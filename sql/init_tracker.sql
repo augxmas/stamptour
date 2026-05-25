@@ -1,0 +1,7 @@
+CREATE DATABASE IF NOT EXISTS tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 비밀번호는 배포 환경에 맞게 변경하고 .env(DB_PASSWORD)와 일치시키세요.
+CREATE USER IF NOT EXISTS 'tracker'@'%' IDENTIFIED BY 'CHANGE_ME_DB_PASSWORD';
+
+GRANT ALL PRIVILEGES ON tracker.* TO 'tracker'@'%';
+FLUSH PRIVILEGES;

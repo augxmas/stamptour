@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vscode/
+.env
+.env.local
+.env.*.local
+
+# 런타임 업로드(사업자등록증·통장사본·QR 이미지 등 민감/대용량)
+uploads/
+
+# 로그/임시
+*.log
+_tmp_*.js
+.DS_Store

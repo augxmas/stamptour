@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Gift 사용 · 모노라마 트래커</title>
+  <meta name="theme-color" content="#0d3b66">
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: "Malgun Gothic", -apple-system, sans-serif; margin: 0;
+           background: radial-gradient(circle at top, #dbe7ff, #f5f8ff); color: #16243a;
+           min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+           padding: 24px 16px env(safe-area-inset-bottom); }
+    .card { width: 100%; max-width: 420px; background: #fff; border-radius: 18px;
+            box-shadow: 0 12px 36px rgba(18,38,72,.16); overflow: hidden; }
+    .head { background: #0d3b66; color: #fff; padding: 18px 20px; text-align: center; }
+    .head .t { font-size: 13px; opacity: .85; }
+    .head .amt { font-size: 30px; font-weight: 800; margin-top: 4px; }
+    .body { padding: 22px 20px 26px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .row:last-of-type { border-bottom: none; }
+    .row .k { color: #64748b; }
+    .row .v { font-weight: 700; text-align: right; }
+    .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: 800; border: none; border-radius: 12px; cursor: pointer; margin-top: 16px; }
+    .btn-primary { background: #0d3b66; color: #fff; }
+    .btn-primary:disabled { background: #9fb2cc; cursor: not-allowed; }
+    .btn-ghost { background: #eef3fb; color: #0d3b66; }
+    input[type=password], input[type=tel] { width: 100%; padding: 14px; font-size: 18px; letter-spacing: 4px;
+            text-align: center; border: 1.5px solid #c9d6ea; border-radius: 10px; outline: none; }
+    input:focus { border-color: #0d3b66; }
+    .lab { font-size: 13px; font-weight: 600; color: #33415c; margin: 4px 0 8px; }
+    .msg { font-size: 13px; margin-top: 10px; min-height: 18px; text-align: center; }
+    .msg.err { color: #d62828; } .msg.ok { color: #138a36; }
+    .state { text-align: center; padding: 14px 0 4px; }
+    .state .ico { font-size: 54px; }
+    .state .ttl { font-size: 20px; font-weight: 800; margin-top: 6px; }
+    .state .desc { font-size: 13px; color: #64748b; margin-top: 6px; }
+    .used { color: #d62828; }
+    .hidden { display: none; }
+    .center { text-align: center; }
+    .spin { display:inline-block; width: 26px; height: 26px; border: 3px solid #d3deef; border-top-color: #0d3b66; border-radius: 50%; animation: r 1s linear infinite; }
+    @keyframes r { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="t">모노라마 트래커 · Gift</div>
+      <div class="amt" id="amt">—</div>
+    </div>
+    <div class="body">
+      <div id="loading" class="center" style="padding:20px;"><div class="spin"></div></div>
+
+      <!-- 유효한(미사용) Gift -->
+      <div id="view-valid" class="hidden">
+        <div class="row"><span class="k">프로젝트</span><span class="v" id="v-project"></span></div>
+        <div class="row"><span class="k">일련번호</span><span class="v" id="v-serial"></span></div>
+        <div class="row"><span class="k">소유자 휴대폰</span><span class="v" id="v-phone"></span></div>
+        <div class="row"><span class="k">Gift 금액</span><span class="v" id="v-amount"></span></div>
+
+        <button class="btn btn-primary" id="btn-use">사용하기</button>
+
+        <!-- 비밀번호 입력 -->
+        <div id="pin-box" class="hidden" style="margin-top:16px;">
+          <div class="lab">프로젝트 비밀번호를 입력하세요</div>
+          <input id="pin" type="tel" inputmode="numeric" maxlength="6" placeholder="● ● ● ● ● ●">
+          <div id="use-msg" class="msg"></div>
+          <button class="btn btn-primary" id="btn-confirm">사용 확정</button>
+          <button class="btn btn-ghost" id="btn-cancel">취소</button>
+        </div>
+      </div>
+
+      <!-- 이미 사용됨 -->
+      <div id="view-used" class="hidden">
+        <div class="state">
+          <div class="ico">🚫</div>
+          <div class="ttl used">이미 사용된 Gift입니다</div>
+          <div class="desc" id="used-desc"></div>
+        </div>
+        <div class="row"><span class="k">프로젝트</span><span class="v" id="u-project"></span></div>
+        <div class="row"><span class="k">Gift 금액</span><span class="v" id="u-amount"></span></div>
+      </div>
+
+      <!-- 사용 완료 -->
+      <div id="view-done" class="hidden">
+        <div class="state">
+          <div class="ico">✅</div>
+          <div class="ttl" style="color:#138a36;">Gift 사용 완료</div>
+          <div class="desc" id="done-desc"></div>
+        </div>
+      </div>
+
+      <!-- 오류 -->
+      <div id="view-error" class="hidden">
+        <div class="state">
+          <div class="ico">⚠️</div>
+          <div class="ttl" id="err-ttl">안내</div>
+          <div class="desc" id="err-desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = location.pathname.split('/').filter(Boolean)[1] || '';
+    const $ = id => document.getElementById(id);
+    const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+    const fmtDT = s => { if (!s) return ''; const d = new Date(s); if (isNaN(d)) return ''; const p = n => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const VIEWS = ['loading','view-valid','view-used','view-done','view-error'];
+    const show = id => VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id));
+
+    let gift = null;
+
+    async function api(path, body) {
+      const r = await fetch(path, body
+        ? { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) } : {});
+      let d = {}; try { d = await r.json(); } catch (e) {}
+      return { ok: r.ok, status: r.status, d };
+    }
+
+    function showError(ttl, desc) { $('err-ttl').textContent = ttl; $('err-desc').textContent = desc || ''; show('view-error'); }
+
+    async function load() {
+      show('loading');
+      if (!token) { showError('잘못된 접근', '유효하지 않은 Gift QR입니다.'); return; }
+      const { ok, status, d } = await api(`/api/gift/${token}`);
+      if (!ok) { showError(status === 404 ? '유효하지 않은 Gift' : '오류', d.message || '정보를 불러오지 못했습니다.'); return; }
+      gift = d;
+      $('amt').textContent = won(d.amount);
+      if (d.status === 'used') {
+        $('u-project').textContent = d.project_name || '-';
+        $('u-amount').textContent = won(d.amount);
+        $('used-desc').textContent = d.used_at ? `사용일시: ${fmtDT(d.used_at)}` : '';
+        show('view-used');
+        return;
+      }
+      $('v-project').textContent = d.project_name || '-';
+      $('v-serial').textContent = d.project_serial || '-';
+      $('v-phone').textContent = d.phone || '-';
+      $('v-amount').textContent = won(d.amount);
+      show('view-valid');
+    }
+
+    $('btn-use').addEventListener('click', () => {
+      $('pin-box').classList.remove('hidden');
+      $('btn-use').classList.add('hidden');
+      $('pin').focus();
+    });
+    $('btn-cancel').addEventListener('click', () => {
+      $('pin-box').classList.add('hidden');
+      $('btn-use').classList.remove('hidden');
+      $('pin').value = ''; $('use-msg').textContent = '';
+    });
+    $('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); });
+
+    $('btn-confirm').addEventListener('click', async () => {
+      const pin = $('pin').value.trim();
+      if (!pin) { $('use-msg').className = 'msg err'; $('use-msg').textContent = '비밀번호를 입력해 주세요.'; return; }
+      $('btn-confirm').disabled = true;
+      const { ok, status, d } = await api(`/api/gift/${token}/use`, { pin });
+      $('btn-confirm').disabled = false;
+      if (ok) {
+        $('done-desc').textContent = `${gift.project_name || ''} · ${won(d.amount)} 사용 처리되었습니다.`;
+        show('view-done');
+        return;
+      }
+      if (status === 409 || d.error === 'already_used') {
+        // 이미 사용된 Gift (캡처 이미지 재사용 시도 포함)
+        $('u-project').textContent = gift.project_name || '-';
+        $('u-amount').textContent = won(gift.amount);
+        $('used-desc').textContent = '이미 사용 처리된 Gift입니다.';
+        show('view-used');
+        return;
+      }
+      $('use-msg').className = 'msg err';
+      $('use-msg').textContent = d.message || '사용 처리에 실패했습니다.';
+    });
+
+    load();
+  </script>
+</body>
+</html>

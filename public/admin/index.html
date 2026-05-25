@@ -1,0 +1,2425 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Host Admin · 모노라마 트래커</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Malgun Gothic", sans-serif; background: #f0f4f9; min-height: 100vh;
+           display: flex; flex-direction: column; }
+    .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 16px 40px; }
+    .logo { font-size: 22px; font-weight: 700; color: #16a34a; margin-bottom: 28px; }
+
+    /* ── 카드 헤더 (회원가입·팝업 공통) ── */
+    .card-header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+                   border-radius: 16px 16px 0 0; padding: 18px 28px;
+                   text-align: center; position: relative; }
+    .card-header h2, .card-header h3 { font-size: 18px; font-weight: 700; color: #fff; margin: 0; }
+    .card-body { padding: 24px 28px 28px; }
+
+    /* ── 푸터 ── */
+    .site-footer { background: #1e293b; color: #94a3b8; font-size: 12px; padding: 20px 32px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-info { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; align-items: center; }
+    .footer-company { font-weight: 700; color: #e2e8f0; font-size: 13px; }
+    .footer-copy { color: #64748b; font-size: 11px; }
+
+    /* ── 인증 카드 ── */
+    .auth-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(20,30,60,.10);
+                 padding: 36px 32px; width: 100%; max-width: 460px; }
+    .auth-card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 22px; }
+    /* 로그인 제목 띠: 가운데 정렬 + 색 배경 (카드 상단 폭에 맞춰 꽉 채움) */
+    .auth-card h2.login-band { text-align: center; color: #fff;
+      background: linear-gradient(135deg, #16a34a, #166534);
+      margin: -36px -32px 24px; padding: 16px 32px; border-radius: 16px 16px 0 0; }
+
+    /* ── 폼 공통 ── */
+    .fg { margin-bottom: 13px; }
+    .fg label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600;
+                color: #475569; margin-bottom: 5px; }
+    .req { color: #dc2626; font-size: 11px; }
+    .fg input[type=text], .fg input[type=email], .fg input[type=password],
+    .fg input[type=date], .fg input[type=number], .fg textarea {
+      width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;
+      font-size: 14px; outline: none; transition: border-color .2s; font-family: inherit; }
+    .fg input:focus, .fg textarea:focus { border-color: #16a34a; }
+    .fg input.inv { border-color: #dc2626 !important; }
+    .fg input.ok  { border-color: #16a34a !important; }
+    .fm { font-size: 11px; margin-top: 3px; min-height: 15px; }
+    .fm.e { color: #dc2626; } .fm.g { color: #16a34a; }
+
+    /* ── 비밀번호 ── */
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 40px; }
+    .pw-tog { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+              background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 15px; padding: 0; }
+    .pw-bar-wrap { height: 4px; border-radius: 4px; margin-top: 4px; background: #e2e8f0; overflow: hidden; }
+    .pw-bar { height: 100%; width: 0; transition: width .3s, background .3s; border-radius: 4px; }
+
+    /* ── 파일 업로드 ── */
+    .file-drop { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 18px;
+                 text-align: center; cursor: pointer; font-size: 13px; color: #94a3b8;
+                 transition: border-color .2s, background .2s; }
+    .file-drop:hover, .file-drop.drag { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+    .file-drop.has-file { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+    .file-drop input[type=file] { display: none; }
+
+    /* ── 버튼 ── */
+    .btn { padding: 11px 18px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+           cursor: pointer; transition: background .2s; }
+    .btn-full { width: 100%; margin-top: 4px; }
+    .btn-p { background: #16a34a; color: #fff; } .btn-p:hover { background: #15803d; }
+    .btn-o { background: #fff; color: #16a34a; border: 1.5px solid #16a34a; }
+    .btn-o:hover { background: #f0fdf4; }
+    .btn-g { background: #16a34a; color: #fff; } .btn-g:hover { background: #15803d; }
+    .btn-r { background: #dc2626; color: #fff; } .btn-r:hover { background: #b91c1c; }
+    .btn-sm { padding: 7px 14px; font-size: 13px; }
+    .links { display: flex; justify-content: space-between; margin-top: 14px; }
+    .links a { font-size: 13px; color: #16a34a; cursor: pointer; }
+    .links a:hover { text-decoration: underline; }
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0; }
+
+    /* ── 알림 메시지 ── */
+    .msg { font-size: 13px; margin-top: 10px; padding: 10px 12px; border-radius: 8px; display: none; }
+    .msg.s { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: block; }
+    .msg.e { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; display: block; }
+
+    /* ── 섹션 ── */
+    section { display: none; width: 100%; }
+    section.active { display: flex; flex-direction: column; align-items: center; }
+    #sec-dashboard { align-items: stretch; width: 90vw; max-width: 90vw; }
+
+    /* ── 대시보드 ── */
+    .topbar { position: fixed; top: 14px; right: 18px; z-index: 90;
+              display: flex; align-items: center; gap: 10px;
+              background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
+              padding: 6px 8px 6px 16px; box-shadow: 0 2px 12px rgba(20,30,60,.10); }
+    .topbar-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; }
+    .topbar-name span { color: #16a34a; }
+    .topbar-brand { font-size: 13px; font-weight: 800; color: #166534; white-space: nowrap;
+                    text-align: right; margin-right: 4px; padding-right: 10px; border-right: 1px solid #e2e8f0; }
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
+    .tab-btn { padding: 9px 18px; border: none; background: none; font-size: 14px; font-weight: 600;
+               color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab-btn.act { color: #16a34a; border-bottom-color: #16a34a; }
+    .tab-panel { display: none; } .tab-panel.act { display: block; }
+    /* 등록 폼은 기존 너비 유지(넓은 대시보드에서 과도하게 늘어나지 않도록) */
+    #tab-new { max-width: 1020px; }
+    .panel-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; }
+    .panel-card h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
+
+    /* ── 테이블 ── */
+    .tbl-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 11px 13px;
+               text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    thead th.sortable { cursor: pointer; user-select: none; }
+    thead th.sortable:hover { color: #16a34a; background: #f0fdf4; }
+    tbody td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #fafbfd; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .bq  { background: #fef9c3; color: #854d0e; }
+    .bs  { background: #dcfce7; color: #166534; }
+    .bd  { background: #dbeafe; color: #1e40af; }
+    .bc  { background: #fee2e2; color: #991b1b; }
+
+    /* ── 목적지 관리 패널 ── */
+    #loc-panel { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08);
+                 padding: 24px; margin-top: 16px; display: none; }
+    #loc-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    #loc-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+    /* ── Kakao 주소 검색 ── */
+    .search-wrap { position: relative; }
+    .search-wrap input { padding-right: 34px; }
+    .search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
+    .sug-box { position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+               border: 1.5px solid #16a34a; border-top: none; border-radius: 0 0 10px 10px;
+               box-shadow: 0 8px 24px rgba(20,30,60,.12); z-index: 50; max-height: 260px; overflow-y: auto; display: none; }
+    .sug-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+    .sug-item:last-child { border-bottom: none; }
+    .sug-item:hover { background: #f0fdf4; }
+    .sug-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .sug-addr { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .sug-empty { padding: 14px; text-align: center; font-size: 13px; color: #94a3b8; }
+
+    /* ── 선택된 장소 프리뷰 ── */
+    .place-preview { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px;
+                     padding: 12px 14px; margin-top: 10px; display: none; }
+    .place-preview .pname { font-size: 14px; font-weight: 700; color: #15803d; margin-bottom: 4px; }
+    .place-preview .paddr { font-size: 12px; color: #64748b; }
+    .place-preview .pcoord { font-size: 12px; color: #475569; margin-top: 4px; }
+    .map-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+                font-size: 12px; font-weight: 600; color: #16a34a; text-decoration: none;
+                background: #fff; border: 1.5px solid #bbf7d0; padding: 5px 12px; border-radius: 20px; }
+    .map-link:hover { background: #dcfce7; }
+
+    /* ── 목적지 목록 ── */
+    .loc-list { margin-bottom: 20px; }
+    .loc-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
+               border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
+    .loc-row:last-child { border-bottom: none; }
+    .loc-seq { width: 28px; height: 28px; background: #16a34a; color: #fff; border-radius: 50%;
+               display: flex; align-items: center; justify-content: center; font-size: 12px;
+               font-weight: 700; flex-shrink: 0; }
+    .loc-info { flex: 1; min-width: 0; }
+    .loc-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .loc-desc { font-size: 12px; color: #64748b; }
+    .loc-empty { font-size: 13px; color: #94a3b8; padding: 16px 0; text-align: center; }
+
+    /* ── 목적지 유형 선택 / 아이콘 업로드 ── */
+    .hint { font-size: 11px; color: #94a3b8; font-weight: 400; }
+    .seg { display: inline-flex; border: 1.5px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
+    .seg-btn { background: #fff; border: none; padding: 9px 18px; font-size: 13px; font-weight: 600;
+               color: #64748b; cursor: pointer; }
+    .seg-btn + .seg-btn { border-left: 1.5px solid #cbd5e1; }
+    .seg-btn.act { background: #16a34a; color: #fff; }
+    .icon-up { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .icon-prev { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1.5px solid #e2e8f0; }
+
+    /* ── 목적지 요약 / 제출 ── */
+    .loc-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                   flex-wrap: wrap; margin-bottom: 12px; }
+    .loc-counts { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cnt { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .cnt-on { background: #dcfce7; color: #166534; }
+    .cnt-off { background: #fee2e2; color: #991b1b; }
+    .cnt-qr { background: #dbeafe; color: #1e40af; }
+
+    /* ── 목적지 목록 추가 요소 ── */
+    .loc-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover;
+                 border: 1px solid #e2e8f0; flex-shrink: 0; }
+    .loc-thumb-ph { display: flex; align-items: center; justify-content: center; background: #f1f5f9; font-size: 18px; }
+    .loc-tag { display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 11px;
+               font-weight: 700; margin-right: 4px; vertical-align: middle; }
+    .tag-loc { background: #dcfce7; color: #15803d; }
+    .tag-exh { background: #f3e8ff; color: #7e22ce; }
+    .loc-row.loc-off { opacity: .55; }
+    .loc-row.loc-off .loc-seq { background: #94a3b8; }
+    .loc-qr { flex-shrink: 0; }
+    .loc-qr img { width: 46px; height: 46px; border: 1px solid #e2e8f0; border-radius: 6px; display: block; }
+
+    /* ── 방문자 현황 그리드 ── */
+    .vf { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; outline: none; background: #fff; }
+    .vf:focus { border-color: #16a34a; }
+    .vis-table { width: 100%; }
+    .vis-table th, .vis-table td { white-space: nowrap; padding: 9px 10px; }
+    .vis-table .badge { white-space: nowrap; }
+    .vis-table th.vis-sort { cursor: pointer; user-select: none; }
+    .vis-table th.vis-sort:hover { color: #16a34a; }
+
+    /* ── 모달 ── */
+    .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.5);
+                align-items: center; justify-content: center; z-index: 100; display: none; }
+    .modal-ov.open { display: flex; }
+    /* 공통 확인/알림 모달은 다른 팝업(지원현황 등) 위에 항상 노출 */
+    #modal-confirm { z-index: 600; }
+    .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 400px;
+             overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,.2); }
+    .modal p.sub { font-size: 13px; color: #64748b; margin-bottom: 22px; }
+    /* 모달 우상단 닫기(×) 아이콘 */
+    .modal-close { position: absolute; top: 10px; right: 12px; background: none; border: none;
+                   font-size: 22px; line-height: 1; color: rgba(255,255,255,.85); cursor: pointer;
+                   padding: 4px 9px; border-radius: 8px; transition: background .15s, color .15s; }
+    .modal-close:hover { background: rgba(255,255,255,.2); color: #fff; }
+    /* 정렬 가능한 헤더 */
+    thead th.usort { cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th.usort:hover { color: #16a34a; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── 회원가입 넓은 카드 ── */
+    .reg-card { background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(20,30,60,.10);
+                overflow:hidden; width:100%; max-width:880px; }
+    .reg-card .card-body { padding:28px 40px; }
+    .reg-grid { display:grid; grid-template-columns:1fr 1fr; column-gap:28px; }
+    .fg-full { grid-column:1/-1; }
+    .fg-inline { display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; }
+    .fg-inline > label { width:120px; min-width:120px; font-size:13px; font-weight:600; color:#475569;
+                         text-align:right; padding-top:10px; line-height:1.3; }
+    .field-wrap { flex:1; min-width:0; }
+    .reg-card input[type=text], .reg-card input[type=email], .reg-card input[type=password] {
+      width:100%; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px;
+      font-size:14px; outline:none; transition:border-color .2s; font-family:inherit; }
+    .reg-card input:focus { border-color:#16a34a; }
+    .reg-card input.inv { border-color:#dc2626 !important; }
+    .reg-card input.ok  { border-color:#16a34a !important; }
+    .reg-card .file-drop { padding:10px 16px; }
+
+    /* disabled 폼 필드 */
+    .fg input:disabled, .fg textarea:disabled, .fg select:disabled {
+      background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+  </style>
+</head>
+<body>
+<div class="main-wrap">
+<div class="logo">모노라마 트래커 · 주최측</div>
+
+<!-- ── 로그인 ── -->
+<section id="sec-login" class="active">
+  <div class="auth-card">
+    <h2 class="login-band">Host 로그인</h2>
+    <div class="fg">
+      <label>이메일 <span class="req">*</span></label>
+      <input id="li-email" type="email" placeholder="host@example.com" autocomplete="email"
+        oninput="lvEmail('li-email','li-em')">
+      <div id="li-em" class="fm"></div>
+    </div>
+    <div class="fg">
+      <label>비밀번호 <span class="req">*</span></label>
+      <div class="pw-wrap"><input id="li-pw" type="password" placeholder="비밀번호" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="pw-tog" onclick="togPw('li-pw',this)">👁</button></div>
+    </div>
+    <div id="li-msg" class="msg"></div>
+    <button class="btn btn-p btn-full" onclick="doLogin()">로그인</button>
+    <div class="links">
+      <a onclick="show('sec-register')">회원가입</a>
+      <a onclick="show('sec-forgot')">비밀번호 분실</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── 회원가입 ── -->
+<section id="sec-register">
+  <div class="reg-card">
+    <div class="card-header"><h2>Host 회원가입</h2></div>
+    <div class="card-body">
+    <div class="reg-grid">
+
+      <!-- 담당자명 + 이메일 -->
+      <div class="fg-inline">
+        <label>담당자명 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <input id="rg-name" type="text" placeholder="홍길동"
+            oninput="lvReq('rg-name','rg-nm','담당자명을 입력해 주세요.')">
+          <div id="rg-nm" class="fm"></div>
+        </div>
+      </div>
+      <div class="fg-inline">
+        <label>이메일 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <div style="display:flex;gap:8px;">
+            <input id="rg-email" type="email" placeholder="host@example.com"
+              style="flex:1;min-width:0;" oninput="onRegEmailInput()">
+            <button class="btn btn-o btn-sm" id="btn-send-verify" onclick="sendVerifyCode()"
+              style="white-space:nowrap;flex-shrink:0;" disabled>인증코드 발송</button>
+          </div>
+          <div id="rg-em" class="fm"></div>
+          <div id="verify-wrap" style="display:none;margin-top:8px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="pw-wrap" style="width:130px;">
+                <input id="rg-vcode" type="password" placeholder="6자리 코드" maxlength="6"
+                  inputmode="numeric">
+                <button class="pw-tog" type="button" onclick="togPw('rg-vcode',this)">👁</button>
+              </div>
+              <button class="btn btn-o btn-sm" onclick="checkVerifyCode()">확인</button>
+              <span id="verify-timer" style="font-size:12px;color:#94a3b8;"></span>
+            </div>
+            <div id="verify-msg" class="fm"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 소속기관명 + 사업자등록번호 -->
+      <div class="fg-inline">
+        <label>소속기관명 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <input id="rg-org" type="text" placeholder="(주)모노라마"
+            oninput="lvReq('rg-org','rg-om','소속기관명을 입력해 주세요.')">
+          <div id="rg-om" class="fm"></div>
+        </div>
+      </div>
+      <div class="fg-inline">
+        <label>사업자등록번호 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <input id="rg-biz" type="text" placeholder="000-00-00000" maxlength="12"
+            inputmode="numeric" oninput="onBiz(this)">
+          <div id="rg-bm" class="fm"></div>
+        </div>
+      </div>
+
+      <!-- 모바일폰 + 연락처 -->
+      <div class="fg-inline">
+        <label>모바일폰 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <input id="rg-mobile" type="text" placeholder="010-0000-0000" maxlength="13"
+            inputmode="numeric" oninput="onMobile(this)">
+          <div id="rg-mobilem" class="fm"></div>
+        </div>
+      </div>
+      <div class="fg-inline">
+        <label>연락처</label>
+        <div class="field-wrap">
+          <input id="rg-phone" type="text" placeholder="02-0000-0000" maxlength="13"
+            inputmode="numeric" oninput="onPhone(this)">
+          <div id="rg-phonem" class="fm"></div>
+        </div>
+      </div>
+
+      <!-- 주소 (전체 폭) -->
+      <div class="fg-inline fg-full">
+        <label>주소 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <div style="margin-bottom:6px;">
+            <button type="button" class="btn btn-o btn-sm" onclick="openPostcode()">🔍 주소 검색</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <input id="rg-zip" type="text" placeholder="우편번호" readonly
+              style="width:90px;background:#f8fafc;color:#475569;">
+            <input id="rg-addr1" type="text" placeholder="도로명 주소 (자동입력)" readonly
+              style="flex:1;min-width:0;background:#f8fafc;color:#475569;">
+          </div>
+          <input id="rg-addr2" type="text" placeholder="상세주소 (동·호수 등, 선택)">
+          <div id="rg-addrm" class="fm"></div>
+        </div>
+      </div>
+
+      <!-- 비밀번호 + 비밀번호 확인 -->
+      <div class="fg-inline">
+        <label>비밀번호 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <div class="pw-wrap">
+            <input id="rg-pw" type="password" placeholder="대소문자·숫자·특수문자 포함 8자↑"
+              oninput="onPw(this,'pw-b','rg-pm')">
+            <button class="pw-tog" onclick="togPw('rg-pw',this)">👁</button>
+          </div>
+          <div class="pw-bar-wrap"><div id="pw-b" class="pw-bar"></div></div>
+          <div id="rg-pm" class="fm"></div>
+        </div>
+      </div>
+      <div class="fg-inline">
+        <label>비밀번호 확인 <span class="req">*</span></label>
+        <div class="field-wrap">
+          <div class="pw-wrap">
+            <input id="rg-pw2" type="password" placeholder="재입력"
+              oninput="lvMatch('rg-pw','rg-pw2','rg-p2m')">
+            <button class="pw-tog" onclick="togPw('rg-pw2',this)">👁</button>
+          </div>
+          <div id="rg-p2m" class="fm"></div>
+        </div>
+      </div>
+
+      <!-- 사업자등록증 (전체 폭) -->
+      <div class="fg-inline fg-full">
+        <label>사업자등록증 <span class="req">*</span><br>
+          <span style="font-size:10px;color:#94a3b8;font-weight:400;">(PDF·JPG·PNG, 20MB↓)</span>
+        </label>
+        <div class="field-wrap">
+          <div class="file-drop" id="cert-drop"
+            onclick="document.getElementById('rg-cert').click()"
+            ondragover="fDragOver(event)" ondragleave="fDragLeave(event)" ondrop="fDrop(event)">
+            <input id="rg-cert" type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="onCert(this)">
+            <div id="cert-lbl">클릭하거나 파일을 끌어다 놓으세요</div>
+          </div>
+          <div id="rg-cf" class="fm"></div>
+        </div>
+      </div>
+
+    </div><!-- /reg-grid -->
+    <div id="rg-msg" class="msg"></div>
+    <button class="btn btn-p btn-full" onclick="doRegister()">가입 신청</button>
+    <hr class="divider">
+    <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
+    </div><!-- /card-body -->
+  </div>
+</section>
+
+<!-- ── 비밀번호 분실 ── -->
+<section id="sec-forgot">
+  <div class="auth-card">
+    <h2>비밀번호 분실</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:18px;">가입한 이메일 주소를 입력하시면 임시 비밀번호를 발송해 드립니다.</p>
+    <div class="fg"><label>이메일 <span class="req">*</span></label>
+      <input id="fo-email" type="email" placeholder="host@example.com" oninput="lvEmail('fo-email','fo-em')">
+      <div id="fo-em" class="fm"></div></div>
+    <div id="fo-msg" class="msg"></div>
+    <button class="btn btn-p btn-full" onclick="doForgot()">임시 비밀번호 발송</button>
+    <hr class="divider">
+    <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
+  </div>
+</section>
+
+<!-- ── 대시보드 ── -->
+<section id="sec-dashboard">
+  <div class="topbar">
+    <span class="topbar-brand" id="topbar-brand">모노라마 트래커</span>
+    <span class="topbar-name"><span id="d-name"></span>님</span>
+    <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
+    <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">내 프로젝트</button>
+    <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
+    <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">정산</button>
+  </div>
+
+  <!-- ─ 내 프로젝트 탭 ─ -->
+  <div class="tab-panel act" id="tab-proj">
+    <div class="panel-card">
+      <h3>내 프로젝트</h3>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <input id="pf-name" type="text" placeholder="프로젝트명 검색"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
+          oninput="loadProjects(1)">
+        <select id="pf-status" onchange="loadProjects(1)"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+          <option value="">전체 상태</option>
+          <option value="quoted">견적</option>
+          <option value="deposit_wait">입금대기</option>
+          <option value="deposit_confirmed">입금확인</option>
+          <option value="ready_to_start">시작대기</option>
+          <option value="started">진행중</option>
+          <option value="completed">완료</option>
+          <option value="cancelled">취소</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadProjects(1)">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pf-name').value='';document.getElementById('pf-status').value='';loadProjects(1)">초기화</button>
+        <button class="btn btn-g btn-sm" id="proj-excel" onclick="downloadProjectsExcel()" disabled>⬇ 엑셀 다운로드</button>
+        <label style="margin-left:auto;font-size:13px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
+          <select id="pf-size" onchange="changeProjSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="proj-thead"></thead>
+          <tbody id="proj-tbody"></tbody>
+        </table>
+      </div>
+      <div id="proj-pager" style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:14px;flex-wrap:wrap;font-size:13px;"></div>
+    </div>
+
+    <!-- 목적지 관리 패널 -->
+    <div id="loc-panel">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+        <button class="btn btn-o btn-sm" onclick="closeLoc()">← 목록으로</button>
+        <h3 id="loc-proj-name" style="margin-bottom:0;"></h3>
+      </div>
+      <p class="sub" id="loc-proj-serial"></p>
+
+      <!-- 목적지 요약 + 제출 -->
+      <div class="loc-summary" id="loc-summary"></div>
+
+      <!-- 기존 목적지 목록 -->
+      <div class="loc-list" id="loc-list"></div>
+
+      <!-- 목적지 추가 폼 -->
+      <div class="divider"></div>
+      <h3 style="margin-bottom:14px;">목적지 추가</h3>
+
+      <!-- 유형 선택 -->
+      <div class="fg">
+        <label>목적지 유형 <span class="req">*</span></label>
+        <div class="seg" id="dest-type-seg">
+          <button type="button" class="seg-btn act" data-type="location" onclick="setDestType('location')">📍 위치</button>
+          <button type="button" class="seg-btn" data-type="exhibit" onclick="setDestType('exhibit')">🎨 전시물</button>
+        </div>
+      </div>
+
+      <!-- 위치 입력부 -->
+      <div id="mode-location">
+        <div class="fg">
+          <label>주소 검색 <span class="req">*</span></label>
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input id="loc-search" type="text" placeholder="장소명 또는 주소 입력"
+              oninput="onLocSearch(this)" autocomplete="off">
+            <div id="sug-box" class="sug-box"></div>
+          </div>
+          <button type="button" class="map-link" style="margin-top:8px;cursor:pointer;border:1.5px solid #bbf7d0;"
+            onclick="openMapPicker()">📌 지도에서 선택</button>
+        </div>
+
+        <!-- 선택된 장소 프리뷰 -->
+        <div class="place-preview" id="place-prev">
+          <div class="pname" id="prev-pname"></div>
+          <div class="paddr" id="prev-paddr"></div>
+          <div class="pcoord" id="prev-pcoord"></div>
+          <a class="map-link" id="prev-link" href="#" target="_blank" rel="noopener">
+            🗺 카카오맵에서 보기
+          </a>
+        </div>
+
+        <div style="display:none;" id="loc-fields">
+          <div class="fg" style="margin-top:14px;">
+            <label>장소명 <span class="req">*</span> <span class="hint">(최대 100자, 수정 가능)</span></label>
+            <input id="loc-name" type="text" placeholder="장소명" maxlength="100">
+          </div>
+          <div class="fg">
+            <label>목적지 설명 <span class="req">*</span> <span class="hint">(최대 50자)</span></label>
+            <input id="loc-desc" type="text" placeholder="예: 1번 부스 앞" maxlength="50">
+            <div id="loc-desc-count" class="fm" style="text-align:right;"></div>
+          </div>
+          <input type="hidden" id="loc-lat">
+          <input type="hidden" id="loc-lng">
+        </div>
+      </div>
+
+      <!-- 전시물 입력부 -->
+      <div id="mode-exhibit" style="display:none;">
+        <div class="fg">
+          <label>전시물 설명 <span class="req">*</span> <span class="hint">(최대 100자)</span></label>
+          <textarea id="exh-desc" placeholder="전시물에 대한 설명을 간단히 입력해주세요" maxlength="100"
+            style="resize:vertical;min-height:60px;"></textarea>
+        </div>
+      </div>
+
+      <!-- 아이콘 이미지 (위치/전시물 공통, 선택) -->
+      <div class="fg">
+        <label>이미지(아이콘) <span class="hint">(선택, 5MB 이하)</span></label>
+        <div class="icon-up">
+          <img id="icon-prev" class="icon-prev" alt="" style="display:none;">
+          <input id="loc-image" type="file" accept="image/*" onchange="onIconChange(this)">
+          <button type="button" class="btn btn-o btn-sm" id="icon-clear" style="display:none;" onclick="clearIcon()">제거</button>
+        </div>
+      </div>
+
+      <div id="loc-msg" class="msg"></div>
+      <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addLocation()">+ 목적지 추가</button>
+    </div>
+  </div>
+
+  <!-- ─ 프로젝트 등록 탭 ─ -->
+  <div class="tab-panel" id="tab-new">
+
+    <!-- 견적 계산 안내 -->
+    <div class="panel-card" id="quote-info-card">
+      <h3>견적 계산 안내</h3>
+      <div id="quote-info-body">
+        <p style="font-size:13px;color:#94a3b8;">불러오는 중...</p>
+      </div>
+    </div>
+
+    <!-- Gift 승인 비밀번호 -->
+    <div class="panel-card" style="margin-top:16px;">
+      <h3>Gift 승인 비밀번호 발송</h3>
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
+        Gift 결제 승인 시 입력할 비밀번호입니다. 별도로 메모하여 기억하도록 하십시오.
+      </p>
+      <button class="btn btn-o btn-sm" id="btn-send-pin" onclick="sendPin()">비밀번호 발송</button>
+      <div id="pin-verify-wrap" style="display:none;margin-top:14px;">
+        <div class="fg" style="margin-bottom:0;">
+          <label>비밀번호 확인</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="pw-wrap" style="flex:1;max-width:180px;">
+              <input id="pin-input" type="password" placeholder="6자리 코드" maxlength="6" inputmode="numeric">
+              <button class="pw-tog" type="button" onclick="togPw('pin-input',this)">👁</button>
+            </div>
+            <button class="btn btn-o btn-sm" onclick="verifyPinCode()">확인</button>
+            <span id="pin-timer" style="font-size:12px;color:#94a3b8;white-space:nowrap;"></span>
+          </div>
+        </div>
+        <div id="pin-verify-msg" class="fm"></div>
+      </div>
+      <div id="pin-msg" class="msg" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- 프로젝트 등록 폼 -->
+    <div class="panel-card" style="margin-top:16px;">
+      <h3>프로젝트 등록</h3>
+      <div class="fg"><label>프로젝트명 <span class="req">*</span></label>
+        <input id="pj-name" type="text" placeholder="프로젝트명칭" disabled></div>
+      <div class="fg"><label>설명 <span class="req">*</span> <span style="font-size:11px;color:#94a3b8;font-weight:400;">(최대 200자)</span></label>
+        <textarea id="pj-desc" placeholder="설명을 상세히 작성해 주세요" maxlength="200"
+          style="resize:vertical;min-height:70px;" disabled></textarea></div>
+      <div class="grid2">
+        <div class="fg"><label>시작일 <span class="req">*</span></label><input id="pj-from" type="date" disabled onchange="onFromDateChange()"></div>
+        <div class="fg"><label>종료일 <span class="req">*</span></label><input id="pj-to" type="date" disabled></div>
+        <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pj-gift" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-gift')"></div>
+        <div class="fg"><label>발급수량 <span class="req">*</span></label><input id="pj-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-qty')"></div>
+        <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(단가 × 발급수량 자동 계산)</span></label>
+          <input id="pj-budget" type="text" inputmode="numeric" placeholder="자동 계산" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
+      </div>
+      <div id="pj-msg" class="msg"></div>
+      <button class="btn btn-p btn-full" id="btn-create-proj" onclick="createProject()" disabled>프로젝트 등록</button>
+    </div>
+  </div>
+
+  <!-- ─ 정산 탭 ─ -->
+  <div class="tab-panel" id="tab-settle">
+    <div class="panel-card">
+      <h3>정산</h3>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <input id="sf-name" type="text" placeholder="프로젝트명 검색"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
+          oninput="loadSettlement()">
+        <select id="sf-status" onchange="loadSettlement()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+          <option value="">전체 상태</option>
+          <option value="ready_to_start">시작대기</option>
+          <option value="started">진행중</option>
+          <option value="completed">완료</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadSettlement()">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettlement()">초기화</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>프로젝트명</th>
+              <th>상태</th>
+              <th style="text-align:right;">Gift 단가</th>
+              <th style="text-align:center;">Gift 사용개수</th>
+              <th style="text-align:center;">Gift 증정개수</th>
+              <th style="text-align:right;">Gift 사용금액</th>
+              <th style="text-align:right;">Gift 증정금액</th>
+              <th style="text-align:right;">총 Gift 금액</th>
+              <th style="text-align:center;">사용자현황</th>
+            </tr>
+          </thead>
+          <tbody id="settle-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /main-wrap -->
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-info">
+      <span class="footer-company">(주)모노라마</span>
+      <span>대표 김창호</span>
+      <span>tel: 02-6925-4083</span>
+      <span>서울시 강서구 마곡중앙로 143 B동 339호 (우)07797</span>
+    </div>
+    <div class="footer-copy">© 2026 (주)모노라마. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- ── 기본 정보(설정) 모달 ── -->
+<div class="modal-ov" id="modal-profile">
+  <div class="modal" style="max-width:560px;">
+    <div class="card-header"><h2>기본 정보</h2>
+      <button class="modal-close" onclick="closeProfile()">×</button></div>
+    <div class="card-body">
+      <div class="grid2">
+        <div class="fg"><label>담당자명 <span class="req">*</span></label><input id="pf-host-name" type="text"></div>
+        <div class="fg"><label>이메일 <span class="hint">(변경 불가)</span></label><input id="pf-host-email" type="text" disabled></div>
+        <div class="fg"><label>소속기관명 <span class="req">*</span></label><input id="pf-host-org" type="text"></div>
+        <div class="fg"><label>사업자등록번호 <span class="hint">(변경 불가)</span></label><input id="pf-host-biz" type="text" disabled></div>
+        <div class="fg"><label>모바일폰 <span class="req">*</span></label><input id="pf-host-mobile" type="text" inputmode="numeric" placeholder="010-1234-5678"></div>
+        <div class="fg"><label>연락처 <span class="hint">(선택)</span></label><input id="pf-host-phone" type="text" inputmode="numeric" placeholder="02-1234-5678"></div>
+        <div class="fg" style="grid-column:1/-1;">
+          <label>주소</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <input id="pf-host-zip" type="text" placeholder="우편번호" readonly style="width:120px;">
+            <button type="button" class="btn btn-o btn-sm" onclick="openPostcodeProfile()">🔍 주소 검색</button>
+          </div>
+          <input id="pf-host-addr1" type="text" placeholder="도로명 주소 (자동입력)" readonly style="margin-bottom:6px;">
+          <input id="pf-host-addr2" type="text" placeholder="상세주소 (동·호수 등, 선택)">
+        </div>
+      </div>
+      <hr class="divider">
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:8px;">비밀번호 변경 <span class="hint">(변경 시에만 입력)</span></div>
+      <div class="grid2">
+        <div class="fg"><label>새 비밀번호</label>
+          <div class="pw-wrap"><input id="pf-host-newpw" type="password" placeholder="대소문자·숫자·특수문자 8자↑">
+            <button class="pw-tog" type="button" onclick="togPw('pf-host-newpw',this)">👁</button></div></div>
+        <div class="fg"><label>새 비밀번호 확인</label>
+          <div class="pw-wrap"><input id="pf-host-newpw2" type="password">
+            <button class="pw-tog" type="button" onclick="togPw('pf-host-newpw2',this)">👁</button></div></div>
+      </div>
+      <div class="fg"><label>현재 비밀번호 <span class="req">*</span> <span class="hint">(본인 확인용)</span></label>
+        <div class="pw-wrap"><input id="pf-host-curpw" type="password" placeholder="저장하려면 현재 비밀번호 입력"
+            onkeydown="if(event.key==='Enter')saveProfile()">
+          <button class="pw-tog" type="button" onclick="togPw('pf-host-curpw',this)">👁</button></div></div>
+      <div id="pf-host-msg" class="msg"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="closeProfile()">취소</button>
+        <button class="btn btn-p btn-sm" style="flex:1;" id="pf-host-save" onclick="saveProfile()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gift 사용자 현황 모달 (정산) ── -->
+<div class="modal-ov" id="modal-usage">
+  <div class="modal" style="width:96vw;max-width:820px;">
+    <div class="card-header"><h2>Gift 사용자 현황</h2>
+      <button class="modal-close" onclick="closeUsage()" aria-label="닫기">×</button></div>
+    <div class="card-body">
+      <div id="usage-sub" style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;"></div>
+      <!-- 구분별 건수/금액 요약 -->
+      <div id="usage-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <!-- 필터 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+        <input id="uf-phone" type="text" placeholder="휴대폰번호 검색"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 11px;font-size:13px;outline:none;width:170px;"
+          oninput="renderUsage()">
+        <select id="uf-type" onchange="renderUsage()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 11px;font-size:13px;outline:none;">
+          <option value="">구분 전체</option>
+          <option value="normal">Gift사용</option>
+          <option value="grant">Gift증정</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('uf-phone').value='';document.getElementById('uf-type').value='';renderUsage()">초기화</button>
+        <span id="uf-count" style="font-size:12px;color:#64748b;margin-left:auto;"></span>
+      </div>
+      <div class="tbl-wrap" style="max-height:52vh;overflow:auto;">
+        <table>
+          <thead><tr id="usage-thead"></tr></thead>
+          <tbody id="usage-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 지도에서 위치 선택 모달 ── -->
+<div class="modal-ov" id="modal-map">
+  <div class="modal" style="max-width:560px;">
+    <div class="card-header"><h2>지도에서 위치 선택</h2></div>
+    <div class="card-body">
+      <p class="sub" style="margin-bottom:10px;color:#64748b;font-size:13px;">지도를 클릭하거나 마커를 드래그해 목적지를 지정하세요.</p>
+      <div id="map-canvas" style="width:100%;height:340px;border-radius:10px;overflow:hidden;background:#eef2f7;"></div>
+      <div id="map-pick-info" style="font-size:12px;color:#475569;margin-top:10px;min-height:18px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="closeMapPicker()">취소</button>
+        <button class="btn btn-p btn-sm" style="flex:1;" id="map-confirm" onclick="confirmMapPick()" disabled>이 위치 선택</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 랜딩페이지 미리보기 모달 ── -->
+<div class="modal-ov" id="modal-preview">
+  <div class="modal" style="max-width:420px;">
+    <div class="card-header"><h2>랜딩페이지 미리보기</h2></div>
+    <div class="card-body" style="padding:0;background:#0f172a;">
+      <iframe id="preview-frame" title="랜딩페이지 미리보기" style="width:100%;height:68vh;border:0;display:block;background:#fff;"></iframe>
+    </div>
+    <div style="padding:12px;display:flex;gap:8px;justify-content:center;">
+      <a id="preview-open" class="btn btn-o btn-sm" href="#" target="_blank" rel="noopener" style="text-decoration:none;">새 탭에서 열기</a>
+      <button class="btn btn-o btn-sm" onclick="closePreview()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 방문자 현황 모달 ── -->
+<div class="modal-ov" id="modal-visitors">
+  <div class="modal" style="width:96vw;max-width:1200px;">
+    <div class="card-header"><h2>방문자 현황</h2></div>
+    <div class="card-body">
+      <p id="vis-proj" style="font-size:13px;color:#64748b;margin-bottom:6px;"></p>
+      <p id="vis-summary" style="font-size:12px;color:#94a3b8;margin-bottom:10px;"></p>
+      <div id="vis-filters" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <input id="vf-phone" class="vf" type="text" placeholder="휴대폰 검색" oninput="visFilter.phone=this.value;renderVisitors()" style="width:150px;">
+        <select id="vf-mission" class="vf" onchange="visFilter.mission=this.value;renderVisitors()">
+          <option value="">미션 전체</option><option value="done">완료</option><option value="ing">진행중</option></select>
+        <select id="vf-issued" class="vf" onchange="visFilter.issued=this.value;renderVisitors()">
+          <option value="">발급 전체</option><option value="y">발급</option><option value="n">미발급</option></select>
+        <select id="vf-used" class="vf" onchange="visFilter.used=this.value;renderVisitors()">
+          <option value="">사용 전체</option><option value="y">사용</option><option value="n">미사용</option></select>
+        <select id="vf-type" class="vf" onchange="visFilter.type=this.value;renderVisitors()">
+          <option value="">타입 전체</option><option value="normal">지급</option><option value="grant">증정</option><option value="none">미사용</option></select>
+        <button class="btn btn-o btn-sm" onclick="resetVisFilter()">필터 초기화</button>
+        <button class="btn btn-g btn-sm" style="margin-left:auto;" onclick="downloadVisitorsExcel()">⬇ 엑셀 다운로드</button>
+      </div>
+      <div id="vis-body" class="tbl-wrap" style="max-height:58vh;overflow:auto;"></div>
+      <button class="btn btn-o btn-sm btn-full" style="margin-top:14px;" onclick="closeVisitors()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 가맹점 지원현황 모달 ── -->
+<div class="modal-ov" id="modal-apps">
+  <div class="modal" style="width:96vw;max-width:1000px;">
+    <div class="card-header"><h2>가맹점 지원현황</h2></div>
+    <div class="card-body">
+      <p id="apps-proj" style="font-size:13px;color:#64748b;margin-bottom:6px;"></p>
+      <p id="apps-summary" style="font-size:12px;color:#94a3b8;margin-bottom:10px;"></p>
+      <div id="apps-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
+      <button class="btn btn-o btn-sm btn-full" style="margin-top:14px;" onclick="closeApplications()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 공통 확인/알림 모달 ── -->
+<div class="modal-ov" id="modal-confirm">
+  <div class="modal" style="max-width:360px;">
+    <div class="card-header"><h2 id="confirm-title">확인</h2></div>
+    <div class="card-body">
+      <p id="confirm-msg" style="font-size:14px;color:#334155;line-height:1.55;margin-bottom:20px;white-space:pre-line;"></p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" id="confirm-cancel">취소</button>
+        <button class="btn btn-p btn-sm" style="flex:1;" id="confirm-ok">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 세션 연장/만료 경고 모달 ── -->
+<div class="modal-ov" id="session-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h2>로그인 연장 안내</h2></div>
+    <div class="card-body">
+      <p style="font-size:14px;color:#1e293b;line-height:1.6;margin-bottom:8px;">장시간 활동이 없어 곧 자동 로그아웃됩니다.</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:18px;">남은 시간 <b id="session-countdown" style="color:#dc2626;">60초</b> · 로그인을 연장하시겠습니까?</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-o btn-sm" onclick="sessionLogout()">로그아웃</button>
+        <button class="btn btn-p btn-sm" onclick="sessionExtend()">로그인 연장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 비밀번호 재설정 모달 ── -->
+<div class="modal-ov" id="modal-reset">
+  <div class="modal">
+    <div class="card-header"><h2>비밀번호 변경 필요</h2></div>
+    <div class="card-body">
+    <p class="sub">임시 비밀번호로 로그인하셨습니다. 새 비밀번호로 변경해 주세요.</p>
+    <div class="fg"><label>현재(임시) 비밀번호 <span class="req">*</span></label>
+      <div class="pw-wrap"><input id="rs-cur" type="password" placeholder="임시 비밀번호">
+        <button class="pw-tog" onclick="togPw('rs-cur',this)">👁</button></div></div>
+    <div class="fg"><label>새 비밀번호 <span class="req">*</span></label>
+      <div class="pw-wrap"><input id="rs-new" type="password" placeholder="대소문자·숫자·특수문자 포함 8자↑"
+        oninput="onPw(this,'rs-bar','rs-nm')">
+        <button class="pw-tog" onclick="togPw('rs-new',this)">👁</button></div>
+      <div class="pw-bar-wrap"><div id="rs-bar" class="pw-bar"></div></div>
+      <div id="rs-nm" class="fm"></div></div>
+    <div class="fg"><label>새 비밀번호 확인 <span class="req">*</span></label>
+      <div class="pw-wrap"><input id="rs-new2" type="password" placeholder="재입력"
+        oninput="lvMatch('rs-new','rs-new2','rs-n2m')">
+        <button class="pw-tog" onclick="togPw('rs-new2',this)">👁</button></div>
+      <div id="rs-n2m" class="fm"></div></div>
+    <div id="rs-msg" class="msg"></div>
+    <button class="btn btn-p btn-full" onclick="doReset()">비밀번호 변경</button>
+    </div><!-- /card-body -->
+  </div>
+</div>
+
+<!-- 견적서 발송 확인 모달 -->
+<div class="modal-ov" id="modal-quote-confirm">
+  <div class="modal" style="max-width:400px;">
+    <div class="card-header"><h2>프로젝트 등록 확인</h2></div>
+    <div class="card-body">
+      <p>프로젝트를 등록하면 <strong>견적서가 담당자 이메일로 발송</strong>됩니다.</p>
+      <p style="font-size:13px;color:#64748b;margin-top:8px;">계속 진행하시겠습니까?</p>
+      <div id="quote-confirm-msg" class="msg" style="margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-p" style="flex:1;" id="btn-confirm-create" onclick="confirmCreateProject()">등록</button>
+        <button class="btn btn-o" style="flex:1;" onclick="document.getElementById('modal-quote-confirm').classList.remove('open')">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PW_RE  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+const EM_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ── 섹션 전환 ──
+function show(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // 대시보드에서는 상단 로고 줄을 숨겨 페이지 높이를 확보 (브랜드는 우상단 바로 이동)
+  const logo = document.querySelector('.logo');
+  if (logo) logo.style.display = (id === 'sec-dashboard') ? 'none' : '';
+}
+function switchTab(name) {
+  ['proj','new','settle'].forEach(t => {
+    document.getElementById('tb-'+t).classList.toggle('act', t===name);
+    document.getElementById('tab-'+t).classList.toggle('act', t===name);
+  });
+  if (name === 'new') loadQuoteConfig();
+  if (name === 'settle') loadSettlement();
+}
+
+// ── 메시지 ──
+function setMsg(id, type, txt) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + type;
+  el.textContent = txt;
+}
+function clrMsg(id) { const el = document.getElementById(id); el.className = 'msg'; el.textContent = ''; }
+function setFm(id, type, txt) { const el = document.getElementById(id); el.className = 'fm '+(type==='e'?'e':'g'); el.textContent = txt; }
+function clrFm(id) { const el = document.getElementById(id); el.className = 'fm'; el.textContent = ''; }
+function setV(id, ok) { const el = document.getElementById(id); el.classList.toggle('inv',!ok); el.classList.toggle('ok',ok); }
+
+// ── Validation ──
+function lvReq(iid, mid, msg) {
+  const v = document.getElementById(iid).value.trim();
+  v ? (setV(iid,true), clrFm(mid)) : (setV(iid,false), setFm(mid,'e',msg));
+}
+function lvEmail(iid, mid) {
+  const v = document.getElementById(iid).value.trim();
+  if (!v) { setV(iid,false); clrFm(mid); return; }
+  EM_RE.test(v) ? (setV(iid,true), clrFm(mid)) : (setV(iid,false), setFm(mid,'e','올바른 이메일 형식으로 입력해 주세요.'));
+}
+function onBiz(input) {
+  let d = input.value.replace(/\D/g,'').slice(0,10);
+  if (d.length>5) d = d.slice(0,3)+'-'+d.slice(3,5)+'-'+d.slice(5);
+  else if (d.length>3) d = d.slice(0,3)+'-'+d.slice(3);
+  input.value = d;
+  const raw = d.replace(/-/g,'');
+  if (!raw) { setV('rg-biz',false); clrFm('rg-bm'); }
+  else if (raw.length<10) { setV('rg-biz',false); setFm('rg-bm','e','사업자등록번호 10자리를 입력해 주세요.'); }
+  else { setV('rg-biz',true); clrFm('rg-bm'); }
+}
+function onPw(input, barId, mid) {
+  const v = input.value;
+  let s = 0;
+  if(v.length>=8)s++; if(/[a-z]/.test(v))s++; if(/[A-Z]/.test(v))s++; if(/\d/.test(v))s++; if(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(v))s++;
+  const cs = ['','#ef4444','#f97316','#eab308','#84cc16','#22c55e'];
+  const bar = document.getElementById(barId); bar.style.width=(s*20)+'%'; bar.style.background=cs[s]||'#e2e8f0';
+  if (!v) { setV(input.id,false); clrFm(mid); }
+  else if (!PW_RE.test(v)) { setV(input.id,false); setFm(mid,'e','대소문자·숫자·특수문자를 포함한 8자 이상으로 입력해 주세요.'); }
+  else { setV(input.id,true); clrFm(mid); }
+}
+function lvMatch(pid, cid, mid) {
+  const v1 = document.getElementById(pid).value, v2 = document.getElementById(cid).value;
+  if (!v2) { setV(cid,false); clrFm(mid); return; }
+  v1===v2 ? (setV(cid,true),clrFm(mid)) : (setV(cid,false),setFm(mid,'e','비밀번호가 일치하지 않습니다.'));
+}
+function togPw(id, btn) { const i=document.getElementById(id); i.type=i.type==='password'?'text':'password'; btn.textContent=i.type==='password'?'👁':'🙈'; }
+
+// ── 전화번호 포맷 ──
+function onMobile(input) {
+  let d = input.value.replace(/\D/g,'').slice(0,11);
+  if (d.length >= 8) d = d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
+  else if (d.length >= 4) d = d.slice(0,3)+'-'+d.slice(3);
+  input.value = d;
+  const raw = d.replace(/-/g,'');
+  if (!raw) { setV('rg-mobile',false); clrFm('rg-mobilem'); }
+  else if (!/^01[016789]\d{7,8}$/.test(raw)) { setV('rg-mobile',false); setFm('rg-mobilem','e','올바른 모바일폰 번호를 입력해 주세요.'); }
+  else { setV('rg-mobile',true); clrFm('rg-mobilem'); }
+}
+function onPhone(input) {
+  let d = input.value.replace(/\D/g,'').slice(0,11);
+  if (d.startsWith('02')) {
+    if (d.length >= 10) d = d.slice(0,2)+'-'+d.slice(2,6)+'-'+d.slice(6);
+    else if (d.length >= 6) d = d.slice(0,2)+'-'+d.slice(2,5)+'-'+d.slice(5);
+    else if (d.length >= 3) d = d.slice(0,2)+'-'+d.slice(2);
+  } else {
+    if (d.length >= 11) d = d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
+    else if (d.length >= 7) d = d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
+    else if (d.length >= 4) d = d.slice(0,3)+'-'+d.slice(3);
+  }
+  input.value = d;
+}
+
+// ── 다음 우편번호 주소 검색 ──
+function openPostcode() {
+  new daum.Postcode({
+    oncomplete(data) {
+      const addr = data.roadAddress || data.autoRoadAddress || data.jibunAddress;
+      document.getElementById('rg-zip').value = data.zonecode;
+      document.getElementById('rg-addr1').value = addr;
+      document.getElementById('rg-addr2').focus();
+      clrFm('rg-addrm');
+    }
+  }).open();
+}
+
+// 기본 정보 모달용 우편번호 주소 검색
+function openPostcodeProfile() {
+  new daum.Postcode({
+    oncomplete(data) {
+      const addr = data.roadAddress || data.autoRoadAddress || data.jibunAddress;
+      document.getElementById('pf-host-zip').value = data.zonecode;
+      document.getElementById('pf-host-addr1').value = addr;
+      document.getElementById('pf-host-addr2').focus();
+    }
+  }).open();
+}
+
+// ── 이메일 인증 ──
+let emailVerified = false;
+let verifyTimerInterval = null;
+function onRegEmailInput() {
+  lvEmail('rg-email','rg-em');
+  const v = document.getElementById('rg-email').value.trim();
+  const ok = EM_RE.test(v);
+  document.getElementById('btn-send-verify').disabled = !ok;
+  if (emailVerified) {
+    emailVerified = false;
+    document.getElementById('verify-wrap').style.display = 'none';
+    clearInterval(verifyTimerInterval);
+    setFm('rg-em','e','이메일이 변경되었습니다. 다시 인증해 주세요.');
+  }
+}
+async function sendVerifyCode() {
+  const email = document.getElementById('rg-email').value.trim();
+  if (!EM_RE.test(email)) return;
+  const btn = document.getElementById('btn-send-verify');
+  btn.disabled = true; btn.textContent = '발송 중...';
+  const r = await fetch('/api/host/email-verify/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+  const d = await r.json();
+  btn.textContent = '인증코드 발송';
+  if (!r.ok) { btn.disabled=false; setFm('rg-em','e',d.error||'발송에 실패했습니다.'); return; }
+  document.getElementById('verify-wrap').style.display='block';
+  document.getElementById('rg-vcode').value='';
+  clrFm('verify-msg');
+  setFm('rg-em','g','인증코드가 발송되었습니다. 이메일을 확인해 주세요.');
+  startVerifyTimer(600);
+  setTimeout(()=>{ btn.disabled=false; }, 60000);
+}
+function startVerifyTimer(sec) {
+  clearInterval(verifyTimerInterval);
+  const el = document.getElementById('verify-timer');
+  function tick() {
+    if (sec <= 0) { el.textContent='만료됨'; clearInterval(verifyTimerInterval); return; }
+    el.textContent = `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+    sec--;
+  }
+  tick(); verifyTimerInterval = setInterval(tick,1000);
+}
+async function checkVerifyCode() {
+  const email = document.getElementById('rg-email').value.trim();
+  const code = document.getElementById('rg-vcode').value.trim();
+  if (!code) { setFm('verify-msg','e','인증코드를 입력해 주세요.'); return; }
+  const r = await fetch('/api/host/email-verify/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})});
+  const d = await r.json();
+  if (!r.ok) { setFm('verify-msg','e',d.error||'인증에 실패했습니다.'); return; }
+  emailVerified = true;
+  clearInterval(verifyTimerInterval);
+  document.getElementById('verify-timer').textContent='';
+  setFm('verify-msg','g','✔ 이메일 인증이 완료되었습니다.');
+  setV('rg-email',true);
+  document.getElementById('btn-send-verify').disabled = true;
+}
+
+// ── 파일 드래그앤드롭 ──
+function fDragOver(e) { e.preventDefault(); document.getElementById('cert-drop').classList.add('drag'); }
+function fDragLeave() { document.getElementById('cert-drop').classList.remove('drag'); }
+function fDrop(e) { e.preventDefault(); fDragLeave(); const f=e.dataTransfer.files[0]; if(f) applyCert(f); }
+function onCert(inp) { if(inp.files[0]) applyCert(inp.files[0]); }
+function applyCert(f) {
+  const ok = ['application/pdf','image/jpeg','image/png'].includes(f.type);
+  const drop = document.getElementById('cert-drop');
+  if (!ok) { drop.classList.remove('has-file'); setFm('rg-cf','e','PDF, JPG, PNG 파일만 가능합니다.'); return; }
+  if (f.size > 20*1024*1024) { setFm('rg-cf','e','파일 크기는 20MB 이하여야 합니다.'); return; }
+  const dt = new DataTransfer(); dt.items.add(f); document.getElementById('rg-cert').files = dt.files;
+  drop.classList.add('has-file'); document.getElementById('cert-lbl').textContent = '✔ '+f.name; clrFm('rg-cf');
+}
+
+// ── 로그인 ──
+async function doLogin() {
+  clrMsg('li-msg');
+  const host_email = document.getElementById('li-email').value.trim();
+  const password   = document.getElementById('li-pw').value;
+  if (!host_email||!EM_RE.test(host_email)) { setMsg('li-msg','e','올바른 이메일 주소를 입력해 주세요.'); return; }
+  if (!password) { setMsg('li-msg','e','비밀번호를 입력해 주세요.'); return; }
+  const r = await fetch('/api/host/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host_email,password})});
+  const d = await r.json();
+  if (!r.ok) { setMsg('li-msg','e',d.error||'로그인에 실패했습니다.'); return; }
+  document.getElementById('d-name').textContent = d.host?.name||'';
+  document.getElementById('topbar-brand').textContent = '주최측' + (d.host?.organization_name ? ' ' + d.host.organization_name : '');
+  show('sec-dashboard');
+  startSessionWatch();
+  if (d.resetRequired) {
+    document.getElementById('modal-reset').classList.add('open');
+  } else if (d.prevIp || d.prevLogoutAt) {
+    // 마지막 접속 IP / 로그아웃 시간 팝업 안내
+    const ipLine  = `마지막 접속 IP: ${d.prevIp || '정보 없음'}`;
+    const outLine = `마지막 로그아웃: ${d.prevLogoutAt ? new Date(d.prevLogoutAt).toLocaleString('ko-KR') : '정보 없음'}`;
+    uiAlert(`${ipLine}\n${outLine}`, { title: '이전 접속 정보' });
+  }
+}
+
+// ── 회원가입 ──
+async function doRegister() {
+  clrMsg('rg-msg');
+  const host_name = document.getElementById('rg-name').value.trim();
+  const host_email = document.getElementById('rg-email').value.trim();
+  const organization_name = document.getElementById('rg-org').value.trim();
+  const biz_no = document.getElementById('rg-biz').value.replace(/-/g,'');
+  const mobile_phone = document.getElementById('rg-mobile').value.trim();
+  const phone = document.getElementById('rg-phone').value.trim();
+  const address_zip = document.getElementById('rg-zip').value.trim();
+  const address1 = document.getElementById('rg-addr1').value.trim();
+  const address2 = document.getElementById('rg-addr2').value.trim();
+  const certFile = document.getElementById('rg-cert').files[0];
+  const password = document.getElementById('rg-pw').value;
+  const password2 = document.getElementById('rg-pw2').value;
+  if (!host_name) { setMsg('rg-msg','e','담당자명을 입력해 주세요.'); return; }
+  if (!host_email||!EM_RE.test(host_email)) { setMsg('rg-msg','e','올바른 이메일 주소를 입력해 주세요.'); return; }
+  if (!emailVerified) { setMsg('rg-msg','e','이메일 인증을 완료해 주세요.'); return; }
+  if (!organization_name) { setMsg('rg-msg','e','소속기관명을 입력해 주세요.'); return; }
+  if (biz_no.length!==10) { setMsg('rg-msg','e','사업자등록번호 10자리를 입력해 주세요.'); return; }
+  if (!mobile_phone||!/^01[016789]\d{7,8}$/.test(mobile_phone.replace(/-/g,''))) {
+    setMsg('rg-msg','e','올바른 모바일폰 번호를 입력해 주세요.'); return;
+  }
+  if (!address1) { setMsg('rg-msg','e','주소를 검색하여 선택해 주세요.'); return; }
+  if (!certFile) { setMsg('rg-msg','e','사업자등록증 파일을 업로드해 주세요.'); return; }
+  if (!PW_RE.test(password)) { setMsg('rg-msg','e','비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.'); return; }
+  if (password!==password2) { setMsg('rg-msg','e','비밀번호가 일치하지 않습니다.'); return; }
+  const fd = new FormData();
+  fd.append('host_name',host_name); fd.append('host_email',host_email);
+  fd.append('organization_name',organization_name); fd.append('biz_no',biz_no);
+  fd.append('mobile_phone',mobile_phone); fd.append('phone',phone);
+  fd.append('address_zip',address_zip); fd.append('address1',address1); fd.append('address2',address2);
+  fd.append('password',password); fd.append('biz_cert',certFile);
+  const r = await fetch('/api/host/register',{method:'POST',body:fd});
+  const d = await r.json();
+  if (!r.ok) { setMsg('rg-msg','e',d.error||'가입 신청에 실패했습니다.'); return; }
+  setMsg('rg-msg','s',d.message||'가입 신청이 완료되었습니다. 관리자 승인 후 로그인하세요.');
+  ['rg-name','rg-email','rg-org','rg-biz','rg-mobile','rg-phone','rg-zip','rg-addr1','rg-addr2','rg-pw','rg-pw2'].forEach(id=>{
+    document.getElementById(id).value='';
+    document.getElementById(id).className=document.getElementById(id).className.replace(/ ?(inv|ok)/g,'');
+  });
+  document.getElementById('rg-cert').value=''; document.getElementById('cert-drop').classList.remove('has-file');
+  document.getElementById('cert-lbl').textContent='클릭하거나 파일을 끌어다 놓으세요';
+  emailVerified=false; clearInterval(verifyTimerInterval);
+  document.getElementById('verify-wrap').style.display='none';
+  document.getElementById('btn-send-verify').disabled=true;
+}
+
+// ── 비밀번호 분실 ──
+async function doForgot() {
+  clrMsg('fo-msg');
+  const host_email = document.getElementById('fo-email').value.trim();
+  if (!host_email||!EM_RE.test(host_email)) { setMsg('fo-msg','e','올바른 이메일 주소를 입력해 주세요.'); return; }
+  const r = await fetch('/api/host/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host_email})});
+  const d = await r.json();
+  if (!r.ok) { setMsg('fo-msg','e',d.error||'요청에 실패했습니다.'); return; }
+  setMsg('fo-msg','s',d.message);
+}
+
+// ── 로그아웃 ──
+async function doLogout() {
+  const ok = await uiConfirm('정말, 로그아웃하시겠습니까?', { title: '로그아웃', okText: '로그아웃', danger: true });
+  if (!ok) return;
+  stopSessionWatch();
+  await fetch('/api/host/logout',{method:'POST'});
+  show('sec-login'); document.getElementById('li-email').value=''; document.getElementById('li-pw').value=''; clrMsg('li-msg');
+}
+
+// ── 세션 유휴 감시 (4분, 잔여 1분 경고 → 연장/로그아웃 선택, 무응답 시 자동 로그아웃) ──
+let sessionPollTimer = null, sessionCountdownTimer = null, sessionWarnShown = false;
+function startSessionWatch() {
+  stopSessionWatch();
+  sessionPollTimer = setInterval(checkSession, 10000);
+}
+function stopSessionWatch() {
+  if (sessionPollTimer) { clearInterval(sessionPollTimer); sessionPollTimer = null; }
+  hideSessionWarn();
+}
+async function checkSession() {
+  let r;
+  try { r = await fetch('/api/session-info'); } catch (e) { return; }
+  if (r.status === 401 || r.status === 440) { stopSessionWatch(); show('sec-login'); return; }
+  let d = null; try { d = await r.json(); } catch (e) {}
+  if (!d || !d.ok) return;
+  if (d.expiringSoon && !sessionWarnShown) showSessionWarn(d.remainingMs);
+  else if (!d.expiringSoon && sessionWarnShown) hideSessionWarn(); // 활동으로 자동 연장됨
+}
+function showSessionWarn(remainingMs) {
+  sessionWarnShown = true;
+  let sec = Math.max(1, Math.ceil((remainingMs || 60000) / 1000));
+  const upd = () => { document.getElementById('session-countdown').textContent = sec + '초'; };
+  upd();
+  document.getElementById('session-modal').classList.add('open');
+  sessionCountdownTimer = setInterval(() => {
+    sec--;
+    if (sec <= 0) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; sessionLogout(); return; }
+    upd();
+  }, 1000);
+}
+function hideSessionWarn() {
+  sessionWarnShown = false;
+  if (sessionCountdownTimer) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; }
+  document.getElementById('session-modal').classList.remove('open');
+}
+async function sessionExtend() {
+  let r;
+  try { r = await fetch('/api/session-extend', { method: 'POST' }); } catch (e) { return; }
+  if (r.ok) { hideSessionWarn(); }
+  else { stopSessionWatch(); show('sec-login'); }
+}
+async function sessionLogout() {
+  hideSessionWarn(); stopSessionWatch();
+  try { await fetch('/api/host/logout', { method: 'POST' }); } catch (e) {}
+  show('sec-login');
+}
+
+// ── 비밀번호 재설정 ──
+async function doReset() {
+  clrMsg('rs-msg');
+  const current_password = document.getElementById('rs-cur').value;
+  const new_password = document.getElementById('rs-new').value;
+  const new_password2 = document.getElementById('rs-new2').value;
+  if (!current_password) { setMsg('rs-msg','e','현재 비밀번호를 입력해 주세요.'); return; }
+  if (!PW_RE.test(new_password)) { setMsg('rs-msg','e','새 비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.'); return; }
+  if (new_password!==new_password2) { setMsg('rs-msg','e','새 비밀번호가 일치하지 않습니다.'); return; }
+  const r = await fetch('/api/host/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password,new_password})});
+  const d = await r.json();
+  if (!r.ok) { setMsg('rs-msg','e',d.error||'비밀번호 변경에 실패했습니다.'); return; }
+  document.getElementById('modal-reset').classList.remove('open');
+  ['rs-cur','rs-new','rs-new2'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ── 프로젝트 목록 ──
+const STATUS_LABEL = { quoted:'견적',deposit_wait:'입금대기',deposit_confirmed:'입금확인',
+  ready_to_start:'시작대기',started:'진행중',completed:'완료',cancelled:'취소',draft:'초안' };
+const STATUS_CLS = { quoted:'bq',deposit_wait:'bq',deposit_confirmed:'bd',
+  ready_to_start:'bd',started:'bs',completed:'bs',cancelled:'bc',draft:'bc' };
+
+// 정렬 가능한 컬럼 정의 (num: 숫자 정렬, 그 외 문자 정렬)
+const PROJ_COLS = [
+  { key:'project_serial', label:'일련번호' },
+  { key:'project_name',   label:'프로젝트명' },
+  { key:'from_date',      label:'기간' },
+  { key:'status',         label:'상태' },
+  { key:'gift_amount',    label:'Gift 단가', num:true },
+  { key:'gift_qty',       label:'Gift 수량', num:true },
+  { key:'budget_amount',  label:'예산', num:true },
+  { key:'issued_gifts',   label:'Gift 발급수량', num:true },
+  { key:'used_gifts',     label:'Gift 사용 개수', num:true },
+  { key:'grant_gifts',    label:'Gift 증정 개수', num:true },
+  { key:'used_gift_amount', label:'Gift 사용액', num:true },
+  { key:'grant_gift_amount',  label:'Gift 증정액', num:true },
+  { key:'gift_spent',     label:'Gift 전체소진금액', num:true },
+  { key:'budget_consumption_rate', label:'소진율', num:true },
+  { key:'active_locations', label:'목적지', num:true },
+  { key:'visitor_count',  label:'방문객수', num:true },
+];
+const PROJ_NUM_KEYS = new Set(PROJ_COLS.filter(c => c.num).map(c => c.key));
+let projData = [];
+let projSort = { key: 'created_at', dir: 'desc' }; // 기본: 최신 등록순
+let projPage = 1;                                   // 현재 페이지(클라이언트 페이징)
+
+async function loadProjects(page) {
+  const name = document.getElementById('pf-name').value;
+  const status = document.getElementById('pf-status').value;
+  // 컬럼 정렬은 클라이언트에서 처리하므로 충분히 받아온다
+  const qs = new URLSearchParams({ project_name:name, status, page:1, size:100 });
+  const r = await fetch('/api/host/projects?'+qs);
+  const d = await r.json();
+  if (!r.ok) return;
+  projData = d.data || [];
+  projPage = 1;                 // 새 조회 → 첫 페이지
+  renderProjectsTable();
+}
+
+// 조회조건에 해당하는 모든 프로젝트를 엑셀로 다운로드(서버에서 동일 필터 적용, 페이지 무관 전체)
+async function downloadProjectsExcel() {
+  const btn = document.getElementById('proj-excel');
+  if (!btn || btn.disabled) return;
+  const qs = new URLSearchParams({
+    project_name: document.getElementById('pf-name').value.trim(),
+    status: document.getElementById('pf-status').value,
+  });
+  try {
+    const r = await fetch('/api/host/projects/export?' + qs.toString());
+    if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+    const blob = await r.blob();
+    let fname = 'projects.xlsx';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+}
+
+function sortProjects(key) {
+  if (projSort.key === key) projSort.dir = projSort.dir === 'asc' ? 'desc' : 'asc';
+  else projSort = { key, dir: PROJ_NUM_KEYS.has(key) ? 'desc' : 'asc' };
+  projPage = 1;
+  renderProjectsTable();
+}
+function changeProjSize() { projPage = 1; renderProjectsTable(); }
+function gotoProjPage(p) { projPage = p; renderProjectsTable(); }
+function renderProjPager(totalPages, total) {
+  const el = document.getElementById('proj-pager');
+  if (!el) return;
+  if (!total) { el.innerHTML = ''; return; }
+  let h = `<span style="color:#64748b;margin-right:6px;">총 ${total}건 · ${projPage}/${totalPages}</span>`;
+  h += `<button class="btn btn-o btn-sm" ${projPage <= 1 ? 'disabled' : ''} onclick="gotoProjPage(${projPage - 1})">‹</button>`;
+  let s = Math.max(1, projPage - 2), e = Math.min(totalPages, s + 4); s = Math.max(1, e - 4);
+  for (let i = s; i <= e; i++) h += `<button class="btn ${i === projPage ? 'btn-p' : 'btn-o'} btn-sm" onclick="gotoProjPage(${i})">${i}</button>`;
+  h += `<button class="btn btn-o btn-sm" ${projPage >= totalPages ? 'disabled' : ''} onclick="gotoProjPage(${projPage + 1})">›</button>`;
+  el.innerHTML = h;
+}
+
+function renderProjectsTable() {
+  const excelBtn = document.getElementById('proj-excel');
+  if (excelBtn) excelBtn.disabled = !projData.length;   // 조회결과 있을 때만 활성화
+  const k = projSort.key;
+  const list = projData.slice().sort((a, b) => {
+    let av, bv;
+    if (PROJ_NUM_KEYS.has(k)) { av = Number(a[k] || 0); bv = Number(b[k] || 0); }
+    else { av = String(a[k] ?? ''); bv = String(b[k] ?? ''); }
+    if (av < bv) return projSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return projSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const arr = key => projSort.key === key ? (projSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+  document.getElementById('proj-thead').innerHTML = '<tr>' +
+    PROJ_COLS.map(c => `<th class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
+    '<th>지원현황</th><th>목적지관리</th><th>미리보기</th></tr>';
+
+  // 페이징: 선택한 표시 개수 기준으로 현재 페이지만 렌더
+  const pageSize = Number((document.getElementById('pf-size') || {}).value) || 10;
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  if (projPage > totalPages) projPage = totalPages;
+  if (projPage < 1) projPage = 1;
+  const pageList = list.slice((projPage - 1) * pageSize, (projPage - 1) * pageSize + pageSize);
+
+  const fmt = (v) => v ? Number(v).toLocaleString('ko-KR') + '원' : '-';
+  document.getElementById('proj-tbody').innerHTML = pageList.map(p => {
+    const from = p.from_date ? p.from_date.slice(0,10) : '-';
+    const to   = p.to_date ? p.to_date.slice(0,10) : '-';
+    const cls  = STATUS_CLS[p.status] || '';
+    return `<tr>
+      <td><code style="font-size:12px;">${p.project_serial}</code></td>
+      <td><b>${p.project_name}</b></td>
+      <td style="font-size:12px;">${from} ~ ${to}</td>
+      <td><span class="badge ${cls}">${STATUS_LABEL[p.status]||p.status}</span></td>
+      <td style="text-align:right;">${p.gift_amount ? Number(p.gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
+      <td style="text-align:center;">${p.gift_qty ?? 0}개</td>
+      <td style="text-align:right;">${fmt(p.budget_amount)}</td>
+      <td style="text-align:center;">${p.issued_gifts ?? 0}개</td>
+      <td style="text-align:center;">${p.used_gifts ?? 0}개</td>
+      <td style="text-align:center;">${p.grant_gifts ?? 0}개</td>
+      <td style="text-align:right;">${p.used_gift_amount ? Number(p.used_gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
+      <td style="text-align:right;">${p.grant_gift_amount ? Number(p.grant_gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
+      <td style="text-align:right;">${fmt(p.gift_spent)}</td>
+      <td style="text-align:right;">${(Number(p.budget_consumption_rate)||0).toFixed(2)}%</td>
+      <td style="text-align:center;">${p.active_locations??0}개</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitors(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">${p.visitor_count??0}명</button></td>
+      <td style="text-align:center;"><button class="btn ${Number(p.applied_count)>Number(p.approved_count)?'btn-p':'btn-o'} btn-sm" onclick="openApplications(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">지원 ${p.applied_count??0} · 승인 ${p.approved_count??0}</button></td>
+      <td><button class="btn btn-o btn-sm" onclick="openLoc(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">목적지관리</button></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  renderProjPager(totalPages, list.length);
+}
+
+// ── 위치 관리 ──
+let currentProjectId = null;
+let searchTimer = null;
+let sugDocs = [];
+
+async function openLoc(pid, pname, pserial) {
+  currentProjectId = pid;
+  document.getElementById('loc-proj-name').textContent = pname;
+  document.getElementById('loc-proj-serial').textContent = '일련번호: ' + pserial;
+  document.getElementById('loc-panel').style.display = 'block';
+  document.getElementById('loc-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  resetLocForm();
+  await loadLocations();
+}
+
+function closeLoc() {
+  document.getElementById('loc-panel').style.display = 'none';
+  currentProjectId = null;
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+// ── 방문자 현황 팝업 ──
+function fmtPhone(p) {
+  const s = String(p || '').replace(/[^0-9]/g, '');
+  if (s.length === 11) return `${s.slice(0,3)}-${s.slice(3,7)}-${s.slice(7)}`;
+  if (s.length === 10) return `${s.slice(0,3)}-${s.slice(3,6)}-${s.slice(6)}`;
+  return s || '-';
+}
+let visData = { list: [], total: 0 };
+let visSort = { key: 'visited_count', dir: 'desc' };
+let visFilter = { phone: '', mission: '', issued: '', used: '', type: '' };
+let visProjectId = null;
+
+function fmtDT(s) {
+  if (!s) return '-';
+  const d = new Date(s); if (isNaN(d)) return '-';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function giftTypeLabel(t) { return t === 'normal' ? '지급' : t === 'grant' ? '증정' : '-'; }
+
+async function openVisitors(pid, pname) {
+  visProjectId = pid;
+  const ov = document.getElementById('modal-visitors');
+  document.getElementById('vis-proj').textContent = pname || '';
+  document.getElementById('vis-summary').textContent = '';
+  document.getElementById('vis-filters').style.display = 'none';
+  document.getElementById('vis-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+  ov.classList.add('open');
+  visSort = { key: 'visited_count', dir: 'desc' };
+  visFilter = { phone: '', mission: '', issued: '', used: '', type: '' };
+  const r = await fetch(`/api/host/projects/${pid}/visitors`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { document.getElementById('vis-body').innerHTML = '<div style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</div>'; return; }
+  visData = { list: d.data || [], total: Number(d.totalLocations || 0) };
+  ['vf-phone','vf-mission','vf-issued','vf-used','vf-type'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('vis-filters').style.display = visData.list.length ? 'flex' : 'none';
+  renderVisitors();
+}
+
+function resetVisFilter() {
+  visFilter = { phone: '', mission: '', issued: '', used: '', type: '' };
+  ['vf-phone','vf-mission','vf-issued','vf-used','vf-type'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderVisitors();
+}
+
+function sortVisitors(key) {
+  if (visSort.key === key) visSort.dir = visSort.dir === 'asc' ? 'desc' : 'asc';
+  else visSort = { key, dir: (key === 'phone' || key === 'type') ? 'asc' : 'desc' };
+  renderVisitors();
+}
+
+function visMatch(v) {
+  if (visFilter.phone) { const q = visFilter.phone.replace(/[^0-9]/g, ''); if (q && !String(v.phone || '').includes(q)) return false; }
+  if (visFilter.mission) { if (!!v.completed !== (visFilter.mission === 'done')) return false; }
+  if (visFilter.issued)  { if (!!v.gift_issued !== (visFilter.issued === 'y')) return false; }
+  if (visFilter.used)    { if (!!v.gift_used !== (visFilter.used === 'y')) return false; }
+  if (visFilter.type)    { if (visFilter.type === 'none') { if (v.gift_type) return false; } else if (v.gift_type !== visFilter.type) return false; }
+  return true;
+}
+
+function visVal(v, key) {
+  switch (key) {
+    case 'phone': return String(v.phone || '');
+    case 'visited_count': return Number(v.visited_count || 0);
+    case 'mission': return v.completed ? 1 : 0;
+    case 'issued': return v.gift_issued ? 1 : 0;
+    case 'used': return v.gift_used ? 1 : 0;
+    case 'type': return v.gift_type || '';
+    case 'giftDate': return v.gift_used_at ? new Date(v.gift_used_at).getTime() : 0;
+    case 'lastVisit': return v.last_visited_at ? new Date(v.last_visited_at).getTime() : 0;
+    default: return '';
+  }
+}
+
+function renderVisitors() {
+  const total = visData.total;
+  const body = document.getElementById('vis-body');
+  if (!visData.list.length) {
+    document.getElementById('vis-summary').textContent = `방문자 0명 · 전체 목적지 ${total}곳`;
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">방문한 방문자가 없습니다.</div>';
+    return;
+  }
+  const doneCnt = visData.list.filter(v => v.completed).length;
+  const rows = visData.list.filter(visMatch).sort((a, b) => {
+    const av = visVal(a, visSort.key), bv = visVal(b, visSort.key);
+    if (av < bv) return visSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return visSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  document.getElementById('vis-summary').textContent =
+    `방문자 ${visData.list.length}명 · 미션완료 ${doneCnt}명 · 전체 목적지 ${total}곳 · 표시 ${rows.length}명`;
+
+  const arr = key => visSort.key === key ? (visSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+  const th = (key, label, center) => `<th class="vis-sort"${center ? ' style="text-align:center;"' : ''} onclick="sortVisitors('${key}')">${label}${arr(key)}</th>`;
+  body.innerHTML = `
+    <table class="vis-table">
+      <thead><tr>
+        ${th('phone','휴대폰번호',false)}
+        ${th('visited_count','방문',true)}
+        ${th('mission','미션',true)}
+        ${th('issued','Gift발급여부',true)}
+        ${th('used','Gift사용여부',true)}
+        ${th('type','Gift사용타입',true)}
+        ${th('giftDate','Gift사용일자',false)}
+        ${th('lastVisit','최근 방문',false)}
+      </tr></thead>
+      <tbody>${rows.length ? rows.map(v => `
+        <tr>
+          <td><code style="font-size:12px;">${fmtPhone(v.phone)}</code></td>
+          <td style="text-align:center;">${v.visited_count} / ${total}</td>
+          <td style="text-align:center;">${v.completed ? '<span class="badge bs">완료</span>' : '<span class="badge bq">진행중</span>'}</td>
+          <td style="text-align:center;">${v.gift_issued ? '<span class="badge bd">발급</span>' : '<span class="badge bc">미발급</span>'}</td>
+          <td style="text-align:center;">${v.gift_used ? '<span class="badge bs">사용</span>' : '<span class="badge bc">미사용</span>'}</td>
+          <td style="text-align:center;">${giftTypeLabel(v.gift_type)}</td>
+          <td style="font-size:12px;color:#64748b;">${fmtDT(v.gift_used_at)}</td>
+          <td style="font-size:12px;color:#64748b;">${fmtDT(v.last_visited_at)}</td>
+        </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">조건에 맞는 방문자가 없습니다.</td></tr>'}</tbody>
+    </table>`;
+}
+function closeVisitors() { document.getElementById('modal-visitors').classList.remove('open'); }
+
+// 방문자 현황 팝업: 현재 필터 조건 그대로 엑셀 다운로드
+async function downloadVisitorsExcel() {
+  if (!visProjectId) return;
+  if (!visData.list.length) { await uiAlert('다운로드할 방문자가 없습니다.'); return; }
+  const qs = new URLSearchParams({
+    phone: visFilter.phone || '', mission: visFilter.mission || '',
+    issued: visFilter.issued || '', used: visFilter.used || '', type: visFilter.type || '',
+  });
+  try {
+    const r = await fetch(`/api/host/projects/${visProjectId}/visitors/export?` + qs.toString());
+    if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+    const blob = await r.blob();
+    let fname = 'visitors.xlsx';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+}
+
+// ── 정산 (가맹점 정산과 동일 구성: 프로젝트별 Gift 사용/증정 집계 + 사용자현황) ──
+let settleData = [];
+function stWon(v) { return v ? Number(v).toLocaleString('ko-KR') + '원' : '-'; }
+async function loadSettlement() {
+  const tbody = document.getElementById('settle-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  const qs = new URLSearchParams({
+    project_name: document.getElementById('sf-name').value.trim(),
+    status: document.getElementById('sf-status').value,
+  });
+  let d;
+  try {
+    const r = await fetch('/api/host/settlement?' + qs.toString());
+    if (!r.ok) throw 0;
+    d = await r.json();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  settleData = d.data || [];
+  renderSettlement();
+}
+function renderSettlement() {
+  const tbody = document.getElementById('settle-tbody');
+  if (!settleData.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = settleData.map(p => {
+    const cls = STATUS_CLS[p.status] || 'bq';
+    return `<tr>
+      <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
+      <td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>
+      <td style="text-align:right;">${stWon(p.gift_amount)}</td>
+      <td style="text-align:center;">${Number(p.used_count || 0)}개</td>
+      <td style="text-align:center;">${Number(p.grant_count || 0)}개</td>
+      <td style="text-align:right;">${stWon(p.used_amount)}</td>
+      <td style="text-align:right;">${stWon(p.grant_amount)}</td>
+      <td style="text-align:right;"><b>${stWon(Number(p.used_amount || 0) + Number(p.grant_amount || 0))}</b></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
+    </tr>`;
+  }).join('');
+}
+let usageData = [];
+const USAGE_COLS = [
+  { key: 'phone',           label: '휴대폰번호', cls: '' },
+  { key: 'redemption_type', label: '구분',       cls: 'center' },
+  { key: 'amount',          label: '금액',       cls: 'right', num: true },
+  { key: 'redeemed_at',     label: '일시',       cls: '' },
+];
+let usageSort = { key: 'redeemed_at', dir: 'desc' };
+
+function usageVal(x, key) {
+  if (key === 'amount') return Number(x.amount || 0);
+  if (key === 'redeemed_at') return x.redeemed_at ? new Date(x.redeemed_at).getTime() : 0;
+  if (key === 'redemption_type') return x.redemption_type === 'grant' ? 1 : 0; // 사용(0) < 증정(1)
+  return String(x.phone || '').replace(/[^0-9]/g, '');
+}
+function sortUsage(key) {
+  const col = USAGE_COLS.find(c => c.key === key);
+  if (usageSort.key === key) usageSort.dir = usageSort.dir === 'asc' ? 'desc' : 'asc';
+  else usageSort = { key, dir: (col && (col.num || key === 'redeemed_at')) ? 'desc' : 'asc' };
+  renderUsage();
+}
+
+async function openUsage(pid) {
+  const proj = settleData.find(x => Number(x.id) === Number(pid));
+  const pname = proj ? `${proj.project_name} (${proj.project_serial})` : 'Gift 사용자 현황';
+  document.getElementById('usage-sub').textContent = pname;
+  document.getElementById('usage-summary').innerHTML = '';
+  document.getElementById('usage-thead').innerHTML = '';
+  document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</td></tr>';
+  document.getElementById('uf-phone').value = '';
+  document.getElementById('uf-type').value = '';
+  document.getElementById('uf-count').textContent = '';
+  usageSort = { key: 'redeemed_at', dir: 'desc' };
+  document.getElementById('modal-usage').classList.add('open');
+
+  let d;
+  try {
+    const r = await fetch(`/api/host/settlement/${pid}/usage`);
+    if (!r.ok) throw 0;
+    d = await r.json();
+  } catch (e) {
+    document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  usageData = d.data || [];
+
+  // 구분별 건수 + 금액 요약
+  const usedList = usageData.filter(x => x.redemption_type === 'normal');
+  const grantList = usageData.filter(x => x.redemption_type === 'grant');
+  const usedAmt = usedList.reduce((s, x) => s + Number(x.amount || 0), 0);
+  const grantAmt = grantList.reduce((s, x) => s + Number(x.amount || 0), 0);
+  document.getElementById('usage-summary').innerHTML =
+    `<span class="cnt cnt-on">Gift사용 ${usedList.length}건 · ${stWon(usedAmt)}</span>` +
+    `<span class="cnt cnt-qr">Gift증정 ${grantList.length}건 · ${stWon(grantAmt)}</span>`;
+
+  renderUsage();
+}
+
+function renderUsage() {
+  const phoneQ = (document.getElementById('uf-phone').value || '').replace(/[^0-9]/g, '');
+  const typeQ = document.getElementById('uf-type').value;
+  let list = usageData.slice();
+  if (typeQ) list = list.filter(x => x.redemption_type === typeQ);
+  if (phoneQ) list = list.filter(x => String(x.phone || '').replace(/[^0-9]/g, '').includes(phoneQ));
+
+  const k = usageSort.key;
+  list.sort((a, b) => {
+    const av = usageVal(a, k), bv = usageVal(b, k);
+    if (av < bv) return usageSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return usageSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const arrow = key => usageSort.key === key ? (usageSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+  document.getElementById('usage-thead').innerHTML = USAGE_COLS.map(c => {
+    const align = c.cls === 'right' ? 'text-align:right;' : c.cls === 'center' ? 'text-align:center;' : '';
+    return `<th class="usort" style="${align}" onclick="sortUsage('${c.key}')">${c.label}${arrow(c.key)}</th>`;
+  }).join('');
+
+  const body = document.getElementById('usage-body');
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">표시할 내역이 없습니다.</td></tr>';
+  } else {
+    body.innerHTML = list.map(x => `
+      <tr>
+        <td><code style="font-size:12px;">${fmtPhone(x.phone)}</code></td>
+        <td style="text-align:center;"><span class="badge ${x.redemption_type === 'grant' ? 'bd' : 'bs'}">${x.redemption_type === 'grant' ? 'Gift증정' : 'Gift사용'}</span></td>
+        <td style="text-align:right;">${stWon(x.amount)}</td>
+        <td style="font-size:12px;color:#64748b;">${fmtDT(x.redeemed_at)}</td>
+      </tr>`).join('');
+  }
+  document.getElementById('uf-count').textContent = `${list.length}건 표시`;
+}
+function closeUsage() { document.getElementById('modal-usage').classList.remove('open'); }
+
+// ── 기본 정보(설정) ──
+async function openProfile() {
+  clrMsg('pf-host-msg');
+  document.getElementById('modal-profile').classList.add('open');
+  let d;
+  try { const r = await fetch('/api/host/profile'); if (!r.ok) throw 0; d = await r.json(); }
+  catch (e) { setMsg('pf-host-msg', 'e', '정보를 불러오지 못했습니다.'); return; }
+  const p = d.profile || {};
+  document.getElementById('pf-host-name').value = p.host_name || '';
+  document.getElementById('pf-host-email').value = p.host_email || '';
+  document.getElementById('pf-host-org').value = p.organization_name || '';
+  document.getElementById('pf-host-biz').value = p.biz_no || '';
+  document.getElementById('pf-host-mobile').value = p.mobile_phone || '';
+  document.getElementById('pf-host-phone').value = p.phone || '';
+  document.getElementById('pf-host-zip').value = p.address_zip || '';
+  document.getElementById('pf-host-addr1').value = p.address1 || '';
+  document.getElementById('pf-host-addr2').value = p.address2 || '';
+  // 비밀번호 입력 초기화
+  document.getElementById('pf-host-newpw').value = '';
+  document.getElementById('pf-host-newpw2').value = '';
+  document.getElementById('pf-host-curpw').value = '';
+}
+function closeProfile() { document.getElementById('modal-profile').classList.remove('open'); }
+async function saveProfile() {
+  const v = id => document.getElementById(id).value.trim();
+  if (!v('pf-host-name')) { setMsg('pf-host-msg', 'e', '담당자명을 입력해 주세요.'); return; }
+  if (!v('pf-host-org')) { setMsg('pf-host-msg', 'e', '소속기관명을 입력해 주세요.'); return; }
+  const newpw = document.getElementById('pf-host-newpw').value;
+  const newpw2 = document.getElementById('pf-host-newpw2').value;
+  const curpw = document.getElementById('pf-host-curpw').value;
+  if (newpw || newpw2) {
+    if (!PW_RE.test(newpw)) { setMsg('pf-host-msg', 'e', '새 비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.'); return; }
+    if (newpw !== newpw2) { setMsg('pf-host-msg', 'e', '새 비밀번호가 일치하지 않습니다.'); return; }
+  }
+  if (!curpw) { setMsg('pf-host-msg', 'e', '본인 확인을 위해 현재 비밀번호를 입력해 주세요.'); return; }
+  const ok = await uiConfirm('저장하시겠습니까?', { title: '기본 정보 저장', okText: '저장' });
+  if (!ok) return;
+  const btn = document.getElementById('pf-host-save'); btn.disabled = true;
+  let r, d;
+  try {
+    r = await fetch('/api/host/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host_name: v('pf-host-name'), organization_name: v('pf-host-org'),
+        mobile_phone: v('pf-host-mobile'), phone: v('pf-host-phone'),
+        address_zip: v('pf-host-zip'), address1: v('pf-host-addr1'), address2: v('pf-host-addr2'),
+        current_password: curpw, new_password: newpw || undefined,
+      }),
+    });
+    d = await r.json().catch(() => ({}));
+  } catch (e) { btn.disabled = false; setMsg('pf-host-msg', 'e', '저장에 실패했습니다.'); return; }
+  btn.disabled = false;
+  if (!r.ok) { setMsg('pf-host-msg', 'e', d.error || '저장에 실패했습니다.'); return; }
+  document.getElementById('d-name').textContent = v('pf-host-name');
+  document.getElementById('topbar-brand').textContent = '주최측' + (v('pf-host-org') ? ' ' + v('pf-host-org') : '');
+  closeProfile();
+  await uiAlert(d.message || '기본 정보가 저장되었습니다.');
+}
+
+// ── 랜딩페이지 미리보기 (방문자가 보는 실제 랜딩 페이지) ──
+function openPreview(serial) {
+  const url = `/v/${serial}`;
+  document.getElementById('preview-frame').src = url;
+  document.getElementById('preview-open').href = url;
+  document.getElementById('modal-preview').classList.add('open');
+}
+function closePreview() {
+  document.getElementById('modal-preview').classList.remove('open');
+  document.getElementById('preview-frame').src = 'about:blank';
+}
+
+// ── 가맹점 지원현황 (지원한 가맹점 승인/거절) ──
+let currentAppProjectId = null;
+let appsData = [];
+const APP_STATUS = { pending: ['대기', 'bq'], approved: ['승인', 'bs'], rejected: ['거절', 'bc'] };
+function fmtBizNo(s) {
+  const d = String(s || '').replace(/[^0-9]/g, '');
+  return d.length === 10 ? `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}` : (s || '-');
+}
+
+async function openApplications(pid, pname) {
+  currentAppProjectId = pid;
+  document.getElementById('apps-proj').textContent = pname || '';
+  document.getElementById('apps-summary').textContent = '';
+  document.getElementById('apps-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+  document.getElementById('modal-apps').classList.add('open');
+  await loadApplications();
+}
+
+async function loadApplications() {
+  const r = await fetch(`/api/host/projects/${currentAppProjectId}/applications`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { document.getElementById('apps-body').innerHTML = '<div style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</div>'; return; }
+  appsData = d.data || [];
+  renderApplications();
+}
+
+function renderApplications() {
+  const body = document.getElementById('apps-body');
+  const pend = appsData.filter(a => a.status === 'pending').length;
+  const appr = appsData.filter(a => a.status === 'approved').length;
+  document.getElementById('apps-summary').textContent =
+    `지원 ${appsData.length}곳 · 대기 ${pend}곳 · 승인 ${appr}곳`;
+  if (!appsData.length) {
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">지원한 가맹점이 없습니다.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table class="vis-table">
+      <thead><tr>
+        <th>가맹점명</th><th>사업자등록번호</th><th>담당자</th>
+        <th>연락처</th><th>이메일</th><th>지원일시</th>
+        <th style="text-align:center;">상태</th><th style="text-align:center;">승인</th>
+      </tr></thead>
+      <tbody>${appsData.map(a => {
+        const st = APP_STATUS[a.status] || [a.status, 'bc'];
+        const contact = [a.contact_mobile, a.contact_phone].filter(Boolean).map(fmtPhone).join(' / ') || '-';
+        const mn = String(a.merchant_name || '').replace(/'/g, "\\'");
+        return `<tr>
+          <td><b>${esc(a.merchant_name)}</b></td>
+          <td><code style="font-size:12px;">${fmtBizNo(a.biz_no)}</code></td>
+          <td>${esc(a.contact_name) || '-'}</td>
+          <td style="font-size:12px;">${esc(contact)}</td>
+          <td style="font-size:12px;">${esc(a.email)}</td>
+          <td style="font-size:12px;color:#64748b;">${fmtDT(a.applied_at)}</td>
+          <td style="text-align:center;"><span class="badge ${st[1]}">${st[0]}</span></td>
+          <td style="text-align:center;white-space:nowrap;">
+            <button class="btn btn-p btn-sm" ${a.status==='approved'?'disabled style="opacity:.4;"':''} onclick="decideApplication(${a.id},'approved','${mn}')">승인</button>
+            <button class="btn btn-r btn-sm" ${a.status==='rejected'?'disabled style="opacity:.4;"':''} onclick="decideApplication(${a.id},'rejected','${mn}')">거절</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+async function decideApplication(appId, decision, mname) {
+  const approve = decision === 'approved';
+  const ok = await uiConfirm(
+    approve
+      ? `'${mname}' 가맹점의 참여를 승인하시겠습니까?\n승인 시 가맹점 담당자에게 Gift 승인 비밀번호가 메일로 전송됩니다.`
+      : `'${mname}' 가맹점의 참여를 거절하시겠습니까?\n결정 사항이 가맹점 담당자에게 메일로 전송됩니다.`,
+    { title: approve ? '참여 승인' : '참여 거절', okText: approve ? '승인' : '거절', danger: !approve },
+  );
+  if (!ok) return;
+  const r = await fetch(`/api/host/projects/${currentAppProjectId}/applications/${appId}/decision`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '처리하지 못했습니다.'); return; }
+  await uiAlert(approve ? '승인되었습니다. 가맹점에 안내 메일이 전송되었습니다.' : '거절되었습니다. 가맹점에 안내 메일이 전송되었습니다.');
+  await loadApplications();
+  loadProjects(1); // 메인 그리드 지원/승인 카운트 갱신
+}
+
+function closeApplications() {
+  document.getElementById('modal-apps').classList.remove('open');
+  currentAppProjectId = null;
+}
+
+// ── 공통 확인/알림 모달 (네이티브 confirm/alert 대체) ──
+function _uiModal(message, opts) {
+  return new Promise(resolve => {
+    const ov = document.getElementById('modal-confirm');
+    const ok = document.getElementById('confirm-ok');
+    const cancel = document.getElementById('confirm-cancel');
+    document.getElementById('confirm-title').textContent = opts.title || '알림';
+    document.getElementById('confirm-msg').textContent = message;
+    ok.textContent = opts.okText || '확인';
+    ok.className = 'btn btn-sm ' + (opts.danger ? 'btn-r' : 'btn-p');
+    ok.style.flex = '1';
+    cancel.textContent = opts.cancelText || '취소';
+    cancel.style.display = opts.alert ? 'none' : '';
+    function close(val) { ov.classList.remove('open'); ok.onclick = cancel.onclick = ov.onclick = null; resolve(val); }
+    ok.onclick = () => close(true);
+    cancel.onclick = () => close(false);
+    ov.onclick = e => { if (e.target === ov) close(false); };
+    ov.classList.add('open');
+    ok.focus();
+  });
+}
+function uiConfirm(message, opts) { return _uiModal(message, opts || {}); }
+function uiAlert(message, opts) { return _uiModal(message, Object.assign({ title: '알림', alert: true }, opts || {})); }
+
+async function loadLocations() {
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations`);
+  const d = await r.json();
+  if (!r.ok) return;
+  const all = d.data || [];
+  const active = all.filter(l => !l.disabled);
+  const off = all.filter(l => l.disabled);
+
+  // 요약 + 제출
+  document.getElementById('loc-summary').innerHTML = `
+    <div class="loc-counts">
+      <span class="cnt cnt-on">활성 ${active.length}</span>
+      <span class="cnt cnt-off">비활성 ${off.length}</span>
+      ${d.qr_ready ? '<span class="cnt cnt-qr">QR 생성됨</span>' : ''}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${d.qr_ready ? '<button class="btn btn-o btn-sm" onclick="downloadQrZip()">⬇ QR코드 다운로드</button>' : ''}
+      <button class="btn ${d.locations_submitted ? 'btn-o' : 'btn-p'} btn-sm" onclick="submitLocations()">
+        ${d.locations_submitted ? '✓ 제출됨 (재제출)' : '제출'}
+      </button>
+    </div>`;
+
+  const el = document.getElementById('loc-list');
+  if (!all.length) {
+    el.innerHTML = '<div class="loc-empty">등록된 목적지가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = all.map(l => renderLocRow(l, d.started)).join('');
+}
+
+function renderLocRow(l, started) {
+  const isExhibit = l.dest_type === 'exhibit';
+  const off = !!l.disabled;
+  const hasCoord = !isExhibit && l.kakao_lat != null && l.kakao_lng != null;
+  const thumb = l.image_url
+    ? `<img class="loc-thumb" src="${l.image_url}" alt="">`
+    : `<div class="loc-thumb loc-thumb-ph">${isExhibit ? '🎨' : '📍'}</div>`;
+  const badge = `<span class="loc-tag ${isExhibit ? 'tag-exh' : 'tag-loc'}">${isExhibit ? '전시물' : '위치'}</span>`;
+  const coord = hasCoord
+    ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">위도 ${l.kakao_lat} · 경도 ${l.kakao_lng}</div>` : '';
+  const mapLink = hasCoord
+    ? `<a class="map-link" href="https://map.kakao.com/link/map/${encodeURIComponent(l.location_name)},${l.kakao_lat},${l.kakao_lng}" target="_blank" rel="noopener">🗺 지도</a>` : '';
+  const qr = l.qr_image_url
+    ? `<a class="loc-qr" href="${l.qr_image_url}" target="_blank" rel="noopener" title="QR 크게 보기"><img src="${l.qr_image_url}" alt="QR"></a>` : '';
+  const toggle = off
+    ? `<button class="btn btn-g btn-sm" onclick="enableLoc(${l.id})">활성화</button>`
+    : `<button class="btn btn-r btn-sm" onclick="disableLoc(${l.id})">비활성화</button>`;
+  return `<div class="loc-row${off ? ' loc-off' : ''}">
+    <div class="loc-seq">${off ? '–' : l.display_seq}</div>
+    ${thumb}
+    <div class="loc-info">
+      <div class="loc-name">${badge}${esc(l.location_name)}</div>
+      ${(!isExhibit && l.location_desc) ? `<div class="loc-desc">${esc(l.location_desc)}</div>` : ''}
+      ${coord}
+    </div>
+    ${qr}
+    ${mapLink}
+    ${toggle}
+  </div>`;
+}
+
+async function disableLoc(locId) {
+  const ok = await uiConfirm('이 목적지를 비활성화하시겠습니까?', { title: '목적지 비활성화', okText: '비활성화', danger: true });
+  if (!ok) return;
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations/${locId}/disable`,{method:'PUT'});
+  if (r.ok) { await loadLocations(); loadProjects(1); }
+}
+
+async function enableLoc(locId) {
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations/${locId}/enable`,{method:'PUT'});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '활성화에 실패했습니다.'); return; }
+  await loadLocations(); loadProjects(1);
+}
+
+async function submitLocations() {
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations/submit`,{method:'POST'});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '제출에 실패했습니다.'); return; }
+  await loadLocations();
+  await uiAlert('목적지가 제출되었습니다.', { title: '제출 완료' });
+}
+
+// 전체 QR코드를 zip으로 다운로드 (파일명: 프로젝트일련번호_목적지일련번호.png)
+async function downloadQrZip() {
+  try {
+    const r = await fetch(`/api/host/projects/${currentProjectId}/qr-zip`);
+    if (!r.ok) {
+      let msg = 'QR 코드를 다운로드하지 못했습니다.';
+      try { const d = await r.json(); if (d && d.error) msg = d.error; } catch (e) {}
+      await uiAlert(msg);
+      return;
+    }
+    const blob = await r.blob();
+    let fname = 'qr.zip';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    await uiAlert('QR 코드를 다운로드하지 못했습니다.');
+  }
+}
+
+// ── Kakao 장소 키워드 검색 (JS SDK) ──
+let kakaoSdkReady = false;
+
+async function loadKakaoSdk() {
+  if (kakaoSdkReady) return;
+  const r = await fetch('/api/host/kakao/js-key');
+  if (!r.ok) throw new Error('KAKAO_JS_KEY가 설정되지 않았습니다. .env에 KAKAO_JS_KEY를 추가해 주세요.');
+  const { key } = await r.json();
+  const sdkUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&libraries=services&autoload=false`;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = sdkUrl;
+    s.onload = () => kakao.maps.load(resolve);
+    s.onerror = async () => {
+      // 실제 원인(도메인 미등록/서비스 비활성 등)을 가능하면 표시
+      let detail = '';
+      try { const er = await fetch(sdkUrl); const j = await er.json(); detail = (j && j.message) || ''; } catch (_) {}
+      reject(new Error('카카오맵 SDK 로드 실패' +
+        (detail ? ` — ${detail}` : ' (Kakao Developers에서 카카오맵 서비스 활성화 및 사이트 도메인 등록을 확인하세요)')));
+    };
+    document.head.appendChild(s);
+  });
+  kakaoSdkReady = true;
+}
+
+function onLocSearch(input) {
+  clearTimeout(searchTimer);
+  const q = input.value.trim();
+  hideSug();
+  // 입력 중에는 검색창 값은 그대로 두고, 선택된 장소 정보만 초기화한다.
+  if (q.length < 2) { clearSelectedPlace(); return; }
+  searchTimer = setTimeout(() => fetchPlaces(q), 320);
+}
+
+async function fetchPlaces(q) {
+  try { await loadKakaoSdk(); } catch(e) { showSugError(e.message); return; }
+  const ps = new kakao.maps.services.Places();
+  ps.keywordSearch(q, (data, status) => {
+    if (status !== kakao.maps.services.Status.OK) { showSugError('검색 결과가 없습니다.'); return; }
+    sugDocs = data;
+    const box = document.getElementById('sug-box');
+    box.innerHTML = sugDocs.map((doc, i) =>
+      `<div class="sug-item" onclick="selectPlace(${i})">
+        <div class="sug-name">${doc.place_name}</div>
+        <div class="sug-addr">${doc.road_address_name||doc.address_name}</div>
+      </div>`
+    ).join('');
+    box.style.display = 'block';
+  });
+}
+
+function showSugError(msg) {
+  const box = document.getElementById('sug-box');
+  box.innerHTML = `<div class="sug-empty">${msg}</div>`;
+  box.style.display = 'block';
+}
+function hideSug() { document.getElementById('sug-box').style.display = 'none'; }
+
+function selectPlace(i) {
+  const doc = sugDocs[i];
+  hideSug();
+  document.getElementById('loc-search').value = doc.road_address_name || doc.address_name;
+
+  // 프리뷰
+  document.getElementById('prev-pname').textContent = doc.place_name;
+  document.getElementById('prev-paddr').textContent = doc.road_address_name || doc.address_name;
+  document.getElementById('prev-pcoord').textContent = `위도 ${doc.y} · 경도 ${doc.x}`;
+  const mapUrl = doc.place_url || `https://map.kakao.com/link/map/${encodeURIComponent(doc.place_name)},${doc.y},${doc.x}`;
+  document.getElementById('prev-link').href = mapUrl;
+  document.getElementById('place-prev').style.display = 'block';
+
+  // 필드
+  document.getElementById('loc-name').value = doc.place_name;
+  document.getElementById('loc-lat').value  = doc.y;
+  document.getElementById('loc-lng').value  = doc.x;
+  document.getElementById('loc-fields').style.display = 'block';
+  document.getElementById('loc-name').focus();
+  clrMsg('loc-msg');
+}
+
+// ── 목적지 유형 전환 ──
+let destType = 'location';
+function setDestType(t) {
+  destType = t;
+  document.querySelectorAll('#dest-type-seg .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.type === t));
+  document.getElementById('mode-location').style.display = t === 'location' ? 'block' : 'none';
+  document.getElementById('mode-exhibit').style.display  = t === 'exhibit'  ? 'block' : 'none';
+  clrMsg('loc-msg');
+}
+
+// ── 아이콘 이미지 미리보기 ──
+function onIconChange(input) {
+  const f = input.files && input.files[0];
+  const prev = document.getElementById('icon-prev');
+  const clr = document.getElementById('icon-clear');
+  if (!f) { prev.style.display = 'none'; clr.style.display = 'none'; return; }
+  prev.src = URL.createObjectURL(f);
+  prev.style.display = 'block';
+  clr.style.display = 'inline-block';
+}
+function clearIcon() {
+  document.getElementById('loc-image').value = '';
+  document.getElementById('icon-prev').style.display = 'none';
+  document.getElementById('icon-clear').style.display = 'none';
+}
+
+// 선택된 장소(프리뷰/좌표/장소명·설명)만 초기화 — 검색창 입력값은 보존
+function clearSelectedPlace() {
+  document.getElementById('place-prev').style.display = 'none';
+  document.getElementById('loc-fields').style.display = 'none';
+  document.getElementById('loc-name').value = '';
+  document.getElementById('loc-desc').value = '';
+  document.getElementById('loc-lat').value  = '';
+  document.getElementById('loc-lng').value  = '';
+  clrMsg('loc-msg');
+  hideSug();
+}
+
+function resetLocForm() {
+  setDestType('location');
+  document.getElementById('loc-search').value = '';
+  const exh = document.getElementById('exh-desc'); if (exh) exh.value = '';
+  clearIcon();
+  clearSelectedPlace();
+}
+
+// ── 지도에서 위치 선택 (Kakao 지도 + 좌표→주소 변환) ──
+let mapPicker = null, mapMarker = null, mapGeocoder = null, mapPick = null;
+
+async function openMapPicker() {
+  try { await loadKakaoSdk(); } catch (e) { await uiAlert(e.message); return; }
+  document.getElementById('modal-map').classList.add('open');
+  setTimeout(() => {
+    const center = new kakao.maps.LatLng(37.5665, 126.9780);
+    if (!mapPicker) {
+      mapPicker = new kakao.maps.Map(document.getElementById('map-canvas'), { center, level: 4 });
+      mapMarker = new kakao.maps.Marker({ position: center, draggable: true });
+      mapGeocoder = new kakao.maps.services.Geocoder();
+      kakao.maps.event.addListener(mapPicker, 'click', e => placeMapMarker(e.latLng));
+      kakao.maps.event.addListener(mapMarker, 'dragend', () => placeMapMarker(mapMarker.getPosition()));
+    } else {
+      mapPicker.relayout();
+      mapPicker.setCenter(center);
+    }
+    mapPick = null;
+    mapMarker.setMap(null);
+    document.getElementById('map-confirm').disabled = true;
+    document.getElementById('map-pick-info').textContent = '';
+  }, 60);
+}
+
+function placeMapMarker(latLng) {
+  mapMarker.setPosition(latLng);
+  mapMarker.setMap(mapPicker);
+  const lat = latLng.getLat(), lng = latLng.getLng();
+  mapGeocoder.coord2Address(lng, lat, (res, status) => {
+    let addr = '';
+    if (status === kakao.maps.services.Status.OK && res[0]) {
+      addr = (res[0].road_address && res[0].road_address.address_name) ||
+             (res[0].address && res[0].address.address_name) || '';
+    }
+    const name = addr || `좌표(${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+    mapPick = { lat, lng, addr, name };
+    document.getElementById('map-pick-info').textContent =
+      addr ? `선택: ${addr}` : `선택: 위도 ${lat.toFixed(6)}, 경도 ${lng.toFixed(6)}`;
+    document.getElementById('map-confirm').disabled = false;
+  });
+}
+
+function confirmMapPick() {
+  if (!mapPick) return;
+  document.getElementById('loc-search').value = mapPick.addr || mapPick.name;
+  document.getElementById('prev-pname').textContent = mapPick.name;
+  document.getElementById('prev-paddr').textContent = mapPick.addr || '(주소 정보 없음, 좌표 사용)';
+  document.getElementById('prev-pcoord').textContent = `위도 ${mapPick.lat} · 경도 ${mapPick.lng}`;
+  document.getElementById('prev-link').href =
+    `https://map.kakao.com/link/map/${encodeURIComponent(mapPick.name)},${mapPick.lat},${mapPick.lng}`;
+  document.getElementById('place-prev').style.display = 'block';
+  document.getElementById('loc-name').value = mapPick.name;
+  document.getElementById('loc-lat').value = mapPick.lat;
+  document.getElementById('loc-lng').value = mapPick.lng;
+  document.getElementById('loc-fields').style.display = 'block';
+  clrMsg('loc-msg');
+  closeMapPicker();
+}
+
+function closeMapPicker() { document.getElementById('modal-map').classList.remove('open'); }
+
+// 설명 글자수 카운터
+document.getElementById('loc-desc').addEventListener('input', function() {
+  const n = this.value.length;
+  const el = document.getElementById('loc-desc-count');
+  el.textContent = `${n}/50`;
+  el.className = 'fm ' + (n>50?'e':'g');
+});
+
+async function addLocation() {
+  clrMsg('loc-msg');
+  const fd = new FormData();
+  fd.append('dest_type', destType);
+
+  if (destType === 'location') {
+    const location_name = document.getElementById('loc-name').value.trim();
+    const location_desc = document.getElementById('loc-desc').value.trim();
+    const kakao_lat = document.getElementById('loc-lat').value;
+    const kakao_lng = document.getElementById('loc-lng').value;
+    if (!kakao_lat || !kakao_lng) { setMsg('loc-msg','e','주소 검색 또는 지도에서 장소를 선택해 주세요.'); return; }
+    if (!location_name) { setMsg('loc-msg','e','장소명을 입력해 주세요.'); return; }
+    if (!location_desc) { setMsg('loc-msg','e','목적지 설명을 입력해 주세요.'); return; }
+    fd.append('location_name', location_name);
+    fd.append('location_desc', location_desc);
+    fd.append('kakao_lat', kakao_lat);
+    fd.append('kakao_lng', kakao_lng);
+  } else {
+    const exhibit_desc = document.getElementById('exh-desc').value.trim();
+    if (!exhibit_desc) { setMsg('loc-msg','e','전시물 설명을 입력해 주세요.'); return; }
+    fd.append('location_name', exhibit_desc);
+  }
+
+  const img = document.getElementById('loc-image').files[0];
+  if (img) fd.append('image', img);
+
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations`, { method:'POST', body: fd });
+  const d = await r.json();
+  if (!r.ok) { setMsg('loc-msg','e', d.error || '목적지 추가에 실패했습니다.'); return; }
+  setMsg('loc-msg','s','목적지가 추가되었습니다.');
+  resetLocForm();
+  await loadLocations();
+  loadProjects(1);
+}
+
+// 검색창 외부 클릭 시 제안 닫기
+document.addEventListener('click', e => {
+  if (!document.getElementById('loc-search').contains(e.target) &&
+      !document.getElementById('sug-box').contains(e.target)) hideSug();
+});
+
+// ── Gift 승인 비밀번호 ──
+let verifiedPin = null;
+let pinTimerInterval = null;
+
+async function sendPin() {
+  clrMsg('pin-msg');
+  const btn = document.getElementById('btn-send-pin');
+  btn.disabled = true; btn.textContent = '발송 중...';
+  const r = await fetch('/api/host/project-pin/send',{method:'POST'});
+  const d = await r.json();
+  btn.disabled = false; btn.textContent = '비밀번호 발송';
+  if (!r.ok) { setMsg('pin-msg','e',d.message||d.error||'발송에 실패했습니다.'); return; }
+  setMsg('pin-msg','s','이메일로 비밀번호가 발송되었습니다.');
+  document.getElementById('pin-verify-wrap').style.display = 'block';
+  document.getElementById('pin-input').value = '';
+  clrFm('pin-verify-msg');
+  startPinTimer(600);
+}
+
+function startPinTimer(sec) {
+  clearInterval(pinTimerInterval);
+  const el = document.getElementById('pin-timer');
+  function tick() {
+    if (sec <= 0) { el.textContent = '만료됨'; clearInterval(pinTimerInterval); return; }
+    el.textContent = `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+    sec--;
+  }
+  tick(); pinTimerInterval = setInterval(tick, 1000);
+}
+
+async function verifyPinCode() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) { setFm('pin-verify-msg','e','비밀번호를 입력해 주세요.'); return; }
+  const r = await fetch('/api/host/project-pin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
+  const d = await r.json();
+  if (!r.ok) { setFm('pin-verify-msg','e',d.error||'비밀번호가 일치하지 않습니다.'); return; }
+  verifiedPin = pin;
+  clearInterval(pinTimerInterval);
+  document.getElementById('pin-timer').textContent = '';
+  setFm('pin-verify-msg','g','✔ 비밀번호가 확인되었습니다. 아래 양식을 작성해 주세요.');
+  enableProjectForm(true);
+}
+
+function getTomorrow() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function onFromDateChange() {
+  const fromVal = document.getElementById('pj-from').value;
+  const toEl = document.getElementById('pj-to');
+  if (!fromVal) { toEl.min = ''; return; }
+  const from = new Date(fromVal + 'T00:00:00');
+  from.setDate(from.getDate() + 5);
+  const minTo = from.toISOString().slice(0, 10);
+  toEl.min = minTo;
+  if (toEl.value && toEl.value < minTo) toEl.value = minTo;
+}
+
+function parseNum(s) { return parseInt(String(s).replace(/,/g,''), 10) || 0; }
+function onAmountInput(el) {
+  const digits = el.value.replace(/[^0-9]/g, '');
+  el.value = digits ? Number(digits).toLocaleString('ko-KR') : '';
+  calcBudget();
+}
+function calcBudget() {
+  const gift = parseNum(document.getElementById('pj-gift').value);
+  const qty  = parseNum(document.getElementById('pj-qty').value);
+  document.getElementById('pj-budget').value = gift > 0 && qty > 0 ? (gift * qty).toLocaleString('ko-KR') : '';
+}
+
+function enableProjectForm(on) {
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','btn-create-proj']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; });
+  if (on) {
+    const fromEl = document.getElementById('pj-from');
+    const tmr = getTomorrow();
+    fromEl.min = tmr;
+    if (!fromEl.value) { fromEl.value = tmr; onFromDateChange(); }
+  }
+}
+
+function resetPinState() {
+  verifiedPin = null;
+  clearInterval(pinTimerInterval);
+  document.getElementById('pin-verify-wrap').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-timer').textContent = '';
+  clrFm('pin-verify-msg');
+  clrMsg('pin-msg');
+  enableProjectForm(false);
+}
+
+// ── 견적 계산 안내 로드 ──
+let quoteConfigLoaded = false;
+async function loadQuoteConfig() {
+  if (quoteConfigLoaded) return;
+  const r = await fetch('/api/host/quote-config');
+  if (!r.ok) return;
+  const c = await r.json();
+  const fmt = n => Number(n).toLocaleString('ko-KR') + '원';
+  document.getElementById('quote-info-body').innerHTML = `
+    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:8px;">
+      <tr style="background:#f8fafc;"><td style="font-weight:600;width:50%;">항목</td><td style="font-weight:600;">금액</td></tr>
+      <tr><td>이용료 (1일 × 일수)</td><td>${fmt(c.dailyFee)} × 이용일수</td></tr>
+      <tr><td>모바일 디자인 (${c.mobileCount}안)</td><td>${fmt(c.mobileUnitFee)} × ${c.mobileCount} = ${fmt(c.mobileUnitFee * c.mobileCount)}</td></tr>
+      <tr><td>파비콘</td><td>${fmt(c.faviconFee)}</td></tr>
+      <tr><td>초기 세팅</td><td>${fmt(c.initialSetupFee)}</td></tr>
+      <tr style="background:#f0f9ff;"><td style="font-weight:600;">총액</td><td style="font-weight:600;">이용료 + ${fmt(c.mobileUnitFee * c.mobileCount + c.faviconFee + c.initialSetupFee)}</td></tr>
+    </table>
+    <p style="font-size:12px;color:#64748b;">※ 이용료 = 1일 ${fmt(c.dailyFee)} × 프로젝트 기간(일수). 추가 디자인 시안은 별도 견적입니다.</p>`;
+  quoteConfigLoaded = true;
+}
+
+// ── 프로젝트 등록 ──
+async function createProject() {
+  clrMsg('pj-msg');
+  if (!verifiedPin) { setMsg('pj-msg','e','Gift 승인 비밀번호를 먼저 확인해 주세요.'); return; }
+  const name = document.getElementById('pj-name').value.trim();
+  const desc = document.getElementById('pj-desc').value.trim();
+  const from = document.getElementById('pj-from').value;
+  const to   = document.getElementById('pj-to').value;
+  const giftNum = parseNum(document.getElementById('pj-gift').value);
+  const qtyNum  = parseNum(document.getElementById('pj-qty').value);
+  if (!name) { setMsg('pj-msg','e','프로젝트명을 입력해 주세요.'); return; }
+  if (!desc) { setMsg('pj-msg','e','설명을 입력해 주세요.'); return; }
+  if (!from) { setMsg('pj-msg','e','시작일을 선택해 주세요.'); return; }
+  if (!to)   { setMsg('pj-msg','e','종료일을 선택해 주세요.'); return; }
+  if (giftNum <= 0) { setMsg('pj-msg','e','Gift 단가 금액을 입력해 주세요.'); return; }
+  if (qtyNum  < 1)  { setMsg('pj-msg','e','발급수량을 1 이상 입력해 주세요.'); return; }
+  clrMsg('pj-msg');
+  document.getElementById('quote-confirm-msg').className = 'msg';
+  document.getElementById('quote-confirm-msg').textContent = '';
+  document.getElementById('modal-quote-confirm').classList.add('open');
+}
+
+async function confirmCreateProject() {
+  const btn = document.getElementById('btn-confirm-create');
+  btn.disabled = true; btn.textContent = '등록 중...';
+  const body = {
+    project_name: document.getElementById('pj-name').value,
+    description:  document.getElementById('pj-desc').value,
+    from_date:    document.getElementById('pj-from').value,
+    to_date:      document.getElementById('pj-to').value,
+    gift_amount:  String(parseNum(document.getElementById('pj-gift').value)),
+    gift_qty:     String(parseNum(document.getElementById('pj-qty').value)),
+    pin_input:    verifiedPin,
+  };
+  const r = await fetch('/api/host/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d = await r.json();
+  btn.disabled = false; btn.textContent = '등록';
+  if (!r.ok) {
+    const msgEl = document.getElementById('quote-confirm-msg');
+    msgEl.className = 'msg e'; msgEl.textContent = d.error||d.message||'프로젝트 등록에 실패했습니다.';
+    return;
+  }
+  document.getElementById('modal-quote-confirm').classList.remove('open');
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-budget'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  resetPinState();
+  switchTab('proj');
+}
+
+// ── 초기 로그인 상태 확인 ──
+(async () => {
+  const r = await fetch('/api/host/me');
+  if (r.ok) {
+    const d = await r.json();
+    document.getElementById('d-name').textContent = d.host?.name||'';
+    document.getElementById('topbar-brand').textContent = '주최측' + (d.host?.organization_name ? ' ' + d.host.organization_name : '');
+    show('sec-dashboard');
+    startSessionWatch();
+    loadQuoteConfig();
+  }
+})();
+</script>
+</body>
+</html>

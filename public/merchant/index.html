@@ -1,0 +1,1727 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>가맹점 · 모노라마 트래커</title>
+  <link rel="icon" href="/favicon.svg">
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Malgun Gothic", -apple-system, sans-serif; background: #f0f4f9;
+           min-height: 100vh; display: flex; flex-direction: column; }
+    .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 16px; }
+    .logo { font-size: 22px; font-weight: 800; color: #2563eb; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(20,30,60,.1);
+            padding: 32px 28px; width: 100%; max-width: 460px; }
+    .card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
+    /* 로그인 제목 띠: 가운데 정렬 + 색 배경 (카드 상단 폭에 맞춰 꽉 채움) */
+    .card h2.login-band { text-align: center; color: #fff;
+      background: linear-gradient(135deg, #2563eb, #0d3b66);
+      margin: -32px -28px 22px; padding: 16px 28px; border-radius: 16px 16px 0 0; }
+    .fg { margin-bottom: 14px; }
+    .fg label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .req { color: #dc2626; font-size: 11px; }
+    .fg input[type=text], .fg input[type=email], .fg input[type=password], .fg input[type=file], .fg select {
+      width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; background: #fff; }
+    .fg input:focus, .fg select:focus { border-color: #2563eb; }
+    .fg select:disabled { background: #f1f5f9; color: #94a3b8; }
+    .row2 { display: flex; gap: 8px; }
+    .row2 input { flex: 1; }
+    .pw-wrap { position: relative; flex: 1; }
+    .pw-wrap input { width: 100%; padding-right: 38px; }
+    .pw-tog { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+              background: none; border: none; cursor: pointer; font-size: 15px; padding: 0; line-height: 1; }
+    /* 브라우저 기본 비밀번호 표시 아이콘 숨김(눈 아이콘 중복 방지) */
+    input[type=password]::-ms-reveal, input[type=password]::-ms-clear { display: none; }
+    .btn { padding: 11px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-p { background: #2563eb; color: #fff; }
+    .btn-p:disabled { background: #93b4f0; cursor: not-allowed; }
+    .btn-o:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-o { background: #fff; color: #2563eb; border: 1.5px solid #bfdbfe; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 9px 14px; font-size: 13px; }
+    .msg { font-size: 13px; min-height: 18px; margin: 8px 0; }
+    .msg.e { color: #dc2626; } .msg.s { color: #16a34a; }
+    .fm { font-size: 12px; margin-top: 3px; min-height: 16px; }
+    .fm.e { color: #dc2626; } .fm.s { color: #16a34a; }
+    .link { font-size: 13px; color: #2563eb; cursor: pointer; }
+    .center { text-align: center; }
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0; }
+    .hint { font-size: 11px; color: #94a3b8; font-weight: 400; }
+    section { display: none; } section.active { display: block; }
+    .site-footer { background: #1e293b; color: #94a3b8; font-size: 12px; padding: 18px 32px; text-align: center; line-height: 1.7; }
+    .site-footer .ft-company { font-weight: 700; color: #e2e8f0; font-size: 13px; }
+    .site-footer .ft-copy { margin-top: 8px; color: #64748b; }
+    .ok-box { background:#f0fdf4; border:1.5px solid #bbf7d0; color:#166534; border-radius:10px; padding:18px; font-size:14px; line-height:1.6; }
+    /* 가입 등록 폼은 넓게 + 2열 배치 */
+    #sec-register .card { max-width: 760px; }
+    /* ── 대시보드(admin 레이아웃과 동일) ── */
+    #sec-dashboard.active { display: block; width: 90vw; max-width: 90vw; }
+    .topbar { position: fixed; top: 14px; right: 18px; z-index: 90;
+              display: flex; align-items: center; gap: 10px;
+              background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
+              padding: 6px 8px 6px 16px; box-shadow: 0 2px 12px rgba(20,30,60,.10); }
+    .topbar-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; }
+    .topbar-name span { color: #2563eb; }
+    .topbar-brand { font-size: 13px; font-weight: 800; color: #0d3b66; white-space: nowrap;
+                    text-align: right; margin-right: 4px; padding-right: 10px; border-right: 1px solid #e2e8f0; }
+    .panel-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; }
+    .panel-card h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
+    .badge { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+    .b-pend { background:#fef9c3; color:#854d0e; } .b-appr { background:#dcfce7; color:#166534; }
+    .b-rej { background:#fee2e2; color:#991b1b; } .b-stat { background:#e0e7ff; color:#3730a3; }
+    .b-end { background:#e2e8f0; color:#475569; }
+    .tbl-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); }
+    .ptbl { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+    .ptbl th, .ptbl td { padding:11px 13px; border-bottom:1px solid #f1f5f9; text-align:left; }
+    .ptbl th { background:#f8fafc; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+    .ptbl th.sortable { cursor:pointer; user-select:none; }
+    .ptbl th.sortable:hover { color:#2563eb; background:#eef2ff; }
+    .ptbl tbody tr:last-child td { border-bottom:none; }
+    .ptbl tbody tr:hover td { background:#fafbfd; }
+    .ptbl td.c, .ptbl th.c { text-align:center; }
+    .ptbl td.r, .ptbl th.r { text-align:right; }
+    /* 탭 */
+    .tabs { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin:0 0 18px; }
+    .tab { background:none; border:none; padding:9px 18px; font-size:14px; font-weight:600; color:#94a3b8;
+           cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .pane { display:none; } .pane.active { display:block; }
+    /* 조회 조건 */
+    .pj-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+    .pj-filters input, .pj-filters select { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 11px; font-size:13px; outline:none; background:#fff; }
+    .pj-filters input { width:150px; } .pj-filters input:focus, .pj-filters select:focus { border-color:#2563eb; }
+    /* 공통 확인/알림 모달 */
+    .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none;
+                align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+    .modal-ov.open { display: flex; }
+    /* 공통 확인/알림 모달은 다른 모달(기본정보 등) 위에 항상 노출 */
+    #ui-modal { z-index: 2000; }
+    .modal-box { background: #fff; border-radius: 14px; width: 100%; max-width: 360px;
+                 box-shadow: 0 12px 40px rgba(20,30,60,.25); overflow: hidden; }
+    .modal-box .mb-head { padding: 18px 20px 0; font-size: 17px; font-weight: 700; color: #1e293b; }
+    .modal-box .mb-msg { padding: 12px 20px 20px; font-size: 14px; color: #334155; line-height: 1.55; white-space: pre-line; }
+    .modal-box .mb-btns { display: flex; gap: 8px; padding: 0 20px 20px; }
+    .modal-box .mb-btns .btn { flex: 1; }
+    /* 모달 우상단 닫기(×) 아이콘 */
+    .modal-close { position: absolute; top: 10px; right: 12px; background: none; border: none;
+                   font-size: 22px; line-height: 1; color: #94a3b8; cursor: pointer;
+                   padding: 2px 9px; border-radius: 8px; transition: background .15s, color .15s; }
+    .modal-close:hover { background: #f1f5f9; color: #1e293b; }
+    /* Gift 사용자 현황 모달 헤더: 가운데 정렬 + 파란 배경 띠 */
+    .modal-box .mb-head.band { text-align: center; color: #fff; padding: 16px 20px;
+      background: linear-gradient(135deg, #2563eb, #0d3b66); }
+    .modal-box .mb-head.band .modal-close { color: rgba(255,255,255,.85); }
+    .modal-box .mb-head.band .modal-close:hover { background: rgba(255,255,255,.2); color: #fff; }
+    .ptbl th.usort { cursor: pointer; user-select: none; white-space: nowrap; }
+    .ptbl th.usort:hover { color: #2563eb; }
+    .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+    .reg-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 560px) {
+      .reg-grid { grid-template-columns: 1fr; }
+      #sec-register .card { max-width: 460px; }
+    }
+    /* ── Gift 결제 on/off 토글 ── */
+    .gift-switch { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+    .gift-switch input { display: none; }
+    .gs-label { font-size: 12px; font-weight: 700; color: #475569; white-space: nowrap; }
+    .gs-track { width: 40px; height: 22px; background: #cbd5e1; border-radius: 999px; position: relative; transition: background .2s; flex: none; }
+    .gs-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s; }
+    .gift-switch input:checked + .gs-track { background: #2563eb; }
+    .gift-switch input:checked + .gs-track .gs-thumb { left: 20px; }
+    /* 로그인 화면의 Gift 결제 모드 선택 박스 */
+    .login-gift { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+                  background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 11px 14px; margin: 4px 0 14px; }
+    .login-gift .hint { flex-basis: 100%; line-height: 1.4; }
+    /* 대시보드 모드 표시 배지 */
+    .mode-badge { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+                  background: #e0e7ff; color: #3730a3; white-space: nowrap; }
+    .mode-badge.gift { background: #dcfce7; color: #166534; }
+    /* ── Gift 결제 모드 ── */
+    .gift-wrap { max-width: 460px; margin: 0 auto; }
+    .gp-head { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+    .gp-name { font-weight: 800; color: #0d3b66; }
+    .gp-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .gpj { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+           background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+           cursor: pointer; text-align: left; transition: border-color .15s, box-shadow .15s; font-family: inherit; }
+    .gpj:hover { border-color: #2563eb; box-shadow: 0 2px 10px rgba(37,99,235,.12); }
+    .gpj-name { font-weight: 700; color: #1e293b; font-size: 14px; }
+    .gpj-meta { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+    .gpj-amt { font-weight: 800; color: #0d3b66; white-space: nowrap; }
+    #scan-stage { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 14px; overflow: hidden; margin: 14px 0; }
+    #scan-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-frame { position: absolute; inset: 16%; border: 3px solid rgba(255,255,255,.92); border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0,0,0,.28); pointer-events: none; }
+    .rp-head { text-align: center; background: #0d3b66; color: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .rp-amt { font-size: 30px; font-weight: 800; }
+    .gift-wrap .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .gift-wrap .row:last-of-type { border-bottom: none; }
+    .gift-wrap .row .k { color: #64748b; } .gift-wrap .row .v { font-weight: 700; text-align: right; }
+    .lab { font-size: 13px; font-weight: 600; color: #33415c; }
+    .pin-in { width: 100%; padding: 13px; font-size: 18px; letter-spacing: 4px; text-align: center;
+              border: 1.5px solid #c9d6ea; border-radius: 10px; outline: none; margin-top: 8px; }
+    .pin-in:focus { border-color: #0d3b66; }
+    .rp-ico { font-size: 52px; } .rp-ttl { font-size: 20px; font-weight: 800; margin-top: 6px; }
+    .rp-desc { font-size: 13px; color: #64748b; margin-top: 6px; }
+    .msg.center { text-align: center; }
+    /* ── 모바일(가맹점 휴대폰) 레이아웃 ── */
+    @media (max-width: 640px) {
+      #sec-dashboard.active { width: 100%; max-width: 100%; }
+      .topbar { position: static; width: 100%; border-radius: 12px; padding: 8px 12px; margin: 0 0 16px;
+                justify-content: space-between; flex-wrap: wrap; }
+      .topbar-brand { border-right: none; padding-right: 0; margin-right: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="main-wrap">
+  <div class="logo">모노라마 트래커 · 가맹점</div>
+
+  <!-- ── 로그인 ── -->
+  <section id="sec-login" class="active">
+    <div class="card">
+      <h2 class="login-band">가맹점 로그인</h2>
+      <div class="fg"><label>이메일</label>
+        <input id="li-email" type="email" placeholder="merchant@example.com"></div>
+      <div class="fg"><label>비밀번호</label>
+        <input id="li-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-gift">
+        <label class="gift-switch" title="Gift 결제 모드로 로그인">
+          <span class="gs-label">Gift 결제 모드</span>
+          <input type="checkbox" id="login-gift-toggle" onchange="updateLoginGiftHint()">
+          <span class="gs-track"><span class="gs-thumb"></span></span>
+        </label>
+        <span class="hint" id="login-gift-hint"></span>
+      </div>
+      <div id="li-msg" class="msg"></div>
+      <button class="btn btn-p btn-full" onclick="doLogin()">로그인</button>
+      <div class="center" style="margin-top:12px;"><span class="link" onclick="show('sec-forgot')">비밀번호를 잊으셨나요?</span></div>
+      <hr class="divider">
+      <div class="center">아직 가맹점 회원이 아니신가요? <span class="link" onclick="show('sec-register')">가맹점 가입 신청</span></div>
+    </div>
+  </section>
+
+  <!-- ── 회원가입 ── -->
+  <section id="sec-register">
+    <div class="card">
+      <h2>가맹점 가입 신청</h2>
+      <p class="hint" style="margin-bottom:14px;">먼저 이메일 인증을 완료하면 나머지 항목을 입력할 수 있습니다.</p>
+      <div class="reg-grid">
+        <!-- 이메일 인증 -->
+        <div class="fg full"><label>이메일 <span class="req">*</span></label>
+          <div class="row2">
+            <input id="rg-email" type="email" placeholder="merchant@example.com">
+            <button class="btn btn-o btn-sm" id="rg-send" onclick="sendCode()">인증코드 발송</button>
+          </div>
+          <div id="rg-email-fm" class="fm"></div>
+        </div>
+        <div class="fg full" id="rg-code-wrap" style="display:none;"><label>인증코드 <span class="req">*</span></label>
+          <div class="row2">
+            <div class="pw-wrap">
+              <input id="rg-code" type="password" inputmode="numeric" placeholder="6자리 코드" maxlength="6" autocomplete="off">
+              <button type="button" class="pw-tog" onclick="togCode(this)" title="인증코드 보기">👁</button>
+            </div>
+            <button class="btn btn-o btn-sm" id="rg-check" onclick="checkCode()">확인</button>
+          </div>
+          <div id="rg-code-fm" class="fm"></div>
+        </div>
+
+        <div class="fg"><label>가맹점명 <span class="req">*</span></label>
+          <input id="rg-name" type="text" placeholder="가맹점 상호" disabled></div>
+        <div class="fg"><label>사업자등록번호 <span class="req">*</span> <span class="hint">(- 없이 10자리)</span></label>
+          <input id="rg-biz" type="text" inputmode="numeric" placeholder="277-86-00185" maxlength="14" disabled></div>
+
+        <div class="fg"><label>담당자 이름 <span class="req">*</span></label>
+          <input id="rg-cname" type="text" placeholder="담당자 이름" disabled></div>
+        <div class="fg"><label>담당자 연락처 <span class="hint">(일반전화, 예: 0212345678)</span></label>
+          <input id="rg-cphone" type="text" inputmode="numeric" placeholder="02-1234-5678" maxlength="13" disabled>
+          <div class="fm" id="rg-cphone-fm"></div></div>
+
+        <div class="fg full"><label>담당자 모바일 <span class="req">*</span> <span class="hint">(예: 010-1234-5678)</span></label>
+          <input id="rg-cmobile" type="text" inputmode="numeric" placeholder="010-1234-5678" maxlength="13" disabled>
+          <div class="fm" id="rg-cmobile-fm"></div></div>
+        <div class="fg"><label>비밀번호 <span class="req">*</span> <span class="hint">(대소문자·숫자·특수문자 8자↑)</span></label>
+          <input id="rg-pw" type="password" disabled>
+          <div class="fm" id="rg-pw-fm"></div></div>
+
+        <div class="fg"><label>비밀번호 확인 <span class="req">*</span></label>
+          <input id="rg-pw2" type="password" disabled>
+          <div class="fm" id="rg-pw2-fm"></div></div>
+        <div class="fg"><label>은행 <span class="req">*</span></label>
+          <select id="rg-bank" disabled><option value="">은행 선택</option></select></div>
+
+        <div class="fg"><label>은행계좌번호 <span class="req">*</span> <span class="hint">(숫자만)</span></label>
+          <input id="rg-account" type="text" inputmode="numeric" placeholder="계좌번호" disabled></div>
+
+        <div class="fg full"><label>사업자등록증 <span class="req">*</span> <span class="hint">(PDF/JPG/PNG)</span></label>
+          <input id="rg-bizcert" type="file" accept="application/pdf,image/jpeg,image/png" disabled></div>
+        <div class="fg full"><label>은행계좌사본 <span class="req">*</span> <span class="hint">(PDF/JPG/PNG)</span></label>
+          <input id="rg-bankcopy" type="file" accept="application/pdf,image/jpeg,image/png" disabled></div>
+      </div>
+
+      <div id="rg-msg" class="msg"></div>
+      <button class="btn btn-p btn-full" id="rg-submit" onclick="doRegister()" disabled>가입 신청</button>
+      <hr class="divider">
+      <div class="center"><span class="link" onclick="show('sec-login')">← 로그인으로 돌아가기</span></div>
+    </div>
+  </section>
+
+  <!-- ── 가입 완료 안내 ── -->
+  <section id="sec-done">
+    <div class="card center">
+      <h2>가입 신청 완료</h2>
+      <div class="ok-box" id="done-msg"></div>
+      <button class="btn btn-o btn-full" style="margin-top:18px;" onclick="show('sec-login')">로그인 화면으로</button>
+    </div>
+  </section>
+
+  <!-- ── 비밀번호 찾기 ── -->
+  <section id="sec-forgot">
+    <div class="card">
+      <h2>비밀번호 찾기</h2>
+      <p class="hint" style="margin-bottom:14px;">가입 시 사용한 이메일로 임시 비밀번호를 보내드립니다. 로그인 후 새 비밀번호로 변경해 주세요.</p>
+      <div class="fg"><label>이메일</label>
+        <input id="fp-email" type="email" placeholder="merchant@example.com" onkeydown="if(event.key==='Enter')doForgot()"></div>
+      <div id="fp-msg" class="msg"></div>
+      <button class="btn btn-p btn-full" id="fp-submit" onclick="doForgot()">임시 비밀번호 발송</button>
+      <hr class="divider">
+      <div class="center"><span class="link" onclick="show('sec-login')">← 로그인으로 돌아가기</span></div>
+    </div>
+  </section>
+
+  <!-- ── 로그인 후 대시보드 (admin 레이아웃) ── -->
+  <section id="sec-dashboard">
+    <div class="topbar">
+      <span class="topbar-brand">모노라마 트래커 · 가맹점</span>
+      <span class="topbar-name"><span id="d-name"></span> 가맹점님</span>
+      <span class="mode-badge" id="mode-badge"></span>
+      <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
+      <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
+    </div>
+
+    <!-- ── 관리 모드(off): 기존 관리자 페이지 ── -->
+    <div id="mode-manage">
+    <div class="tabs">
+      <button class="tab active" id="tab-projects" onclick="switchTab('projects')">프로젝트</button>
+      <button class="tab" id="tab-settle" onclick="switchTab('settle')">정산</button>
+    </div>
+
+    <!-- 프로젝트 탭 -->
+    <div id="pane-projects" class="pane active">
+      <div class="panel-card">
+        <h3>프로젝트</h3>
+        <div class="pj-filters">
+          <input id="pf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadProjects()">
+          <input id="pf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadProjects()">
+          <select id="pf-status">
+            <option value="">상태 전체</option>
+            <option value="ready_to_start">시작대기</option>
+            <option value="started">진행중</option>
+            <option value="completed">종료</option>
+          </select>
+          <select id="pf-applied">
+            <option value="">지원여부 전체</option>
+            <option value="y">지원함</option>
+            <option value="n">미지원</option>
+          </select>
+          <button class="btn btn-p btn-sm" onclick="loadProjects()">조회</button>
+          <button class="btn btn-o btn-sm" onclick="resetProjFilter()">초기화</button>
+          <button class="btn btn-o btn-sm" id="proj-excel" onclick="downloadProjectsExcel()" disabled>⬇ 엑셀 다운로드</button>
+          <label style="margin-left:auto;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
+            <select id="pf-size" onchange="changeProjSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 9px;font-size:13px;outline:none;">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+        <div id="pj-body"></div>
+      </div>
+    </div>
+
+    <!-- 정산 탭 -->
+    <div id="pane-settle" class="pane">
+      <div class="panel-card">
+        <h3>정산</h3>
+        <div class="pj-filters">
+          <input id="sf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadSettlement()">
+          <input id="sf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadSettlement()">
+          <select id="sf-status">
+            <option value="">상태 전체</option>
+            <option value="ready_to_start">시작대기</option>
+            <option value="started">진행중</option>
+            <option value="completed">종료</option>
+          </select>
+          <select id="sf-applied">
+            <option value="">지원여부 전체</option>
+            <option value="y">지원함</option>
+            <option value="n">미지원</option>
+          </select>
+          <button class="btn btn-p btn-sm" onclick="loadSettlement()">조회</button>
+          <button class="btn btn-o btn-sm" onclick="resetSettleFilter()">초기화</button>
+          <button class="btn btn-o btn-sm" id="settle-excel" onclick="downloadSettlementExcel()" disabled>⬇ 엑셀 다운로드</button>
+          <label style="margin-left:auto;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
+            <select id="sf-size" onchange="changeSettleSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 9px;font-size:13px;outline:none;">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+        <div id="st-body"></div>
+      </div>
+    </div>
+    </div><!-- /#mode-manage -->
+
+    <!-- ── Gift 결제 모드(on): 프로젝트 선택 → QR 스캔 → 결제 ── -->
+    <div id="mode-gift" style="display:none;">
+      <!-- 1) 프로젝트 선택 -->
+      <div id="gift-list-view" class="gift-wrap">
+        <div class="panel-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+            <h3 style="margin:0;">Gift 결제 프로젝트</h3>
+            <button class="btn btn-o btn-sm" onclick="loadGiftProjects()">새로고침</button>
+          </div>
+          <p class="hint" style="margin-bottom:14px;">결제할 프로젝트를 선택하면 QR 스캐너가 열립니다.</p>
+          <div id="gift-proj-list"></div>
+        </div>
+      </div>
+
+      <!-- 2) QR 스캔 -->
+      <div id="gift-scan-view" class="gift-wrap" style="display:none;">
+        <div class="panel-card">
+          <button class="btn btn-o btn-sm" onclick="backToGiftList()">← 프로젝트 선택</button>
+          <div class="gp-head" style="margin-top:12px;">
+            <div class="gp-name" id="scan-proj-name"></div>
+            <div class="gp-sub" id="scan-proj-sub"></div>
+          </div>
+          <div id="scan-stage">
+            <video id="scan-video" playsinline muted></video>
+            <div class="scan-frame"></div>
+          </div>
+          <div id="scan-msg" class="msg center"></div>
+          <button class="btn btn-o btn-full" id="btn-photo">📷 사진으로 스캔</button>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;">
+          <button class="btn btn-o btn-full" id="btn-grant" style="margin-top:8px;" onclick="openGrant()">🎁 Gift 증정</button>
+
+          <!-- Gift 증정 입력 -->
+          <div id="grant-box" style="display:none;margin-top:12px;">
+            <div class="lab">방문자 휴대폰 번호</div>
+            <input id="grant-phone" type="tel" inputmode="numeric" maxlength="13" placeholder="010-1234-5678"
+              style="width:100%;padding:13px;font-size:16px;text-align:center;letter-spacing:1px;border:1.5px solid #c9d6ea;border-radius:10px;outline:none;margin-top:8px;">
+            <div id="grant-msg" class="msg center"></div>
+            <button class="btn btn-p btn-full" id="grant-submit" onclick="submitGrant()">증정하기</button>
+            <button class="btn btn-o btn-full" style="margin-top:8px;" onclick="closeGrant()">취소</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3) Gift 결제(사용) 처리 -->
+      <div id="gift-redeem" class="gift-wrap" style="display:none;">
+        <div class="panel-card">
+          <div class="rp-head"><div class="rp-amt" id="rp-amt">—</div></div>
+
+          <div id="rp-valid">
+            <div class="row"><span class="k">프로젝트</span><span class="v" id="rp-project"></span></div>
+            <div class="row"><span class="k">일련번호</span><span class="v" id="rp-serial"></span></div>
+            <div class="row"><span class="k">소유자 휴대폰</span><span class="v" id="rp-phone"></span></div>
+            <div class="row"><span class="k">Gift 금액</span><span class="v" id="rp-amount"></span></div>
+            <div class="lab" style="margin-top:14px;">프로젝트 비밀번호를 입력하세요</div>
+            <input id="rp-pin" class="pin-in" type="tel" inputmode="numeric" maxlength="6" placeholder="● ● ● ● ● ●">
+            <div id="rp-msg" class="msg center"></div>
+            <button class="btn btn-p btn-full" id="rp-confirm">사용 확정</button>
+            <button class="btn btn-o btn-full" style="margin-top:8px;" onclick="resumeScan()">취소</button>
+          </div>
+
+          <div id="rp-state" class="center" style="display:none;padding:8px 0;">
+            <div class="rp-ico" id="rp-ico">✅</div>
+            <div class="rp-ttl" id="rp-ttl"></div>
+            <div class="rp-desc" id="rp-desc"></div>
+            <button class="btn btn-p btn-full" style="margin-top:16px;" onclick="resumeScan()">다음 Gift 스캔</button>
+            <button class="btn btn-o btn-full" style="margin-top:8px;" onclick="backToGiftList()">프로젝트 선택으로</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="site-footer">
+  <div><span class="ft-company">(주)모노라마</span> 대표 김창호 &nbsp;tel: 02-6925-4083 &nbsp;서울시 강서구 마곡중앙로 143 B동 339호 (우)07797</div>
+  <div class="ft-copy">© 2026 (주)모노라마. All rights reserved.</div>
+</footer>
+
+<!-- ── 공통 확인/알림 모달 ── -->
+<div class="modal-ov" id="ui-modal">
+  <div class="modal-box">
+    <div class="mb-head" id="ui-title">알림</div>
+    <div class="mb-msg" id="ui-msg"></div>
+    <div class="mb-btns">
+      <button class="btn btn-o btn-sm" id="ui-cancel">취소</button>
+      <button class="btn btn-p btn-sm" id="ui-ok">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 임시 비밀번호 강제 변경 모달 ── -->
+<div class="modal-ov" id="pwchg-modal">
+  <div class="modal-box">
+    <div class="mb-head">새 비밀번호 설정</div>
+    <div class="mb-msg" style="padding-bottom:6px;">임시 비밀번호로 로그인하셨습니다. 보안을 위해 새 비밀번호로 변경해 주세요.</div>
+    <div style="padding:0 20px 4px;">
+      <div class="fg"><label>현재(임시) 비밀번호</label><input id="pc-cur" type="password"></div>
+      <div class="fg"><label>새 비밀번호 <span class="hint">(대소문자·숫자·특수문자 8자↑)</span></label>
+        <input id="pc-new" type="password"><div class="fm" id="pc-new-fm"></div></div>
+      <div class="fg"><label>새 비밀번호 확인</label>
+        <input id="pc-new2" type="password"><div class="fm" id="pc-new2-fm"></div></div>
+      <div id="pc-msg" class="msg"></div>
+    </div>
+    <div class="mb-btns"><button class="btn btn-p btn-sm" id="pc-submit" onclick="submitPwChange()" style="flex:1;">변경하기</button></div>
+  </div>
+</div>
+
+<!-- ── Gift 사용자 현황 상세 모달 ── -->
+<div class="modal-ov" id="usage-modal">
+  <div class="modal-box" style="max-width:820px;position:relative;">
+    <div class="mb-head band" id="usage-title">Gift 사용자 현황
+      <button class="modal-close" onclick="closeUsage()" aria-label="닫기">×</button></div>
+    <div style="padding:8px 20px 18px;">
+      <div id="usage-sub" style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;"></div>
+      <!-- 구분별 건수/금액 요약 -->
+      <div id="usage-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <!-- 필터 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+        <input id="uf-phone" type="text" placeholder="휴대폰번호 검색"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 11px;font-size:13px;outline:none;width:170px;"
+          oninput="renderUsage()">
+        <select id="uf-type" onchange="renderUsage()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 11px;font-size:13px;outline:none;">
+          <option value="">구분 전체</option>
+          <option value="normal">Gift사용</option>
+          <option value="grant">Gift증정</option>
+        </select>
+        <button class="btn btn-o btn-sm" onclick="document.getElementById('uf-phone').value='';document.getElementById('uf-type').value='';renderUsage()">초기화</button>
+        <span id="uf-count" style="font-size:12px;color:#64748b;margin-left:auto;"></span>
+      </div>
+      <div class="tbl-wrap" style="max-height:52vh;overflow:auto;">
+        <table class="ptbl">
+          <thead><tr id="usage-thead"></tr></thead>
+          <tbody id="usage-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 기본 정보(설정) 모달 ── -->
+<div class="modal-ov" id="modal-profile">
+  <div class="modal-box" style="max-width:560px;position:relative;">
+    <div class="mb-head band">기본 정보
+      <button class="modal-close" onclick="closeProfile()" aria-label="닫기">×</button></div>
+    <div style="padding:14px 20px 18px;max-height:78vh;overflow-y:auto;">
+      <div class="reg-grid">
+        <div class="fg"><label>가맹점명 <span class="req">*</span></label><input id="pf-mc-name" type="text"></div>
+        <div class="fg"><label>이메일 <span class="hint">(변경 불가)</span></label><input id="pf-mc-email" type="text" disabled></div>
+        <div class="fg"><label>담당자 이름 <span class="req">*</span></label><input id="pf-mc-cname" type="text"></div>
+        <div class="fg"><label>사업자등록번호 <span class="hint">(변경 불가)</span></label><input id="pf-mc-biz" type="text" disabled></div>
+        <div class="fg"><label>담당자 연락처 <span class="hint">(선택)</span></label>
+          <input id="pf-mc-cphone" type="text" inputmode="numeric" placeholder="02-1234-5678" oninput="this.value=formatPhone(this.value)"></div>
+        <div class="fg"><label>담당자 모바일 <span class="req">*</span></label>
+          <input id="pf-mc-cmobile" type="text" inputmode="numeric" placeholder="010-1234-5678" oninput="this.value=formatPhone(this.value)"></div>
+        <div class="fg"><label>은행 <span class="req">*</span></label>
+          <select id="pf-mc-bank"><option value="">은행 선택</option></select></div>
+        <div class="fg"><label>은행계좌번호 <span class="req">*</span></label>
+          <input id="pf-mc-account" type="text" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="fg full">
+          <label>주소</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <input id="pf-mc-zip" type="text" placeholder="우편번호" readonly style="width:120px;flex:none;">
+            <button type="button" class="btn btn-o btn-sm" onclick="openPostcodeProfile()">🔍 주소 검색</button>
+          </div>
+          <input id="pf-mc-addr1" type="text" placeholder="도로명 주소 (자동입력)" readonly style="margin-bottom:6px;">
+          <input id="pf-mc-addr2" type="text" placeholder="상세주소 (동·호수 등, 선택)">
+        </div>
+      </div>
+      <hr class="divider">
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:8px;">비밀번호 변경 <span class="hint">(변경 시에만 입력)</span></div>
+      <div class="reg-grid">
+        <div class="fg"><label>새 비밀번호 <span class="hint">(대소문자·숫자·특수문자 8자↑)</span></label>
+          <input id="pf-mc-newpw" type="password"></div>
+        <div class="fg"><label>새 비밀번호 확인</label>
+          <input id="pf-mc-newpw2" type="password"></div>
+      </div>
+      <div class="fg"><label>현재 비밀번호 <span class="req">*</span> <span class="hint">(본인 확인용)</span></label>
+        <input id="pf-mc-curpw" type="password" placeholder="저장하려면 현재 비밀번호 입력" onkeydown="if(event.key==='Enter')saveProfile()"></div>
+      <div id="pf-mc-msg" class="msg"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="closeProfile()">취소</button>
+        <button class="btn btn-p btn-sm" style="flex:1;" id="pf-mc-save" onclick="saveProfile()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 세션 연장/만료 경고 모달 ── -->
+<div class="modal-ov" id="session-modal">
+  <div class="modal-box">
+    <div class="mb-head">로그인 연장 안내</div>
+    <div class="mb-msg">장시간 활동이 없어 곧 자동 로그아웃됩니다.
+남은 시간 <b id="session-countdown" style="color:#dc2626;">60초</b> · 로그인을 연장하시겠습니까?</div>
+    <div class="mb-btns">
+      <button class="btn btn-o btn-sm" onclick="sessionLogout()">로그아웃</button>
+      <button class="btn btn-p btn-sm" onclick="sessionExtend()">로그인 연장</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/jsQR.js"></script>
+<script>
+  const EM_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RE = /^(02\d{7,8}|0[3-9]\d{8,9})$/;   // 일반전화(02/지역번호/070 등)
+  const MOBILE_RE = /^01[016789]\d{7,8}$/;          // 휴대폰
+  const PW_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+  let emailVerified = false;
+
+  function show(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const logo = document.querySelector('.logo');
+    if (logo) logo.style.display = (id === 'sec-dashboard') ? 'none' : '';
+  }
+  function setMsg(id, cls, text) { const el = document.getElementById(id); el.className = (id.endsWith('-fm') ? 'fm ' : 'msg ') + cls; el.textContent = text; }
+  function clr(id) { setMsg(id, '', ''); }
+  async function api(path, opt) {
+    const r = await fetch(path, opt);
+    let d = {}; try { d = await r.json(); } catch (e) {}
+    return { ok: r.ok, status: r.status, d };
+  }
+
+  // ── 로그인 ──
+  async function doLogin() {
+    clr('li-msg');
+    const email = document.getElementById('li-email').value.trim();
+    const password = document.getElementById('li-pw').value;
+    if (!EM_RE.test(email)) { setMsg('li-msg', 'e', '올바른 이메일을 입력해 주세요.'); return; }
+    if (!password) { setMsg('li-msg', 'e', '비밀번호를 입력해 주세요.'); return; }
+    const { ok, d } = await api('/api/merchant/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    if (!ok) { setMsg('li-msg', 'e', d.error || '로그인에 실패했습니다.'); return; }
+    document.getElementById('d-name').textContent = d.merchant?.name || '';
+    if (d.resetRequired) { openPwChange(); return; }   // 임시 비밀번호 → 강제 변경
+    enterApp(document.getElementById('login-gift-toggle').checked);
+    if (d.prevIp || d.prevLogoutAt) {
+      const ipLine = `마지막 접속 IP: ${d.prevIp || '정보 없음'}`;
+      const outLine = `마지막 로그아웃: ${d.prevLogoutAt ? new Date(d.prevLogoutAt).toLocaleString('ko-KR') : '정보 없음'}`;
+      uiAlert(`${ipLine}\n${outLine}`, { title: '이전 접속 정보' });
+    }
+  }
+  async function doLogout() {
+    const ok = await uiConfirm('로그아웃 하시겠습니까?', { title: '로그아웃', okText: '로그아웃' });
+    if (!ok) return;
+    stopSessionWatch();
+    stopScanner();
+    await fetch('/api/merchant/logout', { method: 'POST' });
+    document.getElementById('li-email').value = ''; document.getElementById('li-pw').value = '';
+    show('sec-login');
+  }
+
+  // ── 비밀번호 찾기(임시 비밀번호 발송) ──
+  async function doForgot() {
+    clr('fp-msg');
+    const email = document.getElementById('fp-email').value.trim();
+    if (!EM_RE.test(email)) { setMsg('fp-msg', 'e', '올바른 이메일을 입력해 주세요.'); return; }
+    const btn = document.getElementById('fp-submit'); btn.disabled = true;
+    const { ok, d } = await api('/api/merchant/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    btn.disabled = false;
+    if (!ok) { setMsg('fp-msg', 'e', d.error || '요청에 실패했습니다.'); return; }
+    setMsg('fp-msg', 's', d.message || '임시 비밀번호가 발송되었습니다. 메일을 확인해 주세요.');
+  }
+
+  // ── 임시 비밀번호 강제 변경 ──
+  function openPwChange() {
+    document.getElementById('pc-cur').value = document.getElementById('li-pw').value || '';
+    document.getElementById('pc-new').value = '';
+    document.getElementById('pc-new2').value = '';
+    clr('pc-msg'); clr('pc-new-fm'); clr('pc-new2-fm');
+    document.getElementById('pwchg-modal').classList.add('open');
+    document.getElementById('pc-new').focus();
+  }
+  async function submitPwChange() {
+    clr('pc-msg');
+    const cur = document.getElementById('pc-cur').value;
+    const np = document.getElementById('pc-new').value;
+    const np2 = document.getElementById('pc-new2').value;
+    if (!cur) { setMsg('pc-msg', 'e', '현재(임시) 비밀번호를 입력해 주세요.'); return; }
+    if (!PW_RE.test(np)) { setMsg('pc-msg', 'e', '새 비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.'); return; }
+    if (np !== np2) { setMsg('pc-msg', 'e', '새 비밀번호가 일치하지 않습니다.'); return; }
+    const btn = document.getElementById('pc-submit'); btn.disabled = true;
+    const { ok, d } = await api('/api/merchant/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password: cur, new_password: np }) });
+    btn.disabled = false;
+    if (!ok) { setMsg('pc-msg', 'e', d.error || '변경에 실패했습니다.'); return; }
+    document.getElementById('pwchg-modal').classList.remove('open');
+    document.getElementById('li-pw').value = '';
+    await uiAlert('비밀번호가 변경되었습니다.');
+    enterApp(document.getElementById('login-gift-toggle').checked);
+  }
+  document.getElementById('pc-new').addEventListener('input', function () {
+    const v = this.value;
+    if (!v) setMsg('pc-new-fm', '', '');
+    else if (!PW_RE.test(v)) setMsg('pc-new-fm', 'e', '대소문자·숫자·특수문자를 포함해 8자 이상이어야 합니다.');
+    else setMsg('pc-new-fm', 's', '사용 가능한 비밀번호입니다.');
+  });
+  document.getElementById('pc-new2').addEventListener('input', function () {
+    const p1 = document.getElementById('pc-new').value, p2 = this.value;
+    if (!p2) setMsg('pc-new2-fm', '', '');
+    else if (p1 !== p2) setMsg('pc-new2-fm', 'e', '비밀번호가 일치하지 않습니다.');
+    else setMsg('pc-new2-fm', 's', '비밀번호가 일치합니다.');
+  });
+
+  // 이메일 인증 전에는 나머지 입력 비활성화
+  const REG_GATED = ['rg-name','rg-biz','rg-cname','rg-cphone','rg-cmobile','rg-pw','rg-pw2','rg-bank','rg-account','rg-bizcert','rg-bankcopy','rg-submit'];
+  function setRegEnabled(on) { REG_GATED.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; }); }
+  function togCode(btn) {
+    const inp = document.getElementById('rg-code');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  // ── 이메일 인증 ──
+  async function sendCode() {
+    const email = document.getElementById('rg-email').value.trim();
+    if (!EM_RE.test(email)) { setMsg('rg-email-fm', 'e', '올바른 이메일을 입력해 주세요.'); return; }
+    const btn = document.getElementById('rg-send'); btn.disabled = true;
+    const { ok, d } = await api('/api/merchant/email-verify/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    btn.disabled = false;
+    if (!ok) { setMsg('rg-email-fm', 'e', d.error || '발송 실패'); return; }
+    setMsg('rg-email-fm', 's', '인증코드를 발송했습니다. 메일을 확인해 주세요.');
+    document.getElementById('rg-code-wrap').style.display = 'block';
+  }
+  async function checkCode() {
+    const email = document.getElementById('rg-email').value.trim();
+    const code = document.getElementById('rg-code').value.trim();
+    if (!code) { setMsg('rg-code-fm', 'e', '코드를 입력해 주세요.'); return; }
+    const { ok, d } = await api('/api/merchant/email-verify/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code }) });
+    if (!ok) { setMsg('rg-code-fm', 'e', d.error || '인증 실패'); emailVerified = false; return; }
+    setMsg('rg-code-fm', 's', '✓ 이메일 인증 완료. 나머지 정보를 입력해 주세요.');
+    emailVerified = true;
+    document.getElementById('rg-email').readOnly = true;
+    document.getElementById('rg-send').disabled = true;
+    document.getElementById('rg-check').disabled = true;
+    document.getElementById('rg-code').readOnly = true;
+    setRegEnabled(true);   // 나머지 입력 필드 활성화
+  }
+
+  // ── 회원가입 ──
+  async function doRegister() {
+    clr('rg-msg');
+    const v = id => document.getElementById(id).value.trim();
+    if (!emailVerified) { setMsg('rg-msg', 'e', '이메일 인증을 먼저 완료해 주세요.'); return; }
+    if (!v('rg-name')) { setMsg('rg-msg', 'e', '가맹점명을 입력해 주세요.'); return; }
+    if (!/^\d{10}$/.test(v('rg-biz').replace(/-/g, ''))) { setMsg('rg-msg', 'e', '사업자등록번호는 10자리 숫자입니다.'); return; }
+    if (!v('rg-cname')) { setMsg('rg-msg', 'e', '담당자 이름을 입력해 주세요.'); return; }
+    const cphone = v('rg-cphone').replace(/[^0-9]/g, '');
+    if (cphone && !PHONE_RE.test(cphone)) { setMsg('rg-msg', 'e', '담당자 연락처(일반전화) 형식이 올바르지 않습니다.'); return; }
+    const cmobile = v('rg-cmobile').replace(/[^0-9]/g, '');
+    if (!cmobile) { setMsg('rg-msg', 'e', '담당자 모바일을 입력해 주세요.'); return; }
+    if (!MOBILE_RE.test(cmobile)) { setMsg('rg-msg', 'e', '올바른 담당자 휴대폰 번호를 입력해 주세요.'); return; }
+    const pw = document.getElementById('rg-pw').value;
+    if (!pw) { setMsg('rg-msg', 'e', '비밀번호를 입력해 주세요.'); return; }
+    if (!PW_RE.test(pw)) { setMsg('rg-msg', 'e', '비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.'); return; }
+    if (pw !== document.getElementById('rg-pw2').value) { setMsg('rg-msg', 'e', '비밀번호가 일치하지 않습니다.'); return; }
+    const bankCode = document.getElementById('rg-bank').value;
+    if (!bankCode) { setMsg('rg-msg', 'e', '은행을 선택해 주세요.'); return; }
+    if (!v('rg-account')) { setMsg('rg-msg', 'e', '은행계좌번호를 입력해 주세요.'); return; }
+    if (!document.getElementById('rg-bizcert').files[0]) { setMsg('rg-msg', 'e', '사업자등록증을 첨부해 주세요.'); return; }
+    if (!document.getElementById('rg-bankcopy').files[0]) { setMsg('rg-msg', 'e', '은행계좌사본을 첨부해 주세요.'); return; }
+
+    const fd = new FormData();
+    fd.append('merchant_name', v('rg-name'));
+    fd.append('biz_no', v('rg-biz'));
+    fd.append('contact_name', v('rg-cname'));
+    fd.append('contact_phone', v('rg-cphone'));
+    fd.append('contact_mobile', v('rg-cmobile'));
+    fd.append('email', v('rg-email'));
+    fd.append('password', pw);
+    fd.append('bank_code', bankCode);
+    fd.append('bank_account', v('rg-account'));
+    fd.append('biz_cert', document.getElementById('rg-bizcert').files[0]);
+    fd.append('bank_copy', document.getElementById('rg-bankcopy').files[0]);
+
+    const btn = document.getElementById('rg-submit'); btn.disabled = true;
+    const { ok, d } = await api('/api/merchant/register', { method: 'POST', body: fd });
+    btn.disabled = false;
+    if (!ok) { setMsg('rg-msg', 'e', d.error || '가입 신청에 실패했습니다.'); return; }
+    document.getElementById('done-msg').textContent = d.message || '가맹점 가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.';
+    show('sec-done');
+  }
+
+  // ── 숫자 포맷터 (포커스 아웃 시 하이픈 표기) ──
+  function formatBiz(s) {
+    const d = String(s).replace(/[^0-9]/g, '').slice(0, 10);
+    if (d.length <= 3) return d;
+    if (d.length <= 5) return d.slice(0, 3) + '-' + d.slice(3);
+    return d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5);          // ddd-dd-ddddd
+  }
+  function formatPhone(s) {
+    const d = String(s).replace(/[^0-9]/g, '').slice(0, 11);
+    if (d.startsWith('02')) {                                                // 서울 지역번호
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return d.slice(0, 2) + '-' + d.slice(2);
+      if (d.length <= 9) return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);   // 02-ddd-dddd
+      return d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6, 10);                  // 02-dddd-dddd
+    }
+    if (d.length <= 3) return d;
+    if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+    if (d.length <= 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);    // ddd-ddd-dddd
+    return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7, 11);                    // ddd-dddd-dddd / 010-dddd-dddd
+  }
+
+  // 입력 중에는 숫자만, 포커스 시 숫자만(편집 편의)
+  document.getElementById('rg-biz').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10); });
+  document.getElementById('rg-code').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6); });
+  document.getElementById('rg-cphone').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11); });
+  document.getElementById('rg-cmobile').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11); });
+  document.getElementById('rg-account').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, ''); });
+  ['rg-biz', 'rg-cphone', 'rg-cmobile'].forEach(id =>
+    document.getElementById(id).addEventListener('focus', function () { this.value = this.value.replace(/[^0-9]/g, ''); }));
+
+  // 포커스 아웃 시 패턴 검증 + 하이픈 포맷
+  document.getElementById('rg-biz').addEventListener('blur', function () { this.value = formatBiz(this.value); });
+  document.getElementById('rg-cphone').addEventListener('blur', function () {
+    const v = this.value.replace(/[^0-9]/g, '');
+    if (v && !PHONE_RE.test(v)) { setMsg('rg-cphone-fm', 'e', '올바른 일반전화 번호 형식이 아닙니다. (예: 02-1234-5678)'); }
+    else { setMsg('rg-cphone-fm', '', ''); this.value = formatPhone(v); }
+  });
+  document.getElementById('rg-cmobile').addEventListener('blur', function () {
+    const v = this.value.replace(/[^0-9]/g, '');
+    if (v && !MOBILE_RE.test(v)) { setMsg('rg-cmobile-fm', 'e', '올바른 휴대폰 번호 형식이 아닙니다. (예: 010-1234-5678)'); }
+    else { setMsg('rg-cmobile-fm', '', ''); this.value = formatPhone(v); }
+  });
+  // 비밀번호 요건/일치 실시간 검증
+  function checkPwMatch() {
+    const p1 = document.getElementById('rg-pw').value, p2 = document.getElementById('rg-pw2').value;
+    if (!p2) setMsg('rg-pw2-fm', '', '');
+    else if (p1 !== p2) setMsg('rg-pw2-fm', 'e', '비밀번호가 일치하지 않습니다.');
+    else setMsg('rg-pw2-fm', 's', '비밀번호가 일치합니다.');
+  }
+  document.getElementById('rg-pw').addEventListener('input', function () {
+    const v = this.value;
+    if (!v) setMsg('rg-pw-fm', '', '');
+    else if (!PW_RE.test(v)) setMsg('rg-pw-fm', 'e', '대소문자·숫자·특수문자를 포함해 8자 이상이어야 합니다.');
+    else setMsg('rg-pw-fm', 's', '사용 가능한 비밀번호입니다.');
+    checkPwMatch();
+  });
+  document.getElementById('rg-pw2').addEventListener('input', checkPwMatch);
+
+  // 이메일 변경 시 인증 초기화 + 나머지 다시 비활성화
+  document.getElementById('rg-email').addEventListener('input', function () {
+    emailVerified = false;
+    setRegEnabled(false);
+    document.getElementById('rg-send').disabled = false;
+  });
+
+  // 은행 목록(코드값) 로드 → select 채우기
+  (async () => {
+    try {
+      const r = await fetch('/api/merchant/banks');
+      const d = await r.json();
+      if (d && d.ok) {
+        const sel = document.getElementById('rg-bank');
+        d.banks.forEach(b => { const o = document.createElement('option'); o.value = b.code; o.textContent = `${b.name} (${b.code})`; sel.appendChild(o); });
+      }
+    } catch (e) {}
+  })();
+
+  // 이메일 인증 링크로 진입 시 자동 입력·검증
+  (async () => {
+    const qp = new URLSearchParams(location.search);
+    const vmail = qp.get('vmail'), vcode = qp.get('vcode');
+    if (vmail && vcode) {
+      history.replaceState(null, '', '/merchant');
+      show('sec-register');
+      document.getElementById('rg-email').value = vmail;
+      document.getElementById('rg-code-wrap').style.display = 'block';
+      document.getElementById('rg-code').value = vcode;
+      await checkCode();   // 자동 인증 → 나머지 필드 활성화
+      return;
+    }
+    const { ok, d } = await api('/api/merchant/me');
+    if (ok && d.ok) { document.getElementById('d-name').textContent = d.merchant?.name || ''; enterApp(); }
+  })();
+
+  // ── 탭 전환 ──
+  function switchTab(name) {
+    document.getElementById('tab-projects').classList.toggle('active', name === 'projects');
+    document.getElementById('tab-settle').classList.toggle('active', name === 'settle');
+    document.getElementById('pane-projects').classList.toggle('active', name === 'projects');
+    document.getElementById('pane-settle').classList.toggle('active', name === 'settle');
+    if (name === 'settle') loadSettlement();
+  }
+
+  // ── 프로젝트 ──
+  const STATUS_LABEL = { ready_to_start: '시작대기', started: '진행중', completed: '종료' };
+  const STATUS_BADGE = { ready_to_start: 'b-pend', started: 'b-appr', completed: 'b-end' };
+  const APP_BADGE = { pending: ['지원중', 'b-pend'], approved: ['승인', 'b-appr'], rejected: ['거절', 'b-rej'] };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function won(v) { return v ? Number(v).toLocaleString('ko-KR') + '원' : '-'; }
+  function remainLabel(p) {
+    if (p.status === 'completed') return '종료';
+    const r = p.remaining_days;
+    if (r == null) return '-';
+    if (Number(r) < 0) return '마감';
+    return `${Number(r)}일`;
+  }
+
+  function resetProjFilter() {
+    document.getElementById('pf-name').value = '';
+    document.getElementById('pf-org').value = '';
+    document.getElementById('pf-status').value = '';
+    document.getElementById('pf-applied').value = '';
+    loadProjects();
+  }
+
+  // 컬럼 정렬(클라이언트) — admin 그리드와 동일한 방식
+  const STATUS_RANK = { started: 0, ready_to_start: 1, completed: 2 };
+  const APP_RANK = { pending: 0, approved: 1, rejected: 2 };
+  const PJ_COLS = [
+    { key: 'organization_name', label: '소속기관', cls: '' },
+    { key: 'project_name',      label: '프로젝트명', cls: '' },
+    { key: 'from_date',         label: '프로젝트 기간', cls: '' },
+    { key: 'remaining_days',    label: '잔여일', cls: 'c', num: true },
+    { key: 'status',            label: '상태', cls: 'c' },
+    { key: 'gift_amount',       label: 'Gift 단가', cls: 'r', num: true },
+    { key: 'application_status',label: '지원', cls: 'c' },
+  ];
+  let projData = [];
+  let projSort = { key: 'from_date', dir: 'desc' };
+  let projPage = 1;
+
+  function projVal(p, key) {
+    if (key === 'remaining_days') return p.status === 'completed' ? -99999 : (p.remaining_days == null ? -99998 : Number(p.remaining_days));
+    if (key === 'gift_amount') return Number(p.gift_amount || 0);
+    if (key === 'from_date') return p.from_date ? new Date(p.from_date).getTime() : 0;
+    if (key === 'status') return STATUS_RANK[p.status] ?? 9;
+    if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
+    return String(p[key] ?? '').toLowerCase();
+  }
+
+  function sortProj(key) {
+    const col = PJ_COLS.find(c => c.key === key);
+    if (projSort.key === key) projSort.dir = projSort.dir === 'asc' ? 'desc' : 'asc';
+    else projSort = { key, dir: (col && (col.num || key === 'from_date')) ? 'desc' : 'asc' };
+    projPage = 1;
+    renderProjects();
+  }
+  function changeProjSize() { projPage = 1; renderProjects(); }
+  function gotoProjPage(p) { projPage = p; renderProjects(); }
+  function projPagerHtml(totalPages, total) {
+    let h = `<span style="color:#64748b;margin-right:6px;">총 ${total}건 · ${projPage}/${totalPages}</span>`;
+    h += `<button class="btn btn-o btn-sm" ${projPage <= 1 ? 'disabled' : ''} onclick="gotoProjPage(${projPage - 1})">‹</button>`;
+    let s = Math.max(1, projPage - 2), e = Math.min(totalPages, s + 4); s = Math.max(1, e - 4);
+    for (let i = s; i <= e; i++) h += `<button class="btn ${i === projPage ? 'btn-p' : 'btn-o'} btn-sm" onclick="gotoProjPage(${i})">${i}</button>`;
+    h += `<button class="btn btn-o btn-sm" ${projPage >= totalPages ? 'disabled' : ''} onclick="gotoProjPage(${projPage + 1})">›</button>`;
+    return `<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:13px;">${h}</div>`;
+  }
+  // 조회조건 전체를 엑셀로 다운로드 (파일명: 소속기관_프로젝트일련번호)
+  async function downloadProjectsExcel() {
+    const btn = document.getElementById('proj-excel');
+    if (!btn || btn.disabled) return;
+    const qs = new URLSearchParams({
+      project_name: document.getElementById('pf-name').value.trim(),
+      organization: document.getElementById('pf-org').value.trim(),
+      status: document.getElementById('pf-status').value,
+      applied: document.getElementById('pf-applied').value,
+    });
+    try {
+      const r = await fetch('/api/merchant/projects/export?' + qs.toString());
+      if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+      const blob = await r.blob();
+      let fname = 'projects.xlsx';
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+  }
+
+  async function loadProjects() {
+    const body = document.getElementById('pj-body');
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
+    const qs = new URLSearchParams({
+      project_name: document.getElementById('pf-name').value.trim(),
+      organization: document.getElementById('pf-org').value.trim(),
+      status: document.getElementById('pf-status').value,
+      applied: document.getElementById('pf-applied').value,
+    });
+    const { ok, d } = await api('/api/merchant/projects?' + qs.toString());
+    if (!ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; return; }
+    projData = d.data || [];
+    projPage = 1;
+    renderProjects();
+  }
+
+  function renderProjects() {
+    const excelBtn = document.getElementById('proj-excel');
+    if (excelBtn) excelBtn.disabled = !projData.length;   // 조회결과 있을 때만 활성화
+    const body = document.getElementById('pj-body');
+    if (!projData.length) {
+      body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">조회된 프로젝트가 없습니다.</div>';
+      return;
+    }
+    const k = projSort.key;
+    const sorted = projData.slice().sort((a, b) => {
+      const av = projVal(a, k), bv = projVal(b, k);
+      if (av < bv) return projSort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return projSort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    // 페이징: 선택한 표시 개수 기준
+    const pageSize = Number((document.getElementById('pf-size') || {}).value) || 10;
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    if (projPage > totalPages) projPage = totalPages;
+    if (projPage < 1) projPage = 1;
+    const list = sorted.slice((projPage - 1) * pageSize, (projPage - 1) * pageSize + pageSize);
+    const arr = key => projSort.key === key ? (projSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    const thead = PJ_COLS.map(c =>
+      `<th class="sortable ${c.cls}" onclick="sortProj('${c.key}')">${c.label}${arr(c.key)}</th>`).join('');
+    body.innerHTML = `
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr>${thead}</tr></thead>
+        <tbody>${list.map(p => {
+          const from = p.from_date ? String(p.from_date).slice(0,10) : '-';
+          const to = p.to_date ? String(p.to_date).slice(0,10) : '-';
+          const canApply = !p.application_status && (p.status === 'ready_to_start' || p.status === 'started');
+          let action;
+          if (p.application_status) {
+            const b = APP_BADGE[p.application_status] || [p.application_status, 'b-stat'];
+            action = `<span class="badge ${b[1]}">${b[0]}</span>`;
+          } else if (canApply) {
+            action = `<button class="btn btn-p btn-sm" onclick="applyProject(${p.id},'${esc(p.project_name).replace(/'/g,"\\'")}')">지원</button>`;
+          } else {
+            action = '<span style="color:#cbd5e1;">-</span>';
+          }
+          return `<tr>
+            <td>${esc(p.organization_name) || '-'}</td>
+            <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
+            <td style="font-size:12px;color:#64748b;">${from} ~ ${to}</td>
+            <td class="c" style="font-size:12px;">${remainLabel(p)}</td>
+            <td class="c"><span class="badge ${STATUS_BADGE[p.status] || 'b-stat'}">${STATUS_LABEL[p.status] || p.status}</span></td>
+            <td class="r">${won(p.gift_amount)}</td>
+            <td class="c">${action}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>${projPagerHtml(totalPages, sorted.length)}`;
+  }
+
+  // ── 정산 ──
+  function fmtPhone(p) {
+    const s = String(p || '').replace(/[^0-9]/g, '');
+    if (s.length === 11) return `${s.slice(0,3)}-${s.slice(3,7)}-${s.slice(7)}`;
+    if (s.length === 10) return `${s.slice(0,3)}-${s.slice(3,6)}-${s.slice(6)}`;
+    return s || '-';
+  }
+  function fmtDT(s) {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
+  function appLabel(s) {
+    if (!s) return '<span class="badge b-end">미지원</span>';
+    const b = APP_BADGE[s] || [s, 'b-stat'];
+    return `<span class="badge ${b[1]}">${b[0]}</span>`;
+  }
+
+  const STT_COLS = [
+    { key: 'organization_name', label: '소속기관', cls: '' },
+    { key: 'project_name',      label: '프로젝트명', cls: '' },
+    { key: 'status',            label: '프로젝트상태', cls: 'c' },
+    { key: 'application_status',label: '지원여부', cls: 'c' },
+    { key: 'gift_amount',       label: 'Gift 단가', cls: 'r', num: true },
+    { key: 'used_count',        label: 'Gift 사용개수', cls: 'c', num: true },
+    { key: 'grant_count',       label: 'Gift 증정개수', cls: 'c', num: true },
+    { key: 'used_amount',       label: 'Gift 사용금액', cls: 'r', num: true },
+    { key: 'grant_amount',      label: 'Gift 증정금액', cls: 'r', num: true },
+    { key: 'total_amount',      label: '총 Gift 금액', cls: 'r', num: true },
+  ];
+  let settleData = [];
+  let settleSort = { key: 'status', dir: 'asc' };
+  let settlePage = 1;
+
+  function settleVal(p, key) {
+    if (key === 'total_amount') return Number(p.used_amount || 0) + Number(p.grant_amount || 0);
+    if (['gift_amount','used_count','grant_count','used_amount','grant_amount'].includes(key)) return Number(p[key] || 0);
+    if (key === 'status') return STATUS_RANK[p.status] ?? 9;
+    if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
+    return String(p[key] ?? '').toLowerCase();
+  }
+  function sortSettle(key) {
+    const col = STT_COLS.find(c => c.key === key);
+    if (settleSort.key === key) settleSort.dir = settleSort.dir === 'asc' ? 'desc' : 'asc';
+    else settleSort = { key, dir: (col && col.num) ? 'desc' : 'asc' };
+    settlePage = 1;
+    renderSettlement();
+  }
+  function changeSettleSize() { settlePage = 1; renderSettlement(); }
+  function gotoSettlePage(p) { settlePage = p; renderSettlement(); }
+  function settlePagerHtml(totalPages, total) {
+    let h = `<span style="color:#64748b;margin-right:6px;">총 ${total}건 · ${settlePage}/${totalPages}</span>`;
+    h += `<button class="btn btn-o btn-sm" ${settlePage <= 1 ? 'disabled' : ''} onclick="gotoSettlePage(${settlePage - 1})">‹</button>`;
+    let s = Math.max(1, settlePage - 2), e = Math.min(totalPages, s + 4); s = Math.max(1, e - 4);
+    for (let i = s; i <= e; i++) h += `<button class="btn ${i === settlePage ? 'btn-p' : 'btn-o'} btn-sm" onclick="gotoSettlePage(${i})">${i}</button>`;
+    h += `<button class="btn btn-o btn-sm" ${settlePage >= totalPages ? 'disabled' : ''} onclick="gotoSettlePage(${settlePage + 1})">›</button>`;
+    return `<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:13px;">${h}</div>`;
+  }
+  // 정산 조회조건 전체를 엑셀로 다운로드
+  async function downloadSettlementExcel() {
+    const btn = document.getElementById('settle-excel');
+    if (!btn || btn.disabled) return;
+    const qs = new URLSearchParams({
+      project_name: document.getElementById('sf-name').value.trim(),
+      organization: document.getElementById('sf-org').value.trim(),
+      status: document.getElementById('sf-status').value,
+      applied: document.getElementById('sf-applied').value,
+    });
+    try {
+      const r = await fetch('/api/merchant/settlement/export?' + qs.toString());
+      if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+      const blob = await r.blob();
+      let fname = 'settlement.xlsx';
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+  }
+  function resetSettleFilter() {
+    document.getElementById('sf-name').value = '';
+    document.getElementById('sf-org').value = '';
+    document.getElementById('sf-status').value = '';
+    document.getElementById('sf-applied').value = '';
+    loadSettlement();
+  }
+  async function loadSettlement() {
+    const body = document.getElementById('st-body');
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
+    const qs = new URLSearchParams({
+      project_name: document.getElementById('sf-name').value.trim(),
+      organization: document.getElementById('sf-org').value.trim(),
+      status: document.getElementById('sf-status').value,
+      applied: document.getElementById('sf-applied').value,
+    });
+    const { ok, d } = await api('/api/merchant/settlement?' + qs.toString());
+    if (!ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; return; }
+    settleData = d.data || [];
+    settlePage = 1;
+    renderSettlement();
+  }
+  function renderSettlement() {
+    const excelBtn = document.getElementById('settle-excel');
+    if (excelBtn) excelBtn.disabled = !settleData.length;   // 조회결과 있을 때만 활성화
+    const body = document.getElementById('st-body');
+    if (!settleData.length) {
+      body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">조회된 프로젝트가 없습니다.</div>';
+      return;
+    }
+    const k = settleSort.key;
+    const sorted = settleData.slice().sort((a, b) => {
+      const av = settleVal(a, k), bv = settleVal(b, k);
+      if (av < bv) return settleSort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return settleSort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    // 페이징
+    const pageSize = Number((document.getElementById('sf-size') || {}).value) || 10;
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    if (settlePage > totalPages) settlePage = totalPages;
+    if (settlePage < 1) settlePage = 1;
+    const list = sorted.slice((settlePage - 1) * pageSize, (settlePage - 1) * pageSize + pageSize);
+    const arr = key => settleSort.key === key ? (settleSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    const thead = STT_COLS.map(c =>
+      `<th class="sortable ${c.cls}" onclick="sortSettle('${c.key}')">${c.label}${arr(c.key)}</th>`).join('')
+      + '<th class="c">사용자현황</th>';
+    body.innerHTML = `
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr>${thead}</tr></thead>
+        <tbody>${list.map(p => `
+          <tr>
+            <td>${esc(p.organization_name) || '-'}</td>
+            <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
+            <td class="c"><span class="badge ${STATUS_BADGE[p.status] || 'b-stat'}">${STATUS_LABEL[p.status] || p.status}</span></td>
+            <td class="c">${appLabel(p.application_status)}</td>
+            <td class="r">${won(p.gift_amount)}</td>
+            <td class="c">${Number(p.used_count || 0)}개</td>
+            <td class="c">${Number(p.grant_count || 0)}개</td>
+            <td class="r">${won(p.used_amount)}</td>
+            <td class="r">${won(p.grant_amount)}</td>
+            <td class="r"><b>${won(Number(p.used_amount||0) + Number(p.grant_amount||0))}</b></td>
+            <td class="c"><button class="btn btn-o btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users||0)} / ${Number(p.grant_users||0)}</button></td>
+          </tr>`).join('')}</tbody>
+      </table></div>${settlePagerHtml(totalPages, sorted.length)}`;
+  }
+
+  // ── Gift 사용자 현황 상세 ──
+  let usageData = [];
+  const USAGE_COLS = [
+    { key: 'phone',           label: '휴대폰번호', cls: '' },
+    { key: 'redemption_type', label: '구분',       cls: 'c' },
+    { key: 'amount',          label: '금액',       cls: 'r', num: true },
+    { key: 'redeemed_at',     label: '일시',       cls: '' },
+  ];
+  let usageSort = { key: 'redeemed_at', dir: 'desc' };
+
+  function usageVal(x, key) {
+    if (key === 'amount') return Number(x.amount || 0);
+    if (key === 'redeemed_at') return x.redeemed_at ? new Date(x.redeemed_at).getTime() : 0;
+    if (key === 'redemption_type') return x.redemption_type === 'grant' ? 1 : 0; // 사용(0) < 증정(1)
+    return String(x.phone || '').replace(/[^0-9]/g, '');
+  }
+  function sortUsage(key) {
+    const col = USAGE_COLS.find(c => c.key === key);
+    if (usageSort.key === key) usageSort.dir = usageSort.dir === 'asc' ? 'desc' : 'asc';
+    else usageSort = { key, dir: (col && (col.num || key === 'redeemed_at')) ? 'desc' : 'asc' };
+    renderUsage();
+  }
+
+  async function openUsage(pid) {
+    const proj = settleData.find(x => Number(x.id) === Number(pid));
+    const pname = proj ? `${proj.project_name} (${proj.project_serial})` : 'Gift 사용자 현황';
+    document.getElementById('usage-sub').textContent = pname;
+    document.getElementById('usage-summary').innerHTML = '';
+    document.getElementById('usage-thead').innerHTML = '';
+    document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</td></tr>';
+    document.getElementById('uf-phone').value = '';
+    document.getElementById('uf-type').value = '';
+    document.getElementById('uf-count').textContent = '';
+    usageSort = { key: 'redeemed_at', dir: 'desc' };
+    document.getElementById('usage-modal').classList.add('open');
+
+    const { ok, d } = await api(`/api/merchant/settlement/${pid}/usage`);
+    if (!ok) { document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</td></tr>'; return; }
+    usageData = d.data || [];
+
+    // 구분별 건수 + 금액 요약
+    const usedList = usageData.filter(x => x.redemption_type === 'normal');
+    const grantList = usageData.filter(x => x.redemption_type === 'grant');
+    const usedAmt = usedList.reduce((s, x) => s + Number(x.amount || 0), 0);
+    const grantAmt = grantList.reduce((s, x) => s + Number(x.amount || 0), 0);
+    document.getElementById('usage-summary').innerHTML =
+      `<span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534;">Gift사용 ${usedList.length}건 · ${won(usedAmt)}</span>` +
+      `<span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#e0e7ff;color:#3730a3;">Gift증정 ${grantList.length}건 · ${won(grantAmt)}</span>`;
+
+    renderUsage();
+  }
+
+  function renderUsage() {
+    const phoneQ = (document.getElementById('uf-phone').value || '').replace(/[^0-9]/g, '');
+    const typeQ = document.getElementById('uf-type').value;
+    let list = usageData.slice();
+    if (typeQ) list = list.filter(x => x.redemption_type === typeQ);
+    if (phoneQ) list = list.filter(x => String(x.phone || '').replace(/[^0-9]/g, '').includes(phoneQ));
+
+    const k = usageSort.key;
+    list.sort((a, b) => {
+      const av = usageVal(a, k), bv = usageVal(b, k);
+      if (av < bv) return usageSort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return usageSort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const arrow = key => usageSort.key === key ? (usageSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    document.getElementById('usage-thead').innerHTML = USAGE_COLS.map(c =>
+      `<th class="usort ${c.cls}" onclick="sortUsage('${c.key}')">${c.label}${arrow(c.key)}</th>`).join('');
+
+    const body = document.getElementById('usage-body');
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">표시할 내역이 없습니다.</td></tr>';
+    } else {
+      body.innerHTML = list.map(x => `
+        <tr>
+          <td><code style="font-size:12px;">${fmtPhone(x.phone)}</code></td>
+          <td class="c"><span class="badge ${x.redemption_type === 'grant' ? 'b-stat' : 'b-appr'}">${x.redemption_type === 'grant' ? 'Gift증정' : 'Gift사용'}</span></td>
+          <td class="r">${won(x.amount)}</td>
+          <td style="font-size:12px;color:#64748b;">${fmtDT(x.redeemed_at)}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('uf-count').textContent = `${list.length}건 표시`;
+  }
+  function closeUsage() { document.getElementById('usage-modal').classList.remove('open'); }
+
+  // ── 기본 정보(설정) ──
+  async function openProfile() {
+    clr('pf-mc-msg');
+    document.getElementById('pf-mc-bank').innerHTML = document.getElementById('rg-bank').innerHTML; // 은행 목록 재사용
+    document.getElementById('modal-profile').classList.add('open');
+    const { ok, d } = await api('/api/merchant/profile');
+    if (!ok) { setMsg('pf-mc-msg', 'e', '정보를 불러오지 못했습니다.'); return; }
+    const p = d.profile || {};
+    document.getElementById('pf-mc-name').value = p.merchant_name || '';
+    document.getElementById('pf-mc-email').value = p.email || '';
+    document.getElementById('pf-mc-cname').value = p.contact_name || '';
+    document.getElementById('pf-mc-biz').value = p.biz_no || '';
+    document.getElementById('pf-mc-cphone').value = p.contact_phone ? formatPhone(p.contact_phone) : '';
+    document.getElementById('pf-mc-cmobile').value = p.contact_mobile ? formatPhone(p.contact_mobile) : '';
+    document.getElementById('pf-mc-bank').value = p.bank_code || '';
+    document.getElementById('pf-mc-account').value = p.bank_account || '';
+    document.getElementById('pf-mc-zip').value = p.address_zip || '';
+    document.getElementById('pf-mc-addr1').value = p.address1 || '';
+    document.getElementById('pf-mc-addr2').value = p.address2 || '';
+    // 비밀번호 입력 초기화
+    document.getElementById('pf-mc-newpw').value = '';
+    document.getElementById('pf-mc-newpw2').value = '';
+    document.getElementById('pf-mc-curpw').value = '';
+  }
+  function closeProfile() { document.getElementById('modal-profile').classList.remove('open'); }
+  // 가맹점 기본정보 모달용 우편번호 주소 검색
+  function openPostcodeProfile() {
+    new daum.Postcode({
+      oncomplete(data) {
+        const addr = data.roadAddress || data.autoRoadAddress || data.jibunAddress;
+        document.getElementById('pf-mc-zip').value = data.zonecode;
+        document.getElementById('pf-mc-addr1').value = addr;
+        document.getElementById('pf-mc-addr2').focus();
+      },
+    }).open();
+  }
+  // 검증 실패 시 메시지 + 해당 필드로 포커스/스크롤(무엇이 막는지 바로 보이도록)
+  function pfErr(msg, focusId) {
+    setMsg('pf-mc-msg', 'e', msg);
+    const el = focusId && document.getElementById(focusId);
+    if (el) { try { el.focus(); el.scrollIntoView({ block: 'center' }); } catch (e) {} }
+    try { document.getElementById('pf-mc-msg').scrollIntoView({ block: 'center' }); } catch (e) {}
+  }
+  async function saveProfile() {
+    const v = id => document.getElementById(id).value.trim();
+    if (!v('pf-mc-name')) { pfErr('가맹점명을 입력해 주세요.', 'pf-mc-name'); return; }
+    if (!v('pf-mc-cname')) { pfErr('담당자 이름을 입력해 주세요.', 'pf-mc-cname'); return; }
+    const cmobile = v('pf-mc-cmobile').replace(/[^0-9]/g, '');
+    if (!MOBILE_RE.test(cmobile)) { pfErr('올바른 담당자 휴대폰 번호를 입력해 주세요.', 'pf-mc-cmobile'); return; }
+    if (!document.getElementById('pf-mc-bank').value) { pfErr('은행을 선택해 주세요.', 'pf-mc-bank'); return; }
+    if (!v('pf-mc-account')) { pfErr('은행계좌번호를 입력해 주세요.', 'pf-mc-account'); return; }
+    const newpw = document.getElementById('pf-mc-newpw').value;
+    const newpw2 = document.getElementById('pf-mc-newpw2').value;
+    const curpw = document.getElementById('pf-mc-curpw').value;
+    if (newpw || newpw2) {
+      if (!PW_RE.test(newpw)) { pfErr('새 비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다.', 'pf-mc-newpw'); return; }
+      if (newpw !== newpw2) { pfErr('새 비밀번호가 일치하지 않습니다.', 'pf-mc-newpw2'); return; }
+    }
+    if (!curpw) { pfErr('본인 확인을 위해 현재 비밀번호를 입력해 주세요.', 'pf-mc-curpw'); return; }
+    const ok = await uiConfirm('저장하시겠습니까?', { title: '기본 정보 저장', okText: '저장' });
+    if (!ok) return;
+    const btn = document.getElementById('pf-mc-save'); btn.disabled = true;
+    const { ok: rok, d } = await api('/api/merchant/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchant_name: v('pf-mc-name'), contact_name: v('pf-mc-cname'),
+        contact_phone: v('pf-mc-cphone'), contact_mobile: v('pf-mc-cmobile'),
+        bank_code: document.getElementById('pf-mc-bank').value, bank_account: v('pf-mc-account'),
+        address_zip: v('pf-mc-zip'), address1: v('pf-mc-addr1'), address2: v('pf-mc-addr2'),
+        current_password: curpw, new_password: newpw || undefined,
+      }),
+    });
+    btn.disabled = false;
+    if (!rok) { pfErr(d.error || '저장에 실패했습니다.', 'pf-mc-curpw'); return; }
+    document.getElementById('d-name').textContent = v('pf-mc-name');
+    closeProfile();
+    await uiAlert(d.message || '기본 정보가 저장되었습니다.');
+  }
+
+  // ── 공통 확인/알림 모달 (네이티브 confirm/alert 대체) ──
+  function _uiModal(message, opts) {
+    return new Promise(resolve => {
+      const ov = document.getElementById('ui-modal');
+      const ok = document.getElementById('ui-ok');
+      const cancel = document.getElementById('ui-cancel');
+      document.getElementById('ui-title').textContent = opts.title || '알림';
+      document.getElementById('ui-msg').textContent = message;
+      ok.textContent = opts.okText || '확인';
+      cancel.textContent = opts.cancelText || '취소';
+      cancel.style.display = opts.alert ? 'none' : '';
+      function close(val) { ov.classList.remove('open'); ok.onclick = cancel.onclick = ov.onclick = null; resolve(val); }
+      ok.onclick = () => close(true);
+      cancel.onclick = () => close(false);
+      ov.onclick = e => { if (e.target === ov) close(false); };
+      ov.classList.add('open');
+      ok.focus();
+    });
+  }
+  function uiConfirm(message, opts) { return _uiModal(message, opts || {}); }
+  function uiAlert(message, opts) { return _uiModal(message, Object.assign({ title: '알림', alert: true }, opts || {})); }
+
+  async function applyProject(id, name) {
+    const ok = await uiConfirm(`'${name}' 프로젝트에 참여를 신청하시겠습니까?`, { title: '프로젝트 지원', okText: '지원' });
+    if (!ok) return;
+    const { ok: rok, d } = await api(`/api/merchant/projects/${id}/apply`, { method: 'POST' });
+    if (!rok) { await uiAlert(d.error || '신청하지 못했습니다.'); return; }
+    await uiAlert(d.message || '참여를 신청했습니다.');
+    loadProjects();
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  Gift 결제 모드 (on/off) · 기기 판별 · QR 스캔 · 인앱 결제
+  // ════════════════════════════════════════════════════════════
+  let giftMode = false;
+
+  // 접속 기기가 휴대폰이면 true(=Gift 결제 on). 태블릿/PC는 false(=관리 모드).
+  function isMobilePhone() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPod/i.test(ua)) return true;
+    if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
+    if (/(BlackBerry|Windows Phone|webOS|IEMobile|Opera Mini)/i.test(ua)) return true;
+    const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+    const small = Math.min(screen.width || 9999, screen.height || 9999) <= 480;
+    return !!(coarse && small);
+  }
+
+  // 로그인 화면 기본 Gift 결제 모드: 직전 선택(localStorage) > 기기 기본값(휴대폰=on)
+  function preferredGiftMode() {
+    try { const s = localStorage.getItem('merchantGiftMode'); if (s === '1') return true; if (s === '0') return false; } catch (e) {}
+    return isMobilePhone();
+  }
+
+  // 로그인 화면 토글 안내문구
+  function updateLoginGiftHint() {
+    const on = document.getElementById('login-gift-toggle').checked;
+    document.getElementById('login-gift-hint').textContent = on
+      ? '로그인 후 방문자 QR을 결제하는 화면으로 들어갑니다.'
+      : '로그인 후 가맹점 관리 화면으로 들어갑니다.';
+  }
+
+  // 로그인/세션복원 후 진입점. forceGift(불리언)가 주어지면 그 값으로, 없으면 직전 선택/기기 기본값으로.
+  function enterApp(forceGift) {
+    show('sec-dashboard');
+    startSessionWatch();
+    let on;
+    if (typeof forceGift === 'boolean') { on = forceGift; try { localStorage.setItem('merchantGiftMode', on ? '1' : '0'); } catch (e) {} }
+    else { on = preferredGiftMode(); }
+    setGiftMode(on);
+  }
+
+  // Gift 결제 on/off 전환
+  function setGiftMode(on) {
+    giftMode = on;
+    document.getElementById('mode-manage').style.display = on ? 'none' : '';
+    document.getElementById('mode-gift').style.display = on ? '' : 'none';
+    const badge = document.getElementById('mode-badge');
+    badge.textContent = on ? 'Gift 결제 모드' : '관리 모드';
+    badge.className = 'mode-badge' + (on ? ' gift' : '');
+    stopScanner();
+    if (on) { backToGiftList(); loadGiftProjects(); }
+    else { loadProjects(); }
+  }
+
+  // ── 1) 승인된 참여 프로젝트 목록 ──
+  let giftProjData = [];
+  let giftSel = null;
+  async function loadGiftProjects() {
+    const box = document.getElementById('gift-proj-list');
+    box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
+    const { ok, d } = await api('/api/merchant/gift-projects');
+    if (!ok) { box.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; return; }
+    giftProjData = d.data || [];
+    if (!giftProjData.length) {
+      box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">승인된 참여 프로젝트가 없습니다.</div>';
+      return;
+    }
+    box.innerHTML = giftProjData.map((p, i) => `
+      <button class="gpj" onclick="selectGiftProject(${i})">
+        <span>
+          <span class="gpj-name">${esc(p.project_name)}</span>
+          <span class="gpj-meta">${esc(p.organization_name) || '-'} · ${esc(p.project_serial)} · ${STATUS_LABEL[p.status] || p.status}</span>
+        </span>
+        <span class="gpj-amt">${won(p.gift_amount)}</span>
+      </button>`).join('');
+  }
+
+  function selectGiftProject(i) {
+    const p = giftProjData[i];
+    if (!p) return;
+    giftSel = p;
+    document.getElementById('scan-proj-name').textContent = p.project_name;
+    document.getElementById('scan-proj-sub').textContent = `${p.organization_name || '-'} · ${p.project_serial} · Gift ${won(p.gift_amount)}`;
+    document.getElementById('gift-list-view').style.display = 'none';
+    document.getElementById('gift-redeem').style.display = 'none';
+    document.getElementById('gift-scan-view').style.display = '';
+    resumeScan();
+  }
+
+  function backToGiftList() {
+    stopScanner();
+    giftSel = null;
+    document.getElementById('gift-scan-view').style.display = 'none';
+    document.getElementById('gift-redeem').style.display = 'none';
+    document.getElementById('gift-list-view').style.display = '';
+  }
+
+  // ── 2) QR 스캐너 (jsQR + getUserMedia) ──
+  let scanStream = null, scanRAF = null, scanning = false, scanBusy = false;
+  let scanCanvas = null, scanCtx = null;
+  function ensureCanvas() {
+    if (!scanCanvas) { scanCanvas = document.createElement('canvas'); scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true }); }
+  }
+  function setScan(cls, text) { const el = document.getElementById('scan-msg'); el.className = 'msg center ' + cls; el.textContent = text; }
+
+  async function resumeScan() {
+    document.getElementById('gift-redeem').style.display = 'none';
+    document.getElementById('gift-scan-view').style.display = '';
+    setScan('', '');
+    await startScanner();
+  }
+
+  async function startScanner() {
+    if (scanning) return;
+    ensureCanvas();
+    const video = document.getElementById('scan-video');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setScan('e', '이 브라우저는 실시간 스캔을 지원하지 않습니다. "사진으로 스캔"을 이용해 주세요.');
+      return;
+    }
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    } catch (e) {
+      setScan('e', '카메라를 사용할 수 없습니다. 권한을 허용한 뒤 다시 시도하거나 "사진으로 스캔"을 이용해 주세요.');
+      return;
+    }
+    video.srcObject = scanStream;
+    video.setAttribute('playsinline', '');
+    try { await video.play(); } catch (e) {}
+    scanning = true; scanBusy = false;
+    setScan('', 'Gift QR을 사각형 안에 비춰 주세요.');
+    scanRAF = requestAnimationFrame(tickScan);
+  }
+
+  function tickScan() {
+    if (!scanning) return;
+    const video = document.getElementById('scan-video');
+    if (video && video.readyState >= 2 && video.videoWidth) {
+      scanCanvas.width = video.videoWidth;
+      scanCanvas.height = video.videoHeight;
+      scanCtx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+      let img = null;
+      try { img = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height); } catch (e) {}
+      if (img && window.jsQR) {
+        const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data) { onScanned(code.data); return; }
+      }
+    }
+    scanRAF = requestAnimationFrame(tickScan);
+  }
+
+  function stopScanner() {
+    scanning = false;
+    if (scanRAF) { cancelAnimationFrame(scanRAF); scanRAF = null; }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    const v = document.getElementById('scan-video'); if (v) v.srcObject = null;
+  }
+
+  // 스캔 결과에서 Gift 토큰 추출 (.../g/<token> 형태 또는 토큰 단독)
+  function extractToken(text) {
+    const s = String(text || '').trim();
+    const m = s.match(/\/g\/([^/?#\s]+)/);
+    if (m) return m[1];
+    if (/^[0-9a-f]{20,}$/i.test(s)) return s;
+    return null;
+  }
+
+  async function onScanned(text) {
+    if (scanBusy) return;
+    const token = extractToken(text);
+    if (!token) return;            // Gift QR이 아니면 계속 스캔
+    scanBusy = true;
+    stopScanner();
+    await loadGiftForRedeem(token);
+  }
+
+  // 사진 촬영으로 스캔(실시간 카메라 미지원/실패 시 대체)
+  document.getElementById('btn-photo').addEventListener('click', () => document.getElementById('photo-input').click());
+  document.getElementById('photo-input').addEventListener('change', function () {
+    const f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    ensureCanvas();
+    const img = new Image();
+    img.onload = () => {
+      scanCanvas.width = img.naturalWidth;
+      scanCanvas.height = img.naturalHeight;
+      scanCtx.drawImage(img, 0, 0);
+      let data = null;
+      try { data = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height); } catch (e) {}
+      const code = (data && window.jsQR) ? window.jsQR(data.data, data.width, data.height, { inversionAttempts: 'attemptBoth' }) : null;
+      URL.revokeObjectURL(img.src);
+      if (code && code.data) { onScanned(code.data); }
+      else { setScan('e', 'QR을 인식하지 못했습니다. 다시 촬영해 주세요.'); }
+    };
+    img.onerror = () => { setScan('e', '이미지를 불러오지 못했습니다.'); };
+    img.src = URL.createObjectURL(f);
+  });
+
+  // ── 2-1) Gift 증정 (방문자 휴대폰번호 입력 → grant 처리) ──
+  function setGrantMsg(cls, text) { const el = document.getElementById('grant-msg'); el.className = 'msg center ' + cls; el.textContent = text; }
+  function openGrant() {
+    stopScanner();                                   // 입력 동안 카메라 정지
+    document.getElementById('grant-box').style.display = '';
+    document.getElementById('grant-phone').value = '';
+    setGrantMsg('', '');
+    document.getElementById('grant-phone').focus();
+  }
+  function closeGrant() {
+    document.getElementById('grant-box').style.display = 'none';
+    setGrantMsg('', '');
+    resumeScan();                                    // 다시 스캐너로
+  }
+  document.getElementById('grant-phone').addEventListener('input', function () { this.value = formatPhone(this.value); });
+  async function submitGrant() {
+    if (!giftSel) { setGrantMsg('e', '프로젝트를 먼저 선택해 주세요.'); return; }
+    const digits = (document.getElementById('grant-phone').value || '').replace(/[^0-9]/g, '');
+    if (!MOBILE_RE.test(digits)) { setGrantMsg('e', '올바른 휴대폰 번호를 입력해 주세요. (예: 010-1234-5678)'); return; }
+    const ok = await uiConfirm('결제하시겠습니까?', { title: 'Gift 증정', okText: '증정' });
+    if (!ok) return;
+    const btn = document.getElementById('grant-submit'); btn.disabled = true;
+    const { ok: rok, d } = await api('/api/merchant/gift-grant', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: giftSel.id, phone: digits }),
+    });
+    btn.disabled = false;
+    if (!rok) { setGrantMsg('e', d.error || '증정 처리에 실패했습니다.'); return; }
+    document.getElementById('grant-box').style.display = 'none';
+    // 완료 화면(결제 패널 재사용)
+    document.getElementById('gift-scan-view').style.display = 'none';
+    document.getElementById('gift-redeem').style.display = '';
+    document.getElementById('rp-amt').textContent = won(d.amount);
+    const extra = d.filledVisits ? ` · 미방문 ${d.filledVisits}곳 방문 완료 처리` : '';
+    redeemState('🎁', 'Gift 증정 완료', `${(giftSel && giftSel.project_name) || ''} · ${won(d.amount)} 증정 처리되었습니다.${extra}`);
+  }
+
+  // ── 3) Gift 결제(사용) 처리 ──
+  let redeemToken = null, redeemGift = null;
+  function showRedeemForm() {
+    document.getElementById('rp-valid').style.display = '';
+    document.getElementById('rp-state').style.display = 'none';
+  }
+  function redeemState(ico, ttl, desc) {
+    document.getElementById('rp-valid').style.display = 'none';
+    document.getElementById('rp-state').style.display = '';
+    document.getElementById('rp-ico').textContent = ico;
+    document.getElementById('rp-ttl').textContent = ttl;
+    document.getElementById('rp-desc').textContent = desc || '';
+  }
+  function setRpMsg(cls, text) { const el = document.getElementById('rp-msg'); el.className = 'msg center ' + cls; el.textContent = text; }
+
+  async function loadGiftForRedeem(token) {
+    redeemToken = token; redeemGift = null;
+    document.getElementById('gift-scan-view').style.display = 'none';
+    document.getElementById('gift-redeem').style.display = '';
+    showRedeemForm();
+    document.getElementById('rp-amt').textContent = '—';
+    document.getElementById('rp-pin').value = '';
+    setRpMsg('', '');
+
+    const { ok, status, d } = await api(`/api/gift/${token}`);
+    if (!ok) {
+      redeemState('⚠️', '오류', d.message || (status === 404 ? '유효하지 않은 Gift QR입니다.' : '정보를 불러오지 못했습니다.'));
+      return;
+    }
+    // 선택한 프로젝트의 Gift가 맞는지 확인
+    if (giftSel && d.project_serial && String(d.project_serial) !== String(giftSel.project_serial)) {
+      redeemState('⚠️', '다른 프로젝트의 Gift', `선택한 「${giftSel.project_name}」 프로젝트의 Gift가 아닙니다.`);
+      return;
+    }
+    redeemGift = d;
+    document.getElementById('rp-amt').textContent = won(d.amount);
+    if (d.status === 'used') {
+      redeemState('🚫', '이미 사용된 Gift', d.used_at ? `사용일시: ${fmtDT(d.used_at)}` : '이미 사용 처리된 Gift입니다.');
+      return;
+    }
+    document.getElementById('rp-project').textContent = d.project_name || '-';
+    document.getElementById('rp-serial').textContent = d.project_serial || '-';
+    document.getElementById('rp-phone').textContent = d.phone || '-';
+    document.getElementById('rp-amount').textContent = won(d.amount);
+    document.getElementById('rp-pin').focus();
+  }
+
+  document.getElementById('rp-pin').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6); });
+  document.getElementById('rp-confirm').addEventListener('click', async () => {
+    const pin = document.getElementById('rp-pin').value.trim();
+    if (!pin) { setRpMsg('e', '비밀번호를 입력해 주세요.'); return; }
+    const btn = document.getElementById('rp-confirm'); btn.disabled = true;
+    const { ok, status, d } = await api(`/api/gift/${redeemToken}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+    btn.disabled = false;
+    if (ok) {
+      redeemState('✅', 'Gift 사용 완료', `${(redeemGift && redeemGift.project_name) || ''} · ${won(d.amount)} 사용 처리되었습니다.`);
+      return;
+    }
+    if (status === 409 || d.error === 'already_used') {
+      redeemState('🚫', '이미 사용된 Gift', '이미 사용 처리된 Gift입니다.');
+      return;
+    }
+    setRpMsg('e', d.message || '사용 처리에 실패했습니다.');
+  });
+
+  // ════════════════════════════════════════════════════════════
+  //  세션 유휴 감시 (4분, 잔여 1분 경고 → 연장/로그아웃 선택, 무응답 시 자동 로그아웃)
+  // ════════════════════════════════════════════════════════════
+  let sessionPollTimer = null, sessionCountdownTimer = null, sessionWarnShown = false;
+  function startSessionWatch() {
+    stopSessionWatch();
+    sessionPollTimer = setInterval(checkSession, 10000);
+  }
+  function stopSessionWatch() {
+    if (sessionPollTimer) { clearInterval(sessionPollTimer); sessionPollTimer = null; }
+    hideSessionWarn();
+  }
+  async function checkSession() {
+    let r;
+    try { r = await fetch('/api/session-info'); } catch (e) { return; }
+    if (r.status === 401 || r.status === 440) { stopSessionWatch(); stopScanner(); show('sec-login'); return; }
+    let d = null; try { d = await r.json(); } catch (e) {}
+    if (!d || !d.ok) return;
+    if (d.expiringSoon && !sessionWarnShown) showSessionWarn(d.remainingMs);
+    else if (!d.expiringSoon && sessionWarnShown) hideSessionWarn(); // 활동으로 자동 연장됨
+  }
+  function showSessionWarn(remainingMs) {
+    sessionWarnShown = true;
+    let sec = Math.max(1, Math.ceil((remainingMs || 60000) / 1000));
+    const upd = () => { document.getElementById('session-countdown').textContent = sec + '초'; };
+    upd();
+    document.getElementById('session-modal').classList.add('open');
+    sessionCountdownTimer = setInterval(() => {
+      sec--;
+      if (sec <= 0) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; sessionLogout(); return; }
+      upd();
+    }, 1000);
+  }
+  function hideSessionWarn() {
+    sessionWarnShown = false;
+    if (sessionCountdownTimer) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; }
+    document.getElementById('session-modal').classList.remove('open');
+  }
+  async function sessionExtend() {
+    let r;
+    try { r = await fetch('/api/session-extend', { method: 'POST' }); } catch (e) { return; }
+    if (r.ok) { hideSessionWarn(); }
+    else { stopSessionWatch(); stopScanner(); show('sec-login'); }
+  }
+  async function sessionLogout() {
+    hideSessionWarn(); stopSessionWatch(); stopScanner();
+    try { await fetch('/api/merchant/logout', { method: 'POST' }); } catch (e) {}
+    show('sec-login');
+  }
+
+  // 로그인 화면의 Gift 결제 모드 기본값(기기/직전선택) + 안내문구 초기화
+  (function initLoginGiftToggle() {
+    const t = document.getElementById('login-gift-toggle');
+    if (t) { t.checked = preferredGiftMode(); updateLoginGiftHint(); }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Test-NetConnection -ComputerName 10.56.120.38 -Port 3306 -WarningAction SilentlyContinue)"
+    ]
+  }
+}

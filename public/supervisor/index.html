@@ -1,0 +1,1719 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervisor · 모노라마 트래커</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Malgun Gothic", sans-serif; background: #f0f4f9; min-height: 100vh;
+           display: flex; flex-direction: column; }
+
+    /* ── 카드 헤더 (팝업 공통) ── */
+    .card-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                   border-radius: 16px 16px 0 0; padding: 18px 28px;
+                   text-align: center; position: relative; }
+    .card-header h2, .card-header h3 { font-size: 18px; font-weight: 700; color: #fff; margin: 0; }
+    .card-body { padding: 24px 28px 28px; }
+
+    /* ── 푸터 ── */
+    .site-footer { background: #1e293b; color: #94a3b8; font-size: 12px; padding: 20px 32px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-info { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; align-items: center; }
+    .footer-company { font-weight: 700; color: #e2e8f0; font-size: 13px; }
+    .footer-copy { color: #64748b; font-size: 11px; }
+
+    /* 로그인 */
+    .login-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center;
+                  flex: 1; padding: 24px; }
+    .logo { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 28px; }
+    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(20,30,60,.10); padding: 36px 32px; width: 100%; max-width: 400px; }
+    .card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .form-group input { width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color .2s; }
+    .form-group input:focus { border-color: #1e293b; }
+    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-primary { background: #1e293b; color: #fff; }
+    .btn-primary:hover { background: #0f172a; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: #fff; color: #475569; border: 1.5px solid #cbd5e1; }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+    .btn-full { width: 100%; }
+    .msg { font-size: 13px; margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
+    .msg.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+    /* 대시보드 */
+    #dashboard { display: none; flex-direction: column; flex: 1; }
+    .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .brand { font-size: 17px; font-weight: 700; color: #1e293b; }
+    .topbar .user { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 12px; }
+    .content { flex: 1; padding: 28px 32px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; }
+    .tab-btn { padding: 10px 20px; border: none; background: none; font-size: 14px; font-weight: 600; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
+    .tab-btn.active { color: #1e293b; border-bottom-color: #1e293b; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* 필터 바 */
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-bar input, .filter-bar select { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: #1e293b; }
+
+    /* 테이블 */
+    .tbl-wrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(20,30,60,.07); }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 12px 14px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f8fafc; }
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+    .badge-approved { background: #dcfce7; color: #166534; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    .badge-terminated { background: #e5e7eb; color: #374151; }
+    .badge-locked { background: #fde8d8; color: #9a3412; }
+
+    /* 모달 */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal-overlay.open { display: flex; }
+    #loc-list-modal { z-index: 420; }
+    #preview-modal { z-index: 430; }
+    #support-modal { z-index: 435; }
+    #file-modal { z-index: 440; }
+    #image-modal { z-index: 450; }
+    #info-modal { z-index: 600; }
+    #session-modal { z-index: 500; }
+    .modal { background: #fff; border-radius: 16px; overflow: hidden; width: 100%; max-width: 480px; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+    .modal-close { position: absolute; top: 50%; right: 16px; transform: translateY(-50%);
+                   background: none; border: none; font-size: 20px; color: rgba(255,255,255,.8);
+                   cursor: pointer; line-height: 1; padding: 4px 6px; border-radius: 6px; transition: background .15s; }
+    .modal-close:hover { background: rgba(255,255,255,.2); color: #fff; }
+    .detail-row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+    .detail-label { width: 110px; flex-shrink: 0; color: #64748b; font-weight: 600; }
+    .detail-val { color: #1e293b; word-break: break-all; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+    .reason-wrap { margin-top: 14px; display: none; }
+    .reason-wrap textarea { width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 13px; resize: vertical; min-height: 72px; font-family: inherit; outline: none; }
+    .reason-wrap textarea:focus { border-color: #1e293b; }
+    .modal-msg { font-size: 13px; margin-top: 10px; }
+    .modal-msg.error { color: #dc2626; }
+
+    /* 페이지네이션 */
+    .pager { display: flex; gap: 6px; align-items: center; margin-top: 16px; justify-content: flex-end; font-size: 13px; }
+    .pager button { padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+    .pager button.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+    .pager button:disabled { opacity: .4; cursor: default; }
+
+    /* 정렬 */
+    thead th.sortable { cursor: pointer; user-select: none; }
+    thead th.sortable:hover { background: #f1f5f9; }
+    .sort-icon { font-size: 11px; color: #94a3b8; margin-left: 3px; }
+    .sort-icon.asc::after { content: ' ▲'; color: #1e293b; }
+    .sort-icon.desc::after { content: ' ▼'; color: #1e293b; }
+
+    /* 엑셀 버튼 */
+    .btn-excel { background: #16a34a; color: #fff; }
+    .btn-excel:hover:not(:disabled) { background: #15803d; }
+    .btn-excel:disabled { background: #86efac; cursor: default; }
+
+    /* 사업자등록증 뷰어 모달 */
+    #cert-modal { z-index: 200; }
+    .cert-modal { background: #fff; border-radius: 16px; overflow: hidden;
+                  width: 90vw; max-width: 860px; max-height: 90vh;
+                  display: flex; flex-direction: column;
+                  box-shadow: 0 8px 40px rgba(0,0,0,.24); }
+    .cert-modal .cert-body { flex: 1; overflow: hidden; min-height: 0; }
+    .cert-modal iframe { width: 100%; height: 76vh; border: none; display: block; }
+
+    /* 프로젝트 상태 배지 */
+    .bp-quoted        { background:#fef9c3;color:#854d0e; }
+    .bp-deposit_wait  { background:#ffedd5;color:#9a3412; }
+    .bp-deposit_conf  { background:#dbeafe;color:#1e40af; }
+    .bp-ready         { background:#ede9fe;color:#5b21b6; }
+    .bp-started       { background:#dcfce7;color:#166534; }
+    .bp-completed     { background:#f1f5f9;color:#475569; }
+    .bp-cancelled     { background:#fee2e2;color:#991b1b; }
+    .bp-draft         { background:#f1f5f9;color:#94a3b8; }
+    .bp-yes           { background:#dcfce7;color:#166534; }
+    .bp-no            { background:#fee2e2;color:#991b1b; }
+
+    /* 프로젝트 상세 모달 */
+    #proj-detail-modal { z-index: 150; }
+    /* 확인 alert는 모든 모달 위에 항상 노출 */
+    #save-confirm-modal { z-index: 600; }
+    .proj-detail-modal { background:#fff; border-radius:16px; overflow:hidden;
+                         width:96vw; max-width:720px; max-height:92vh;
+                         display:flex; flex-direction:column;
+                         box-shadow:0 8px 40px rgba(0,0,0,.22); }
+    .proj-detail-modal .modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
+    .pd-tabs { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin-bottom:16px; }
+    .pd-tab-btn { padding:9px 18px; border:none; background:none; font-size:14px; font-weight:600; color:#94a3b8;
+                  cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .pd-tab-btn.active { color:#1e293b; border-bottom-color:#1e293b; }
+    .pd-tab-panel { display:none; } .pd-tab-panel.active { display:block; }
+    .pd-row .val.email-val { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .copy-btn { background:#eef3fb; border:1px solid #dbe4f3; border-radius:6px; cursor:pointer;
+                font-size:12px; font-weight:600; color:#1e293b; padding:3px 9px; }
+    .copy-btn:hover { background:#dbe4f3; }
+    .pd-section { margin-bottom:16px; }
+    .pd-section h4 { font-size:13px; font-weight:700; color:#1e293b; text-transform:uppercase;
+                     letter-spacing:.5px; margin-bottom:10px; padding-bottom:6px;
+                     border-bottom:1px solid #e2e8f0; }
+    .pd-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; }
+    .pd-row { font-size:13px; display:flex; align-items:baseline; gap:6px; }
+    .pd-row .lbl { color:#64748b; font-weight:600; font-size:12px; flex-shrink:0; white-space:nowrap; }
+    .pd-row .val { color:#1e293b; word-break:break-all; }
+    .pd-row.full { grid-column:1/-1; }
+    .pd-edit-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
+    .pd-edit-row:last-child { border-bottom:none; }
+    .pd-edit-row .lbl2 { width:130px; flex-shrink:0; color:#475569; font-weight:600; }
+    .pd-edit-row select, .pd-edit-row input[type=checkbox] { font-size:13px; }
+    .pd-edit-row select { border:1.5px solid #cbd5e1; border-radius:6px; padding:6px 10px; outline:none; }
+    .pd-edit-row select:disabled { background:#f8fafc; color:#94a3b8; }
+    .pd-edit-row input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#1e293b; }
+    .pd-edit-row input[type=checkbox]:disabled { cursor:not-allowed; opacity:.4; }
+    .proj-modal-footer { padding:14px 24px; border-top:1px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end; background:#f8fafc; }
+    .filter-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+    .filter-row input, .filter-row select { border:1.5px solid #e2e8f0; border-radius:6px;
+      padding:6px 10px; font-size:12px; outline:none; background:#f8fafc; }
+    .filter-row input:focus, .filter-row select:focus { border-color:#1e293b; background:#fff; }
+    .filter-row input { width:120px; }
+  </style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div class="login-wrap" id="login-wrap">
+  <div class="logo">모노라마 트래커 · Supervisor</div>
+  <div class="card">
+    <h2>Supervisor 로그인</h2>
+    <div class="form-group">
+      <label>아이디</label>
+      <input id="sv-username" type="text" value="supervisor" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>비밀번호</label>
+      <input id="sv-password" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}">
+    </div>
+    <div id="login-msg" class="msg" style="display:none;"></div>
+    <button class="btn btn-primary btn-full" style="margin-top:4px;" onclick="doLogin()">로그인</button>
+  </div>
+</div>
+
+<!-- 대시보드 -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="brand">모노라마 트래커 · Supervisor</div>
+    <div class="user">
+      <span id="sv-user-label"></span>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">로그아웃</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-hosts-btn" onclick="switchTab('hosts')">소속기관관리</button>
+      <button class="tab-btn" id="tab-projects-btn" onclick="switchTab('projects')">프로젝트 관리</button>
+      <button class="tab-btn" id="tab-visit-btn" onclick="switchTab('visit')">방문현황</button>
+      <button class="tab-btn" id="tab-merchants-btn" onclick="switchTab('merchants')">가맹점관리</button>
+      <button class="tab-btn" id="tab-settle-btn" onclick="switchTab('settle')">정산</button>
+    </div>
+
+    <!-- Host 관리 탭 -->
+    <div class="tab-panel active" id="tab-hosts">
+      <div class="filter-bar">
+        <input id="h-org" type="text" placeholder="소속기관" style="width:140px;" oninput="loadHosts(1)">
+        <input id="h-biz" type="text" placeholder="사업자등록번호" style="width:150px;" oninput="loadHosts(1)">
+        <select id="h-status" onchange="loadHosts(1)">
+          <option value="">전체 상태</option>
+          <option value="pending">승인 대기</option>
+          <option value="approved">승인</option>
+          <option value="cancelled">취소</option>
+          <option value="terminated">종료</option>
+          <option value="locked">잠김</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadHosts(1)">검색</button>
+        <button class="btn btn-outline btn-sm" id="h-reset-btn" onclick="resetFilters()">초기화</button>
+        <button class="btn btn-excel btn-sm" id="h-excel-btn" onclick="downloadExcel()" disabled>엑셀 다운로드</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortHosts('id')">ID<span class="sort-icon" id="si-id"></span></th>
+              <th class="sortable" onclick="sortHosts('organization_name')">소속기관<span class="sort-icon" id="si-organization_name"></span></th>
+              <th>담당자명</th>
+              <th class="sortable" onclick="sortHosts('biz_no')">사업자번호<span class="sort-icon" id="si-biz_no"></span></th>
+              <th>이메일</th>
+              <th class="sortable" onclick="sortHosts('status')">상태<span class="sort-icon" id="si-status"></span></th>
+              <th class="sortable" onclick="sortHosts('created_at')">가입일<span class="sort-icon" id="si-created_at"></span></th>
+              <th>사업자등록증</th>
+              <th>처리</th>
+            </tr>
+          </thead>
+          <tbody id="host-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="host-pager"></div>
+    </div>
+
+    <!-- 프로젝트 관리 탭 -->
+    <div class="tab-panel" id="tab-projects">
+      <div class="filter-bar" style="flex-direction:column;align-items:flex-start;gap:6px;">
+        <div class="filter-row">
+          <input id="p-host" type="text" placeholder="소속기관명" style="width:130px;" oninput="loadProjects(1)">
+          <input id="p-name" type="text" placeholder="프로젝트명" style="width:150px;" oninput="loadProjects(1)">
+          <input id="p-serial" type="text" placeholder="일련번호" style="width:120px;" oninput="loadProjects(1)">
+          <select id="p-status" onchange="loadProjects(1)">
+            <option value="">전체 상태</option>
+            <option value="draft">초안</option>
+            <option value="quoted">견적</option>
+            <option value="deposit_wait">입금대기</option>
+            <option value="deposit_confirmed">입금확인</option>
+            <option value="ready_to_start">시작대기</option>
+            <option value="started">진행중</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+          <select id="p-quote-read" onchange="loadProjects(1)">
+            <option value="">견적확인 전체</option>
+            <option value="1">확인</option>
+            <option value="0">미확인</option>
+          </select>
+          <select id="p-deposit" onchange="loadProjects(1)">
+            <option value="">입금 전체</option>
+            <option value="1">입금확인</option>
+            <option value="0">미확인</option>
+          </select>
+        </div>
+        <div class="filter-row">
+          <label style="font-size:12px;color:#475569;">시작일</label>
+          <input id="p-from" type="date" style="width:145px;" onchange="loadProjects(1)">
+          <label style="font-size:12px;color:#475569;">~</label>
+          <input id="p-to" type="date" style="width:145px;" onchange="loadProjects(1)">
+          <button class="btn btn-primary btn-sm" onclick="loadProjects(1)">검색</button>
+          <button class="btn btn-outline btn-sm" onclick="resetProjFilters()">초기화</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortProjects('id')">ID<span class="sort-icon" id="psi-id"></span></th>
+              <th class="sortable" onclick="sortProjects('organization_name')">소속기관<span class="sort-icon" id="psi-organization_name"></span></th>
+              <th class="sortable" onclick="sortProjects('project_name')">프로젝트명<span class="sort-icon" id="psi-project_name"></span></th>
+              <th class="sortable" onclick="sortProjects('project_serial')">일련번호<span class="sort-icon" id="psi-project_serial"></span></th>
+              <th class="sortable" onclick="sortProjects('from_date')">시작일<span class="sort-icon" id="psi-from_date"></span></th>
+              <th class="sortable" onclick="sortProjects('to_date')">종료일<span class="sort-icon" id="psi-to_date"></span></th>
+              <th class="sortable" onclick="sortProjects('status')">상태<span class="sort-icon" id="psi-status"></span></th>
+              <th class="sortable" onclick="sortProjects('quote_sent_at')">견적발송일<span class="sort-icon" id="psi-quote_sent_at"></span></th>
+              <th class="sortable" onclick="sortProjects('quote_read')">견적확인<span class="sort-icon" id="psi-quote_read"></span></th>
+              <th class="sortable" onclick="sortProjects('deposit_confirmed_at')">입금확인일<span class="sort-icon" id="psi-deposit_confirmed_at"></span></th>
+              <th>입금여부</th>
+              <th>목적지정보</th>
+              <th class="sortable" onclick="sortProjects('created_at')">등록일<span class="sort-icon" id="psi-created_at"></span></th>
+              <th>상세보기</th>
+              <th>미리보기</th>
+            </tr>
+          </thead>
+          <tbody id="proj-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="proj-pager"></div>
+    </div>
+
+    <!-- 방문현황 탭 -->
+    <div class="tab-panel" id="tab-visit">
+      <div class="filter-bar">
+        <input id="vs-org" type="text" placeholder="소속기관" style="width:140px;" oninput="onVsFilter()">
+        <input id="vs-name" type="text" placeholder="프로젝트명" style="width:150px;" oninput="onVsFilter()">
+        <select id="vs-status" onchange="onVsFilter()">
+          <option value="">전체 상태</option>
+          <option value="quoted">견적</option>
+          <option value="deposit_wait">입금대기</option>
+          <option value="deposit_confirmed">입금확인</option>
+          <option value="ready_to_start">시작대기</option>
+          <option value="started">진행중</option>
+          <option value="completed">완료</option>
+          <option value="cancelled">취소</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadVisitStatus(1)">검색</button>
+        <button class="btn btn-outline btn-sm" id="vs-reset" onclick="resetVsFilter()" disabled>조회조건 초기화</button>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:#64748b;">표시 개수</span>
+          <select id="vs-size" onchange="vsSize=Number(this.value);loadVisitStatus(1)">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="vs-thead"></thead>
+          <tbody id="vs-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="vs-pager"></div>
+    </div>
+
+    <!-- 가맹점관리 탭 -->
+    <div class="tab-panel" id="tab-merchants">
+      <div class="filter-bar">
+        <input id="mc-name" type="text" placeholder="가맹점명" style="width:150px;" oninput="loadMerchants(1)">
+        <input id="mc-biz" type="text" placeholder="사업자등록번호" style="width:150px;" oninput="loadMerchants(1)">
+        <select id="mc-status" onchange="loadMerchants(1)">
+          <option value="">전체 상태</option>
+          <option value="pending">승인대기</option>
+          <option value="approved">승인</option>
+          <option value="cancelled">취소</option>
+          <option value="terminated">종료</option>
+          <option value="locked">잠김</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadMerchants(1)">검색</button>
+        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openSupportProjects()">프로젝트보기</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="mc-thead"></thead>
+          <tbody id="mc-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="mc-pager"></div>
+    </div>
+
+    <!-- 정산 탭 (소속기관·프로젝트별 Gift 사용/증정) -->
+    <div class="tab-panel" id="tab-settle">
+      <div class="filter-bar">
+        <input id="sf-org" type="text" placeholder="소속기관명" style="width:150px;" oninput="loadSettlement()">
+        <input id="sf-name" type="text" placeholder="프로젝트명" style="width:160px;" oninput="loadSettlement()">
+        <select id="sf-status" onchange="loadSettlement()">
+          <option value="">전체 상태</option>
+          <option value="ready_to_start">시작대기</option>
+          <option value="started">진행중</option>
+          <option value="completed">완료</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadSettlement()">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-org').value='';document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettlement()">초기화</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>소속기관</th>
+            <th>프로젝트</th>
+            <th style="text-align:center;">상태</th>
+            <th style="text-align:right;">Gift 단가</th>
+            <th style="text-align:center;">Gift 사용개수</th>
+            <th style="text-align:center;">Gift 증정개수</th>
+            <th style="text-align:right;">Gift 사용금액</th>
+            <th style="text-align:right;">Gift 증정금액</th>
+            <th style="text-align:right;">총 Gift 금액</th>
+            <th style="text-align:center;">사용자현황</th>
+          </tr></thead>
+          <tbody id="settle-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-info">
+      <span class="footer-company">(주)모노라마</span>
+      <span>대표 김창호</span>
+      <span>tel: 02-6925-4083</span>
+      <span>서울시 강서구 마곡중앙로 143 B동 339호 (우)07797</span>
+    </div>
+    <div class="footer-copy">© 2026 (주)모노라마. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- 사업자등록증 뷰어 모달 -->
+<div class="modal-overlay" id="cert-modal" onclick="if(event.target===this)closeCert()">
+  <div class="cert-modal">
+    <div class="card-header">
+      <h3>사업자등록증</h3>
+      <button class="modal-close" onclick="closeCert()">✕</button>
+    </div>
+    <div class="cert-body">
+      <iframe id="cert-frame" src=""></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Host 상세보기 모달 -->
+<div class="modal-overlay" id="host-modal">
+  <div class="modal">
+    <div class="card-header">
+      <h3>Host 상세 정보</h3>
+      <button class="modal-close" onclick="closeModal()" title="닫기">✕</button>
+    </div>
+    <div class="card-body">
+      <div id="host-detail"></div>
+      <div class="modal-actions" id="host-actions"></div>
+      <div class="reason-wrap" id="reason-wrap">
+        <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">처리 사유 (선택)</label>
+        <textarea id="reason-input" placeholder="사유를 입력해 주세요"></textarea>
+      </div>
+      <div id="modal-msg" class="modal-msg"></div>
+    </div><!-- /card-body -->
+  </div>
+</div>
+
+<!-- 프로젝트 상세보기 모달 -->
+<div class="modal-overlay" id="proj-detail-modal" onclick="if(event.target===this)closeProjectModal()">
+  <div class="proj-detail-modal">
+    <div class="card-header">
+      <h3>프로젝트 상세 정보</h3>
+      <button class="modal-close" onclick="closeProjectModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pd-tabs">
+        <button type="button" class="pd-tab-btn active" data-pdtab="basic" onclick="pdSwitch('basic')">기본정보</button>
+        <button type="button" class="pd-tab-btn" data-pdtab="contact" onclick="pdSwitch('contact')">담당자</button>
+      </div>
+
+      <!-- 기본정보 탭 -->
+      <div class="pd-tab-panel active" id="pd-panel-basic">
+        <div class="pd-section">
+          <div class="pd-grid">
+            <div class="pd-row"><div class="lbl">소속기관</div><div class="val" id="pd-org">-</div></div>
+            <div class="pd-row"><div class="lbl">프로젝트명</div><div class="val" id="pd-proj-name">-</div></div>
+            <div class="pd-row"><div class="lbl">일련번호</div><div class="val" id="pd-serial">-</div></div>
+            <div class="pd-row"><div class="lbl">시작일</div><div class="val" id="pd-from">-</div></div>
+            <div class="pd-row"><div class="lbl">종료일</div><div class="val" id="pd-to">-</div></div>
+            <div class="pd-row"><div class="lbl">Gift 단가</div><div class="val" id="pd-gift-amount">-</div></div>
+            <div class="pd-row"><div class="lbl">발급수량</div><div class="val" id="pd-gift-qty">-</div></div>
+            <div class="pd-row"><div class="lbl">예산금액</div><div class="val" id="pd-budget">-</div></div>
+            <div class="pd-row"><div class="lbl">견적금액</div><div class="val" id="pd-quote-amount">-</div></div>
+            <div class="pd-row"><div class="lbl">목적지정보</div><div class="val" id="pd-locations">-</div></div>
+            <div class="pd-row"><div class="lbl">방문자수</div><div class="val" id="pd-visitors">-</div></div>
+            <div class="pd-row"><div class="lbl">견적발송일</div><div class="val" id="pd-quote-sent">-</div></div>
+            <div class="pd-row"><div class="lbl">등록일</div><div class="val" id="pd-created">-</div></div>
+            <div class="pd-row full"><div class="lbl">설명</div><div class="val" id="pd-desc">-</div></div>
+          </div>
+        </div>
+        <div class="pd-section">
+          <h4>상태 관리</h4>
+          <div class="pd-edit-row">
+            <span class="lbl2">견적확인여부</span>
+            <input type="checkbox" id="pd-quote-read">
+            <span id="pd-quote-read-at" style="color:#64748b;font-size:12px;"></span>
+          </div>
+          <div class="pd-edit-row">
+            <span class="lbl2">입금확인여부</span>
+            <input type="checkbox" id="pd-deposit-confirmed">
+            <span id="pd-deposit-at" style="color:#64748b;font-size:12px;"></span>
+          </div>
+          <div class="pd-edit-row">
+            <span class="lbl2">상태</span>
+            <select id="pd-status">
+              <option value="draft">초안</option>
+              <option value="quoted">견적</option>
+              <option value="deposit_wait">입금대기</option>
+              <option value="deposit_confirmed">입금확인</option>
+              <option value="ready_to_start">시작대기</option>
+              <option value="started">진행중</option>
+              <option value="completed">완료</option>
+              <option value="cancelled">취소</option>
+            </select>
+          </div>
+        </div>
+        <div class="pd-section">
+          <h4>이미지</h4>
+          <div class="pd-edit-row">
+            <span class="lbl2">랜딩페이지</span>
+            <input type="file" id="pd-landing-file" accept="image/*" style="font-size:12px;">
+            <button class="btn btn-primary btn-sm" onclick="uploadAsset('mobile')">업로드</button>
+            <button class="btn btn-outline btn-sm" id="pd-landing-view" style="display:none;" onclick="viewAsset('landing')">보기</button>
+          </div>
+          <div class="pd-edit-row">
+            <span class="lbl2">아이콘</span>
+            <input type="file" id="pd-icon-file" accept="image/*" style="font-size:12px;">
+            <button class="btn btn-primary btn-sm" onclick="uploadAsset('favicon')">업로드</button>
+            <button class="btn btn-outline btn-sm" id="pd-icon-view" style="display:none;" onclick="viewAsset('icon')">보기</button>
+          </div>
+          <div id="pd-asset-msg" style="font-size:12px;color:#64748b;padding-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- 담당자 탭 -->
+      <div class="pd-tab-panel" id="pd-panel-contact">
+        <div class="pd-section">
+          <div class="pd-grid">
+            <div class="pd-row"><div class="lbl">담당자명</div><div class="val" id="pd-c-name">-</div></div>
+            <div class="pd-row"><div class="lbl">이메일</div>
+              <div class="val email-val"><span id="pd-c-email">-</span>
+                <button type="button" class="copy-btn" id="pd-c-email-copy" title="이메일 복사" onclick="copyContactEmail()">📋 복사</button>
+              </div>
+            </div>
+            <div class="pd-row"><div class="lbl">모바일</div><div class="val" id="pd-c-mobile">-</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pd-msg" style="font-size:13px;padding:4px 0;min-height:20px;"></div>
+    </div>
+    <div class="proj-modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="rollbackProjectChanges()">롤백</button>
+      <button class="btn btn-primary btn-sm" onclick="saveProjectChanges()">저장</button>
+      <button class="btn btn-outline btn-sm" onclick="closeProjectModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 저장 확인 모달 -->
+<div class="modal-overlay" id="save-confirm-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="card-header"><h3 id="save-confirm-title">저장 확인</h3></div>
+    <div class="card-body">
+      <p id="save-confirm-text" style="font-size:14px;color:#1e293b;line-height:1.6;margin-bottom:20px;">변경 내용을 저장하시겠습니까?</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" onclick="closeSaveConfirm()">취소</button>
+        <button class="btn btn-primary btn-sm" id="save-confirm-ok" onclick="onSaveConfirmOk()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gift 사용자 현황 모달 (정산) -->
+<div class="modal-overlay" id="modal-usage">
+  <div class="modal" style="width:96vw;max-width:840px;">
+    <div class="card-header"><h2>Gift 사용자 현황</h2>
+      <button class="modal-close" onclick="closeUsage()">×</button></div>
+    <div class="card-body">
+      <div id="usage-sub" style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;"></div>
+      <div id="usage-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <div class="filter-bar" style="margin-bottom:10px;">
+        <input id="uf-phone" type="text" placeholder="휴대폰번호 검색" style="width:160px;" oninput="renderUsage()">
+        <select id="uf-type" onchange="renderUsage()">
+          <option value="">구분 전체</option>
+          <option value="normal">Gift사용</option>
+          <option value="grant">Gift증정</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('uf-phone').value='';document.getElementById('uf-type').value='';renderUsage()">초기화</button>
+        <span id="uf-count" style="font-size:12px;color:#64748b;margin-left:auto;"></span>
+      </div>
+      <div class="tbl-wrap" style="max-height:54vh;overflow:auto;">
+        <table><thead><tr id="usage-thead"></tr></thead><tbody id="usage-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 세션 연장/만료 경고 모달 -->
+<div class="modal-overlay" id="session-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h3>로그인 연장 안내</h3></div>
+    <div class="card-body">
+      <p style="font-size:14px;color:#1e293b;line-height:1.6;margin-bottom:8px;">장시간 활동이 없어 곧 자동 로그아웃됩니다.</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:18px;">남은 시간 <b id="session-countdown" style="color:#dc2626;">60초</b> · 로그인을 연장하시겠습니까?</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" onclick="sessionLogout()">로그아웃</button>
+        <button class="btn btn-primary btn-sm" onclick="sessionExtend()">로그인 연장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 안내 팝업(이전 접속 정보 등) -->
+<div class="modal-overlay" id="info-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="card-header"><h3 id="info-title">안내</h3></div>
+    <div class="card-body">
+      <p id="info-msg" style="font-size:14px;color:#1e293b;line-height:1.7;margin-bottom:18px;white-space:pre-line;"></p>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="closeInfo()">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 목적지 목록 모달 -->
+<div class="modal-overlay" id="loc-list-modal" onclick="if(event.target===this)closeProjectLocations()">
+  <div class="modal" style="max-width:720px;">
+    <div class="card-header"><h3>목적지 목록</h3><button class="modal-close" onclick="closeProjectLocations()">✕</button></div>
+    <div class="card-body">
+      <p id="loc-list-proj" style="font-size:13px;color:#64748b;margin-bottom:10px;"></p>
+      <div id="loc-list-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 랜딩페이지 미리보기 모달 -->
+<div class="modal-overlay" id="preview-modal" onclick="if(event.target===this)closePreview()">
+  <div class="modal" style="max-width:420px;">
+    <div class="card-header"><h3>랜딩페이지 미리보기</h3><button class="modal-close" onclick="closePreview()">✕</button></div>
+    <div class="card-body" style="padding:0;background:#0f172a;">
+      <iframe id="preview-frame" title="랜딩페이지 미리보기" style="width:100%;height:68vh;border:0;display:block;background:#fff;"></iframe>
+    </div>
+    <div style="padding:12px;display:flex;gap:8px;justify-content:center;">
+      <a id="preview-open" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener" style="text-decoration:none;">새 탭에서 열기</a>
+      <button class="btn btn-outline btn-sm" onclick="closePreview()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 가맹점 지원 대상 프로젝트(시작대기/진행중) 모달 -->
+<div class="modal-overlay" id="support-modal" onclick="if(event.target===this)closeSupport()">
+  <div class="modal" style="max-width:720px;">
+    <div class="card-header"><h3>프로젝트 지원</h3><button class="modal-close" onclick="closeSupport()">✕</button></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">시작대기·진행중 프로젝트에 가맹점 지원 요청을 보낼 수 있습니다.</p>
+      <div id="support-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 첨부파일(사업자등록증/통장사본) 보기 모달 -->
+<div class="modal-overlay" id="file-modal" onclick="if(event.target===this)closeFile()">
+  <div class="modal" style="max-width:780px;">
+    <div class="card-header"><h3 id="file-title">파일 보기</h3><button class="modal-close" onclick="closeFile()">✕</button></div>
+    <div class="card-body" style="padding:0;background:#0f172a;">
+      <iframe id="file-frame" title="첨부파일" style="width:100%;height:72vh;border:0;display:block;background:#fff;"></iframe>
+    </div>
+    <div style="padding:12px;display:flex;gap:8px;justify-content:center;">
+      <a id="file-open" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener" style="text-decoration:none;">새 탭에서 열기</a>
+      <button class="btn btn-outline btn-sm" onclick="closeFile()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이미지 보기 모달 -->
+<div class="modal-overlay" id="image-modal" onclick="if(event.target===this)closeImage()">
+  <div class="modal" style="max-width:92vw;">
+    <div class="card-header"><h3 id="image-title">이미지</h3><button class="modal-close" onclick="closeImage()">✕</button></div>
+    <div class="card-body" style="text-align:center;">
+      <img id="image-view" src="" alt="" style="max-width:100%;max-height:70vh;border-radius:8px;">
+    </div>
+  </div>
+</div>
+
+<script>
+  const BADGE = {
+    pending: '<span class="badge badge-pending">승인 대기</span>',
+    approved: '<span class="badge badge-approved">승인</span>',
+    cancelled: '<span class="badge badge-cancelled">취소</span>',
+    terminated: '<span class="badge badge-terminated">종료</span>',
+    locked: '<span class="badge badge-locked">잠김</span>',
+  };
+
+  let currentHostId = null;
+  let currentHostStatus = null;
+  let pendingAction = null;
+  let hostSortCol = 'created_at';
+  let hostSortDir = 'desc';
+  let hostPage = 1;
+
+  let projSortCol = 'created_at';
+  let projSortDir = 'desc';
+  let projPage = 1;
+  let currentProjId = null;
+  let origProjData = null;
+
+  const PROJ_STATUS_LABEL = {
+    draft:'초안', quoted:'견적', deposit_wait:'입금대기',
+    deposit_confirmed:'입금확인', ready_to_start:'시작대기',
+    started:'진행중', completed:'완료', cancelled:'취소'
+  };
+  const PROJ_STATUS_BADGE = {
+    draft:'bp-draft', quoted:'bp-quoted', deposit_wait:'bp-deposit_wait',
+    deposit_confirmed:'bp-deposit_conf', ready_to_start:'bp-ready',
+    started:'bp-started', completed:'bp-completed', cancelled:'bp-cancelled'
+  };
+
+  function showLogin() {
+    stopSessionWatch();
+    document.getElementById('login-wrap').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+  function showDashboard(username) {
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    document.getElementById('sv-user-label').textContent = username;
+    startSessionWatch();
+  }
+
+  // ── 안내 팝업 ──
+  function showInfo(title, msg) {
+    document.getElementById('info-title').textContent = title || '안내';
+    document.getElementById('info-msg').textContent = msg || '';
+    document.getElementById('info-modal').classList.add('open');
+  }
+  function closeInfo() { document.getElementById('info-modal').classList.remove('open'); }
+
+  // ── 세션 유휴 감시 (4분, 잔여 1분 경고 → 무응답 시 자동 로그아웃) ──
+  let sessionPollTimer = null, sessionCountdownTimer = null, sessionWarnShown = false;
+  function startSessionWatch() {
+    stopSessionWatch();
+    sessionPollTimer = setInterval(checkSession, 10000);
+  }
+  function stopSessionWatch() {
+    if (sessionPollTimer) { clearInterval(sessionPollTimer); sessionPollTimer = null; }
+    hideSessionWarn();
+  }
+  async function checkSession() {
+    let r;
+    try { r = await fetch('/api/session-info'); } catch (e) { return; }
+    if (r.status === 401 || r.status === 440) { stopSessionWatch(); showLogin(); return; }
+    let d = null; try { d = await r.json(); } catch (e) {}
+    if (!d || !d.ok) return;
+    if (d.expiringSoon && !sessionWarnShown) showSessionWarn(d.remainingMs);
+    else if (!d.expiringSoon && sessionWarnShown) hideSessionWarn(); // 활동으로 자동 연장됨
+  }
+  function showSessionWarn(remainingMs) {
+    sessionWarnShown = true;
+    let sec = Math.max(1, Math.ceil((remainingMs || 60000) / 1000));
+    const upd = () => { document.getElementById('session-countdown').textContent = sec + '초'; };
+    upd();
+    document.getElementById('session-modal').classList.add('open');
+    sessionCountdownTimer = setInterval(() => {
+      sec--;
+      if (sec <= 0) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; sessionLogout(); return; }
+      upd();
+    }, 1000);
+  }
+  function hideSessionWarn() {
+    sessionWarnShown = false;
+    if (sessionCountdownTimer) { clearInterval(sessionCountdownTimer); sessionCountdownTimer = null; }
+    document.getElementById('session-modal').classList.remove('open');
+  }
+  async function sessionExtend() {
+    let r;
+    try { r = await fetch('/api/session-extend', { method: 'POST' }); } catch (e) { return; }
+    if (r.ok) { hideSessionWarn(); }
+    else { stopSessionWatch(); showLogin(); }
+  }
+  async function sessionLogout() {
+    hideSessionWarn(); stopSessionWatch();
+    try { await fetch('/api/supervisor/logout', { method: 'POST' }); } catch (e) {}
+    showLogin();
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name + '-btn').classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'hosts') loadHosts(1);
+    else if (name === 'projects') loadProjects(1);
+    else if (name === 'visit') loadVisitStatus(1);
+    else if (name === 'merchants') loadMerchants(1);
+    else if (name === 'settle') loadSettlement();
+  }
+
+  // ── 정산 (소속기관·프로젝트별 Gift 사용/증정 집계 + 사용자현황) ──
+  const stWon = n => n ? Number(n).toLocaleString('ko-KR') + '원' : '-';
+  function stPhone(p) {
+    const s = String(p || '').replace(/[^0-9]/g, '');
+    if (s.length === 11) return `${s.slice(0,3)}-${s.slice(3,7)}-${s.slice(7)}`;
+    if (s.length === 10) return `${s.slice(0,3)}-${s.slice(3,6)}-${s.slice(6)}`;
+    return s || '-';
+  }
+  function stDT(s) {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
+  function usageTypeBadge(t) {
+    return t === 'grant'
+      ? '<span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600;background:#e0e7ff;color:#3730a3;">Gift증정</span>'
+      : '<span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600;background:#dcfce7;color:#166534;">Gift사용</span>';
+  }
+
+  let settleData = [];
+  async function loadSettlement() {
+    const tbody = document.getElementById('settle-tbody');
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+    const qs = new URLSearchParams({
+      organization_name: document.getElementById('sf-org').value.trim(),
+      project_name: document.getElementById('sf-name').value.trim(),
+      status: document.getElementById('sf-status').value,
+    });
+    let d;
+    try {
+      const r = await fetch('/api/supervisor/settlement?' + qs.toString());
+      if (!r.ok) throw 0;
+      d = await r.json();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+      return;
+    }
+    settleData = d.data || [];
+    renderSettlement();
+  }
+  function renderSettlement() {
+    const tbody = document.getElementById('settle-tbody');
+    if (!settleData.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = settleData.map(p => `
+      <tr>
+        <td>${esc(p.organization_name) || '-'}</td>
+        <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
+        <td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
+        <td style="text-align:right;">${stWon(p.gift_amount)}</td>
+        <td style="text-align:center;">${Number(p.used_count || 0)}개</td>
+        <td style="text-align:center;">${Number(p.grant_count || 0)}개</td>
+        <td style="text-align:right;">${stWon(p.used_amount)}</td>
+        <td style="text-align:right;">${stWon(p.grant_amount)}</td>
+        <td style="text-align:right;"><b>${stWon(Number(p.used_amount || 0) + Number(p.grant_amount || 0))}</b></td>
+        <td style="text-align:center;"><button class="btn btn-outline btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
+      </tr>`).join('');
+  }
+
+  // 사용자현황 팝업 (정렬 + 필터)
+  let usageData = [];
+  const USAGE_COLS = [
+    { key: 'phone',           label: '휴대폰번호', cls: '' },
+    { key: 'redemption_type', label: '구분',       cls: 'center' },
+    { key: 'amount',          label: '금액',       cls: 'right', num: true },
+    { key: 'redeemed_at',     label: '일시',       cls: '' },
+  ];
+  let usageSort = { key: 'redeemed_at', dir: 'desc' };
+  function usageVal(x, key) {
+    if (key === 'amount') return Number(x.amount || 0);
+    if (key === 'redeemed_at') return x.redeemed_at ? new Date(x.redeemed_at).getTime() : 0;
+    if (key === 'redemption_type') return x.redemption_type === 'grant' ? 1 : 0;
+    return String(x.phone || '').replace(/[^0-9]/g, '');
+  }
+  function sortUsage(key) {
+    const col = USAGE_COLS.find(c => c.key === key);
+    if (usageSort.key === key) usageSort.dir = usageSort.dir === 'asc' ? 'desc' : 'asc';
+    else usageSort = { key, dir: (col && (col.num || key === 'redeemed_at')) ? 'desc' : 'asc' };
+    renderUsage();
+  }
+  async function openUsage(pid) {
+    const proj = settleData.find(x => Number(x.id) === Number(pid));
+    const title = proj ? `${proj.organization_name || ''} · ${proj.project_name} (${proj.project_serial})` : 'Gift 사용자 현황';
+    document.getElementById('usage-sub').textContent = title;
+    document.getElementById('usage-summary').innerHTML = '';
+    document.getElementById('usage-thead').innerHTML = '';
+    document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</td></tr>';
+    document.getElementById('uf-phone').value = '';
+    document.getElementById('uf-type').value = '';
+    document.getElementById('uf-count').textContent = '';
+    usageSort = { key: 'redeemed_at', dir: 'desc' };
+    document.getElementById('modal-usage').classList.add('open');
+    let d;
+    try {
+      const r = await fetch(`/api/supervisor/settlement/${pid}/usage`);
+      if (!r.ok) throw 0;
+      d = await r.json();
+    } catch (e) {
+      document.getElementById('usage-body').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</td></tr>';
+      return;
+    }
+    usageData = d.data || [];
+    const usedList = usageData.filter(x => x.redemption_type === 'normal');
+    const grantList = usageData.filter(x => x.redemption_type === 'grant');
+    const usedAmt = usedList.reduce((s, x) => s + Number(x.amount || 0), 0);
+    const grantAmt = grantList.reduce((s, x) => s + Number(x.amount || 0), 0);
+    document.getElementById('usage-summary').innerHTML =
+      `<span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534;">Gift사용 ${usedList.length}건 · ${stWon(usedAmt)}</span>` +
+      `<span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#e0e7ff;color:#3730a3;">Gift증정 ${grantList.length}건 · ${stWon(grantAmt)}</span>`;
+    renderUsage();
+  }
+  function renderUsage() {
+    const phoneQ = (document.getElementById('uf-phone').value || '').replace(/[^0-9]/g, '');
+    const typeQ = document.getElementById('uf-type').value;
+    let list = usageData.slice();
+    if (typeQ) list = list.filter(x => x.redemption_type === typeQ);
+    if (phoneQ) list = list.filter(x => String(x.phone || '').replace(/[^0-9]/g, '').includes(phoneQ));
+    const k = usageSort.key;
+    list.sort((a, b) => {
+      const av = usageVal(a, k), bv = usageVal(b, k);
+      if (av < bv) return usageSort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return usageSort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    const arrow = key => usageSort.key === key ? (usageSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    document.getElementById('usage-thead').innerHTML = USAGE_COLS.map(c => {
+      const align = c.cls === 'right' ? 'text-align:right;' : c.cls === 'center' ? 'text-align:center;' : '';
+      return `<th class="sortable" style="${align}" onclick="sortUsage('${c.key}')">${c.label}${arrow(c.key)}</th>`;
+    }).join('');
+    const body = document.getElementById('usage-body');
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">표시할 내역이 없습니다.</td></tr>';
+    } else {
+      body.innerHTML = list.map(x => `
+        <tr>
+          <td><code style="font-size:12px;">${stPhone(x.phone)}</code></td>
+          <td style="text-align:center;">${usageTypeBadge(x.redemption_type)}</td>
+          <td style="text-align:right;">${stWon(x.amount)}</td>
+          <td style="font-size:12px;color:#64748b;">${stDT(x.redeemed_at)}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('uf-count').textContent = `${list.length}건 표시`;
+  }
+  function closeUsage() { document.getElementById('modal-usage').classList.remove('open'); }
+
+  // ── 가맹점관리 탭 ──
+  const MC_STATUS = { pending:'승인대기', approved:'승인', cancelled:'취소', terminated:'종료', locked:'잠김' };
+  const MC_BADGE = { pending:'bp-quoted', approved:'bp-started', cancelled:'bp-cancelled', terminated:'bp-cancelled', locked:'bp-cancelled' };
+  let mcSortCol = 'created_at', mcSortDir = 'desc';
+  function sortMerchants(col) {
+    if (mcSortCol === col) mcSortDir = mcSortDir === 'asc' ? 'desc' : 'asc';
+    else { mcSortCol = col; mcSortDir = 'asc'; }
+    loadMerchants(1);
+  }
+  async function loadMerchants(page) {
+    const qs = new URLSearchParams({
+      merchant_name: document.getElementById('mc-name').value,
+      biz_no: document.getElementById('mc-biz').value,
+      status: document.getElementById('mc-status').value,
+      sort_by: mcSortCol, sort_dir: mcSortDir, page, size: 10,
+    }).toString();
+    const r = await apiFetch('/api/supervisor/merchants?' + qs);
+    if (!r) return;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return;
+    renderMerchants(data.data || []);
+    renderPager('mc-pager', data.total, data.size, data.page, loadMerchants);
+  }
+  function renderMerchants(rows) {
+    const arr = key => mcSortCol === key ? (mcSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    const sh = (key, label) => `<th class="sortable" onclick="sortMerchants('${key}')">${label}${arr(key)}</th>`;
+    document.getElementById('mc-thead').innerHTML = '<tr>' +
+      sh('id', 'ID') + '<th>가맹점명</th>' + sh('biz_no', '사업자등록번호') + '<th>사업자등록증</th>' + '<th>이메일</th>' +
+      sh('bank_name', '은행') + '<th>계좌번호</th><th>은행통장사본</th>' + sh('status', '상태') + sh('created_at', '가입일') + '<th>처리</th></tr>';
+    const bizFmt = b => b ? String(b).replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
+    const fileBtn = (m, kind, title) => m[kind === 'biz-cert' ? 'biz_cert_path' : 'bank_copy_path']
+      ? `<button class="btn btn-outline btn-sm" onclick="viewMerchantFile(${m.id},'${kind}','${title}')">보기</button>`
+      : '<span style="color:#cbd5e1;">-</span>';
+    document.getElementById('mc-tbody').innerHTML = rows.length ? rows.map(m => {
+      const act = m.status === 'pending'
+        ? `<button class="btn btn-primary btn-sm" onclick="merchantStatus(${m.id},'approved')">승인</button> <button class="btn btn-outline btn-sm" onclick="merchantStatus(${m.id},'cancelled')">취소</button>`
+        : m.status === 'approved'
+          ? `<button class="btn btn-outline btn-sm" onclick="merchantStatus(${m.id},'terminated')">종료</button>`
+          : '-';
+      return `<tr>
+        <td>${m.id}</td>
+        <td><b>${esc(m.merchant_name)}</b></td>
+        <td>${bizFmt(m.biz_no)}</td>
+        <td style="text-align:center;">${fileBtn(m, 'biz-cert', '사업자등록증')}</td>
+        <td>${esc(m.email)}</td>
+        <td>${esc(m.bank_name || '-')}</td>
+        <td>${esc(m.bank_account || '-')}</td>
+        <td style="text-align:center;">${fileBtn(m, 'bank-copy', '은행통장사본')}</td>
+        <td><span class="badge ${MC_BADGE[m.status] || ''}">${MC_STATUS[m.status] || m.status}</span></td>
+        <td style="font-size:12px;color:#64748b;white-space:nowrap;">${m.created_at ? new Date(m.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td style="white-space:nowrap;">${act}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+  }
+  // 첨부파일(PDF/이미지) 팝업 보기
+  function viewMerchantFile(id, kind, title) {
+    const url = `/api/supervisor/merchants/${id}/${kind}?mode=view`;
+    document.getElementById('file-title').textContent = title || '파일 보기';
+    document.getElementById('file-frame').src = url;
+    document.getElementById('file-open').href = url;
+    document.getElementById('file-modal').classList.add('open');
+  }
+  function closeFile() {
+    document.getElementById('file-modal').classList.remove('open');
+    document.getElementById('file-frame').src = 'about:blank';
+  }
+
+  // ── 가맹점 프로젝트 지원 (시작대기/진행중 프로젝트) ──
+  function closeSupport() { document.getElementById('support-modal').classList.remove('open'); }
+  async function openSupportProjects() {
+    document.getElementById('support-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+    document.getElementById('support-modal').classList.add('open');
+    const r = await apiFetch('/api/supervisor/support-projects');
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    const body = document.getElementById('support-body');
+    if (!r.ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</div>'; return; }
+    const list = d.data || [];
+    if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">시작대기·진행중 프로젝트가 없습니다.</div>'; return; }
+    const dt = s => s ? new Date(s).toLocaleDateString('ko-KR') : '-';
+    body.innerHTML = `
+      <table>
+        <thead><tr><th>소속기관</th><th>프로젝트</th><th>상태</th><th>기간</th><th style="text-align:center;">지원</th></tr></thead>
+        <tbody>${list.map(p => `
+          <tr>
+            <td>${esc(p.organization_name || '-')}</td>
+            <td><b>${esc(p.project_name)}</b></td>
+            <td><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
+            <td style="font-size:12px;color:#64748b;white-space:nowrap;">${dt(p.from_date)} ~ ${dt(p.to_date)}</td>
+            <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="supportRequest(${p.id}, this)">지원</button></td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+  }
+  function supportRequest(id, btn) {
+    showSaveConfirm('이 프로젝트 담당자에게 가맹점 지원 요청 메일을 발송할까요?', async () => {
+      btn.disabled = true;
+      const r = await apiFetch(`/api/supervisor/projects/${id}/support-request`, { method: 'POST' });
+      if (!r) return;
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { btn.disabled = false; showInfo('오류', d.error || '발송에 실패했습니다.'); return; }
+      btn.textContent = '요청완료';
+      showInfo('지원 요청 완료', '지원 요청 메일을 발송했습니다.');
+    }, { title: '프로젝트 지원', okText: '지원' });
+  }
+  async function merchantStatus(id, status) {
+    const labels = { approved: '승인', cancelled: '가입 취소', terminated: '계정 종료' };
+    if (!confirm(`이 가맹점을 '${labels[status] || status}' 처리하시겠습니까?`)) return;
+    let reason = '';
+    if (status === 'cancelled' || status === 'terminated') {
+      reason = prompt('사유를 입력하세요(선택):', '') || '';
+    }
+    const r = await apiFetch(`/api/supervisor/merchants/${id}/status`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, reason }),
+    });
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { alert(d.error || '처리에 실패했습니다.'); return; }
+    loadMerchants(1);
+  }
+
+  // ── 방문현황 탭 ──
+  const VS_COLS = [
+    { key:'organization_name', label:'소속기관' },
+    { key:'project_name', label:'프로젝트' },
+    { key:'status', label:'프로젝트상태' },
+    { key:'gift_amount', label:'Gift 단가', won:true },
+    { key:'gift_qty', label:'Gift 수량', cen:true },
+    { key:'budget_amount', label:'예산', won:true },
+    { key:'issued_gifts', label:'Gift발급수량', cen:true },
+    { key:'used_gifts', label:'Gift사용수량', cen:true },
+    { key:'used_gift_amount', label:'Gift사용액', won:true },
+    { key:'grant_gift_amount', label:'Gift증정액', won:true },
+    { key:'gift_spent', label:'Gift전체소진금액', won:true },
+    { key:'budget_consumption_rate', label:'예산소진율', pct:true },
+    { key:'active_locations', label:'목적지', cen:true },
+    { key:'visitor_count', label:'전체방문자수', cen:true },
+    { key:'gift_recipients', label:'Gift수령자수', cen:true },
+    { key:'gift_receipt_rate', label:'Gift수령율', pct:true },
+  ];
+  let vsSortCol = 'created_at', vsSortDir = 'desc', vsSize = 10;
+
+  function vsHasFilter() {
+    return !!(document.getElementById('vs-org').value || document.getElementById('vs-name').value || document.getElementById('vs-status').value);
+  }
+  function updateVsResetBtn() { document.getElementById('vs-reset').disabled = !vsHasFilter(); }
+  function onVsFilter() { updateVsResetBtn(); loadVisitStatus(1); }
+  function resetVsFilter() {
+    document.getElementById('vs-org').value = '';
+    document.getElementById('vs-name').value = '';
+    document.getElementById('vs-status').value = '';
+    updateVsResetBtn();
+    loadVisitStatus(1);
+  }
+  function sortVs(col) {
+    if (vsSortCol === col) vsSortDir = vsSortDir === 'asc' ? 'desc' : 'asc';
+    else { vsSortCol = col; vsSortDir = 'asc'; }
+    loadVisitStatus(1);
+  }
+  async function loadVisitStatus(page) {
+    const qs = new URLSearchParams({
+      organization_name: document.getElementById('vs-org').value,
+      project_name: document.getElementById('vs-name').value,
+      status: document.getElementById('vs-status').value,
+      sort_by: vsSortCol, sort_dir: vsSortDir,
+      page, size: vsSize,
+    }).toString();
+    const r = await apiFetch('/api/supervisor/visit-status?' + qs);
+    if (!r) return;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return;
+    renderVsTable(data.data || []);
+    renderPager('vs-pager', data.total, data.size, data.page, loadVisitStatus);
+    updateVsResetBtn();
+  }
+  function renderVsTable(rows) {
+    const arr = key => vsSortCol === key ? (vsSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    document.getElementById('vs-thead').innerHTML = '<tr>' +
+      VS_COLS.map(c => `<th class="sortable" onclick="sortVs('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') + '</tr>';
+    const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+    const cell = (p, c) => {
+      const v = p[c.key];
+      if (c.won) return `<td style="text-align:right;">${won(v)}</td>`;
+      if (c.pct) return `<td style="text-align:right;">${(Number(v) || 0).toFixed(2)}%</td>`;
+      if (c.cen) return `<td style="text-align:center;">${v ?? 0}</td>`;
+      if (c.key === 'status') return `<td><span class="badge ${PROJ_STATUS_BADGE[p.status] ?? ''}">${PROJ_STATUS_LABEL[p.status] ?? p.status}</span></td>`;
+      return `<td>${esc(v ?? '-')}</td>`;
+    };
+    document.getElementById('vs-tbody').innerHTML = rows.length
+      ? rows.map(p => '<tr>' + VS_COLS.map(c => cell(p, c)).join('') + '</tr>').join('')
+      : `<tr><td colspan="${VS_COLS.length}" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>`;
+  }
+
+  // ── 프로젝트 상세 모달: 기본정보/담당자 탭 ──
+  let contactEmail = '';
+  function pdSwitch(tab) {
+    document.querySelectorAll('.pd-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.pdtab === tab));
+    document.getElementById('pd-panel-basic').classList.toggle('active', tab === 'basic');
+    document.getElementById('pd-panel-contact').classList.toggle('active', tab === 'contact');
+  }
+  async function copyContactEmail() {
+    if (!contactEmail) return;
+    try {
+      await navigator.clipboard.writeText(contactEmail);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = contactEmail; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    const btn = document.getElementById('pd-c-email-copy');
+    const old = btn.textContent; btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  }
+
+  // ── 랜딩페이지 / 아이콘 이미지 업로드·보기 ──
+  let assetUrls = { mobile: null, favicon: null };
+  function setAssetButtons() {
+    document.getElementById('pd-landing-view').style.display = assetUrls.mobile ? 'inline-block' : 'none';
+    document.getElementById('pd-icon-view').style.display = assetUrls.favicon ? 'inline-block' : 'none';
+  }
+  async function uploadAsset(kind) {
+    const input = document.getElementById(kind === 'mobile' ? 'pd-landing-file' : 'pd-icon-file');
+    const f = input.files && input.files[0];
+    const msg = document.getElementById('pd-asset-msg');
+    if (!f) { msg.textContent = '파일을 선택해 주세요.'; return; }
+    const fd = new FormData();
+    fd.append(kind === 'mobile' ? 'mobile_image' : 'favicon_image', f);
+    msg.textContent = '업로드 중...';
+    const r = await apiFetch(`/api/supervisor/projects/${currentProjId}/assets`, { method: 'POST', body: fd });
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { msg.textContent = d.error || '업로드에 실패했습니다.'; return; }
+    if (kind === 'mobile' && d.mobile_image_url) assetUrls.mobile = d.mobile_image_url;
+    if (kind === 'favicon' && d.favicon_url) assetUrls.favicon = d.favicon_url;
+    input.value = '';
+    setAssetButtons();
+    msg.textContent = (kind === 'mobile' ? '랜딩페이지' : '아이콘') + ' 업로드 완료';
+  }
+  function viewAsset(which) {
+    const url = which === 'landing' ? assetUrls.mobile : assetUrls.favicon;
+    if (!url) return;
+    document.getElementById('image-title').textContent = which === 'landing' ? '랜딩페이지' : '아이콘';
+    document.getElementById('image-view').src = url;
+    document.getElementById('image-modal').classList.add('open');
+  }
+  function closeImage() {
+    document.getElementById('image-modal').classList.remove('open');
+    document.getElementById('image-view').src = '';
+  }
+  function showImageUrl(url, title) {
+    if (!url) return;
+    document.getElementById('image-title').textContent = title || '이미지';
+    document.getElementById('image-view').src = url;
+    document.getElementById('image-modal').classList.add('open');
+  }
+
+  // ── 프로젝트 목적지 목록 팝업 ──
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+  async function openProjectLocations(id, name) {
+    document.getElementById('loc-list-proj').textContent = name || '';
+    document.getElementById('loc-list-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+    document.getElementById('loc-list-modal').classList.add('open');
+    const r = await apiFetch(`/api/supervisor/projects/${id}/locations`);
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    const body = document.getElementById('loc-list-body');
+    if (!r.ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</div>'; return; }
+    const list = d.data || [];
+    if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">등록된 목적지가 없습니다.</div>'; return; }
+    const typeLabel = t => t === 'exhibit' ? '전시물' : '위치';
+    body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th style="text-align:center;">번호</th><th>유형</th><th>목적지명</th><th>설명</th>
+          <th>좌표</th><th style="text-align:center;">이미지</th><th style="text-align:center;">상태</th>
+        </tr></thead>
+        <tbody>${list.map(l => `
+          <tr style="${l.disabled ? 'opacity:.5;' : ''}">
+            <td style="text-align:center;">${l.disabled ? '-' : l.display_seq}</td>
+            <td>${typeLabel(l.dest_type)}</td>
+            <td><b>${esc(l.location_name)}</b></td>
+            <td>${esc(l.location_desc || '-')}</td>
+            <td style="font-size:12px;color:#64748b;white-space:nowrap;">${(l.kakao_lat != null && l.kakao_lng != null) ? (l.kakao_lat + ', ' + l.kakao_lng) : '-'}</td>
+            <td style="text-align:center;">${l.image_url ? `<button class="btn btn-outline btn-sm" onclick="showImageUrl('${l.image_url}','목적지 이미지')">보기</button>` : '-'}</td>
+            <td style="text-align:center;">${l.disabled ? '<span style="color:#94a3b8;font-weight:700;">비활성</span>' : '<span style="color:#138a36;font-weight:700;">활성</span>'}</td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+  }
+  function closeProjectLocations() { document.getElementById('loc-list-modal').classList.remove('open'); }
+
+  // ── 랜딩페이지 미리보기 (방문자가 보는 실제 랜딩 페이지) ──
+  function openPreview(serial) {
+    const url = `/v/${serial}`;
+    document.getElementById('preview-frame').src = url;
+    document.getElementById('preview-open').href = url;
+    document.getElementById('preview-modal').classList.add('open');
+  }
+  function closePreview() {
+    document.getElementById('preview-modal').classList.remove('open');
+    document.getElementById('preview-frame').src = 'about:blank';
+  }
+
+  async function doLogin() {
+    const msgEl = document.getElementById('login-msg');
+    msgEl.style.display = 'none';
+    const username = document.getElementById('sv-username').value;
+    const password = document.getElementById('sv-password').value;
+    const r = await fetch('/api/supervisor/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+    const data = await r.json();
+    if (!r.ok) {
+      msgEl.textContent = data.error || '로그인에 실패했습니다.';
+      msgEl.className = 'msg error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    showDashboard(data.username);
+    // URL에 tab=hosts 파라미터 있으면 해당 탭으로
+    const tab = new URLSearchParams(location.search).get('tab');
+    switchTab(tab === 'projects' ? 'projects' : 'hosts');
+    // 이전 접속 IP / 로그아웃 시간 안내
+    if (data.prevIp || data.prevLogoutAt) {
+      const ipLine  = `마지막 접속 IP: ${data.prevIp || '정보 없음'}`;
+      const outLine = `마지막 로그아웃: ${data.prevLogoutAt ? new Date(data.prevLogoutAt).toLocaleString('ko-KR') : '정보 없음'}`;
+      showInfo('이전 접속 정보', `${ipLine}\n${outLine}`);
+    }
+  }
+
+  async function doLogout() {
+    await fetch('/api/supervisor/logout', { method: 'POST' });
+    showLogin();
+  }
+
+  // ── 공통 fetch 헬퍼 (세션 만료 감지) ──
+  async function apiFetch(url, options) {
+    let r;
+    try { r = await fetch(url, options); } catch (e) { console.error('network error:', e); return null; }
+    if (r.status === 401 || r.status === 440) { showLogin(); return null; }
+    return r;
+  }
+
+  // ── Host 목록 ──
+  function hostQs(extra = {}) {
+    return new URLSearchParams({
+      organization_name: document.getElementById('h-org').value,
+      biz_no: document.getElementById('h-biz').value,
+      status: document.getElementById('h-status').value,
+      sort_by: hostSortCol,
+      sort_dir: hostSortDir,
+      ...extra,
+    }).toString();
+  }
+
+  async function loadHosts(page) {
+    hostPage = page;
+    const qs = hostQs({ page, size: 20 });
+    const r = await apiFetch('/api/supervisor/hosts?' + qs);
+    if (!r) return;
+    const data = await r.json();
+    if (!r.ok) return;
+
+    document.getElementById('h-excel-btn').disabled = data.total === 0;
+
+    const tbody = document.getElementById('host-tbody');
+    tbody.innerHTML = data.data.map(h => {
+      const bizNo = h.biz_no ? h.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
+      const certBtn = h.biz_cert_path
+        ? `<button class="btn btn-outline btn-sm" onclick="openCert(${h.id})">보기</button>`
+        : '-';
+      const created = h.created_at ? new Date(h.created_at).toLocaleDateString('ko-KR') : '-';
+      return `<tr>
+        <td>${h.id}</td>
+        <td><b>${h.organization_name ?? '-'}</b></td>
+        <td>${h.host_name}</td>
+        <td>${bizNo}</td>
+        <td>${h.host_email}</td>
+        <td>${BADGE[h.status] ?? h.status}</td>
+        <td>${created}</td>
+        <td>${certBtn}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openHostModal(${h.id})">상세보기</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+
+    renderPager('host-pager', data.total, data.size, data.page, loadHosts);
+  }
+
+  function resetFilters() {
+    ['h-org','h-biz'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('h-status').value = '';
+  }
+
+  function sortHosts(col) {
+    if (hostSortCol === col) hostSortDir = hostSortDir === 'asc' ? 'desc' : 'asc';
+    else { hostSortCol = col; hostSortDir = 'asc'; }
+    updateSortIcons();
+    loadHosts(1);
+  }
+
+  function updateSortIcons() {
+    ['id','organization_name','biz_no','status','created_at'].forEach(col => {
+      const el = document.getElementById('si-' + col);
+      if (!el) return;
+      el.className = 'sort-icon' + (hostSortCol === col ? ' ' + hostSortDir : '');
+    });
+  }
+
+  function downloadExcel() {
+    const qs = hostQs({ sort_by: hostSortCol, sort_dir: hostSortDir });
+    location.href = '/api/supervisor/hosts/export?' + qs;
+  }
+
+  // ── 사업자등록증 뷰어 ──
+  function openCert(hostId) {
+    document.getElementById('cert-frame').src = `/api/supervisor/hosts/${hostId}/biz-cert?mode=view`;
+    document.getElementById('cert-modal').classList.add('open');
+  }
+  function closeCert() {
+    document.getElementById('cert-modal').classList.remove('open');
+    document.getElementById('cert-frame').src = '';
+  }
+
+  async function openHostModal(id) {
+    currentHostId = id;
+    document.getElementById('modal-msg').textContent = '';
+    document.getElementById('reason-wrap').style.display = 'none';
+    document.getElementById('reason-input').value = '';
+    pendingAction = null;
+
+    const r = await fetch(`/api/supervisor/hosts?page=1&size=1000`);
+    const data = await r.json();
+    const host = data.data.find(h => h.id === id);
+    if (!host) return;
+    currentHostStatus = host.status;
+
+    const bizNo = host.biz_no ? host.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
+    const certButtons = host.biz_cert_path
+      ? `<button class="btn btn-outline btn-sm" onclick="openCert(${host.id})">보기</button>
+         <a href="/api/supervisor/hosts/${host.id}/biz-cert" class="btn btn-outline btn-sm" style="text-decoration:none;">다운로드</a>`
+      : '-';
+
+    document.getElementById('host-detail').innerHTML = `
+      <div class="detail-row"><span class="detail-label">담당자명</span><span class="detail-val">${host.host_name}</span></div>
+      <div class="detail-row"><span class="detail-label">소속기관</span><span class="detail-val">${host.organization_name ?? '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">사업자번호</span><span class="detail-val">${bizNo}</span></div>
+      <div class="detail-row"><span class="detail-label">이메일</span><span class="detail-val">${host.host_email}</span></div>
+      <div class="detail-row"><span class="detail-label">모바일폰</span><span class="detail-val">${host.mobile_phone ?? '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">연락처</span><span class="detail-val">${host.phone ?? '-'}</span></div>
+      ${host.address1 ? `<div class="detail-row"><span class="detail-label">주소</span><span class="detail-val">${host.address_zip ? '['+host.address_zip+'] ' : ''}${host.address1}${host.address2 ? ' ' + host.address2 : ''}</span></div>` : ''}
+      <div class="detail-row"><span class="detail-label">상태</span><span class="detail-val">${BADGE[host.status] ?? host.status}</span></div>
+      <div class="detail-row"><span class="detail-label">사업자등록증</span><span class="detail-val">${certButtons}</span></div>
+      <div class="detail-row"><span class="detail-label">가입일</span><span class="detail-val">${host.created_at ? new Date(host.created_at).toLocaleString('ko-KR') : '-'}</span></div>
+      ${host.status_reason ? `<div class="detail-row"><span class="detail-label">처리사유</span><span class="detail-val">${host.status_reason}</span></div>` : ''}
+    `;
+
+    const actionsEl = document.getElementById('host-actions');
+    actionsEl.innerHTML = '';
+    if (host.status === 'pending') {
+      actionsEl.innerHTML = `
+        <button class="btn btn-success btn-sm" onclick="confirmAction('approved')">✔ 승인</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmAction('cancelled')">✘ 취소</button>
+      `;
+    } else if (host.status === 'approved') {
+      actionsEl.innerHTML = `<button class="btn btn-danger btn-sm" onclick="confirmAction('terminated')">종료</button>`;
+    }
+
+    document.getElementById('host-modal').classList.add('open');
+  }
+
+  function confirmAction(action) {
+    if (action === 'approved') {
+      if (!confirm('승인하시겠습니까?')) return;
+    }
+    pendingAction = action;
+    const needReason = action !== 'approved';
+    document.getElementById('reason-wrap').style.display = needReason ? 'block' : 'none';
+    if (action === 'approved') {
+      doStatusChange();
+    }
+  }
+
+  async function doStatusChange() {
+    if (!currentHostId || !pendingAction) return;
+    const reason = document.getElementById('reason-input').value.trim();
+    const msgEl = document.getElementById('modal-msg');
+    msgEl.textContent = '';
+
+    const r = await fetch(`/api/supervisor/hosts/${currentHostId}/status`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status: pendingAction, reason }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      msgEl.textContent = data.error || '처리에 실패했습니다.';
+      msgEl.className = 'modal-msg error';
+      return;
+    }
+    closeModal();
+    loadHosts(hostPage);
+  }
+
+  function closeModal() {
+    document.getElementById('host-modal').classList.remove('open');
+    pendingAction = null;
+    currentHostId = null;
+  }
+
+  // 취소/종료 버튼에 확인 버튼 추가
+  document.addEventListener('click', e => {
+    if (e.target.id === 'confirm-action-btn') doStatusChange();
+  });
+
+  // ── reason-wrap 안에 확인 버튼 추가 ──
+  document.getElementById('reason-wrap').insertAdjacentHTML('beforeend',
+    '<button class="btn btn-primary btn-sm" style="margin-top:10px;" id="confirm-action-btn">처리 확인</button>'
+  );
+
+  // ── 프로젝트 목록 ──
+  function projQs(extra = {}) {
+    return new URLSearchParams({
+      organization_name: document.getElementById('p-host').value,
+      project_name: document.getElementById('p-name').value,
+      project_serial: document.getElementById('p-serial').value,
+      status: document.getElementById('p-status').value,
+      quote_read: document.getElementById('p-quote-read').value,
+      deposit: document.getElementById('p-deposit').value,
+      from_date: document.getElementById('p-from').value,
+      to_date: document.getElementById('p-to').value,
+      sort_by: projSortCol,
+      sort_dir: projSortDir,
+      ...extra,
+    }).toString();
+  }
+
+  async function loadProjects(page) {
+    projPage = page;
+    const qs = projQs({ page, size: 20 });
+    const r = await apiFetch('/api/supervisor/projects?' + qs);
+    if (!r) return;
+    const data = await r.json();
+    if (!r.ok) return;
+
+    const tbody = document.getElementById('proj-tbody');
+    tbody.innerHTML = data.data.map(p => {
+      const from = p.from_date ? p.from_date.slice(0,10) : '-';
+      const to = p.to_date ? p.to_date.slice(0,10) : '-';
+      const created = p.created_at ? new Date(p.created_at).toLocaleDateString('ko-KR') : '-';
+      const quoteSent = p.quote_sent_at ? new Date(p.quote_sent_at).toLocaleDateString('ko-KR') : '-';
+      const depositAt = p.deposit_confirmed_at ? new Date(p.deposit_confirmed_at).toLocaleDateString('ko-KR') : '-';
+      const quoteRead = p.quote_read
+        ? '<span class="badge bp-yes">확인</span>'
+        : '<span class="badge bp-no">미확인</span>';
+      const depositBadge = p.deposit_confirmed_at
+        ? '<span class="badge bp-yes">확인</span>'
+        : '<span class="badge bp-no">미확인</span>';
+      const sk = p.status || 'draft';
+      return `<tr>
+        <td>${p.id}</td>
+        <td>${p.organization_name ?? '-'}</td>
+        <td>${p.project_name}</td>
+        <td>${p.project_serial}</td>
+        <td>${from}</td>
+        <td>${to}</td>
+        <td><span class="badge ${PROJ_STATUS_BADGE[sk] ?? ''}">${PROJ_STATUS_LABEL[sk] ?? sk}</span></td>
+        <td>${quoteSent}</td>
+        <td>${quoteRead}</td>
+        <td>${depositAt}</td>
+        <td>${depositBadge}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProjectLocations(${p.id}, '${(p.project_name||'').replace(/'/g,"\\'")}')">${p.location_count ?? 0}개</button></td>
+        <td>${created}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProjectModal(${p.id})">상세보기</button></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+
+    renderPager('proj-pager', data.total, data.size, data.page, loadProjects);
+  }
+
+  function resetProjFilters() {
+    ['p-host','p-name','p-serial','p-from','p-to'].forEach(id => document.getElementById(id).value = '');
+    ['p-status','p-quote-read','p-deposit'].forEach(id => document.getElementById(id).value = '');
+    loadProjects(1);
+  }
+
+  function sortProjects(col) {
+    if (projSortCol === col) projSortDir = projSortDir === 'asc' ? 'desc' : 'asc';
+    else { projSortCol = col; projSortDir = 'asc'; }
+    updateProjSortIcons();
+    loadProjects(1);
+  }
+
+  function updateProjSortIcons() {
+    ['id','organization_name','project_name','project_serial','from_date','to_date','status',
+     'quote_sent_at','quote_read','deposit_confirmed_at','created_at'].forEach(col => {
+      const el = document.getElementById('psi-' + col);
+      if (!el) return;
+      el.className = 'sort-icon' + (projSortCol === col ? ' ' + projSortDir : '');
+    });
+  }
+
+  async function openProjectModal(id) {
+    currentProjId = id;
+    document.getElementById('pd-msg').textContent = '';
+    const r = await fetch(`/api/supervisor/projects/${id}`);
+    const data = await r.json();
+    if (!r.ok) { alert(data.error || '불러오기 실패'); return; }
+    const p = data.data;
+    origProjData = { quote_read: !!p.quote_read, deposit_confirmed: !!p.deposit_confirmed_at, status: p.status };
+
+    document.getElementById('pd-org').textContent = p.organization_name ?? '-';
+    document.getElementById('pd-c-name').textContent = p.host_name ?? '-';
+    document.getElementById('pd-c-email').textContent = p.host_email ?? '-';
+    document.getElementById('pd-c-mobile').textContent = p.mobile_phone ?? '-';
+    contactEmail = p.host_email ?? '';
+    pdSwitch('basic');
+    assetUrls = { mobile: p.mobile_image_url || null, favicon: p.favicon_url || null };
+    document.getElementById('pd-asset-msg').textContent = '';
+    document.getElementById('pd-landing-file').value = '';
+    document.getElementById('pd-icon-file').value = '';
+    setAssetButtons();
+    document.getElementById('pd-proj-name').textContent = p.project_name;
+    document.getElementById('pd-serial').textContent = p.project_serial;
+    document.getElementById('pd-from').textContent = p.from_date ? p.from_date.slice(0,10) : '-';
+    document.getElementById('pd-to').textContent = p.to_date ? p.to_date.slice(0,10) : '-';
+    document.getElementById('pd-gift-amount').textContent = p.gift_amount ? Number(p.gift_amount).toLocaleString() + '원' : '-';
+    document.getElementById('pd-gift-qty').textContent = p.gift_qty ?? '-';
+    document.getElementById('pd-budget').textContent = p.budget_amount ? Number(p.budget_amount).toLocaleString() + '원' : '-';
+    document.getElementById('pd-quote-amount').textContent = p.quote_amount ? Number(p.quote_amount).toLocaleString() + '원' : '-';
+    document.getElementById('pd-locations').textContent = (p.location_count ?? 0) + '개';
+    document.getElementById('pd-visitors').textContent = (p.visitor_count ?? 0) + '명';
+    document.getElementById('pd-quote-sent').textContent = p.quote_sent_at ? new Date(p.quote_sent_at).toLocaleString('ko-KR') : '-';
+    document.getElementById('pd-created').textContent = p.created_at ? new Date(p.created_at).toLocaleString('ko-KR') : '-';
+    document.getElementById('pd-desc').textContent = p.description ?? '-';
+
+    const quoteReadChk = document.getElementById('pd-quote-read');
+    quoteReadChk.checked = !!p.quote_read;
+    document.getElementById('pd-quote-read-at').textContent = p.quote_read_at
+      ? '(' + new Date(p.quote_read_at).toLocaleString('ko-KR') + ')' : '';
+
+    const depositChk = document.getElementById('pd-deposit-confirmed');
+    depositChk.checked = !!p.deposit_confirmed_at;
+    depositChk.disabled = !p.quote_read;
+    document.getElementById('pd-deposit-at').textContent = p.deposit_confirmed_at
+      ? '(' + new Date(p.deposit_confirmed_at).toLocaleString('ko-KR') + ')' : '';
+
+    quoteReadChk.onchange = function() {
+      depositChk.disabled = !this.checked;
+      if (!this.checked) depositChk.checked = false;
+    };
+
+    document.getElementById('pd-status').value = p.status;
+    document.getElementById('proj-detail-modal').classList.add('open');
+  }
+
+  function closeProjectModal() {
+    document.getElementById('proj-detail-modal').classList.remove('open');
+    currentProjId = null;
+    origProjData = null;
+  }
+
+  function rollbackProjectChanges() {
+    if (!origProjData) return;
+    const quoteReadChk = document.getElementById('pd-quote-read');
+    quoteReadChk.checked = origProjData.quote_read;
+    const depositChk = document.getElementById('pd-deposit-confirmed');
+    depositChk.checked = origProjData.deposit_confirmed;
+    depositChk.disabled = !origProjData.quote_read;
+    document.getElementById('pd-status').value = origProjData.status;
+    const msgEl = document.getElementById('pd-msg');
+    msgEl.textContent = '변경사항이 원래 값으로 복원되었습니다.';
+    msgEl.style.color = '#16a34a';
+  }
+
+  // ── 커스텀 저장 확인 모달 ──
+  let _saveConfirmCb = null;
+  function showSaveConfirm(msg, onOk, opts) {
+    opts = opts || {};
+    document.getElementById('save-confirm-title').textContent = opts.title || '저장 확인';
+    document.getElementById('save-confirm-ok').textContent = opts.okText || '저장';
+    document.getElementById('save-confirm-text').textContent = msg;
+    _saveConfirmCb = onOk;
+    document.getElementById('save-confirm-modal').classList.add('open');
+  }
+  function closeSaveConfirm() {
+    document.getElementById('save-confirm-modal').classList.remove('open');
+    _saveConfirmCb = null;
+  }
+  function onSaveConfirmOk() {
+    const cb = _saveConfirmCb;
+    closeSaveConfirm();
+    if (cb) cb();
+  }
+
+  async function saveProjectChanges() {
+    if (!currentProjId) return;
+
+    const quote_read = document.getElementById('pd-quote-read').checked;
+    const deposit_confirmed = document.getElementById('pd-deposit-confirmed').checked;
+    const status = document.getElementById('pd-status').value;
+
+    const payload = {};
+    if (quote_read !== origProjData.quote_read) payload.quote_read = quote_read;
+    if (deposit_confirmed !== origProjData.deposit_confirmed) payload.deposit_confirmed = deposit_confirmed;
+    if (status !== origProjData.status) payload.status = status;
+
+    const msgEl = document.getElementById('pd-msg');
+    if (Object.keys(payload).length === 0) {
+      msgEl.textContent = '변경된 항목이 없습니다.';
+      msgEl.style.color = '#64748b';
+      return;
+    }
+
+    showSaveConfirm('변경 내용을 저장하시겠습니까?', async () => {
+      const r = await fetch(`/api/supervisor/projects/${currentProjId}/fields`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        document.getElementById('pd-msg').textContent = data.error || '저장에 실패했습니다.';
+        document.getElementById('pd-msg').style.color = '#dc2626';
+        return;
+      }
+      loadProjects(projPage);
+      await openProjectModal(currentProjId);
+      document.getElementById('pd-msg').textContent = '저장되었습니다.';
+      document.getElementById('pd-msg').style.color = '#16a34a';
+    });
+  }
+
+  function renderPager(containerId, total, size, current, loadFn) {
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    const el = document.getElementById(containerId);
+    let html = `<span style="color:#64748b;">총 ${total}건</span>`;
+    html += `<button onclick="loadFn(${current-1})" ${current<=1?'disabled':''}>◀</button>`;
+    for (let i = Math.max(1, current-2); i <= Math.min(totalPages, current+2); i++) {
+      html += `<button class="${i===current?'active':''}" onclick="${loadFn.name}(${i})">${i}</button>`;
+    }
+    html += `<button onclick="${loadFn.name}(${current+1})" ${current>=totalPages?'disabled':''}>▶</button>`;
+    el.innerHTML = html;
+  }
+
+  // 페이지 로드 시 로그인 상태 확인
+  (async () => {
+    updateSortIcons();
+    updateProjSortIcons();
+    const r = await apiFetch('/api/supervisor/me');
+    if (r && r.ok) {
+      const data = await r.json();
+      showDashboard(data.user?.username ?? 'supervisor');
+      const tab = new URLSearchParams(location.search).get('tab');
+      switchTab(tab === 'projects' ? 'projects' : 'hosts');
+    }
+  })();
+</script>
+</body>
+</html>
