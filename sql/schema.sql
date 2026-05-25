@@ -1,3 +1,32 @@
+-- ============================================================
+--  모노라마 트래커 — MariaDB 스키마 생성 스크립트
+--  실행:  mysql -u <user> -p < sql/schema.sql
+--  (DB 사용자/권한 생성은 sql/init_tracker.sql 참고. 앱은 .env의
+--   ENCRYPTION_KEY를 fn_encrypt/fn_decrypt 의 키 인자로 전달한다.)
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS tracker
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE tracker;
+
+-- ── 암호화 함수: 앱에서 fn_encrypt(값, 키) / fn_decrypt(값, 키) 형태로 사용 ──
+DROP FUNCTION IF EXISTS fn_encrypt;
+CREATE FUNCTION fn_encrypt(p_value TEXT, p_key VARCHAR(64))
+  RETURNS VARCHAR(512) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
+  NO SQL DETERMINISTIC
+  RETURN HEX(AES_ENCRYPT(p_value, p_key));
+
+DROP FUNCTION IF EXISTS fn_decrypt;
+CREATE FUNCTION fn_decrypt(p_value VARCHAR(512), p_key VARCHAR(64))
+  RETURNS TEXT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
+  NO SQL DETERMINISTIC
+  RETURN CAST(AES_DECRYPT(UNHEX(p_value), p_key) AS CHAR);
+
+-- ============================================================
+--  테이블 (FK 순서 무관하게 생성되도록 체크 일시 해제)
+-- ============================================================
+SET FOREIGN_KEY_CHECKS = 0;
+
 CREATE TABLE IF NOT EXISTS hosts (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   host_name VARCHAR(120) NOT NULL,
@@ -204,6 +233,16 @@ CREATE TABLE IF NOT EXISTS project_applications (
   FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS host_email_verify_codes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  code CHAR(6) NOT NULL,
+  used TINYINT(1) NOT NULL DEFAULT 0,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_hvc_email (email)
+);
+
 CREATE TABLE IF NOT EXISTS merchant_email_verify_codes (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) NOT NULL,
@@ -235,3 +274,13 @@ CREATE TABLE IF NOT EXISTS email_logs (
   error_msg TEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 세션 저장소(express-mysql-session). 앱 기동 시 자동 생성되나 참고용으로 포함.
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
+  expires INT UNSIGNED NOT NULL,
+  data MEDIUMTEXT COLLATE utf8mb4_bin,
+  PRIMARY KEY (session_id)
+);
+
+SET FOREIGN_KEY_CHECKS = 1;
