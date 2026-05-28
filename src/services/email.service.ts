@@ -15,10 +15,14 @@ function getTransporter() {
   });
 }
 
-function baseCompanyInfo(): string {
+function baseCompanyInfo(sealCid?: string): string {
+  const ceo = process.env.COMPANY_CEO ?? "김창호";
+  const sealImg = sealCid
+    ? ` <img src="cid:${sealCid}" alt="인감" style="height:42px;vertical-align:middle;margin-left:6px;">`
+    : "";
   return [
     `${process.env.COMPANY_NAME ?? "(주)모노라마"}`,
-    `대표: ${process.env.COMPANY_CEO ?? "김창호"}`,
+    `대표: ${ceo}${sealImg}`,
     `사업자등록번호: ${process.env.COMPANY_BIZ_NO ?? "277-86-00185"}`,
     `입금은행: ${process.env.COMPANY_BANK_NAME ?? "국민은행"}`,
     `계좌번호: ${process.env.COMPANY_BANK_ACCOUNT ?? "000-000-000000"}`,
@@ -249,9 +253,13 @@ export async function sendQuoteEmail(input: {
   projectId: number;
   hostId: number;
 }): Promise<void> {
-  const baseUrl = process.env.BASE_URL ?? "http://localhost:5000";
+  // 견적서 확인 링크는 호스트가 메일 클라이언트에서 클릭하므로 공개 도메인으로 보낸다.
+  // .env DOMAIN 이 비어있을 때만 BASE_URL(개발용)로 폴백한다.
+  const publicBase = process.env.DOMAIN
+    ? `https://${process.env.DOMAIN}`
+    : (process.env.BASE_URL ?? "http://localhost:5000");
   const token = makeQuoteToken(input.projectId, input.hostId);
-  const confirmUrl = `${baseUrl}/api/host/projects/${input.projectId}/confirm-quote?token=${token}&host_id=${input.hostId}`;
+  const confirmUrl = `${publicBase}/api/host/projects/${input.projectId}/confirm-quote?token=${token}&host_id=${input.hostId}`;
   const sealPath = path.join(process.cwd(), "public", "image", "모노라마_인감증명.png");
 
   await sendEmail({
@@ -272,9 +280,6 @@ export async function sendQuoteEmail(input: {
         <tr><td style="padding-left:20px;">초기 세팅</td><td style="text-align:right;">${input.initialSetupFee.toLocaleString()}원</td></tr>
         <tr style="background:#1e293b;color:#fff;"><td style="font-weight:700;font-size:15px;">합계</td><td style="text-align:right;font-weight:700;font-size:15px;">${(input.usageFee + input.mobileDesignFee + input.faviconFee + input.initialSetupFee).toLocaleString()}원</td></tr>
       </table>
-      <div style="text-align:right;margin:8px 0 4px;">
-        <img src="cid:mono_seal" alt="인감" style="width:90px;height:90px;object-fit:contain;">
-      </div>
       <p style="font-size:13px;color:#64748b;">※ 추가 디자인 시안은 별도 견적입니다.</p>
       <div style="text-align:center;margin:24px 0;">
         <a href="${confirmUrl}" style="background:#16a34a;color:#fff;padding:13px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">
@@ -283,7 +288,7 @@ export async function sendQuoteEmail(input: {
         <p style="margin-top:8px;font-size:12px;color:#94a3b8;">버튼을 클릭하시면 견적서 확인으로 처리됩니다.</p>
       </div>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;">
-      <p style="font-size:12px;color:#94a3b8;">${baseCompanyInfo()}</p>
+      <p style="font-size:12px;color:#94a3b8;line-height:1.7;">${baseCompanyInfo("mono_seal")}</p>
     </div>`,
     projectId: input.projectId,
     hostId: input.hostId,

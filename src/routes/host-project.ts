@@ -791,8 +791,6 @@ router.get("/projects/:id/confirm-quote", async (req, res) => {
   const { token, host_id } = req.query as Record<string, string>;
   const hostId = Number(host_id);
 
-  const baseUrl = process.env.BASE_URL ?? "http://localhost:5000";
-
   if (!token || !host_id || isNaN(projectId) || isNaN(hostId)) {
     res.status(400).send("잘못된 요청입니다.");
     return;
@@ -813,7 +811,9 @@ router.get("/projects/:id/confirm-quote", async (req, res) => {
     [projectId, hostId],
   );
 
-  res.redirect(`${baseUrl}/admin`);
+  // 상대 경로로 리다이렉트 — 요청이 들어온 origin(예: https://tracker.ngrok.dev)을
+  // 브라우저가 그대로 사용한다. BASE_URL/DOMAIN 환경변수 분기 불필요.
+  res.redirect("/admin");
 });
 
 // ── 가맹점 지원현황 (이 프로젝트에 지원한 가맹점 목록) ──

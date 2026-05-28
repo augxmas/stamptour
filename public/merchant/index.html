@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>가맹점 · 모노라마 트래커</title>
   <link rel="icon" href="/favicon.svg">
+  <!-- PWA -->
+  <link rel="manifest" href="/merchant/manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="가맹점">
+  <link rel="apple-touch-icon" href="/favicon.svg">
   <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -198,7 +205,7 @@
       <button class="btn btn-p btn-full" onclick="doLogin()">로그인</button>
       <div class="center" style="margin-top:12px;"><span class="link" onclick="show('sec-forgot')">비밀번호를 잊으셨나요?</span></div>
       <hr class="divider">
-      <div class="center">아직 가맹점 회원이 아니신가요? <span class="link" onclick="show('sec-register')">가맹점 가입 신청</span></div>
+      <div class="center">아직 가맹점 회원이 아니신가요? <span class="link" onclick="confirmDocsThenRegister()">가맹점 가입 신청</span></div>
     </div>
   </section>
 
@@ -459,6 +466,10 @@
   <div class="modal-box">
     <div class="mb-head" id="ui-title">알림</div>
     <div class="mb-msg" id="ui-msg"></div>
+    <label id="ui-check-wrap" style="display:none;font-size:13px;color:#1e293b;margin:8px 0 14px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="ui-check" style="margin-right:8px;vertical-align:middle;width:16px;height:16px;">
+      <span id="ui-check-label"></span>
+    </label>
     <div class="mb-btns">
       <button class="btn btn-o btn-sm" id="ui-cancel">취소</button>
       <button class="btn btn-p btn-sm" id="ui-ok">확인</button>
@@ -1342,21 +1353,55 @@
       const ov = document.getElementById('ui-modal');
       const ok = document.getElementById('ui-ok');
       const cancel = document.getElementById('ui-cancel');
+      const checkWrap = document.getElementById('ui-check-wrap');
+      const check = document.getElementById('ui-check');
+      const checkLabel = document.getElementById('ui-check-label');
       document.getElementById('ui-title').textContent = opts.title || '알림';
       document.getElementById('ui-msg').textContent = message;
       ok.textContent = opts.okText || '확인';
       cancel.textContent = opts.cancelText || '취소';
       cancel.style.display = opts.alert ? 'none' : '';
-      function close(val) { ov.classList.remove('open'); ok.onclick = cancel.onclick = ov.onclick = null; resolve(val); }
-      ok.onclick = () => close(true);
+      if (opts.checkbox && checkWrap) {
+        checkLabel.textContent = opts.checkbox;
+        check.checked = false;
+        checkWrap.style.display = '';
+        ok.disabled = true;
+        check.onchange = () => { ok.disabled = !check.checked; };
+      } else if (checkWrap) {
+        checkWrap.style.display = 'none';
+        check.checked = false;
+        ok.disabled = false;
+        check.onchange = null;
+      }
+      function close(val) {
+        ov.classList.remove('open');
+        ok.onclick = cancel.onclick = ov.onclick = null;
+        if (check) check.onchange = null;
+        ok.disabled = false;
+        resolve(val);
+      }
+      ok.onclick = () => { if (!ok.disabled) close(true); };
       cancel.onclick = () => close(false);
       ov.onclick = e => { if (e.target === ov) close(false); };
       ov.classList.add('open');
-      ok.focus();
+      if (!ok.disabled) ok.focus();
     });
   }
   function uiConfirm(message, opts) { return _uiModal(message, opts || {}); }
   function uiAlert(message, opts) { return _uiModal(message, Object.assign({ title: '알림', alert: true }, opts || {})); }
+
+  async function confirmDocsThenRegister() {
+    const ok = await uiConfirm(
+      '회원가입 진행 전에 아래 서류 파일을 미리 준비해 주십시오.\n\n• 사업자등록증 (PDF / JPG / PNG)\n• 통장사본 (PDF / JPG / PNG)',
+      {
+        title: '서류 준비 안내',
+        okText: '예, 회원가입 진행',
+        cancelText: '취소',
+        checkbox: '사업자등록증·통장사본 파일을 준비하였습니다.',
+      },
+    );
+    if (ok) show('sec-register');
+  }
 
   async function applyProject(id, name) {
     const ok = await uiConfirm(`'${name}' 프로젝트에 참여를 신청하시겠습니까?`, { title: '프로젝트 지원', okText: '지원' });
@@ -1722,6 +1767,91 @@
     const t = document.getElementById('login-gift-toggle');
     if (t) { t.checked = preferredGiftMode(); updateLoginGiftHint(); }
   })();
+
+  // ── PWA: 서비스워커 등록 ──
+  (function () {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/merchant/service-worker.js', { scope: '/merchant/' }).catch(() => {});
+  })();
+
+  // ── PWA: 모바일 설치 유도 배너 ──
+  // 배너 HTML이 이 스크립트 다음에 오므로 DOMContentLoaded 후 실행
+  document.addEventListener('DOMContentLoaded', initPwaInstallBanner);
+  function initPwaInstallBanner() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (!banner) return;
+    const btn = document.getElementById('pwa-install-btn');
+    const closeBtn = document.getElementById('pwa-install-close');
+    const txt = document.getElementById('pwa-install-text');
+    const DISMISS_KEY = 'pwa_merchant_install_dismissed_until';
+
+    const ua = navigator.userAgent || '';
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) && !/(CriOS|FxiOS|EdgiOS|OPiOS)/.test(ua);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || window.navigator.standalone === true;
+
+    if (!isMobile || isStandalone) return;
+
+    const until = Number(localStorage.getItem(DISMISS_KEY) || 0);
+    if (until && Date.now() < until) return;
+
+    function show() { banner.style.display = 'flex'; }
+    function hide(dismissDays) {
+      banner.style.display = 'none';
+      if (dismissDays) {
+        localStorage.setItem(DISMISS_KEY, String(Date.now() + dismissDays * 86400000));
+      }
+    }
+
+    let deferredPrompt = null;
+
+    // Android/Chrome 계열: 브라우저가 자동으로 발생시키는 설치 이벤트 가로채기
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      txt.textContent = '앱처럼 빠르게 사용하실 수 있습니다.';
+      btn.textContent = '설치';
+      btn.style.display = '';
+      show();
+    });
+
+    // iOS Safari: beforeinstallprompt 미지원이므로 직접 안내 노출
+    if (isIOS) {
+      txt.textContent = '하단 공유(↥) → "홈 화면에 추가"를 선택하세요.';
+      btn.style.display = 'none';
+      show();
+    }
+
+    btn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      hide(outcome === 'accepted' ? 0 : 1);
+    });
+    closeBtn.addEventListener('click', () => hide(7));
+    window.addEventListener('appinstalled', () => hide(0));
+  }
 </script>
+
+<!-- PWA 설치 유도 배너 (모바일 미설치 상태에서만 노출) -->
+<div id="pwa-install-banner"
+     style="display:none;position:fixed;bottom:16px;left:16px;right:16px;
+            background:linear-gradient(135deg,#2563eb,#0d3b66);color:#fff;
+            border-radius:14px;box-shadow:0 10px 30px rgba(15,30,60,.28);
+            padding:14px 16px;z-index:9000;align-items:center;gap:12px;
+            font-family:'Malgun Gothic',-apple-system,sans-serif;font-size:14px;">
+  <div style="font-size:22px;line-height:1;">📲</div>
+  <div style="flex:1;line-height:1.45;min-width:0;">
+    <div style="font-weight:700;margin-bottom:2px;">홈 화면에 가맹점 앱 추가</div>
+    <div id="pwa-install-text" style="font-size:12px;opacity:.92;">앱처럼 빠르게 사용하실 수 있습니다.</div>
+  </div>
+  <button id="pwa-install-btn" type="button"
+          style="background:#fff;color:#1e3a8a;border:0;border-radius:8px;
+                 padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">설치</button>
+  <button id="pwa-install-close" type="button" aria-label="닫기"
+          style="background:transparent;color:#fff;border:0;font-size:20px;line-height:1;cursor:pointer;padding:4px 6px;">×</button>
+</div>
 </body>
 </html>

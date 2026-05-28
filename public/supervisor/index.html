@@ -636,6 +636,20 @@
   </div>
 </div>
 
+<!-- 공통 확인/알림 모달 -->
+<div class="modal-overlay" id="ui-modal" style="z-index:600;">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h3 id="ui-modal-title">확인</h3></div>
+    <div class="card-body">
+      <p id="ui-modal-msg" style="font-size:14px;color:#1e293b;line-height:1.6;margin-bottom:20px;white-space:pre-line;"></p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" id="ui-modal-cancel">취소</button>
+        <button class="btn btn-primary btn-sm" id="ui-modal-ok">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 목적지 목록 모달 -->
 <div class="modal-overlay" id="loc-list-modal" onclick="if(event.target===this)closeProjectLocations()">
   <div class="modal" style="max-width:720px;">
@@ -1063,7 +1077,13 @@
   }
   async function merchantStatus(id, status) {
     const labels = { approved: '승인', cancelled: '가입 취소', terminated: '계정 종료' };
-    if (!confirm(`이 가맹점을 '${labels[status] || status}' 처리하시겠습니까?`)) return;
+    const label = labels[status] || status;
+    const isApprove = status === 'approved';
+    const ok = await uiConfirm(
+      `이 가맹점을 '${label}' 처리하시겠습니까?`,
+      { title: `가맹점 ${label}`, okText: label, danger: !isApprove },
+    );
+    if (!ok) return;
     let reason = '';
     if (status === 'cancelled' || status === 'terminated') {
       reason = prompt('사유를 입력하세요(선택):', '') || '';
@@ -1073,7 +1093,7 @@
     });
     if (!r) return;
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) { alert(d.error || '처리에 실패했습니다.'); return; }
+    if (!r.ok) { await uiAlert(d.error || '처리에 실패했습니다.'); return; }
     loadMerchants(1);
   }
 
@@ -1183,6 +1203,9 @@
     const f = input.files && input.files[0];
     const msg = document.getElementById('pd-asset-msg');
     if (!f) { msg.textContent = '파일을 선택해 주세요.'; return; }
+    const kindLabel = kind === 'mobile' ? '랜딩페이지' : '아이콘';
+    const ok = await uiConfirm(`${kindLabel} 이미지를 저장하시겠습니까?\n파일명: ${f.name}`, { title: '저장 확인', okText: '저장' });
+    if (!ok) return;
     const fd = new FormData();
     fd.append(kind === 'mobile' ? 'mobile_image' : 'favicon_image', f);
     msg.textContent = '업로드 중...';
@@ -1427,9 +1450,10 @@
     document.getElementById('host-modal').classList.add('open');
   }
 
-  function confirmAction(action) {
+  async function confirmAction(action) {
     if (action === 'approved') {
-      if (!confirm('승인하시겠습니까?')) return;
+      const ok = await uiConfirm('승인하시겠습니까?', { title: 'Host 승인', okText: '승인' });
+      if (!ok) return;
     }
     pendingAction = action;
     const needReason = action !== 'approved';
@@ -1714,6 +1738,29 @@
       switchTab(tab === 'projects' ? 'projects' : 'hosts');
     }
   })();
+
+  // ── 공통 확인/알림 모달 ──
+  function _uiModal(message, opts) {
+    return new Promise(resolve => {
+      const ov = document.getElementById('ui-modal');
+      const ok = document.getElementById('ui-modal-ok');
+      const cancel = document.getElementById('ui-modal-cancel');
+      document.getElementById('ui-modal-title').textContent = opts.title || '알림';
+      document.getElementById('ui-modal-msg').textContent = message;
+      ok.textContent = opts.okText || '확인';
+      ok.className = 'btn btn-sm ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+      cancel.textContent = opts.cancelText || '취소';
+      cancel.style.display = opts.alert ? 'none' : '';
+      function close(val) { ov.classList.remove('open'); ok.onclick = cancel.onclick = ov.onclick = null; resolve(val); }
+      ok.onclick = () => close(true);
+      cancel.onclick = () => close(false);
+      ov.onclick = e => { if (e.target === ov) close(false); };
+      ov.classList.add('open');
+      ok.focus();
+    });
+  }
+  function uiConfirm(message, opts) { return _uiModal(message, opts || {}); }
+  function uiAlert(message, opts) { return _uiModal(message, Object.assign({ title: '알림', alert: true }, opts || {})); }
 </script>
 </body>
 </html>

@@ -254,6 +254,12 @@
     .fg input:disabled, .fg textarea:disabled, .fg select:disabled {
       background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
     .btn:disabled { opacity:.45; cursor:not-allowed; }
+
+    /* 회원가입: 이메일 인증 전 본 폼 잠금 처리 */
+    #reg-fields-gate { border:0; padding:0; margin:0; min-width:0; transition:opacity .2s; }
+    #reg-fields-gate[disabled] { opacity:.55; }
+    .reg-gate-hint { font-size:12px; color:#854d0e; background:#fef9c3; border:1px solid #fde68a;
+                     border-radius:8px; padding:9px 12px; margin:0 0 14px; }
   </style>
 </head>
 <body>
@@ -279,7 +285,7 @@
     <div id="li-msg" class="msg"></div>
     <button class="btn btn-p btn-full" onclick="doLogin()">로그인</button>
     <div class="links">
-      <a onclick="show('sec-register')">회원가입</a>
+      <a onclick="confirmDocsThenRegister()">회원가입</a>
       <a onclick="show('sec-forgot')">비밀번호 분실</a>
     </div>
   </div>
@@ -290,23 +296,15 @@
   <div class="reg-card">
     <div class="card-header"><h2>Host 회원가입</h2></div>
     <div class="card-body">
-    <div class="reg-grid">
 
-      <!-- 담당자명 + 이메일 -->
-      <div class="fg-inline">
-        <label>담당자명 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <input id="rg-name" type="text" placeholder="홍길동"
-            oninput="lvReq('rg-name','rg-nm','담당자명을 입력해 주세요.')">
-          <div id="rg-nm" class="fm"></div>
-        </div>
-      </div>
+      <!-- ── 1단계: 이메일 인증 (본 폼 활성화 게이트) ── -->
       <div class="fg-inline">
         <label>이메일 <span class="req">*</span></label>
         <div class="field-wrap">
           <div style="display:flex;gap:8px;">
             <input id="rg-email" type="email" placeholder="host@example.com"
-              style="flex:1;min-width:0;" oninput="onRegEmailInput()">
+              style="flex:1;min-width:0;" oninput="onRegEmailInput()"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('btn-send-verify').click();}">
             <button class="btn btn-o btn-sm" id="btn-send-verify" onclick="sendVerifyCode()"
               style="white-space:nowrap;flex-shrink:0;" disabled>인증코드 발송</button>
           </div>
@@ -326,106 +324,127 @@
         </div>
       </div>
 
-      <!-- 소속기관명 + 사업자등록번호 -->
-      <div class="fg-inline">
-        <label>소속기관명 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <input id="rg-org" type="text" placeholder="(주)모노라마"
-            oninput="lvReq('rg-org','rg-om','소속기관명을 입력해 주세요.')">
-          <div id="rg-om" class="fm"></div>
-        </div>
-      </div>
-      <div class="fg-inline">
-        <label>사업자등록번호 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <input id="rg-biz" type="text" placeholder="000-00-00000" maxlength="12"
-            inputmode="numeric" oninput="onBiz(this)">
-          <div id="rg-bm" class="fm"></div>
-        </div>
-      </div>
+      <hr class="divider">
 
-      <!-- 모바일폰 + 연락처 -->
-      <div class="fg-inline">
-        <label>모바일폰 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <input id="rg-mobile" type="text" placeholder="010-0000-0000" maxlength="13"
-            inputmode="numeric" oninput="onMobile(this)">
-          <div id="rg-mobilem" class="fm"></div>
-        </div>
-      </div>
-      <div class="fg-inline">
-        <label>연락처</label>
-        <div class="field-wrap">
-          <input id="rg-phone" type="text" placeholder="02-0000-0000" maxlength="13"
-            inputmode="numeric" oninput="onPhone(this)">
-          <div id="rg-phonem" class="fm"></div>
-        </div>
-      </div>
+      <!-- ── 2단계: 본 등록 폼 (이메일 인증 완료 후 활성화) ── -->
+      <div id="reg-gate-hint" class="reg-gate-hint">※ 이메일 인증 완료 후 아래 항목을 입력할 수 있습니다.</div>
 
-      <!-- 주소 (전체 폭) -->
-      <div class="fg-inline fg-full">
-        <label>주소 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <div style="margin-bottom:6px;">
-            <button type="button" class="btn btn-o btn-sm" onclick="openPostcode()">🔍 주소 검색</button>
-          </div>
-          <div style="display:flex;gap:8px;margin-bottom:6px;">
-            <input id="rg-zip" type="text" placeholder="우편번호" readonly
-              style="width:90px;background:#f8fafc;color:#475569;">
-            <input id="rg-addr1" type="text" placeholder="도로명 주소 (자동입력)" readonly
-              style="flex:1;min-width:0;background:#f8fafc;color:#475569;">
-          </div>
-          <input id="rg-addr2" type="text" placeholder="상세주소 (동·호수 등, 선택)">
-          <div id="rg-addrm" class="fm"></div>
-        </div>
-      </div>
+      <fieldset id="reg-fields-gate" disabled>
+        <div class="reg-grid">
 
-      <!-- 비밀번호 + 비밀번호 확인 -->
-      <div class="fg-inline">
-        <label>비밀번호 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <div class="pw-wrap">
-            <input id="rg-pw" type="password" placeholder="대소문자·숫자·특수문자 포함 8자↑"
-              oninput="onPw(this,'pw-b','rg-pm')">
-            <button class="pw-tog" onclick="togPw('rg-pw',this)">👁</button>
+          <!-- 소속기관명 + 사업자등록번호 -->
+          <div class="fg-inline">
+            <label>소속기관명 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <input id="rg-org" type="text" placeholder="(주)모노라마"
+                oninput="lvReq('rg-org','rg-om','소속기관명을 입력해 주세요.')">
+              <div id="rg-om" class="fm"></div>
+            </div>
           </div>
-          <div class="pw-bar-wrap"><div id="pw-b" class="pw-bar"></div></div>
-          <div id="rg-pm" class="fm"></div>
-        </div>
-      </div>
-      <div class="fg-inline">
-        <label>비밀번호 확인 <span class="req">*</span></label>
-        <div class="field-wrap">
-          <div class="pw-wrap">
-            <input id="rg-pw2" type="password" placeholder="재입력"
-              oninput="lvMatch('rg-pw','rg-pw2','rg-p2m')">
-            <button class="pw-tog" onclick="togPw('rg-pw2',this)">👁</button>
+          <div class="fg-inline">
+            <label>사업자등록번호 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <input id="rg-biz" type="text" placeholder="000-00-00000" maxlength="12"
+                inputmode="numeric" oninput="onBiz(this)">
+              <div id="rg-bm" class="fm"></div>
+            </div>
           </div>
-          <div id="rg-p2m" class="fm"></div>
-        </div>
-      </div>
 
-      <!-- 사업자등록증 (전체 폭) -->
-      <div class="fg-inline fg-full">
-        <label>사업자등록증 <span class="req">*</span><br>
-          <span style="font-size:10px;color:#94a3b8;font-weight:400;">(PDF·JPG·PNG, 20MB↓)</span>
-        </label>
-        <div class="field-wrap">
-          <div class="file-drop" id="cert-drop"
-            onclick="document.getElementById('rg-cert').click()"
-            ondragover="fDragOver(event)" ondragleave="fDragLeave(event)" ondrop="fDrop(event)">
-            <input id="rg-cert" type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="onCert(this)">
-            <div id="cert-lbl">클릭하거나 파일을 끌어다 놓으세요</div>
+          <!-- 주소 (전체 폭) -->
+          <div class="fg-inline fg-full">
+            <label>주소 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <div style="margin-bottom:6px;">
+                <button type="button" class="btn btn-o btn-sm" onclick="openPostcode()">🔍 주소 검색</button>
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:6px;">
+                <input id="rg-zip" type="text" placeholder="우편번호" readonly
+                  style="width:90px;background:#f8fafc;color:#475569;">
+                <input id="rg-addr1" type="text" placeholder="도로명 주소 (자동입력)" readonly
+                  style="flex:1;min-width:0;background:#f8fafc;color:#475569;">
+              </div>
+              <input id="rg-addr2" type="text" placeholder="상세주소 (동·호수 등, 선택)">
+              <div id="rg-addrm" class="fm"></div>
+            </div>
           </div>
-          <div id="rg-cf" class="fm"></div>
-        </div>
-      </div>
 
-    </div><!-- /reg-grid -->
-    <div id="rg-msg" class="msg"></div>
-    <button class="btn btn-p btn-full" onclick="doRegister()">가입 신청</button>
-    <hr class="divider">
-    <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
+          <!-- 담당자명 + 담당자 모바일폰 -->
+          <div class="fg-inline">
+            <label>담당자명 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <input id="rg-name" type="text" placeholder="홍길동"
+                oninput="lvReq('rg-name','rg-nm','담당자명을 입력해 주세요.')">
+              <div id="rg-nm" class="fm"></div>
+            </div>
+          </div>
+          <div class="fg-inline">
+            <label>담당자 모바일폰 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <input id="rg-mobile" type="text" placeholder="010-0000-0000" maxlength="13"
+                inputmode="numeric" oninput="onMobile(this)">
+              <div id="rg-mobilem" class="fm"></div>
+            </div>
+          </div>
+
+          <!-- 담당자 연락처 (좌측 절반, 우측은 비움) -->
+          <div class="fg-inline">
+            <label>담당자 연락처</label>
+            <div class="field-wrap">
+              <input id="rg-phone" type="text" placeholder="02-0000-0000" maxlength="13"
+                inputmode="numeric" oninput="onPhone(this)">
+              <div id="rg-phonem" class="fm"></div>
+            </div>
+          </div>
+          <div aria-hidden="true"></div>
+
+          <!-- 비밀번호 + 비밀번호 확인 -->
+          <div class="fg-inline">
+            <label>비밀번호 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <div class="pw-wrap">
+                <input id="rg-pw" type="password" placeholder="대소문자·숫자·특수문자 포함 8자↑"
+                  oninput="onPw(this,'pw-b','rg-pm')">
+                <button class="pw-tog" onclick="togPw('rg-pw',this)">👁</button>
+              </div>
+              <div class="pw-bar-wrap"><div id="pw-b" class="pw-bar"></div></div>
+              <div id="rg-pm" class="fm"></div>
+            </div>
+          </div>
+          <div class="fg-inline">
+            <label>비밀번호 확인 <span class="req">*</span></label>
+            <div class="field-wrap">
+              <div class="pw-wrap">
+                <input id="rg-pw2" type="password" placeholder="재입력"
+                  oninput="lvMatch('rg-pw','rg-pw2','rg-p2m')">
+                <button class="pw-tog" onclick="togPw('rg-pw2',this)">👁</button>
+              </div>
+              <div id="rg-p2m" class="fm"></div>
+            </div>
+          </div>
+
+          <!-- 사업자등록증 (전체 폭) -->
+          <div class="fg-inline fg-full">
+            <label>사업자등록증 <span class="req">*</span><br>
+              <span style="font-size:10px;color:#94a3b8;font-weight:400;">(PDF·JPG·PNG, 20MB↓)</span>
+            </label>
+            <div class="field-wrap">
+              <div class="file-drop" id="cert-drop"
+                onclick="document.getElementById('rg-cert').click()"
+                ondragover="fDragOver(event)" ondragleave="fDragLeave(event)" ondrop="fDrop(event)">
+                <input id="rg-cert" type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="onCert(this)">
+                <div id="cert-lbl">클릭하거나 파일을 끌어다 놓으세요</div>
+              </div>
+              <div id="rg-cf" class="fm"></div>
+            </div>
+          </div>
+
+        </div><!-- /reg-grid -->
+        <div id="rg-msg" class="msg"></div>
+        <button class="btn btn-p btn-full" onclick="doRegister()">가입 신청</button>
+      </fieldset>
+
+      <hr class="divider">
+      <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
     </div><!-- /card-body -->
   </div>
 </section>
@@ -850,10 +869,14 @@
 
 <!-- ── 공통 확인/알림 모달 ── -->
 <div class="modal-ov" id="modal-confirm">
-  <div class="modal" style="max-width:360px;">
+  <div class="modal" style="max-width:380px;">
     <div class="card-header"><h2 id="confirm-title">확인</h2></div>
     <div class="card-body">
-      <p id="confirm-msg" style="font-size:14px;color:#334155;line-height:1.55;margin-bottom:20px;white-space:pre-line;"></p>
+      <p id="confirm-msg" style="font-size:14px;color:#334155;line-height:1.55;margin-bottom:16px;white-space:pre-line;"></p>
+      <label id="confirm-check-wrap" style="display:none;font-size:13px;color:#1e293b;margin:0 0 18px;cursor:pointer;user-select:none;">
+        <input type="checkbox" id="confirm-check" style="margin-right:8px;vertical-align:middle;width:16px;height:16px;">
+        <span id="confirm-check-label"></span>
+      </label>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-o btn-sm" style="flex:1;" id="confirm-cancel">취소</button>
         <button class="btn btn-p btn-sm" style="flex:1;" id="confirm-ok">확인</button>
@@ -1041,6 +1064,13 @@ function openPostcodeProfile() {
 // ── 이메일 인증 ──
 let emailVerified = false;
 let verifyTimerInterval = null;
+function setRegGateLocked(locked) {
+  const fs = document.getElementById('reg-fields-gate');
+  const hint = document.getElementById('reg-gate-hint');
+  if (!fs) return;
+  fs.disabled = !!locked;
+  if (hint) hint.style.display = locked ? '' : 'none';
+}
 function onRegEmailInput() {
   lvEmail('rg-email','rg-em');
   const v = document.getElementById('rg-email').value.trim();
@@ -1051,6 +1081,7 @@ function onRegEmailInput() {
     document.getElementById('verify-wrap').style.display = 'none';
     clearInterval(verifyTimerInterval);
     setFm('rg-em','e','이메일이 변경되었습니다. 다시 인증해 주세요.');
+    setRegGateLocked(true);
   }
 }
 async function sendVerifyCode() {
@@ -1092,6 +1123,7 @@ async function checkVerifyCode() {
   setFm('verify-msg','g','✔ 이메일 인증이 완료되었습니다.');
   setV('rg-email',true);
   document.getElementById('btn-send-verify').disabled = true;
+  setRegGateLocked(false);
 }
 
 // ── 파일 드래그앤드롭 ──
@@ -1168,7 +1200,6 @@ async function doRegister() {
   const r = await fetch('/api/host/register',{method:'POST',body:fd});
   const d = await r.json();
   if (!r.ok) { setMsg('rg-msg','e',d.error||'가입 신청에 실패했습니다.'); return; }
-  setMsg('rg-msg','s',d.message||'가입 신청이 완료되었습니다. 관리자 승인 후 로그인하세요.');
   ['rg-name','rg-email','rg-org','rg-biz','rg-mobile','rg-phone','rg-zip','rg-addr1','rg-addr2','rg-pw','rg-pw2'].forEach(id=>{
     document.getElementById(id).value='';
     document.getElementById(id).className=document.getElementById(id).className.replace(/ ?(inv|ok)/g,'');
@@ -1178,6 +1209,13 @@ async function doRegister() {
   emailVerified=false; clearInterval(verifyTimerInterval);
   document.getElementById('verify-wrap').style.display='none';
   document.getElementById('btn-send-verify').disabled=true;
+  setRegGateLocked(true);
+  clrMsg('rg-msg');
+  await uiAlert(
+    d.message || '가입 신청이 완료되었습니다.\n승인 요청 메일이 관리자에게 발송되었습니다.\n관리자 승인 후 로그인할 수 있습니다.',
+    { title: '가입 신청 완료' },
+  );
+  show('sec-login');
 }
 
 // ── 비밀번호 분실 ──
@@ -1880,6 +1918,9 @@ function _uiModal(message, opts) {
     const ov = document.getElementById('modal-confirm');
     const ok = document.getElementById('confirm-ok');
     const cancel = document.getElementById('confirm-cancel');
+    const checkWrap = document.getElementById('confirm-check-wrap');
+    const check = document.getElementById('confirm-check');
+    const checkLabel = document.getElementById('confirm-check-label');
     document.getElementById('confirm-title').textContent = opts.title || '알림';
     document.getElementById('confirm-msg').textContent = message;
     ok.textContent = opts.okText || '확인';
@@ -1887,16 +1928,47 @@ function _uiModal(message, opts) {
     ok.style.flex = '1';
     cancel.textContent = opts.cancelText || '취소';
     cancel.style.display = opts.alert ? 'none' : '';
-    function close(val) { ov.classList.remove('open'); ok.onclick = cancel.onclick = ov.onclick = null; resolve(val); }
-    ok.onclick = () => close(true);
+    if (opts.checkbox && checkWrap) {
+      checkLabel.textContent = opts.checkbox;
+      check.checked = false;
+      checkWrap.style.display = '';
+      ok.disabled = true;
+      check.onchange = () => { ok.disabled = !check.checked; };
+    } else if (checkWrap) {
+      checkWrap.style.display = 'none';
+      check.checked = false;
+      ok.disabled = false;
+      check.onchange = null;
+    }
+    function close(val) {
+      ov.classList.remove('open');
+      ok.onclick = cancel.onclick = ov.onclick = null;
+      if (check) check.onchange = null;
+      ok.disabled = false;
+      resolve(val);
+    }
+    ok.onclick = () => { if (!ok.disabled) close(true); };
     cancel.onclick = () => close(false);
     ov.onclick = e => { if (e.target === ov) close(false); };
     ov.classList.add('open');
-    ok.focus();
+    if (!ok.disabled) ok.focus();
   });
 }
 function uiConfirm(message, opts) { return _uiModal(message, opts || {}); }
 function uiAlert(message, opts) { return _uiModal(message, Object.assign({ title: '알림', alert: true }, opts || {})); }
+
+async function confirmDocsThenRegister() {
+  const ok = await uiConfirm(
+    '회원가입 진행 전에 아래 서류 파일을 미리 준비해 주십시오.\n\n• 사업자등록증 (PDF / JPG / PNG, 20MB↓)',
+    {
+      title: '서류 준비 안내',
+      okText: '예, 회원가입 진행',
+      cancelText: '취소',
+      checkbox: '사업자등록증 파일을 준비하였습니다.',
+    },
+  );
+  if (ok) show('sec-register');
+}
 
 async function loadLocations() {
   const r = await fetch(`/api/host/projects/${currentProjectId}/locations`);

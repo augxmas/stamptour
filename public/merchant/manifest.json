@@ -1,0 +1,14 @@
+{
+  "name": "모노라마 트래커 가맹점",
+  "short_name": "가맹점",
+  "start_url": "/merchant",
+  "scope": "/merchant",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f4f9",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/favicon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

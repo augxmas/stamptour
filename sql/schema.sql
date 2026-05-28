@@ -27,10 +27,21 @@ CREATE FUNCTION fn_decrypt(p_value VARCHAR(512), p_key VARCHAR(64))
 -- ============================================================
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- 암호화 컬럼(host_name, host_email, mobile_phone, phone 등)은
+-- fn_encrypt(평문, ENCRYPTION_KEY) 의 HEX 결과를 저장합니다. 아래 함수 정의 참조.
 CREATE TABLE IF NOT EXISTS hosts (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  host_name VARCHAR(120) NOT NULL,
-  host_email VARCHAR(190) NOT NULL UNIQUE,
+  host_name VARCHAR(512) NOT NULL,
+  host_email VARCHAR(512) NOT NULL UNIQUE,
+  mobile_phone VARCHAR(255) NULL,
+  phone VARCHAR(255) NULL,
+  organization_name VARCHAR(255) NULL,
+  biz_no VARCHAR(20) NULL,
+  biz_cert_path VARCHAR(255) NULL,
+  biz_cert_name VARCHAR(255) NULL,
+  address_zip VARCHAR(20) NULL,
+  address1 VARCHAR(255) NULL,
+  address2 VARCHAR(255) NULL,
   password_hash VARCHAR(80) NOT NULL,
   status ENUM('pending','approved','cancelled','terminated','locked') NOT NULL DEFAULT 'pending',
   status_reason VARCHAR(255) NULL,
@@ -39,8 +50,19 @@ CREATE TABLE IF NOT EXISTS hosts (
   last_login_ip VARCHAR(80) NULL,
   last_login_at DATETIME NULL,
   last_logout_at DATETIME NULL,
+  password_reset_required TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS host_email_verify_codes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  code  CHAR(6) NOT NULL,
+  used  TINYINT(1) NOT NULL DEFAULT 0,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_hvc_email (email)
 );
 
 CREATE TABLE IF NOT EXISTS host_project_pin_codes (

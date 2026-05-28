@@ -195,7 +195,10 @@ router.post("/register", upload.single("biz_cert"), async (req, res) => {
     });
   } catch (_) {}
 
-  res.json({ ok: true, message: "가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다." });
+  res.json({
+    ok: true,
+    message: "가입 신청이 완료되었습니다.\n승인 요청 메일이 관리자에게 발송되었습니다.\n관리자 승인 후 로그인할 수 있습니다.",
+  });
 });
 
 // ── 로그인 ──
