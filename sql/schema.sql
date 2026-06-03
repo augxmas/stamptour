@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS projects (
   to_date DATE NOT NULL,
   gift_amount BIGINT NOT NULL,
   gift_qty INT NOT NULL DEFAULT 0,
+  prize_amount BIGINT NOT NULL DEFAULT 0,
+  prize_qty INT NOT NULL DEFAULT 0,
   budget_amount BIGINT NOT NULL,
   pin_hash VARCHAR(80) NOT NULL,
   pin_enc VARCHAR(255) NULL, -- 가맹점 승인 메일에 PIN을 동봉하기 위한 복호화 가능 저장값(fn_encrypt)
@@ -128,6 +130,30 @@ CREATE TABLE IF NOT EXISTS project_locations (
   UNIQUE KEY uq_project_location_seq (project_id, location_seq),
   UNIQUE KEY uq_project_display_seq_active (project_id, display_seq, disabled),
   FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_quizzes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  project_id BIGINT NOT NULL,
+  question VARCHAR(500) NOT NULL,
+  choice_type ENUM('single', 'multi') NOT NULL DEFAULT 'single',
+  display_seq INT NOT NULL,
+  disabled TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_project (project_id),
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_quiz_choices (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  quiz_id BIGINT NOT NULL,
+  choice_text VARCHAR(500) NOT NULL,
+  is_correct TINYINT(1) NOT NULL DEFAULT 0,
+  display_seq INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_quiz (quiz_id),
+  FOREIGN KEY (quiz_id) REFERENCES project_quizzes(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS project_location_qr (

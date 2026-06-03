@@ -104,6 +104,8 @@ router.post("/projects", requireHost, async (req, res) => {
     to_date,
     gift_amount,
     gift_qty,
+    prize_amount = "0",
+    prize_qty = "0",
     pin_input,
   } = req.body as Record<string, string>;
 
@@ -117,6 +119,9 @@ router.post("/projects", requireHost, async (req, res) => {
     res.status(400).json({ error: "발급수량은 1 이상의 정수여야 합니다." });
     return;
   }
+
+  const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
+  const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
 
   if (description.length > 200) {
     res.status(400).json({ error: "설명은 200자 이내여야 합니다." });
@@ -188,9 +193,9 @@ router.post("/projects", requireHost, async (req, res) => {
 
     const [insertResult] = await connection.execute(
       `INSERT INTO projects
-       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
-      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
+       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
+      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
     );
 
     const projectId = Number((insertResult as any).insertId);
@@ -276,7 +281,8 @@ router.get("/projects", requireHost, async (req, res) => {
             (SELECT COALESCE(SUM(gr.amount), 0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_gift_amount,
             (SELECT COALESCE(SUM(gr.amount), 0) FROM gift_redemptions gr WHERE gr.project_id = p.id) AS gift_spent,
             (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id) AS applied_count,
-            (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id AND pa.status = 'approved') AS approved_count
+            (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id AND pa.status = 'approved') AS approved_count,
+            (SELECT COUNT(*) FROM project_quizzes pq WHERE pq.project_id = p.id AND pq.disabled = 0) AS quiz_count
      FROM projects p ${where}
      ORDER BY p.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -610,6 +616,170 @@ router.get("/projects/:id/locations", requireHost, async (req, res) => {
   });
 });
 
+// ── 프로젝트 객관식 퀴즈 (single/multi) ──
+
+async function ensureHostOwnsProject(projectId: number, hostId: number): Promise<boolean> {
+  const [rows] = await pool.execute(
+    "SELECT 1 FROM projects WHERE id = ? AND host_id = ?",
+    [projectId, hostId],
+  );
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const [quizRows] = await pool.execute(
+    `SELECT id, question, choice_type, display_seq, disabled, created_at
+     FROM project_quizzes
+     WHERE project_id = ? AND disabled = 0
+     ORDER BY display_seq ASC, id ASC`,
+    [projectId],
+  );
+  const quizzes = (Array.isArray(quizRows) ? quizRows : []) as any[];
+
+  let choicesByQuiz: Record<number, any[]> = {};
+  if (quizzes.length) {
+    const ids = quizzes.map((q) => q.id);
+    const [choiceRows] = await pool.query(
+      `SELECT id, quiz_id, choice_text, is_correct, display_seq
+       FROM project_quiz_choices
+       WHERE quiz_id IN (?)
+       ORDER BY quiz_id ASC, display_seq ASC, id ASC`,
+      [ids],
+    );
+    for (const c of (Array.isArray(choiceRows) ? choiceRows : []) as any[]) {
+      (choicesByQuiz[c.quiz_id] ??= []).push({
+        id: c.id,
+        text: c.choice_text,
+        is_correct: Number(c.is_correct) === 1,
+        display_seq: c.display_seq,
+      });
+    }
+  }
+
+  res.json({
+    ok: true,
+    data: quizzes.map((q: any) => ({
+      id: q.id,
+      question: q.question,
+      choice_type: q.choice_type,
+      display_seq: q.display_seq,
+      created_at: q.created_at,
+      choices: choicesByQuiz[q.id] ?? [],
+    })),
+  });
+});
+
+router.post("/projects/:id/quizzes", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const { question, choice_type, choices } = req.body as {
+    question?: string;
+    choice_type?: "single" | "multi";
+    choices?: Array<{ text: string; is_correct: boolean }>;
+  };
+
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  if (!question || !question.trim()) {
+    res.status(400).json({ error: "질문을 입력해 주세요." });
+    return;
+  }
+  if (question.length > 500) {
+    res.status(400).json({ error: "질문은 500자 이내여야 합니다." });
+    return;
+  }
+  if (choice_type !== "single" && choice_type !== "multi") {
+    res.status(400).json({ error: "선택 유형은 single 또는 multi 여야 합니다." });
+    return;
+  }
+  if (!Array.isArray(choices) || choices.length < 2) {
+    res.status(400).json({ error: "보기는 최소 2개 이상 입력해 주세요." });
+    return;
+  }
+  const cleanChoices = choices
+    .map((c) => ({ text: String(c?.text ?? "").trim(), is_correct: !!c?.is_correct }))
+    .filter((c) => c.text.length > 0);
+  if (cleanChoices.length < 2) {
+    res.status(400).json({ error: "내용이 있는 보기를 2개 이상 입력해 주세요." });
+    return;
+  }
+  if (cleanChoices.some((c) => c.text.length > 500)) {
+    res.status(400).json({ error: "보기는 각 500자 이내여야 합니다." });
+    return;
+  }
+  const correctCount = cleanChoices.filter((c) => c.is_correct).length;
+  if (correctCount < 1) {
+    res.status(400).json({ error: "정답을 1개 이상 선택해 주세요." });
+    return;
+  }
+  if (choice_type === "single" && correctCount !== 1) {
+    res.status(400).json({ error: "단일 선택은 정답이 정확히 1개여야 합니다." });
+    return;
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [seqRows] = await connection.execute(
+      "SELECT COALESCE(MAX(display_seq), 0) + 1 AS next_seq FROM project_quizzes WHERE project_id = ?",
+      [projectId],
+    );
+    const nextSeq = Number((seqRows as any)[0].next_seq);
+
+    const [insertResult] = await connection.execute(
+      `INSERT INTO project_quizzes (project_id, question, choice_type, display_seq)
+       VALUES (?, ?, ?, ?)`,
+      [projectId, question.trim(), choice_type, nextSeq],
+    );
+    const quizId = Number((insertResult as any).insertId);
+
+    for (let i = 0; i < cleanChoices.length; i++) {
+      const c = cleanChoices[i];
+      await connection.execute(
+        `INSERT INTO project_quiz_choices (quiz_id, choice_text, is_correct, display_seq)
+         VALUES (?, ?, ?, ?)`,
+        [quizId, c.text, c.is_correct ? 1 : 0, i + 1],
+      );
+    }
+
+    await connection.commit();
+    res.json({ ok: true, id: quizId });
+  } catch (e) {
+    await connection.rollback();
+    res.status(500).json({ error: "퀴즈 등록에 실패했습니다." });
+  } finally {
+    connection.release();
+  }
+});
+
+router.delete("/projects/:id/quizzes/:qid", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const quizId = Number(req.params.qid);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  // 소프트 삭제 (disabled = 1) — 외부에 노출되지 않게
+  const [r] = await pool.execute(
+    "UPDATE project_quizzes SET disabled = 1, updated_at = NOW() WHERE id = ? AND project_id = ?",
+    [quizId, projectId],
+  );
+  if ((r as any).affectedRows === 0) {
+    res.status(404).json({ error: "quiz_not_found" });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 router.get("/projects/:id/visitors", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
@@ -784,6 +954,60 @@ router.get("/projects/:id/qr-zip", requireHost, async (req, res) => {
 
   const zipPath = await createQrZip(projectId);
   res.download(zipPath, `${project.project_serial}_qr.zip`);
+});
+
+router.post("/projects/:id/qr-regenerate", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const { reason = "" } = (req.body ?? {}) as Record<string, string>;
+  const startedAt = new Date();
+
+  const [rows] = await pool.execute("SELECT id, project_serial, status FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
+  if (!Array.isArray(rows) || rows.length === 0) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const project = (rows as any)[0];
+  if (!QR_READY_STATUSES.includes(String(project.status))) {
+    res.status(400).json({ error: "QR 코드가 아직 생성되지 않은 상태입니다. (입금확인 후 생성됩니다)" });
+    return;
+  }
+  if (!reason.trim()) {
+    res.status(400).json({ error: "재생성 사유를 입력해 주세요." });
+    return;
+  }
+
+  let errMsg: string | null = null;
+  try {
+    await generateProjectQrs(projectId, String(project.project_serial));
+  } catch (e) {
+    errMsg = e instanceof Error ? e.message : String(e);
+  }
+
+  try {
+    await pool.execute(
+      `INSERT INTO batch_logs (job_key, source, status, result_summary, started_at, finished_at, error_msg, details)
+       VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)`,
+      [
+        "qr_regenerate",
+        "host",
+        errMsg ? "error" : "ok",
+        `project:${project.project_serial}`,
+        startedAt,
+        errMsg,
+        JSON.stringify({ project_id: projectId, project_serial: project.project_serial, host_id: host.id, reason: reason.trim() }),
+      ],
+    );
+  } catch (e) {
+    console.error("[qr-regenerate] batch_logs insert failed:", e);
+  }
+
+  if (errMsg) {
+    res.status(500).json({ error: "QR 코드 재생성에 실패했습니다." });
+    return;
+  }
+
+  res.json({ ok: true, ts: Date.now() });
 });
 
 router.get("/projects/:id/confirm-quote", async (req, res) => {

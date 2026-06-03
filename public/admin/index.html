@@ -133,6 +133,41 @@
     #loc-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
     #loc-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
 
+    /* ── 퀴즈 관리 패널 ── */
+    #quiz-panel { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08);
+                  padding: 24px; margin-top: 16px; display: none; }
+    #quiz-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    #quiz-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+    .quiz-list { display: flex; flex-direction: column; gap: 10px; }
+    .quiz-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; background: #f8fafc; }
+    .quiz-card .qhead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .quiz-card .qno { background: #1e293b; color: #fff; font-weight: 700; font-size: 12px;
+                      width: 26px; height: 26px; border-radius: 50%; display: inline-flex;
+                      align-items: center; justify-content: center; flex-shrink: 0; }
+    .quiz-card .qtype { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+    .quiz-card .qtype.single { background: #dbeafe; color: #1e40af; }
+    .quiz-card .qtype.multi  { background: #fef3c7; color: #92400e; }
+    .quiz-card .qtitle { flex: 1; font-size: 14px; font-weight: 700; color: #1e293b; }
+    .quiz-card .qdel { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 13px;
+                       padding: 2px 6px; border-radius: 6px; }
+    .quiz-card .qdel:hover { background: #fee2e2; }
+    .quiz-card .qchoices { display: flex; flex-direction: column; gap: 4px; font-size: 13px; padding-left: 36px; }
+    .quiz-card .qchoice { display: flex; align-items: center; gap: 8px; color: #475569; }
+    .quiz-card .qchoice.qok { color: #166534; font-weight: 600; }
+    .quiz-card .qmark { width: 16px; text-align: center; font-weight: 700; }
+
+    /* 퀴즈 추가 폼 */
+    .qf-choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .qf-choice-row { display: flex; align-items: center; gap: 8px; }
+    .qf-choice-row .qf-mark { width: 36px; text-align: center; flex-shrink: 0; }
+    .qf-choice-row input[type=text] { flex: 1; border: 1.5px solid #cbd5e1; border-radius: 8px;
+                                       padding: 8px 12px; font-size: 13px; outline: none; }
+    .qf-choice-row input[type=text]:focus { border-color: #16a34a; }
+    .qf-choice-row .qf-rm { background: none; border: none; color: #dc2626; cursor: pointer;
+                             font-size: 14px; padding: 4px 8px; border-radius: 6px; }
+    .qf-choice-row .qf-rm:hover { background: #fee2e2; }
+    .qf-choice-row .qf-rm:disabled { color: #cbd5e1; cursor: not-allowed; }
+
     /* ── Kakao 주소 검색 ── */
     .search-wrap { position: relative; }
     .search-wrap input { padding-right: 34px; }
@@ -607,6 +642,46 @@
       <div id="loc-msg" class="msg"></div>
       <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addLocation()">+ 목적지 추가</button>
     </div>
+
+    <!-- 퀴즈 관리 패널 -->
+    <div id="quiz-panel">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+        <button class="btn btn-o btn-sm" onclick="closeQuiz()">← 목록으로</button>
+        <h3 id="quiz-proj-name" style="margin-bottom:0;"></h3>
+      </div>
+      <p class="sub" id="quiz-proj-serial"></p>
+
+      <!-- 등록된 퀴즈 목록 -->
+      <div class="quiz-list" id="quiz-list"></div>
+
+      <!-- 퀴즈 추가 폼 -->
+      <div class="divider"></div>
+      <h3 style="margin-bottom:14px;">퀴즈 추가</h3>
+
+      <div class="fg">
+        <label>질문 <span class="req">*</span> <span class="hint">(최대 500자)</span></label>
+        <textarea id="qf-question" placeholder="문제를 입력하세요" maxlength="500"
+          style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;
+                 font-size:13px;resize:vertical;min-height:60px;font-family:inherit;outline:none;"></textarea>
+      </div>
+
+      <div class="fg">
+        <label>선택 유형 <span class="req">*</span></label>
+        <div class="seg" id="qf-type-seg">
+          <button type="button" class="seg-btn act" data-type="single" onclick="setQuizType('single')">○ 단일 선택</button>
+          <button type="button" class="seg-btn" data-type="multi" onclick="setQuizType('multi')">☑ 다중 선택</button>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>보기 및 정답 <span class="req">*</span> <span class="hint">(2~10개, 정답 표시 필수)</span></label>
+        <div class="qf-choices" id="qf-choices"></div>
+        <button type="button" class="btn btn-o btn-sm" onclick="addQuizChoiceRow()">+ 보기 추가</button>
+      </div>
+
+      <div id="qf-msg" class="msg"></div>
+      <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addQuiz()">+ 퀴즈 등록</button>
+    </div>
   </div>
 
   <!-- ─ 프로젝트 등록 탭 ─ -->
@@ -657,6 +732,8 @@
         <div class="fg"><label>종료일 <span class="req">*</span></label><input id="pj-to" type="date" disabled></div>
         <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pj-gift" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-gift')"></div>
         <div class="fg"><label>발급수량 <span class="req">*</span></label><input id="pj-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-qty')"></div>
+        <div class="fg"><label>Prize 단가 금액</label><input id="pj-prize" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize')"></div>
+        <div class="fg"><label>Prize 발급 수량</label><input id="pj-prize-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize-qty')"></div>
         <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(단가 × 발급수량 자동 계산)</span></label>
           <input id="pj-budget" type="text" inputmode="numeric" placeholder="자동 계산" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
@@ -850,6 +927,23 @@
       </div>
       <div id="vis-body" class="tbl-wrap" style="max-height:58vh;overflow:auto;"></div>
       <button class="btn btn-o btn-sm btn-full" style="margin-top:14px;" onclick="closeVisitors()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── QR코드 재생성 사유 입력 모달 ── -->
+<div class="modal-ov" id="modal-qr-regen">
+  <div class="modal" style="max-width:420px;">
+    <div class="card-header"><h2>QR코드 재생성</h2></div>
+    <div class="card-body">
+      <p style="font-size:14px;color:#1e293b;line-height:1.6;margin-bottom:14px;">QR코드를 재생성 하시겠습니까?</p>
+      <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">재생성 사유 <span style="color:#dc2626;">*</span></label>
+      <textarea id="qr-regen-reason" placeholder="사유를 입력해 주세요" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;min-height:80px;font-family:inherit;outline:none;"></textarea>
+      <div id="qr-regen-msg" style="font-size:13px;margin-top:8px;min-height:18px;color:#dc2626;"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+        <button class="btn btn-o btn-sm" onclick="closeQrRegen()">취소</button>
+        <button class="btn btn-p btn-sm" id="qr-regen-btn" onclick="submitQrRegen()">재생성</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1405,7 +1499,7 @@ function renderProjectsTable() {
   const arr = key => projSort.key === key ? (projSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
   document.getElementById('proj-thead').innerHTML = '<tr>' +
     PROJ_COLS.map(c => `<th class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
-    '<th>지원현황</th><th>목적지관리</th><th>미리보기</th></tr>';
+    '<th>가맹점지원현황</th><th>목적지관리</th><th>퀴즈관리</th><th>미리보기</th></tr>';
 
   // 페이징: 선택한 표시 개수 기준으로 현재 페이지만 렌더
   const pageSize = Number((document.getElementById('pf-size') || {}).value) || 10;
@@ -1438,9 +1532,10 @@ function renderProjectsTable() {
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitors(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">${p.visitor_count??0}명</button></td>
       <td style="text-align:center;"><button class="btn ${Number(p.applied_count)>Number(p.approved_count)?'btn-p':'btn-o'} btn-sm" onclick="openApplications(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">지원 ${p.applied_count??0} · 승인 ${p.approved_count??0}</button></td>
       <td><button class="btn btn-o btn-sm" onclick="openLoc(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">목적지관리</button></td>
+      <td><button class="btn btn-o btn-sm" onclick="openQuiz(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">퀴즈관리 (${p.quiz_count ?? 0})</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
   renderProjPager(totalPages, list.length);
 }
 
@@ -1454,6 +1549,7 @@ async function openLoc(pid, pname, pserial) {
   document.getElementById('loc-proj-name').textContent = pname;
   document.getElementById('loc-proj-serial').textContent = '일련번호: ' + pserial;
   document.getElementById('loc-panel').style.display = 'block';
+  const qp = document.getElementById('quiz-panel'); if (qp) qp.style.display = 'none';
   document.getElementById('loc-panel').scrollIntoView({behavior:'smooth',block:'start'});
   resetLocForm();
   await loadLocations();
@@ -1462,6 +1558,163 @@ async function openLoc(pid, pname, pserial) {
 function closeLoc() {
   document.getElementById('loc-panel').style.display = 'none';
   currentProjectId = null;
+}
+
+// ── 퀴즈 관리 ──
+let currentQuizProjectId = null;
+let qfType = 'single';
+let qfChoices = []; // [{ text, is_correct }]
+
+async function openQuiz(pid, pname, pserial) {
+  currentQuizProjectId = pid;
+  document.getElementById('quiz-proj-name').textContent = pname;
+  document.getElementById('quiz-proj-serial').textContent = '일련번호: ' + pserial;
+  document.getElementById('quiz-panel').style.display = 'block';
+  document.getElementById('loc-panel').style.display = 'none';
+  document.getElementById('quiz-panel').scrollIntoView({ behavior:'smooth', block:'start' });
+  resetQuizForm();
+  await loadQuizzes();
+}
+function closeQuiz() {
+  document.getElementById('quiz-panel').style.display = 'none';
+  currentQuizProjectId = null;
+}
+
+function resetQuizForm() {
+  document.getElementById('qf-question').value = '';
+  qfType = 'single';
+  document.querySelectorAll('#qf-type-seg .seg-btn').forEach(b => {
+    b.classList.toggle('act', b.dataset.type === 'single');
+  });
+  qfChoices = [
+    { text: '', is_correct: false },
+    { text: '', is_correct: false },
+  ];
+  renderQuizChoiceRows();
+  clrMsg('qf-msg');
+}
+
+function setQuizType(t) {
+  if (t !== 'single' && t !== 'multi') return;
+  qfType = t;
+  document.querySelectorAll('#qf-type-seg .seg-btn').forEach(b => {
+    b.classList.toggle('act', b.dataset.type === t);
+  });
+  // 단일선택으로 바꿀 때 정답이 여러개면 첫 정답만 남김
+  if (t === 'single') {
+    const firstIdx = qfChoices.findIndex(c => c.is_correct);
+    qfChoices = qfChoices.map((c, i) => ({ ...c, is_correct: i === firstIdx }));
+    renderQuizChoiceRows();
+  }
+}
+
+function addQuizChoiceRow() {
+  if (qfChoices.length >= 10) {
+    setMsg('qf-msg', 'e', '보기는 최대 10개까지 추가할 수 있습니다.');
+    return;
+  }
+  qfChoices.push({ text: '', is_correct: false });
+  renderQuizChoiceRows();
+}
+
+function removeQuizChoiceRow(idx) {
+  if (qfChoices.length <= 2) return;
+  qfChoices.splice(idx, 1);
+  renderQuizChoiceRows();
+}
+
+function onQuizChoiceText(idx, value) {
+  if (qfChoices[idx]) qfChoices[idx].text = value;
+}
+
+function onQuizChoiceMark(idx) {
+  if (!qfChoices[idx]) return;
+  if (qfType === 'single') {
+    qfChoices = qfChoices.map((c, i) => ({ ...c, is_correct: i === idx }));
+  } else {
+    qfChoices[idx].is_correct = !qfChoices[idx].is_correct;
+  }
+  renderQuizChoiceRows();
+}
+
+function renderQuizChoiceRows() {
+  const wrap = document.getElementById('qf-choices');
+  const isSingle = qfType === 'single';
+  const markChar = isSingle ? '○' : '☐';
+  const checkedChar = isSingle ? '●' : '☑';
+  wrap.innerHTML = qfChoices.map((c, i) => `
+    <div class="qf-choice-row">
+      <button type="button" class="qf-mark" onclick="onQuizChoiceMark(${i})"
+        style="background:${c.is_correct ? '#dcfce7' : '#fff'};border:1.5px solid ${c.is_correct ? '#16a34a' : '#cbd5e1'};
+               border-radius:8px;padding:6px 0;font-size:14px;color:${c.is_correct ? '#166534' : '#94a3b8'};
+               cursor:pointer;font-weight:700;">${c.is_correct ? checkedChar : markChar}</button>
+      <input type="text" maxlength="500" placeholder="보기 ${i + 1}"
+        value="${esc(c.text)}" oninput="onQuizChoiceText(${i}, this.value)">
+      <button type="button" class="qf-rm" onclick="removeQuizChoiceRow(${i})"
+        ${qfChoices.length <= 2 ? 'disabled' : ''} title="삭제">✕</button>
+    </div>`).join('');
+}
+
+async function loadQuizzes() {
+  const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes`);
+  const d = await r.json().catch(() => ({}));
+  const el = document.getElementById('quiz-list');
+  if (!r.ok) { el.innerHTML = `<div style="color:#dc2626;padding:14px;">${d.error || '불러오기에 실패했습니다.'}</div>`; return; }
+  const list = d.data || [];
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:14px;">등록된 퀴즈가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = list.map((q, i) => {
+    const isSingle = q.choice_type === 'single';
+    const typeBadge = `<span class="qtype ${isSingle ? 'single' : 'multi'}">${isSingle ? '단일' : '다중'}</span>`;
+    const choices = (q.choices || []).map(c => `
+      <div class="qchoice ${c.is_correct ? 'qok' : ''}">
+        <span class="qmark">${c.is_correct ? '✓' : '·'}</span>
+        <span>${esc(c.text)}</span>
+      </div>`).join('');
+    return `<div class="quiz-card">
+      <div class="qhead">
+        <span class="qno">${i + 1}</span>
+        ${typeBadge}
+        <div class="qtitle">${esc(q.question)}</div>
+        <button class="qdel" onclick="deleteQuiz(${q.id})">삭제</button>
+      </div>
+      <div class="qchoices">${choices}</div>
+    </div>`;
+  }).join('');
+}
+
+async function addQuiz() {
+  clrMsg('qf-msg');
+  const question = document.getElementById('qf-question').value.trim();
+  if (!question) { setMsg('qf-msg', 'e', '질문을 입력해 주세요.'); return; }
+  const filled = qfChoices.map(c => ({ text: (c.text || '').trim(), is_correct: !!c.is_correct })).filter(c => c.text);
+  if (filled.length < 2) { setMsg('qf-msg', 'e', '내용이 있는 보기를 2개 이상 입력해 주세요.'); return; }
+  const correct = filled.filter(c => c.is_correct).length;
+  if (correct < 1) { setMsg('qf-msg', 'e', '정답을 1개 이상 선택해 주세요.'); return; }
+  if (qfType === 'single' && correct !== 1) { setMsg('qf-msg', 'e', '단일 선택은 정답이 1개여야 합니다.'); return; }
+
+  const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, choice_type: qfType, choices: filled }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { setMsg('qf-msg', 'e', d.error || '등록에 실패했습니다.'); return; }
+  resetQuizForm();
+  await loadQuizzes();
+  loadProjects(1);
+}
+
+async function deleteQuiz(qid) {
+  const ok = await uiConfirm('이 퀴즈를 삭제하시겠습니까?', { title: '퀴즈 삭제', okText: '삭제', danger: true });
+  if (!ok) return;
+  const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes/${qid}`, { method: 'DELETE' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '삭제에 실패했습니다.'); return; }
+  await loadQuizzes();
+  loadProjects(1);
 }
 
 function esc(s) {
@@ -1987,6 +2240,7 @@ async function loadLocations() {
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       ${d.qr_ready ? '<button class="btn btn-o btn-sm" onclick="downloadQrZip()">⬇ QR코드 다운로드</button>' : ''}
+      ${d.qr_ready ? '<button class="btn btn-o btn-sm" onclick="openQrRegen()">↻ QR코드 재생성</button>' : ''}
       <button class="btn ${d.locations_submitted ? 'btn-o' : 'btn-p'} btn-sm" onclick="submitLocations()">
         ${d.locations_submitted ? '✓ 제출됨 (재제출)' : '제출'}
       </button>
@@ -2012,8 +2266,9 @@ function renderLocRow(l, started) {
     ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">위도 ${l.kakao_lat} · 경도 ${l.kakao_lng}</div>` : '';
   const mapLink = hasCoord
     ? `<a class="map-link" href="https://map.kakao.com/link/map/${encodeURIComponent(l.location_name)},${l.kakao_lat},${l.kakao_lng}" target="_blank" rel="noopener">🗺 지도</a>` : '';
-  const qr = l.qr_image_url
-    ? `<a class="loc-qr" href="${l.qr_image_url}" target="_blank" rel="noopener" title="QR 크게 보기"><img src="${l.qr_image_url}" alt="QR"></a>` : '';
+  const qrUrl = l.qr_image_url ? `${l.qr_image_url}?t=${qrCacheBust}` : '';
+  const qr = qrUrl
+    ? `<a class="loc-qr" href="${qrUrl}" target="_blank" rel="noopener" title="QR 크게 보기"><img src="${qrUrl}" alt="QR"></a>` : '';
   const toggle = off
     ? `<button class="btn btn-g btn-sm" onclick="enableLoc(${l.id})">활성화</button>`
     : `<button class="btn btn-r btn-sm" onclick="disableLoc(${l.id})">비활성화</button>`;
@@ -2051,6 +2306,50 @@ async function submitLocations() {
   if (!r.ok) { await uiAlert(d.error || '제출에 실패했습니다.'); return; }
   await loadLocations();
   await uiAlert('목적지가 제출되었습니다.', { title: '제출 완료' });
+}
+
+// QR 이미지 캐시 무효화용 timestamp (재생성 시 갱신)
+let qrCacheBust = Date.now();
+
+// ── QR코드 재생성 ──
+function openQrRegen() {
+  document.getElementById('qr-regen-reason').value = '';
+  document.getElementById('qr-regen-msg').textContent = '';
+  const btn = document.getElementById('qr-regen-btn');
+  btn.disabled = false;
+  btn.textContent = '재생성';
+  document.getElementById('modal-qr-regen').classList.add('open');
+}
+function closeQrRegen() {
+  document.getElementById('modal-qr-regen').classList.remove('open');
+}
+async function submitQrRegen() {
+  const reason = document.getElementById('qr-regen-reason').value.trim();
+  const msg = document.getElementById('qr-regen-msg');
+  msg.textContent = '';
+  if (!reason) { msg.textContent = '재생성 사유를 입력해 주세요.'; return; }
+  const btn = document.getElementById('qr-regen-btn');
+  btn.disabled = true; btn.textContent = '재생성 중...';
+  try {
+    const r = await fetch(`/api/host/projects/${currentProjectId}/qr-regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      msg.textContent = d.error || 'QR코드 재생성에 실패했습니다.';
+      btn.disabled = false; btn.textContent = '재생성';
+      return;
+    }
+    qrCacheBust = d.ts || Date.now();
+    closeQrRegen();
+    await loadLocations();
+    await uiAlert('QR코드가 재생성되었습니다.', { title: '재생성 완료' });
+  } catch (e) {
+    msg.textContent = '네트워크 오류로 재생성에 실패했습니다.';
+    btn.disabled = false; btn.textContent = '재생성';
+  }
 }
 
 // 전체 QR코드를 zip으로 다운로드 (파일명: 프로젝트일련번호_목적지일련번호.png)
@@ -2388,7 +2687,7 @@ function calcBudget() {
 }
 
 function enableProjectForm(on) {
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','btn-create-proj']
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','btn-create-proj']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; });
   if (on) {
     const fromEl = document.getElementById('pj-from');
@@ -2462,6 +2761,8 @@ async function confirmCreateProject() {
     to_date:      document.getElementById('pj-to').value,
     gift_amount:  String(parseNum(document.getElementById('pj-gift').value)),
     gift_qty:     String(parseNum(document.getElementById('pj-qty').value)),
+    prize_amount: String(parseNum(document.getElementById('pj-prize').value)),
+    prize_qty:    String(parseNum(document.getElementById('pj-prize-qty').value)),
     pin_input:    verifiedPin,
   };
   const r = await fetch('/api/host/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -2473,7 +2774,7 @@ async function confirmCreateProject() {
     return;
   }
   document.getElementById('modal-quote-confirm').classList.remove('open');
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-budget'].forEach(id => {
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-budget'].forEach(id => {
     document.getElementById(id).value = '';
   });
   resetPinState();

@@ -14,6 +14,7 @@ import giftRouter from "./routes/gift";
 import merchantRouter from "./routes/merchant";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
+import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
 
 dotenv.config();
 
@@ -112,33 +113,20 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "internal_server_error", message: err.message });
 });
 
+// 프로젝트 상태 일일 자동 전이.
+// 본 로직은 sql/scheduler.sql 의 sp_update_project_statuses() 에 정의되어 있고
+// DB EVENT ev_daily_project_status_update 로 매일 00:05 자동 실행됨.
+// Node 측에서는 (1) 서버 부팅 시 즉시 1회, (2) event_scheduler 가 OFF 인 환경 대비
+// 매시간 동일 SP 를 호출해 안전망 역할.
 async function autoUpdateProjectStatuses(): Promise<void> {
-  // 입금확인됨 + 시작일 도래/경과 → 진행중(started)
-  await pool.execute(
-    `UPDATE projects
-     SET status = 'started', started_at = COALESCE(started_at, NOW()), updated_at = NOW()
-     WHERE deposit_confirmed_at IS NOT NULL
-       AND status IN ('deposit_confirmed', 'ready_to_start')
-       AND from_date <= CURDATE()`,
-  );
-  // 입금확인됐지만 아직 시작일 전 → 시작대기(ready_to_start)
-  await pool.execute(
-    `UPDATE projects
-     SET status = 'ready_to_start', updated_at = NOW()
-     WHERE deposit_confirmed_at IS NOT NULL
-       AND status = 'deposit_confirmed'
-       AND from_date > CURDATE()`,
-  );
-  // 진행중 + 종료일 경과 → 완료(completed)
-  await pool.execute(
-    `UPDATE projects
-     SET status = 'completed', updated_at = NOW()
-     WHERE status = 'started' AND to_date < CURDATE()`,
-  );
+  await pool.query("CALL sp_update_project_statuses('node')");
 }
 
 autoUpdateProjectStatuses().catch(console.error);
 setInterval(() => autoUpdateProjectStatuses().catch(console.error), 60 * 60 * 1000);
+
+// 프로젝트 종료일 3일 전 ~ 종료일까지 매일 1회 담당자 + 참여 가맹점에게 알림
+scheduleProjectEndingNotifications();
 
 app.listen(port, () => {
   console.log(`Tracker server started at http://localhost:${port}`);

@@ -6,7 +6,7 @@ import multer from "multer";
 import pool from "../config/database";
 import { requireSupervisor } from "../middleware/auth";
 import { createQrZip, generateProjectQrs } from "../services/qr.service";
-import { sendHostStatusEmail, sendMerchantStatusEmail, sendProjectSupportRequestEmail } from "../services/email.service";
+import { sendHostStatusEmail, sendMerchantStatusEmail, sendProjectSupportRequestEmail, sendEmail } from "../services/email.service";
 import { encKey, dec, ENC } from "../utils/encrypt";
 
 const router = Router();
@@ -20,6 +20,28 @@ const upload = multer({
     filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`),
   }),
 });
+
+const emailAttachDir = path.join(process.cwd(), "uploads", "supervisor-email");
+fs.mkdirSync(emailAttachDir, { recursive: true });
+
+const EMAIL_TOTAL_LIMIT = 30 * 1024 * 1024;
+
+const emailUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, emailAttachDir),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${file.originalname.replace(/[\\/]/g, "_")}`),
+  }),
+  limits: { fileSize: EMAIL_TOTAL_LIMIT },
+});
+
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function clientIp(req: any): string {
   return String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "");
@@ -115,6 +137,15 @@ router.get("/hosts", requireSupervisor, async (req, res) => {
   const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM hosts h ${where}`, params);
   const total = Number((countRows as any)[0].total);
 
+  // status_counts: 상태 필터를 제외한 나머지 조건만 적용해 전체 분포 표시
+  const { where: summaryWhere, params: summaryParams } = buildHostWhere({ ...q, status: "" }, k);
+  const [byStatusRows] = await pool.execute(
+    `SELECT h.status, COUNT(*) AS cnt FROM hosts h ${summaryWhere} GROUP BY h.status`,
+    summaryParams,
+  );
+  const status_counts: Record<string, number> = {};
+  for (const r of byStatusRows as any[]) status_counts[String(r.status)] = Number(r.cnt);
+
   const [rows] = await pool.execute(
     `SELECT h.id,
             ${dec("h.host_name")}, ${dec("h.host_email")},
@@ -131,7 +162,7 @@ router.get("/hosts", requireSupervisor, async (req, res) => {
     [k, k, k, k, ...params, pageSize, offset],
   );
 
-  res.json({ ok: true, data: rows, total, page: pageNo, size: pageSize });
+  res.json({ ok: true, data: rows, total, status_counts, page: pageNo, size: pageSize });
 });
 
 router.get("/hosts/export", requireSupervisor, async (req, res) => {
@@ -209,7 +240,11 @@ router.get("/hosts/:id/biz-cert", requireSupervisor, async (req, res) => {
   }
   const host = (rows as any)[0];
   if (!host.biz_cert_path) {
-    res.status(404).json({ error: "파일이 없습니다." });
+    res.status(404).json({ error: "사업자등록증 파일이 없습니다." });
+    return;
+  }
+  if (!fs.existsSync(String(host.biz_cert_path))) {
+    res.status(404).json({ error: "사업자등록증 파일이 존재하지 않습니다." });
     return;
   }
   if (mode === "view") {
@@ -252,6 +287,84 @@ router.put("/hosts/:id/status", requireSupervisor, async (req, res) => {
 
   res.json({ ok: true });
 });
+
+router.post(
+  "/hosts/:id/send-email",
+  requireSupervisor,
+  (req, res, next) => {
+    emailUpload.array("attachments", 20)(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          res.status(400).json({ error: "첨부파일 1개당 크기가 30MB를 초과할 수 없습니다." });
+          return;
+        }
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      if (err) { res.status(500).json({ error: "upload_failed" }); return; }
+      next();
+    });
+  },
+  async (req, res) => {
+    const hostId = Number(req.params.id);
+    const { subject = "", body = "" } = (req.body ?? {}) as Record<string, string>;
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+    const cleanup = () => {
+      for (const f of files) { try { fs.unlinkSync(f.path); } catch (_) {} }
+    };
+
+    if (!subject.trim() || !body.trim()) {
+      cleanup();
+      res.status(400).json({ error: "제목과 내용을 입력해 주세요." });
+      return;
+    }
+
+    const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+    if (totalBytes > EMAIL_TOTAL_LIMIT) {
+      cleanup();
+      res.status(400).json({ error: "첨부파일 총 크기가 30MB를 초과합니다." });
+      return;
+    }
+
+    const k = encKey();
+    const [rows] = await pool.execute(
+      `SELECT ${dec("host_name")}, ${dec("host_email")} FROM hosts WHERE id = ?`,
+      [k, k, hostId],
+    );
+    if (!Array.isArray(rows) || rows.length === 0) {
+      cleanup();
+      res.status(404).json({ error: "host_not_found" });
+      return;
+    }
+    const host = (rows as any)[0];
+    if (!host.host_email) {
+      cleanup();
+      res.status(400).json({ error: "수신자 이메일이 없습니다." });
+      return;
+    }
+
+    const html = `<div style="font-family:'Malgun Gothic',sans-serif;white-space:pre-wrap;font-size:14px;color:#1e293b;line-height:1.7;">${escapeHtml(body)}</div>`;
+    const attachments = files.map((f) => ({ filename: f.originalname, path: f.path }));
+
+    try {
+      await sendEmail({
+        templateKey: "supervisor_direct_email",
+        to: String(host.host_email),
+        subject: subject.trim(),
+        html,
+        hostId,
+        attachments,
+      });
+    } catch (e) {
+      cleanup();
+      res.status(500).json({ error: "메일 발송에 실패했습니다." });
+      return;
+    }
+    cleanup();
+    res.json({ ok: true });
+  },
+);
 
 // 가맹점 지원 대상 프로젝트(시작대기/진행중) 목록
 router.get("/support-projects", requireSupervisor, async (_req, res) => {
@@ -321,6 +434,15 @@ router.get("/merchants", requireSupervisor, async (req, res) => {
   const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM merchants m ${where}`, params);
   const total = Number((countRows as any)[0].total);
 
+  // status_counts: 상태 필터를 제외한 나머지 조건만 적용해 전체 분포 표시
+  const { where: summaryWhere, params: summaryParams } = buildMerchantWhere({ ...q, status: "" }, k);
+  const [byStatusRows] = await pool.execute(
+    `SELECT m.status, COUNT(*) AS cnt FROM merchants m ${summaryWhere} GROUP BY m.status`,
+    summaryParams,
+  );
+  const status_counts: Record<string, number> = {};
+  for (const r of byStatusRows as any[]) status_counts[String(r.status)] = Number(r.cnt);
+
   const [rows] = await pool.execute(
     `SELECT m.id, ${dec("m.merchant_name")}, ${dec("m.email")}, ${dec("m.bank_account")},
             m.biz_no, m.biz_cert_path, m.biz_cert_name, m.bank_name, m.bank_copy_path, m.bank_copy_name,
@@ -331,14 +453,15 @@ router.get("/merchants", requireSupervisor, async (req, res) => {
     [k, k, k, ...params, pageSize, offset],
   );
 
-  res.json({ ok: true, data: rows, total, page: pageNo, size: pageSize });
+  res.json({ ok: true, data: rows, total, status_counts, page: pageNo, size: pageSize });
 });
 
 router.get("/merchants/:id/biz-cert", requireSupervisor, async (req, res) => {
   const id = Number(req.params.id);
   const [rows] = await pool.execute("SELECT biz_cert_path, biz_cert_name FROM merchants WHERE id = ?", [id]);
   const m = (Array.isArray(rows) ? rows[0] : null) as any;
-  if (!m || !m.biz_cert_path) { res.status(404).json({ error: "파일이 없습니다." }); return; }
+  if (!m || !m.biz_cert_path) { res.status(404).json({ error: "사업자등록증 파일이 없습니다." }); return; }
+  if (!fs.existsSync(String(m.biz_cert_path))) { res.status(404).json({ error: "사업자등록증 파일이 존재하지 않습니다." }); return; }
   if (req.query.mode === "view") res.sendFile(String(m.biz_cert_path));
   else res.download(String(m.biz_cert_path), String(m.biz_cert_name ?? "biz_cert"));
 });
@@ -347,7 +470,8 @@ router.get("/merchants/:id/bank-copy", requireSupervisor, async (req, res) => {
   const id = Number(req.params.id);
   const [rows] = await pool.execute("SELECT bank_copy_path, bank_copy_name FROM merchants WHERE id = ?", [id]);
   const m = (Array.isArray(rows) ? rows[0] : null) as any;
-  if (!m || !m.bank_copy_path) { res.status(404).json({ error: "파일이 없습니다." }); return; }
+  if (!m || !m.bank_copy_path) { res.status(404).json({ error: "통장사본 파일이 없습니다." }); return; }
+  if (!fs.existsSync(String(m.bank_copy_path))) { res.status(404).json({ error: "통장사본 파일이 존재하지 않습니다." }); return; }
   if (req.query.mode === "view") res.sendFile(String(m.bank_copy_path));
   else res.download(String(m.bank_copy_path), String(m.bank_copy_name ?? "bank_copy"));
 });
@@ -381,6 +505,83 @@ router.put("/merchants/:id/status", requireSupervisor, async (req, res) => {
 
   res.json({ ok: true });
 });
+
+router.post(
+  "/merchants/:id/send-email",
+  requireSupervisor,
+  (req, res, next) => {
+    emailUpload.array("attachments", 20)(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          res.status(400).json({ error: "첨부파일 1개당 크기가 30MB를 초과할 수 없습니다." });
+          return;
+        }
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      if (err) { res.status(500).json({ error: "upload_failed" }); return; }
+      next();
+    });
+  },
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const { subject = "", body = "" } = (req.body ?? {}) as Record<string, string>;
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+    const cleanup = () => {
+      for (const f of files) { try { fs.unlinkSync(f.path); } catch (_) {} }
+    };
+
+    if (!subject.trim() || !body.trim()) {
+      cleanup();
+      res.status(400).json({ error: "제목과 내용을 입력해 주세요." });
+      return;
+    }
+
+    const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+    if (totalBytes > EMAIL_TOTAL_LIMIT) {
+      cleanup();
+      res.status(400).json({ error: "첨부파일 총 크기가 30MB를 초과합니다." });
+      return;
+    }
+
+    const k = encKey();
+    const [rows] = await pool.execute(
+      `SELECT ${dec("merchant_name")}, ${dec("email")} FROM merchants WHERE id = ?`,
+      [k, k, id],
+    );
+    if (!Array.isArray(rows) || rows.length === 0) {
+      cleanup();
+      res.status(404).json({ error: "merchant_not_found" });
+      return;
+    }
+    const merchant = (rows as any)[0];
+    if (!merchant.email) {
+      cleanup();
+      res.status(400).json({ error: "수신자 이메일이 없습니다." });
+      return;
+    }
+
+    const html = `<div style="font-family:'Malgun Gothic',sans-serif;white-space:pre-wrap;font-size:14px;color:#1e293b;line-height:1.7;">${escapeHtml(body)}</div>`;
+    const attachments = files.map((f) => ({ filename: f.originalname, path: f.path }));
+
+    try {
+      await sendEmail({
+        templateKey: "supervisor_direct_email",
+        to: String(merchant.email),
+        subject: subject.trim(),
+        html,
+        attachments,
+      });
+    } catch (e) {
+      cleanup();
+      res.status(500).json({ error: "메일 발송에 실패했습니다." });
+      return;
+    }
+    cleanup();
+    res.json({ ok: true });
+  },
+);
 
 const PROJ_SORT_COLS: Record<string, string> = {
   id: "p.id",
@@ -848,6 +1049,42 @@ router.get("/settlement/:projectId/usage", requireSupervisor, async (req, res) =
     project_serial: project.project_serial,
     data: Array.isArray(rows) ? rows : [],
   });
+});
+
+// ── 배치 작업 실행 이력 ──
+router.get("/batch-logs", requireSupervisor, async (req, res) => {
+  const q = req.query as Record<string, string>;
+  const { job_key = "", source = "", status = "", from_date = "", to_date = "", page = "1", size = "20" } = q;
+  const pageNo = Math.max(1, Number(page));
+  const pageSize = [10, 20, 50, 100, 200].includes(Number(size)) ? Number(size) : 20;
+  const offset = (pageNo - 1) * pageSize;
+
+  let where = "WHERE 1=1";
+  const params: Array<string | number> = [];
+  if (job_key) { where += " AND job_key = ?"; params.push(job_key); }
+  if (source) { where += " AND source = ?"; params.push(source); }
+  if (status) { where += " AND status = ?"; params.push(status); }
+  if (from_date) { where += " AND DATE(started_at) >= ?"; params.push(from_date); }
+  if (to_date) { where += " AND DATE(started_at) <= ?"; params.push(to_date); }
+
+  const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM batch_logs ${where}`, params);
+  const total = Number((countRows as any)[0].total);
+
+  const [rows] = await pool.execute(
+    `SELECT id, job_key, source, status, result_summary, started_at, finished_at, error_msg, details,
+            TIMESTAMPDIFF(MICROSECOND, started_at, finished_at) / 1000 AS duration_ms
+     FROM batch_logs ${where}
+     ORDER BY id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  );
+
+  // 작업별 distinct list (필터 UI 에 사용)
+  const [distinctRows] = await pool.execute(
+    `SELECT job_key, source, COUNT(*) AS cnt FROM batch_logs GROUP BY job_key, source`,
+  );
+
+  res.json({ ok: true, data: rows, total, page: pageNo, size: pageSize, distinct: distinctRows });
 });
 
 export default router;

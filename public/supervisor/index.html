@@ -29,7 +29,8 @@
                   flex: 1; padding: 24px; }
     .logo { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 28px; }
     .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(20,30,60,.10); padding: 36px 32px; width: 100%; max-width: 400px; }
-    .card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 24px; }
+    .card h2 { font-size: 20px; font-weight: 700; color: #fff; background: #000; text-align: center;
+               padding: 14px 16px; margin: -36px -32px 24px; border-radius: 16px 16px 0 0; }
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
     .form-group input { width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color .2s; }
@@ -45,6 +46,7 @@
     .btn-outline:hover { background: #f8fafc; }
     .btn-sm { padding: 6px 14px; font-size: 13px; }
     .btn-full { width: 100%; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .msg { font-size: 13px; margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
     .msg.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 
@@ -184,6 +186,40 @@
       padding:6px 10px; font-size:12px; outline:none; background:#f8fafc; }
     .filter-row input:focus, .filter-row select:focus { border-color:#1e293b; background:#fff; }
     .filter-row input { width:120px; }
+
+    /* 이메일 셀 클릭 가능 링크 */
+    .email-link { color:#1e40af; text-decoration:underline; cursor:pointer; }
+    .email-link:hover { color:#0f172a; }
+
+    /* 메일 발송 모달 */
+    #send-email-modal { z-index: 320; }
+    .send-email-modal { background:#fff; border-radius:16px; overflow:hidden;
+                        width:96vw; max-width:640px; max-height:92vh;
+                        display:flex; flex-direction:column;
+                        box-shadow:0 8px 40px rgba(0,0,0,.22); }
+    .send-email-modal .modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
+    .se-field { margin-bottom:14px; }
+    .se-field label { display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:6px; }
+    .se-field input[type=text], .se-field textarea { width:100%; border:1.5px solid #cbd5e1; border-radius:8px;
+      padding:10px 12px; font-size:14px; outline:none; font-family:inherit; }
+    .se-field input[type=text]:focus, .se-field textarea:focus { border-color:#1e293b; }
+    .se-field textarea { min-height:180px; resize:vertical; }
+    .se-to { background:#f1f5f9; border-radius:8px; padding:10px 12px; font-size:13px; color:#1e293b; }
+    .se-attach-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .se-attach-row input[type=file] { font-size:12px; }
+    .se-files { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+    .se-file { display:flex; align-items:center; gap:8px; padding:6px 10px; background:#f8fafc;
+               border:1px solid #e2e8f0; border-radius:6px; font-size:12px; color:#475569; }
+    .se-file .se-file-name { flex:1; word-break:break-all; }
+    .se-file .se-file-size { color:#94a3b8; white-space:nowrap; }
+    .se-file .se-file-rm { background:none; border:none; color:#dc2626; cursor:pointer; font-size:14px; padding:0 4px; }
+    .se-size-info { font-size:12px; color:#64748b; margin-top:6px; }
+    .se-size-info.over { color:#dc2626; font-weight:600; }
+    .send-email-footer { padding:14px 24px; border-top:1px solid #e2e8f0; display:flex; gap:10px;
+                         justify-content:center; background:#f8fafc; }
+    #se-msg { font-size:13px; min-height:18px; padding-top:6px; }
+    #se-msg.error { color:#dc2626; }
+    #se-msg.success { color:#16a34a; }
   </style>
 </head>
 <body>
@@ -222,6 +258,7 @@
       <button class="tab-btn" id="tab-visit-btn" onclick="switchTab('visit')">방문현황</button>
       <button class="tab-btn" id="tab-merchants-btn" onclick="switchTab('merchants')">가맹점관리</button>
       <button class="tab-btn" id="tab-settle-btn" onclick="switchTab('settle')">정산</button>
+      <button class="tab-btn" id="tab-batch-btn" onclick="switchTab('batch')">배치이력</button>
     </div>
 
     <!-- Host 관리 탭 -->
@@ -241,6 +278,7 @@
         <button class="btn btn-outline btn-sm" id="h-reset-btn" onclick="resetFilters()">초기화</button>
         <button class="btn btn-excel btn-sm" id="h-excel-btn" onclick="downloadExcel()" disabled>엑셀 다운로드</button>
       </div>
+      <div id="host-summary" style="margin-bottom:10px;font-size:13px;color:#475569;font-weight:600;">&nbsp;</div>
       <div class="tbl-wrap">
         <table>
           <thead>
@@ -250,6 +288,7 @@
               <th>담당자명</th>
               <th class="sortable" onclick="sortHosts('biz_no')">사업자번호<span class="sort-icon" id="si-biz_no"></span></th>
               <th>이메일</th>
+              <th>모바일폰</th>
               <th class="sortable" onclick="sortHosts('status')">상태<span class="sort-icon" id="si-status"></span></th>
               <th class="sortable" onclick="sortHosts('created_at')">가입일<span class="sort-icon" id="si-created_at"></span></th>
               <th>사업자등록증</th>
@@ -264,7 +303,7 @@
 
     <!-- 프로젝트 관리 탭 -->
     <div class="tab-panel" id="tab-projects">
-      <div class="filter-bar" style="flex-direction:column;align-items:flex-start;gap:6px;">
+      <div class="filter-bar">
         <div class="filter-row">
           <input id="p-host" type="text" placeholder="소속기관명" style="width:130px;" oninput="loadProjects(1)">
           <input id="p-name" type="text" placeholder="프로젝트명" style="width:150px;" oninput="loadProjects(1)">
@@ -290,8 +329,6 @@
             <option value="1">입금확인</option>
             <option value="0">미확인</option>
           </select>
-        </div>
-        <div class="filter-row">
           <label style="font-size:12px;color:#475569;">시작일</label>
           <input id="p-from" type="date" style="width:145px;" onchange="loadProjects(1)">
           <label style="font-size:12px;color:#475569;">~</label>
@@ -379,6 +416,7 @@
         <button class="btn btn-primary btn-sm" onclick="loadMerchants(1)">검색</button>
         <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openSupportProjects()">프로젝트보기</button>
       </div>
+      <div id="mc-summary" style="margin-bottom:10px;font-size:13px;color:#475569;font-weight:600;">&nbsp;</div>
       <div class="tbl-wrap">
         <table>
           <thead id="mc-thead"></thead>
@@ -420,6 +458,65 @@
         </table>
       </div>
     </div>
+
+    <!-- 배치이력 탭 -->
+    <div class="tab-panel" id="tab-batch">
+      <div class="filter-bar">
+        <select id="bl-job">
+          <option value="">전체 작업</option>
+          <option value="sp_update_project_statuses">프로젝트 상태 자동 전이</option>
+          <option value="project_ending_notice">프로젝트 종료 알림</option>
+          <option value="qr_regenerate">QR코드 재생성</option>
+        </select>
+        <select id="bl-source">
+          <option value="">전체 소스</option>
+          <option value="event">DB EVENT</option>
+          <option value="node">Node (서버 부팅/주기 호출)</option>
+          <option value="manual-test">수동</option>
+        </select>
+        <select id="bl-status">
+          <option value="">전체 상태</option>
+          <option value="ok">성공</option>
+          <option value="error">실패</option>
+        </select>
+        <label style="font-size:12px;color:#475569;">기간</label>
+        <input id="bl-from" type="date" style="width:145px;" onchange="loadBatchLogs(1)">
+        <label style="font-size:12px;color:#475569;">~</label>
+        <input id="bl-to" type="date" style="width:145px;" onchange="loadBatchLogs(1)">
+        <button class="btn btn-primary btn-sm" onclick="loadBatchLogs(1)">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="resetBatchFilters()">초기화</button>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:#64748b;">표시 개수</span>
+          <select id="bl-size" onchange="loadBatchLogs(1)">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </span>
+      </div>
+      <div id="bl-summary" style="margin-bottom:10px;font-size:13px;color:#475569;font-weight:600;">&nbsp;</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>작업</th>
+              <th>소스</th>
+              <th style="text-align:center;">상태</th>
+              <th>결과</th>
+              <th style="text-align:center;">상세</th>
+              <th>시작</th>
+              <th>종료</th>
+              <th style="text-align:right;">소요시간</th>
+              <th>오류</th>
+            </tr>
+          </thead>
+          <tbody id="bl-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="bl-pager"></div>
+    </div>
   </div>
 </div>
 
@@ -457,13 +554,90 @@
     </div>
     <div class="card-body">
       <div id="host-detail"></div>
-      <div class="modal-actions" id="host-actions"></div>
       <div class="reason-wrap" id="reason-wrap">
         <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">처리 사유 (선택)</label>
         <textarea id="reason-input" placeholder="사유를 입력해 주세요"></textarea>
       </div>
       <div id="modal-msg" class="modal-msg"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;padding-top:14px;border-top:1px solid #e2e8f0;">
+        <button class="btn btn-outline btn-sm" onclick="closeModal()">닫기</button>
+        <button class="btn btn-primary btn-sm" id="host-save-btn" onclick="saveHostChanges()" disabled>저장</button>
+      </div>
     </div><!-- /card-body -->
+  </div>
+</div>
+
+<!-- 배치 실행 상세 모달 -->
+<div class="modal-overlay" id="batch-detail-modal" onclick="if(event.target===this)closeBatchDetail()">
+  <div class="modal" style="max-width:780px;width:96vw;">
+    <div class="card-header">
+      <h3>배치 실행 상세</h3>
+      <button class="modal-close" onclick="closeBatchDetail()">✕</button>
+    </div>
+    <div class="card-body" style="max-height:78vh;overflow-y:auto;">
+      <div id="bd-header" style="font-size:13px;color:#475569;margin-bottom:14px;line-height:1.7;"></div>
+      <div id="bd-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Host 메일 발송 모달 -->
+<div class="modal-overlay" id="send-email-modal" onclick="if(event.target===this)closeSendEmail()">
+  <div class="send-email-modal">
+    <div class="card-header">
+      <h3>메일 발송</h3>
+      <button class="modal-close" onclick="closeSendEmail()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="se-field">
+        <label>받는 사람</label>
+        <div class="se-to" id="se-to">-</div>
+      </div>
+      <div class="se-field">
+        <label>제목 <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="se-subject" maxlength="200" placeholder="제목을 입력하세요">
+      </div>
+      <div class="se-field">
+        <label>내용 <span style="color:#dc2626;">*</span></label>
+        <textarea id="se-body" placeholder="내용을 입력하세요. 줄바꿈은 그대로 유지됩니다."></textarea>
+      </div>
+      <div class="se-field">
+        <label>첨부파일 (총 30MB 이하)</label>
+        <div class="se-attach-row">
+          <input type="file" id="se-files-input" multiple onchange="onSeFilesPick()">
+          <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('se-files-input').click()">파일 선택</button>
+        </div>
+        <div class="se-files" id="se-file-list"></div>
+        <div class="se-size-info" id="se-size-info">선택된 파일이 없습니다.</div>
+      </div>
+      <div id="se-msg"></div>
+    </div>
+    <div class="send-email-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeSendEmail()">취소</button>
+      <button class="btn btn-primary btn-sm" id="se-send-btn" onclick="submitSendEmail()">발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- 가맹점 상세 정보 모달 -->
+<div class="modal-overlay" id="merchant-modal">
+  <div class="modal" style="max-width:540px;">
+    <div class="card-header">
+      <h3>가맹점 상세 정보</h3>
+      <button class="modal-close" onclick="closeMerchantModal()" title="닫기">✕</button>
+    </div>
+    <div class="card-body">
+      <div id="merchant-detail"></div>
+      <div class="reason-wrap" id="merchant-reason-wrap">
+        <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">처리 사유 (선택)</label>
+        <textarea id="merchant-reason-input" placeholder="사유를 입력해 주세요"></textarea>
+      </div>
+      <div id="merchant-modal-msg" class="modal-msg"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;padding-top:14px;border-top:1px solid #e2e8f0;">
+        <button class="btn btn-outline btn-sm" onclick="closeMerchantModal()">닫기</button>
+        <button class="btn btn-primary btn-sm" id="merchant-save-btn" onclick="saveMerchantChanges()" disabled>저장</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -718,10 +892,12 @@
     terminated: '<span class="badge badge-terminated">종료</span>',
     locked: '<span class="badge badge-locked">잠김</span>',
   };
+  const HOST_STATUS_LABEL = { pending:'승인 대기', approved:'승인', cancelled:'취소', terminated:'종료', locked:'잠김' };
+  const HOST_STATUS_REASON_REQ = ['cancelled', 'terminated', 'locked'];
+  let origHostStatus = null;
 
   let currentHostId = null;
-  let currentHostStatus = null;
-  let pendingAction = null;
+  let hostsCache = {};
   let hostSortCol = 'created_at';
   let hostSortDir = 'desc';
   let hostPage = 1;
@@ -821,6 +997,7 @@
     else if (name === 'visit') loadVisitStatus(1);
     else if (name === 'merchants') loadMerchants(1);
     else if (name === 'settle') loadSettlement();
+    else if (name === 'batch') loadBatchLogs(1);
   }
 
   // ── 정산 (소속기관·프로젝트별 Gift 사용/증정 집계 + 사용자현황) ──
@@ -971,14 +1148,172 @@
   }
   function closeUsage() { document.getElementById('modal-usage').classList.remove('open'); }
 
+  // ── 배치이력 탭 ──
+  const BL_JOB_LABEL = {
+    sp_update_project_statuses: '프로젝트 상태 자동 전이',
+    project_ending_notice: '프로젝트 종료 알림',
+    qr_regenerate: 'QR코드 재생성',
+  };
+  const BL_SOURCE_LABEL = { event: 'DB EVENT', node: 'Node', host: 'Host', 'manual-test': '수동', unknown: '미지정' };
+  function blFmtTime(s) {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+  }
+  function blFmtDuration(ms) {
+    if (ms == null) return '-';
+    const v = Number(ms);
+    if (!isFinite(v)) return '-';
+    if (v < 1000) return v.toFixed(0) + ' ms';
+    return (v / 1000).toFixed(2) + ' s';
+  }
+  function blStatusBadge(s) {
+    if (s === 'ok') return '<span class="badge bp-yes">성공</span>';
+    if (s === 'error') return '<span class="badge bp-no">실패</span>';
+    return `<span class="badge bp-draft">${esc(s)}</span>`;
+  }
+  let batchLogsCache = {};
+  async function loadBatchLogs(page) {
+    const size = Number(document.getElementById('bl-size').value) || 20;
+    const qs = new URLSearchParams({
+      job_key: document.getElementById('bl-job').value,
+      source: document.getElementById('bl-source').value,
+      status: document.getElementById('bl-status').value,
+      from_date: document.getElementById('bl-from').value,
+      to_date: document.getElementById('bl-to').value,
+      page, size,
+    }).toString();
+    const r = await apiFetch('/api/supervisor/batch-logs?' + qs);
+    if (!r) return;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return;
+    batchLogsCache = {};
+    (data.data || []).forEach(row => { batchLogsCache[row.id] = row; });
+    renderBatchSummary(data.distinct);
+    renderBatchLogs(data.data || []);
+    renderPager('bl-pager', data.total, data.size, data.page, loadBatchLogs);
+  }
+  function renderBatchSummary(distinct) {
+    distinct = distinct || [];
+    if (!distinct.length) { document.getElementById('bl-summary').textContent = '기록된 배치 실행 이력이 없습니다.'; return; }
+    const byJob = {};
+    for (const d of distinct) {
+      byJob[d.job_key] = (byJob[d.job_key] || 0) + Number(d.cnt || 0);
+    }
+    const parts = Object.keys(byJob).map(k => `${BL_JOB_LABEL[k] || k}: ${byJob[k]}회`);
+    const total = Object.values(byJob).reduce((s, n) => s + n, 0);
+    document.getElementById('bl-summary').textContent = `총 ${total}회 (${parts.join(' / ')})`;
+  }
+  function renderBatchLogs(rows) {
+    const tbody = document.getElementById('bl-tbody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px;">조회된 배치 이력이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const detailBtn = r.details
+        ? `<button class="btn btn-outline btn-sm" onclick="openBatchDetail(${r.id})">상세보기</button>`
+        : '<span style="color:#cbd5e1;">-</span>';
+      return `<tr>
+        <td>${r.id}</td>
+        <td><b>${esc(BL_JOB_LABEL[r.job_key] || r.job_key)}</b></td>
+        <td>${esc(BL_SOURCE_LABEL[r.source] || r.source || '-')}</td>
+        <td style="text-align:center;">${blStatusBadge(r.status)}</td>
+        <td style="font-size:12px;color:#475569;">${esc(r.result_summary || '-')}</td>
+        <td style="text-align:center;">${detailBtn}</td>
+        <td style="font-size:12px;color:#64748b;white-space:nowrap;">${blFmtTime(r.started_at)}</td>
+        <td style="font-size:12px;color:#64748b;white-space:nowrap;">${blFmtTime(r.finished_at)}</td>
+        <td style="text-align:right;font-size:12px;color:#64748b;">${blFmtDuration(r.duration_ms)}</td>
+        <td style="font-size:12px;color:#dc2626;word-break:break-all;">${esc(r.error_msg || '')}</td>
+      </tr>`;
+    }).join('');
+  }
+  function blRecipientBadge(status) {
+    if (status === 'sent') return '<span class="badge bp-yes">전송</span>';
+    if (status === 'skipped') return '<span class="badge bp-draft">스킵(중복)</span>';
+    if (status === 'failed') return '<span class="badge bp-no">실패</span>';
+    return `<span class="badge">${esc(status)}</span>`;
+  }
+  function openBatchDetail(id) {
+    const row = batchLogsCache[id];
+    if (!row) return;
+    let parsed = null;
+    try { parsed = row.details ? JSON.parse(row.details) : null; } catch (e) { parsed = null; }
+    const header = `
+      <div><b>작업:</b> ${esc(BL_JOB_LABEL[row.job_key] || row.job_key)} · <b>소스:</b> ${esc(BL_SOURCE_LABEL[row.source] || row.source)}</div>
+      <div><b>시작:</b> ${blFmtTime(row.started_at)} → <b>종료:</b> ${blFmtTime(row.finished_at)} · <b>소요:</b> ${blFmtDuration(row.duration_ms)}</div>
+      <div><b>결과:</b> ${esc(row.result_summary || '-')}</div>
+      ${row.error_msg ? `<div style="color:#dc2626;"><b>오류:</b> ${esc(row.error_msg)}</div>` : ''}
+    `;
+    document.getElementById('bd-header').innerHTML = header;
+
+    const body = document.getElementById('bd-body');
+    const projects = parsed && Array.isArray(parsed.projects) ? parsed.projects : [];
+    if (!projects.length) {
+      body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:18px;">상세 데이터가 없습니다.</div>';
+    } else {
+      body.innerHTML = projects.map(p => {
+        const dday = p.days_left <= 0 ? 'D-day' : `D-${p.days_left}`;
+        const recRows = (p.recipients || []).map(r => `
+          <tr>
+            <td>${r.type === 'host' ? '호스트' : '가맹점'}</td>
+            <td><b>${esc(r.name || '-')}</b></td>
+            <td><code style="font-size:12px;">${esc(r.email)}</code></td>
+            <td style="text-align:center;">${blRecipientBadge(r.status)}</td>
+            <td style="font-size:12px;color:#dc2626;word-break:break-all;">${esc(r.error || '')}</td>
+          </tr>`).join('');
+        return `
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;background:#f8fafc;">
+            <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;">
+              ${esc(p.project_name)}
+              <span style="color:#64748b;font-weight:500;font-size:12px;">(${esc(p.project_serial)})</span>
+            </div>
+            <div style="font-size:12px;color:#475569;margin-bottom:10px;">
+              종료일: <b>${esc(p.to_date)}</b> · <span style="color:#dc2626;font-weight:700;">${dday}</span>
+            </div>
+            <div class="tbl-wrap" style="box-shadow:none;background:#fff;">
+              <table>
+                <thead><tr>
+                  <th>구분</th><th>이름</th><th>이메일</th>
+                  <th style="text-align:center;">결과</th><th>오류</th>
+                </tr></thead>
+                <tbody>${recRows || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:10px;">수신자가 없습니다.</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>`;
+      }).join('');
+    }
+    document.getElementById('batch-detail-modal').classList.add('open');
+  }
+  function closeBatchDetail() {
+    document.getElementById('batch-detail-modal').classList.remove('open');
+  }
+  function resetBatchFilters() {
+    ['bl-job', 'bl-source', 'bl-status'].forEach(id => document.getElementById(id).value = '');
+    ['bl-from', 'bl-to'].forEach(id => document.getElementById(id).value = '');
+    loadBatchLogs(1);
+  }
+
   // ── 가맹점관리 탭 ──
   const MC_STATUS = { pending:'승인대기', approved:'승인', cancelled:'취소', terminated:'종료', locked:'잠김' };
   const MC_BADGE = { pending:'bp-quoted', approved:'bp-started', cancelled:'bp-cancelled', terminated:'bp-cancelled', locked:'bp-cancelled' };
   let mcSortCol = 'created_at', mcSortDir = 'desc';
+  let merchantsCache = {};
   function sortMerchants(col) {
     if (mcSortCol === col) mcSortDir = mcSortDir === 'asc' ? 'desc' : 'asc';
     else { mcSortCol = col; mcSortDir = 'asc'; }
     loadMerchants(1);
+  }
+  function renderMerchantSummary(counts) {
+    counts = counts || {};
+    const order = ['pending', 'approved', 'cancelled', 'terminated', 'locked'];
+    const total = order.reduce((s, k) => s + (Number(counts[k]) || 0), 0);
+    const parts = order
+      .filter(k => Number(counts[k]) > 0)
+      .map(k => `${MC_STATUS[k]}: ${counts[k]}개`);
+    const detail = parts.length ? ` (${parts.join(' / ')})` : '';
+    document.getElementById('mc-summary').textContent = `총: ${total}개${detail}`;
   }
   async function loadMerchants(page) {
     const qs = new URLSearchParams({
@@ -991,6 +1326,7 @@
     if (!r) return;
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return;
+    renderMerchantSummary(data.status_counts);
     renderMerchants(data.data || []);
     renderPager('mc-pager', data.total, data.size, data.page, loadMerchants);
   }
@@ -999,35 +1335,36 @@
     const sh = (key, label) => `<th class="sortable" onclick="sortMerchants('${key}')">${label}${arr(key)}</th>`;
     document.getElementById('mc-thead').innerHTML = '<tr>' +
       sh('id', 'ID') + '<th>가맹점명</th>' + sh('biz_no', '사업자등록번호') + '<th>사업자등록증</th>' + '<th>이메일</th>' +
-      sh('bank_name', '은행') + '<th>계좌번호</th><th>은행통장사본</th>' + sh('status', '상태') + sh('created_at', '가입일') + '<th>처리</th></tr>';
+      sh('bank_name', '은행') + '<th>계좌번호</th><th>은행통장사본</th>' + sh('status', '상태') + sh('created_at', '가입일') + '<th>관리</th></tr>';
     const bizFmt = b => b ? String(b).replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
     const fileBtn = (m, kind, title) => m[kind === 'biz-cert' ? 'biz_cert_path' : 'bank_copy_path']
       ? `<button class="btn btn-outline btn-sm" onclick="viewMerchantFile(${m.id},'${kind}','${title}')">보기</button>`
       : '<span style="color:#cbd5e1;">-</span>';
+    merchantsCache = {};
     document.getElementById('mc-tbody').innerHTML = rows.length ? rows.map(m => {
-      const act = m.status === 'pending'
-        ? `<button class="btn btn-primary btn-sm" onclick="merchantStatus(${m.id},'approved')">승인</button> <button class="btn btn-outline btn-sm" onclick="merchantStatus(${m.id},'cancelled')">취소</button>`
-        : m.status === 'approved'
-          ? `<button class="btn btn-outline btn-sm" onclick="merchantStatus(${m.id},'terminated')">종료</button>`
-          : '-';
+      merchantsCache[m.id] = m;
+      const emailCell = m.email
+        ? `<a href="javascript:void(0)" class="email-link" onclick="openSendMerchantEmail(${m.id})" title="메일 발송">${esc(m.email)}</a>`
+        : '-';
       return `<tr>
         <td>${m.id}</td>
         <td><b>${esc(m.merchant_name)}</b></td>
         <td>${bizFmt(m.biz_no)}</td>
         <td style="text-align:center;">${fileBtn(m, 'biz-cert', '사업자등록증')}</td>
-        <td>${esc(m.email)}</td>
+        <td>${emailCell}</td>
         <td>${esc(m.bank_name || '-')}</td>
         <td>${esc(m.bank_account || '-')}</td>
         <td style="text-align:center;">${fileBtn(m, 'bank-copy', '은행통장사본')}</td>
         <td><span class="badge ${MC_BADGE[m.status] || ''}">${MC_STATUS[m.status] || m.status}</span></td>
         <td style="font-size:12px;color:#64748b;white-space:nowrap;">${m.created_at ? new Date(m.created_at).toLocaleDateString('ko-KR') : '-'}</td>
-        <td style="white-space:nowrap;">${act}</td>
+        <td style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openMerchantModal(${m.id})">관리</button></td>
       </tr>`;
     }).join('') : '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
   }
   // 첨부파일(PDF/이미지) 팝업 보기
-  function viewMerchantFile(id, kind, title) {
+  async function viewMerchantFile(id, kind, title) {
     const url = `/api/supervisor/merchants/${id}/${kind}?mode=view`;
+    if (!(await ensureFileExists(url, (title || '파일') + '을(를) 찾을 수 없습니다.'))) return;
     document.getElementById('file-title').textContent = title || '파일 보기';
     document.getElementById('file-frame').src = url;
     document.getElementById('file-open').href = url;
@@ -1075,26 +1412,107 @@
       showInfo('지원 요청 완료', '지원 요청 메일을 발송했습니다.');
     }, { title: '프로젝트 지원', okText: '지원' });
   }
-  async function merchantStatus(id, status) {
-    const labels = { approved: '승인', cancelled: '가입 취소', terminated: '계정 종료' };
-    const label = labels[status] || status;
-    const isApprove = status === 'approved';
-    const ok = await uiConfirm(
-      `이 가맹점을 '${label}' 처리하시겠습니까?`,
-      { title: `가맹점 ${label}`, okText: label, danger: !isApprove },
-    );
-    if (!ok) return;
-    let reason = '';
-    if (status === 'cancelled' || status === 'terminated') {
-      reason = prompt('사유를 입력하세요(선택):', '') || '';
-    }
-    const r = await apiFetch(`/api/supervisor/merchants/${id}/status`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, reason }),
-    });
-    if (!r) return;
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) { await uiAlert(d.error || '처리에 실패했습니다.'); return; }
-    loadMerchants(1);
+  // ── 가맹점 상세 정보 모달 (상태 변경 포함) ──
+  const MC_REASON_REQ = ['cancelled', 'terminated', 'locked'];
+  let currentMerchantId = null;
+  let origMerchantStatus = null;
+
+  function openMerchantModal(id) {
+    const m = merchantsCache[id];
+    if (!m) { showInfo('알림', '가맹점 정보를 불러올 수 없습니다.'); return; }
+    currentMerchantId = id;
+    origMerchantStatus = m.status;
+    document.getElementById('merchant-modal-msg').textContent = '';
+    document.getElementById('merchant-modal-msg').className = 'modal-msg';
+    document.getElementById('merchant-reason-wrap').style.display = 'none';
+    document.getElementById('merchant-reason-input').value = '';
+    document.getElementById('merchant-save-btn').disabled = true;
+
+    const bizNo = m.biz_no ? m.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
+    const bizCert = m.biz_cert_path
+      ? `<button class="btn btn-outline btn-sm" onclick="viewMerchantFile(${m.id},'biz-cert','사업자등록증')">보기</button>`
+      : '-';
+    const bankCopy = m.bank_copy_path
+      ? `<button class="btn btn-outline btn-sm" onclick="viewMerchantFile(${m.id},'bank-copy','은행통장사본')">보기</button>`
+      : '-';
+    const statusOpts = ['pending','approved','cancelled','terminated','locked']
+      .map(s => `<option value="${s}"${s === m.status ? ' selected' : ''}>${MC_STATUS[s]}</option>`)
+      .join('');
+    const emailLink = m.email
+      ? `<a href="javascript:void(0)" class="email-link" onclick="openSendMerchantEmail(${m.id})">${esc(m.email)}</a>`
+      : '-';
+
+    document.getElementById('merchant-detail').innerHTML = `
+      <div class="detail-row"><span class="detail-label">가맹점명</span><span class="detail-val">${esc(m.merchant_name || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">사업자번호</span><span class="detail-val">${bizNo}</span></div>
+      <div class="detail-row"><span class="detail-label">이메일</span><span class="detail-val">${emailLink}</span></div>
+      <div class="detail-row"><span class="detail-label">은행</span><span class="detail-val">${esc(m.bank_name || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">계좌번호</span><span class="detail-val">${esc(m.bank_account || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">사업자등록증</span><span class="detail-val">${bizCert}</span></div>
+      <div class="detail-row"><span class="detail-label">통장사본</span><span class="detail-val">${bankCopy}</span></div>
+      <div class="detail-row">
+        <span class="detail-label">상태</span>
+        <span class="detail-val">
+          <select id="md-status-select" onchange="onMerchantStatusChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
+            ${statusOpts}
+          </select>
+        </span>
+      </div>
+      <div class="detail-row"><span class="detail-label">가입일</span><span class="detail-val">${m.created_at ? new Date(m.created_at).toLocaleString('ko-KR') : '-'}</span></div>
+      ${m.status_reason ? `<div class="detail-row"><span class="detail-label">처리사유</span><span class="detail-val">${esc(m.status_reason)}</span></div>` : ''}
+    `;
+
+    document.getElementById('merchant-modal').classList.add('open');
+  }
+
+  function onMerchantStatusChange() {
+    const sel = document.getElementById('md-status-select');
+    if (!sel) return;
+    const changed = sel.value !== origMerchantStatus;
+    document.getElementById('merchant-save-btn').disabled = !changed;
+    const needReason = changed && MC_REASON_REQ.includes(sel.value);
+    document.getElementById('merchant-reason-wrap').style.display = needReason ? 'block' : 'none';
+    const msgEl = document.getElementById('merchant-modal-msg');
+    msgEl.textContent = '';
+    msgEl.className = 'modal-msg';
+  }
+
+  async function saveMerchantChanges() {
+    if (!currentMerchantId || origMerchantStatus == null) return;
+    const sel = document.getElementById('md-status-select');
+    if (!sel) return;
+    const newStatus = sel.value;
+    if (newStatus === origMerchantStatus) return;
+    const reason = document.getElementById('merchant-reason-input').value.trim();
+    showSaveConfirm(`상태를 '${MC_STATUS[newStatus]}'(으)로 변경하시겠습니까?`, async () => {
+      const msgEl = document.getElementById('merchant-modal-msg');
+      msgEl.textContent = '';
+      msgEl.className = 'modal-msg';
+      const btn = document.getElementById('merchant-save-btn');
+      btn.disabled = true;
+      const r = await apiFetch(`/api/supervisor/merchants/${currentMerchantId}/status`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ status: newStatus, reason }),
+      });
+      if (!r) return;
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        msgEl.textContent = data.error || '저장에 실패했습니다.';
+        msgEl.className = 'modal-msg error';
+        btn.disabled = false;
+        return;
+      }
+      closeMerchantModal();
+      loadMerchants(1);
+    }, { title: '상태 변경 확인', okText: '저장' });
+  }
+
+  function closeMerchantModal() {
+    document.getElementById('merchant-modal').classList.remove('open');
+    currentMerchantId = null;
+    origMerchantStatus = null;
   }
 
   // ── 방문현황 탭 ──
@@ -1335,6 +1753,17 @@
     }).toString();
   }
 
+  function renderHostSummary(counts) {
+    counts = counts || {};
+    const order = ['pending', 'approved', 'cancelled', 'terminated', 'locked'];
+    const total = order.reduce((s, k) => s + (Number(counts[k]) || 0), 0);
+    const parts = order
+      .filter(k => Number(counts[k]) > 0)
+      .map(k => `${HOST_STATUS_LABEL[k]}: ${counts[k]}개`);
+    const detail = parts.length ? ` (${parts.join(' / ')})` : '';
+    document.getElementById('host-summary').textContent = `총: ${total}개${detail}`;
+  }
+
   async function loadHosts(page) {
     hostPage = page;
     const qs = hostQs({ page, size: 20 });
@@ -1343,27 +1772,34 @@
     const data = await r.json();
     if (!r.ok) return;
 
+    renderHostSummary(data.status_counts);
     document.getElementById('h-excel-btn').disabled = data.total === 0;
 
     const tbody = document.getElementById('host-tbody');
+    hostsCache = {};
     tbody.innerHTML = data.data.map(h => {
+      hostsCache[h.id] = h;
       const bizNo = h.biz_no ? h.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
       const certBtn = h.biz_cert_path
         ? `<button class="btn btn-outline btn-sm" onclick="openCert(${h.id})">보기</button>`
         : '-';
       const created = h.created_at ? new Date(h.created_at).toLocaleDateString('ko-KR') : '-';
+      const emailCell = h.host_email
+        ? `<a href="javascript:void(0)" class="email-link" onclick="openSendEmail(${h.id})" title="메일 발송">${esc(h.host_email)}</a>`
+        : '-';
       return `<tr>
         <td>${h.id}</td>
         <td><b>${h.organization_name ?? '-'}</b></td>
         <td>${h.host_name}</td>
         <td>${bizNo}</td>
-        <td>${h.host_email}</td>
+        <td>${emailCell}</td>
+        <td>${stPhone(h.mobile_phone)}</td>
         <td>${BADGE[h.status] ?? h.status}</td>
         <td>${created}</td>
         <td>${certBtn}</td>
         <td><button class="btn btn-outline btn-sm" onclick="openHostModal(${h.id})">상세보기</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+    }).join('') || '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
 
     renderPager('host-pager', data.total, data.size, data.page, loadHosts);
   }
@@ -1393,112 +1829,240 @@
     location.href = '/api/supervisor/hosts/export?' + qs;
   }
 
+  // ── 파일 존재 확인 helper (HEAD probe) ──
+  async function ensureFileExists(url, missingMsg) {
+    const r = await apiFetch(url, { method: 'HEAD' });
+    if (!r) return false;
+    if (!r.ok) {
+      showInfo('파일 없음', missingMsg || '파일을 찾을 수 없습니다.');
+      return false;
+    }
+    return true;
+  }
+
   // ── 사업자등록증 뷰어 ──
-  function openCert(hostId) {
-    document.getElementById('cert-frame').src = `/api/supervisor/hosts/${hostId}/biz-cert?mode=view`;
+  async function openCert(hostId) {
+    const url = `/api/supervisor/hosts/${hostId}/biz-cert?mode=view`;
+    if (!(await ensureFileExists(url, '사업자등록증 파일을 찾을 수 없습니다.'))) return;
+    document.getElementById('cert-frame').src = url;
     document.getElementById('cert-modal').classList.add('open');
+  }
+  async function downloadHostCert(hostId) {
+    const url = `/api/supervisor/hosts/${hostId}/biz-cert`;
+    if (!(await ensureFileExists(url, '사업자등록증 파일을 찾을 수 없습니다.'))) return;
+    location.href = url;
   }
   function closeCert() {
     document.getElementById('cert-modal').classList.remove('open');
     document.getElementById('cert-frame').src = '';
   }
 
+  // ── 메일 발송 모달 (Host / Merchant 공용) ──
+  const SE_TOTAL_LIMIT = 30 * 1024 * 1024;
+  let seFiles = []; // File[]
+  let seTarget = null; // { kind: 'host'|'merchant', id, to }
+
+  function seFmtSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+  function seTotalSize() { return seFiles.reduce((s, f) => s + f.size, 0); }
+  function seRenderFiles() {
+    const list = document.getElementById('se-file-list');
+    const info = document.getElementById('se-size-info');
+    if (!seFiles.length) {
+      list.innerHTML = '';
+      info.textContent = '선택된 파일이 없습니다.';
+      info.classList.remove('over');
+      return;
+    }
+    list.innerHTML = seFiles.map((f, i) => `
+      <div class="se-file">
+        <span class="se-file-name">${esc(f.name)}</span>
+        <span class="se-file-size">${seFmtSize(f.size)}</span>
+        <button class="se-file-rm" type="button" onclick="seRemoveFile(${i})" title="삭제">✕</button>
+      </div>`).join('');
+    const total = seTotalSize();
+    const over = total > SE_TOTAL_LIMIT;
+    info.textContent = `${seFiles.length}개 파일 · ${seFmtSize(total)} / 30 MB${over ? ' (초과)' : ''}`;
+    info.classList.toggle('over', over);
+  }
+  function seRemoveFile(idx) {
+    seFiles.splice(idx, 1);
+    seRenderFiles();
+  }
+  function onSeFilesPick() {
+    const input = document.getElementById('se-files-input');
+    const picked = Array.from(input.files || []);
+    seFiles = seFiles.concat(picked);
+    input.value = '';
+    seRenderFiles();
+  }
+  function _openSendEmailModal(target) {
+    seTarget = target;
+    seFiles = [];
+    document.getElementById('se-to').textContent = target.to;
+    document.getElementById('se-subject').value = '';
+    document.getElementById('se-body').value = '';
+    document.getElementById('se-files-input').value = '';
+    document.getElementById('se-msg').textContent = '';
+    document.getElementById('se-msg').className = '';
+    document.getElementById('se-send-btn').disabled = false;
+    document.getElementById('se-send-btn').textContent = '발송';
+    seRenderFiles();
+    document.getElementById('send-email-modal').classList.add('open');
+  }
+  function openSendEmail(hostId) {
+    const h = hostsCache[hostId];
+    if (!h || !h.host_email) { showInfo('알림', '이메일 정보가 없습니다.'); return; }
+    const to = `${h.host_name || ''} <${h.host_email}>${h.organization_name ? ' · ' + h.organization_name : ''}`;
+    _openSendEmailModal({ kind: 'host', id: hostId, to });
+  }
+  function openSendMerchantEmail(merchantId) {
+    const m = merchantsCache[merchantId];
+    if (!m || !m.email) { showInfo('알림', '이메일 정보가 없습니다.'); return; }
+    const to = `${m.merchant_name || ''} <${m.email}>`;
+    _openSendEmailModal({ kind: 'merchant', id: merchantId, to });
+  }
+  function closeSendEmail() {
+    document.getElementById('send-email-modal').classList.remove('open');
+    seTarget = null;
+    seFiles = [];
+  }
+  async function submitSendEmail() {
+    if (!seTarget) return;
+    const subject = document.getElementById('se-subject').value.trim();
+    const body = document.getElementById('se-body').value.trim();
+    const msg = document.getElementById('se-msg');
+    msg.className = '';
+    if (!subject) { msg.textContent = '제목을 입력해 주세요.'; msg.className = 'error'; return; }
+    if (!body) { msg.textContent = '내용을 입력해 주세요.'; msg.className = 'error'; return; }
+    if (seTotalSize() > SE_TOTAL_LIMIT) {
+      msg.textContent = '첨부파일 총 크기가 30MB를 초과했습니다.'; msg.className = 'error'; return;
+    }
+    const fd = new FormData();
+    fd.append('subject', subject);
+    fd.append('body', body);
+    for (const f of seFiles) fd.append('attachments', f, f.name);
+
+    const btn = document.getElementById('se-send-btn');
+    btn.disabled = true; btn.textContent = '발송 중...';
+    msg.textContent = ''; msg.className = '';
+
+    const endpoint = seTarget.kind === 'merchant'
+      ? `/api/supervisor/merchants/${seTarget.id}/send-email`
+      : `/api/supervisor/hosts/${seTarget.id}/send-email`;
+    const r = await apiFetch(endpoint, { method: 'POST', body: fd });
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      msg.textContent = d.error || '발송에 실패했습니다.';
+      msg.className = 'error';
+      btn.disabled = false; btn.textContent = '발송';
+      return;
+    }
+    msg.textContent = '발송이 완료되었습니다.';
+    msg.className = 'success';
+    btn.textContent = '발송 완료';
+    setTimeout(closeSendEmail, 900);
+  }
+
   async function openHostModal(id) {
     currentHostId = id;
     document.getElementById('modal-msg').textContent = '';
+    document.getElementById('modal-msg').className = 'modal-msg';
     document.getElementById('reason-wrap').style.display = 'none';
     document.getElementById('reason-input').value = '';
-    pendingAction = null;
+    document.getElementById('host-save-btn').disabled = true;
 
     const r = await fetch(`/api/supervisor/hosts?page=1&size=1000`);
     const data = await r.json();
     const host = data.data.find(h => h.id === id);
     if (!host) return;
-    currentHostStatus = host.status;
+    origHostStatus = host.status;
 
     const bizNo = host.biz_no ? host.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
     const certButtons = host.biz_cert_path
       ? `<button class="btn btn-outline btn-sm" onclick="openCert(${host.id})">보기</button>
-         <a href="/api/supervisor/hosts/${host.id}/biz-cert" class="btn btn-outline btn-sm" style="text-decoration:none;">다운로드</a>`
+         <button class="btn btn-outline btn-sm" onclick="downloadHostCert(${host.id})">다운로드</button>`
       : '-';
+    const statusOpts = ['pending','approved','cancelled','terminated','locked']
+      .map(s => `<option value="${s}"${s === host.status ? ' selected' : ''}>${HOST_STATUS_LABEL[s]}</option>`)
+      .join('');
 
     document.getElementById('host-detail').innerHTML = `
       <div class="detail-row"><span class="detail-label">담당자명</span><span class="detail-val">${host.host_name}</span></div>
       <div class="detail-row"><span class="detail-label">소속기관</span><span class="detail-val">${host.organization_name ?? '-'}</span></div>
       <div class="detail-row"><span class="detail-label">사업자번호</span><span class="detail-val">${bizNo}</span></div>
       <div class="detail-row"><span class="detail-label">이메일</span><span class="detail-val">${host.host_email}</span></div>
-      <div class="detail-row"><span class="detail-label">모바일폰</span><span class="detail-val">${host.mobile_phone ?? '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">모바일폰</span><span class="detail-val">${stPhone(host.mobile_phone)}</span></div>
       <div class="detail-row"><span class="detail-label">연락처</span><span class="detail-val">${host.phone ?? '-'}</span></div>
       ${host.address1 ? `<div class="detail-row"><span class="detail-label">주소</span><span class="detail-val">${host.address_zip ? '['+host.address_zip+'] ' : ''}${host.address1}${host.address2 ? ' ' + host.address2 : ''}</span></div>` : ''}
-      <div class="detail-row"><span class="detail-label">상태</span><span class="detail-val">${BADGE[host.status] ?? host.status}</span></div>
+      <div class="detail-row">
+        <span class="detail-label">상태</span>
+        <span class="detail-val">
+          <select id="hd-status-select" onchange="onHostStatusChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
+            ${statusOpts}
+          </select>
+        </span>
+      </div>
       <div class="detail-row"><span class="detail-label">사업자등록증</span><span class="detail-val">${certButtons}</span></div>
       <div class="detail-row"><span class="detail-label">가입일</span><span class="detail-val">${host.created_at ? new Date(host.created_at).toLocaleString('ko-KR') : '-'}</span></div>
       ${host.status_reason ? `<div class="detail-row"><span class="detail-label">처리사유</span><span class="detail-val">${host.status_reason}</span></div>` : ''}
     `;
 
-    const actionsEl = document.getElementById('host-actions');
-    actionsEl.innerHTML = '';
-    if (host.status === 'pending') {
-      actionsEl.innerHTML = `
-        <button class="btn btn-success btn-sm" onclick="confirmAction('approved')">✔ 승인</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmAction('cancelled')">✘ 취소</button>
-      `;
-    } else if (host.status === 'approved') {
-      actionsEl.innerHTML = `<button class="btn btn-danger btn-sm" onclick="confirmAction('terminated')">종료</button>`;
-    }
-
     document.getElementById('host-modal').classList.add('open');
   }
 
-  async function confirmAction(action) {
-    if (action === 'approved') {
-      const ok = await uiConfirm('승인하시겠습니까?', { title: 'Host 승인', okText: '승인' });
-      if (!ok) return;
-    }
-    pendingAction = action;
-    const needReason = action !== 'approved';
+  function onHostStatusChange() {
+    const sel = document.getElementById('hd-status-select');
+    if (!sel) return;
+    const changed = sel.value !== origHostStatus;
+    document.getElementById('host-save-btn').disabled = !changed;
+    const needReason = changed && HOST_STATUS_REASON_REQ.includes(sel.value);
     document.getElementById('reason-wrap').style.display = needReason ? 'block' : 'none';
-    if (action === 'approved') {
-      doStatusChange();
-    }
-  }
-
-  async function doStatusChange() {
-    if (!currentHostId || !pendingAction) return;
-    const reason = document.getElementById('reason-input').value.trim();
     const msgEl = document.getElementById('modal-msg');
     msgEl.textContent = '';
+    msgEl.className = 'modal-msg';
+  }
 
-    const r = await fetch(`/api/supervisor/hosts/${currentHostId}/status`, {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ status: pendingAction, reason }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      msgEl.textContent = data.error || '처리에 실패했습니다.';
-      msgEl.className = 'modal-msg error';
-      return;
-    }
-    closeModal();
-    loadHosts(hostPage);
+  async function saveHostChanges() {
+    if (!currentHostId || origHostStatus == null) return;
+    const sel = document.getElementById('hd-status-select');
+    if (!sel) return;
+    const newStatus = sel.value;
+    if (newStatus === origHostStatus) return;
+    const reason = document.getElementById('reason-input').value.trim();
+    showSaveConfirm(`상태를 '${HOST_STATUS_LABEL[newStatus]}'(으)로 변경하시겠습니까?`, async () => {
+      const msgEl = document.getElementById('modal-msg');
+      msgEl.textContent = '';
+      msgEl.className = 'modal-msg';
+      const btn = document.getElementById('host-save-btn');
+      btn.disabled = true;
+      const r = await fetch(`/api/supervisor/hosts/${currentHostId}/status`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ status: newStatus, reason }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        msgEl.textContent = data.error || '저장에 실패했습니다.';
+        msgEl.className = 'modal-msg error';
+        btn.disabled = false;
+        return;
+      }
+      closeModal();
+      loadHosts(hostPage);
+    }, { title: '상태 변경 확인', okText: '저장' });
   }
 
   function closeModal() {
     document.getElementById('host-modal').classList.remove('open');
-    pendingAction = null;
     currentHostId = null;
+    origHostStatus = null;
   }
-
-  // 취소/종료 버튼에 확인 버튼 추가
-  document.addEventListener('click', e => {
-    if (e.target.id === 'confirm-action-btn') doStatusChange();
-  });
-
-  // ── reason-wrap 안에 확인 버튼 추가 ──
-  document.getElementById('reason-wrap').insertAdjacentHTML('beforeend',
-    '<button class="btn btn-primary btn-sm" style="margin-top:10px;" id="confirm-action-btn">처리 확인</button>'
-  );
 
   // ── 프로젝트 목록 ──
   function projQs(extra = {}) {
@@ -1595,7 +2159,7 @@
     document.getElementById('pd-org').textContent = p.organization_name ?? '-';
     document.getElementById('pd-c-name').textContent = p.host_name ?? '-';
     document.getElementById('pd-c-email').textContent = p.host_email ?? '-';
-    document.getElementById('pd-c-mobile').textContent = p.mobile_phone ?? '-';
+    document.getElementById('pd-c-mobile').textContent = stPhone(p.mobile_phone);
     contactEmail = p.host_email ?? '';
     pdSwitch('basic');
     assetUrls = { mobile: p.mobile_image_url || null, favicon: p.favicon_url || null };
