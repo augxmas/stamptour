@@ -2,7 +2,7 @@ import { Router } from "express";
 import QRCode from "qrcode";
 import pool from "../config/database";
 import { normalizePhone, verifyPin } from "../services/project.service";
-import { ensureGiftIfEligible, getVisitorGift } from "../services/gift.service";
+import { ensureGiftIfEligible, getVisitorGift, recomputeIssuedGiftAmount } from "../services/gift.service";
 import { vapidPublicKey, saveVisitorSubscription } from "../services/push.service";
 
 const router = Router();
@@ -82,7 +82,10 @@ router.post("/identify", async (req, res) => {
 router.post("/visit", async (req, res) => {
   const { project_serial, location_seq } = req.body as Record<string, string>;
 
-  const [projectRows] = await pool.execute("SELECT id, status FROM projects WHERE project_serial = ?", [project_serial]);
+  const [projectRows] = await pool.execute(
+    "SELECT id, status, project_name, description FROM projects WHERE project_serial = ?",
+    [project_serial],
+  );
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
     res.status(404).json({ error: "project_not_found", message: "프로젝트를 찾을 수 없습니다." });
     return;
@@ -161,27 +164,37 @@ router.post("/visit", async (req, res) => {
   }
 
   const locations = await getVisitorLocations(projectId, visitorId);
+  const quizzes = await getVisitorQuizzes(projectId, visitorId, locations);
 
   res.json({
     ok: true,
+    project_name: proj.project_name,
+    description: proj.description,
     totalLocations,
     visitedLocations,
     completed,
     alreadyVisited,
     progressRate: totalLocations > 0 ? Math.round((visitedLocations / totalLocations) * 100) : 0,
     locations,
+    quizzes,
     gift,
   });
 });
 
 router.get("/progress/:projectSerial", async (req, res) => {
   const projectSerial = req.params.projectSerial;
-  const [projectRows] = await pool.execute("SELECT id FROM projects WHERE project_serial = ?", [projectSerial]);
+  const [projectRows] = await pool.execute(
+    "SELECT id, project_name, description FROM projects WHERE project_serial = ?",
+    [projectSerial],
+  );
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
-  const projectId = Number((projectRows as any)[0].id);
+  const projectRow = (projectRows as any)[0];
+  const projectId = Number(projectRow.id);
+  const projectName = projectRow.project_name as string;
+  const projectDesc = projectRow.description as string;
   const phone = extractVisitorPhone(req, projectId);
   if (!phone) {
     res.status(400).json({ error: "phone_required" });
@@ -206,12 +219,242 @@ router.get("/progress/:projectSerial", async (req, res) => {
   );
   const totals = (countRows as any)[0];
   const locations = await getVisitorLocations(projectId, visitorId);
+  const quizzes = await getVisitorQuizzes(projectId, visitorId, locations);
 
   res.json({
     ok: true,
+    project_name: projectName,
+    description: projectDesc,
     totalLocations: Number(totals.total_locations),
     visitedLocations: Number(totals.visited_locations),
     locations,
+    quizzes,
+  });
+});
+
+// 방문자에게 노출할 퀴즈 목록 + 응시 상태 + 활성화 여부
+async function getVisitorQuizzes(projectId: number, visitorId: number, locations: any[]) {
+  const [quizRows] = await pool.execute(
+    `SELECT q.id, q.location_id, q.question, q.question_image_path, q.choice_type,
+            l.location_name AS location_name, l.display_seq AS location_display_seq
+     FROM project_quizzes q
+     LEFT JOIN project_locations l ON l.id = q.location_id
+     WHERE q.project_id = ? AND q.disabled = 0
+     ORDER BY q.display_seq ASC, q.id ASC`,
+    [projectId],
+  );
+  const quizzes = (Array.isArray(quizRows) ? quizRows : []) as any[];
+  if (!quizzes.length) return [];
+
+  const ids = quizzes.map((q) => q.id);
+  const [choiceRows] = await pool.query(
+    `SELECT id, quiz_id, choice_text, choice_image_path, display_seq
+     FROM project_quiz_choices
+     WHERE quiz_id IN (?)
+     ORDER BY quiz_id ASC, display_seq ASC, id ASC`,
+    [ids],
+  );
+  const choicesByQuiz: Record<number, any[]> = {};
+  for (const c of (Array.isArray(choiceRows) ? choiceRows : []) as any[]) {
+    (choicesByQuiz[c.quiz_id] ??= []).push({
+      id: c.id,
+      text: c.choice_text,
+      image_url: toUploadUrl(c.choice_image_path),
+    });
+  }
+
+  const [attemptRows] = await pool.query(
+    `SELECT quiz_id, is_correct, attempted_at FROM visitor_quiz_attempts WHERE visitor_id = ? AND quiz_id IN (?)`,
+    [visitorId, ids],
+  );
+  const attemptByQuiz: Record<number, any> = {};
+  for (const a of (Array.isArray(attemptRows) ? attemptRows : []) as any[]) {
+    attemptByQuiz[a.quiz_id] = { is_correct: Number(a.is_correct) === 1, attempted_at: a.attempted_at };
+  }
+
+  // 정답 맞춘 퀴즈는 정답 보기 id 들을 노출 (방문자가 확인 가능)
+  const solvedQuizIds = Object.entries(attemptByQuiz)
+    .filter(([, a]) => a.is_correct)
+    .map(([qid]) => Number(qid));
+  if (solvedQuizIds.length) {
+    const [corRows] = await pool.query(
+      `SELECT quiz_id, id FROM project_quiz_choices WHERE quiz_id IN (?) AND is_correct = 1`,
+      [solvedQuizIds],
+    );
+    for (const r of (Array.isArray(corRows) ? corRows : []) as any[]) {
+      const qid = Number(r.quiz_id);
+      (attemptByQuiz[qid].correct_choice_ids ??= []).push(Number(r.id));
+    }
+  }
+
+  // 비연계 퀴즈 활성화 조건: 모든 활성 목적지 방문 완료
+  const allVisited = locations.length > 0 && locations.every((l) => l.visited);
+  const visitedLocIds = new Set(
+    locations.filter((l) => l.visited).map((l) => l.location_id || l.id),
+  );
+  // location.id 가 응답에 없으므로 location_seq로 매칭이 어려움 → seq 기반으로 재매핑
+  // 실제 location_id는 quizRows.location_id (project_quizzes.location_id) 와 비교 필요
+  // → DB에서 직접 visited 여부 확인
+  const [visitedRows] = await pool.execute(
+    `SELECT DISTINCT location_id FROM visitor_visits WHERE visitor_id = ? AND project_id = ?`,
+    [visitorId, projectId],
+  );
+  const visitedIdSet = new Set<number>(
+    (Array.isArray(visitedRows) ? visitedRows : []).map((r: any) => Number(r.location_id)),
+  );
+
+  return quizzes.map((q: any) => {
+    let activated = false;
+    let activation_reason = "";
+    if (q.location_id != null) {
+      activated = visitedIdSet.has(Number(q.location_id));
+      if (!activated) {
+        activation_reason = `'${q.location_display_seq}. ${q.location_name}' 방문 후 활성화됩니다.`;
+      }
+    } else {
+      activated = allVisited;
+      if (!activated) activation_reason = "모든 목적지를 방문하면 활성화됩니다.";
+    }
+    return {
+      id: q.id,
+      location_id: q.location_id,
+      location_name: q.location_name,
+      location_display_seq: q.location_display_seq,
+      question: q.question,
+      question_image_url: toUploadUrl(q.question_image_path),
+      choice_type: q.choice_type,
+      choices: choicesByQuiz[q.id] ?? [],
+      attempt: attemptByQuiz[q.id] ?? null,
+      activated,
+      activation_reason,
+    };
+  });
+}
+
+// 답안 제출 + 채점
+router.post("/quiz-answer", async (req, res) => {
+  const { project_serial, quiz_id, selected_choice_ids } = req.body as {
+    project_serial?: string;
+    quiz_id?: number;
+    selected_choice_ids?: number[];
+  };
+  if (!project_serial || !quiz_id || !Array.isArray(selected_choice_ids) || selected_choice_ids.length === 0) {
+    res.status(400).json({ error: "project_serial, quiz_id, selected_choice_ids 가 필요합니다." });
+    return;
+  }
+  const [projectRows] = await pool.execute("SELECT id FROM projects WHERE project_serial = ?", [project_serial]);
+  if (!Array.isArray(projectRows) || projectRows.length === 0) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const projectId = Number((projectRows as any)[0].id);
+  const phone = extractVisitorPhone(req, projectId);
+  if (!phone) {
+    res.status(400).json({ error: "phone_required" });
+    return;
+  }
+  const [visitorRows] = await pool.execute(
+    "SELECT id FROM visitors WHERE project_id = ? AND phone = ?",
+    [projectId, phone],
+  );
+  if (!Array.isArray(visitorRows) || visitorRows.length === 0) {
+    res.status(404).json({ error: "visitor_not_found" });
+    return;
+  }
+  const visitorId = Number((visitorRows as any)[0].id);
+
+  // 퀴즈 + 활성화 검증
+  const [qRows] = await pool.execute(
+    "SELECT id, project_id, location_id, choice_type FROM project_quizzes WHERE id = ? AND disabled = 0",
+    [quiz_id],
+  );
+  if (!(qRows as any[]).length || Number((qRows as any[])[0].project_id) !== projectId) {
+    res.status(404).json({ error: "quiz_not_found" });
+    return;
+  }
+  const quiz = (qRows as any[])[0];
+
+  // 활성화: 연계이면 그 location 방문 확인, 비연계이면 모든 활성 location 방문 확인
+  if (quiz.location_id != null) {
+    const [vv] = await pool.execute(
+      "SELECT 1 FROM visitor_visits WHERE visitor_id = ? AND location_id = ? LIMIT 1",
+      [visitorId, quiz.location_id],
+    );
+    if (!(vv as any[]).length) {
+      res.status(403).json({ error: "이 퀴즈는 연계 목적지를 먼저 방문해야 응시할 수 있습니다." });
+      return;
+    }
+  } else {
+    const [chk] = await pool.execute(
+      `SELECT
+         (SELECT COUNT(*) FROM project_locations WHERE project_id = ? AND disabled = 0) AS total,
+         (SELECT COUNT(DISTINCT vv.location_id) FROM visitor_visits vv
+            JOIN project_locations pl ON pl.id = vv.location_id
+            WHERE vv.visitor_id = ? AND pl.project_id = ? AND pl.disabled = 0) AS visited`,
+      [projectId, visitorId, projectId],
+    );
+    const row = (chk as any[])[0];
+    if (Number(row.total) === 0 || Number(row.visited) < Number(row.total)) {
+      res.status(403).json({ error: "이 퀴즈는 모든 목적지를 방문해야 응시할 수 있습니다." });
+      return;
+    }
+  }
+
+  // 정답 채점
+  const [correctRows] = await pool.execute(
+    "SELECT id FROM project_quiz_choices WHERE quiz_id = ? AND is_correct = 1",
+    [quiz_id],
+  );
+  const correctIds = new Set<number>((correctRows as any[]).map((r) => Number(r.id)));
+  const submittedIds = new Set<number>(selected_choice_ids.map((n) => Number(n)));
+  const isCorrect =
+    submittedIds.size === correctIds.size &&
+    Array.from(correctIds).every((id) => submittedIds.has(id));
+
+  // UPSERT — 기존 row 있으면 갱신
+  await pool.execute(
+    `INSERT INTO visitor_quiz_attempts (visitor_id, quiz_id, is_correct, selected_choice_ids)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       is_correct = VALUES(is_correct),
+       selected_choice_ids = VALUES(selected_choice_ids),
+       attempted_at = CURRENT_TIMESTAMP`,
+    [visitorId, quiz_id, isCorrect ? 1 : 0, JSON.stringify(Array.from(submittedIds))],
+  );
+
+  // 이미 발급된(미사용) Gift 가 있다면 새 정답 보너스를 반영해 amount 즉시 갱신
+  if (isCorrect) {
+    try { await recomputeIssuedGiftAmount(projectId, visitorId); } catch (e) { /* noop */ }
+  }
+
+  // 프로젝트 단가 + Prize 보상액 + 방문자의 누적 정답 수 → 예상 Gift 금액 계산
+  // 정답 1개당 prize_amount 만큼 Gift 에 추가
+  const [pRows] = await pool.execute(
+    "SELECT gift_amount, prize_amount FROM projects WHERE id = ?",
+    [projectId],
+  );
+  const proj = (pRows as any[])[0] || {};
+  const baseAmount = Number(proj.gift_amount || 0);
+  const prizeAmount = Number(proj.prize_amount || 0);
+  const [cntRows] = await pool.execute(
+    `SELECT COUNT(*) AS n FROM visitor_quiz_attempts vqa
+       JOIN project_quizzes q ON q.id = vqa.quiz_id
+      WHERE vqa.visitor_id = ? AND vqa.is_correct = 1 AND q.project_id = ?`,
+    [visitorId, projectId],
+  );
+  const correctCount = Number((cntRows as any[])[0]?.n || 0);
+  const accumulatedBonus = prizeAmount * correctCount;
+  const expectedTotal = baseAmount + accumulatedBonus;
+
+  res.json({
+    ok: true,
+    is_correct: isCorrect,
+    correct_choice_ids: Array.from(correctIds),
+    prize_amount: prizeAmount,
+    bonus_added: isCorrect ? prizeAmount : 0,
+    accumulated_bonus: accumulatedBonus,
+    base_amount: baseAmount,
+    expected_total: expectedTotal,
   });
 });
 
@@ -380,10 +623,12 @@ router.get("/manifest/:projectSerial", async (req, res) => {
         { src: "/favicon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
       ];
   res.type("application/manifest+json").send(JSON.stringify({
+    // PWA 식별자 — 프로젝트별로 다른 ID 로 별도 앱 설치
+    id: `/v/${projectSerial}`,
     name: `${name} 스탬프투어`,
     short_name: name.slice(0, 12) || "스탬프투어",
     start_url: `/v/${projectSerial}`,
-    scope: "/v/",
+    scope: `/v/${projectSerial}/`,
     display: "standalone",
     orientation: "portrait",
     background_color: "#f6fbff",

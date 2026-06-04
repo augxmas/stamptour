@@ -30,6 +30,45 @@ async function isMissionComplete(projectId: number, visitorId: number): Promise<
   return Number(r.total) > 0 && Number(r.visited) >= Number(r.total);
 }
 
+// 방문자의 누적 정답 보너스 (정답 1개당 prize_amount)
+export async function computeVisitorGiftAmount(projectId: number, visitorId: number): Promise<number> {
+  const [pr] = await pool.execute(
+    "SELECT gift_amount, prize_amount FROM projects WHERE id = ?",
+    [projectId],
+  );
+  if (!Array.isArray(pr) || pr.length === 0) return 0;
+  const baseAmount = Number((pr as any)[0].gift_amount || 0);
+  const prizeAmount = Number((pr as any)[0].prize_amount || 0);
+  const [cnt] = await pool.execute(
+    `SELECT COUNT(*) AS n FROM visitor_quiz_attempts vqa
+       JOIN project_quizzes q ON q.id = vqa.quiz_id
+      WHERE vqa.visitor_id = ? AND vqa.is_correct = 1 AND q.project_id = ? AND q.disabled = 0`,
+    [visitorId, projectId],
+  );
+  const correctCount = Number((cnt as any[])[0]?.n || 0);
+  return baseAmount + prizeAmount * correctCount;
+}
+
+// 발급 전인 visitor 의 누적 Gift 금액(미리보기) — Gift 행이 없을 때도 계산 가능
+export async function previewVisitorGiftAmount(projectId: number, visitorId: number): Promise<number> {
+  return computeVisitorGiftAmount(projectId, visitorId);
+}
+
+// 이미 발급된(미사용) Gift 의 amount 를 현재 정답 수 기반으로 갱신
+export async function recomputeIssuedGiftAmount(projectId: number, visitorId: number): Promise<void> {
+  const [rows] = await pool.execute(
+    "SELECT id, status FROM gifts WHERE project_id = ? AND visitor_id = ?",
+    [projectId, visitorId],
+  );
+  const g = (rows as any[])[0];
+  if (!g || g.status !== "issued") return;
+  const newAmount = await computeVisitorGiftAmount(projectId, visitorId);
+  await pool.execute(
+    "UPDATE gifts SET amount = ? WHERE id = ? AND status = 'issued'",
+    [newAmount, g.id],
+  );
+}
+
 // 미션 완료 시 Gift(QR) 발급 — 이미 있으면 그대로 반환, 자격 없으면 null
 export async function ensureGiftIfEligible(projectId: number, visitorId: number): Promise<any | null> {
   const [existing] = await pool.execute(
@@ -40,9 +79,9 @@ export async function ensureGiftIfEligible(projectId: number, visitorId: number)
 
   if (!(await isMissionComplete(projectId, visitorId))) return null;
 
-  const [pr] = await pool.execute("SELECT gift_amount FROM projects WHERE id = ?", [projectId]);
-  if (!Array.isArray(pr) || pr.length === 0) return null;
-  const amount = Number((pr as any)[0].gift_amount);
+  // 발급 시점의 base + 정답 보너스 누적분을 Gift amount 로 기록
+  const amount = await computeVisitorGiftAmount(projectId, visitorId);
+  if (amount <= 0) return null;
 
   const token = crypto.randomBytes(20).toString("hex");
   fs.mkdirSync(giftDir, { recursive: true });

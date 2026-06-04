@@ -26,6 +26,18 @@ const iconUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+// 퀴즈 이미지 업로드 (질문/답항/정답·오답 결과 이미지)
+const quizImageDir = path.join(process.cwd(), "uploads", "quiz-images");
+fs.mkdirSync(quizImageDir, { recursive: true });
+const quizImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, quizImageDir),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`),
+  }),
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 // 디스크 절대경로 → /uploads/... 정적 URL 변환
 function toUploadUrl(p?: string | null): string | null {
   if (!p) return null;
@@ -106,6 +118,7 @@ router.post("/projects", requireHost, async (req, res) => {
     gift_qty,
     prize_amount = "0",
     prize_qty = "0",
+    quiz_bonus_per_correct = "0",
     pin_input,
   } = req.body as Record<string, string>;
 
@@ -122,6 +135,7 @@ router.post("/projects", requireHost, async (req, res) => {
 
   const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
   const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
+  const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
 
   if (description.length > 200) {
     res.status(400).json({ error: "설명은 200자 이내여야 합니다." });
@@ -193,9 +207,9 @@ router.post("/projects", requireHost, async (req, res) => {
 
     const [insertResult] = await connection.execute(
       `INSERT INTO projects
-       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
-      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
+       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
+      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
     );
 
     const projectId = Number((insertResult as any).insertId);
@@ -285,8 +299,8 @@ router.get("/projects", requireHost, async (req, res) => {
             (SELECT COUNT(*) FROM project_quizzes pq WHERE pq.project_id = p.id AND pq.disabled = 0) AS quiz_count
      FROM projects p ${where}
      ORDER BY p.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [...params],
   );
 
   const data = Array.isArray(rows) ? rows.map((item: any) => ({
@@ -396,6 +410,318 @@ router.get("/projects/export", requireHost, async (req, res) => {
   res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(fnameBase)}.xlsx`);
   await wb.xlsx.write(res);
   res.end();
+});
+
+// 수정 가능한 상태 (진행중 이전)
+const EDITABLE_STATUSES = new Set([
+  "quoted",
+  "deposit_wait",
+  "deposit_confirmed",
+  "ready_to_start",
+]);
+// 재견적 발송 시 세금계산서 안내문이 필요한 상태 (이미 입금 완료된 단계)
+const REQUOTE_TAX_INVOICE_STATUSES = new Set(["deposit_confirmed", "ready_to_start"]);
+
+// 프로젝트 상세 조회 — 수정 팝업에서 사용
+router.get("/projects/:id", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const [rows] = await pool.execute(
+    `SELECT id, project_name, project_serial, description, from_date, to_date,
+            gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct,
+            budget_amount, status, quote_amount, quote_days,
+            quote_sent_at, quote_read_at, deposit_confirmed_at, approved_at, started_at,
+            created_at, updated_at
+       FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const proj = (rows as any[])[0];
+  if (!proj) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  res.json({
+    ok: true,
+    project: proj,
+    editable: EDITABLE_STATUSES.has(String(proj.status)),
+  });
+});
+
+// 프로젝트 수정 — 진행중 이전 상태에서만 가능
+router.put("/projects/:id", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const [pRows] = await pool.execute(
+    `SELECT id, status, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty,
+            quiz_bonus_per_correct, quote_amount FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const cur = (pRows as any[])[0];
+  if (!cur) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  if (!EDITABLE_STATUSES.has(String(cur.status))) {
+    res.status(403).json({ error: "이 상태에서는 프로젝트를 수정할 수 없습니다." });
+    return;
+  }
+  const {
+    project_name,
+    description,
+    from_date,
+    to_date,
+    gift_amount,
+    gift_qty,
+    prize_amount = "0",
+    prize_qty = "0",
+    quiz_bonus_per_correct = "0",
+  } = req.body as Record<string, string>;
+  if (!project_name || !description || !from_date || !to_date || !gift_amount || !gift_qty) {
+    res.status(400).json({ error: "필수값을 입력해 주세요." });
+    return;
+  }
+  if (String(description).length > 200) {
+    res.status(400).json({ error: "설명은 200자 이내여야 합니다." });
+    return;
+  }
+  const dateCheck = validateProjectDates(from_date, to_date);
+  if (!dateCheck.ok) {
+    res.status(400).json({ error: dateCheck.message });
+    return;
+  }
+  const giftAmountNum = Math.max(0, Math.floor(Number(gift_amount) || 0));
+  const giftQtyNum = Math.max(1, Math.floor(Number(gift_qty) || 0));
+  const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
+  const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
+  const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
+  const budgetAmount = giftAmountNum * giftQtyNum;
+  const newQuote = calculateQuote(from_date, to_date);
+
+  await pool.execute(
+    `UPDATE projects SET
+        project_name = ?, description = ?, from_date = ?, to_date = ?,
+        gift_amount = ?, gift_qty = ?, prize_amount = ?, prize_qty = ?,
+        quiz_bonus_per_correct = ?, budget_amount = ?, updated_at = NOW()
+      WHERE id = ?`,
+    [
+      project_name, description, from_date, to_date,
+      giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum,
+      quizBonusNum, budgetAmount, projectId,
+    ],
+  );
+
+  const oldQuote = Number(cur.quote_amount || 0);
+  const quoteChanged = newQuote.total !== oldQuote;
+
+  res.json({
+    ok: true,
+    quote_changed: quoteChanged,
+    old_quote: oldQuote,
+    new_quote: newQuote.total,
+    new_quote_breakdown: newQuote,
+    current_status: cur.status,
+  });
+});
+
+// 재견적 발송 — 상태를 'quoted'로 되돌리고 새 견적금액으로 메일 발송
+router.post("/projects/:id/re-quote", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const k = encKey();
+  const [pRows] = await pool.execute(
+    `SELECT id, project_name, project_serial, description, from_date, to_date, status, host_id
+       FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const proj = (pRows as any[])[0];
+  if (!proj) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  if (!EDITABLE_STATUSES.has(String(proj.status))) {
+    res.status(403).json({ error: "이 상태에서는 재견적을 발송할 수 없습니다." });
+    return;
+  }
+  const [hostRows] = await pool.execute(
+    `SELECT ${dec("host_name")}, ${dec("host_email")} FROM hosts WHERE id = ?`,
+    [k, k, host.id],
+  );
+  const hostRow = (hostRows as any[])[0];
+  if (!hostRow) {
+    res.status(404).json({ error: "host_not_found" });
+    return;
+  }
+  const newQuote = calculateQuote(proj.from_date, proj.to_date);
+  const prevStatus = String(proj.status);
+  // 상태를 'quoted'로 되돌리고 새 견적 정보 저장
+  await pool.execute(
+    `UPDATE projects SET
+        status = 'quoted',
+        quote_days = ?, quote_amount = ?,
+        quote_sent_at = NOW(), quote_read_at = NULL, quote_read = 0,
+        deposit_confirmed_at = NULL, approved_at = NULL, started_at = NULL,
+        updated_at = NOW()
+      WHERE id = ?`,
+    [newQuote.days, newQuote.total, projectId],
+  );
+
+  // 재견적 안내문 (이전 상태에 따라)
+  const needsTaxInvoice = REQUOTE_TAX_INVOICE_STATUSES.has(prevStatus);
+  const requoteNote = needsTaxInvoice
+    ? "프로젝트 수정으로 견적금액이 변경되어 재견적을 발송합니다. " +
+      "이미 입금이 확인된 건이므로, 기존에 발행된 세금계산서는 취소 발행되고 새로운 견적금액으로 다시 발행됩니다."
+    : "프로젝트 수정으로 견적금액이 변경되어 재견적을 발송합니다.";
+
+  try {
+    await sendQuoteEmail({
+      hostEmail: String(hostRow.host_email),
+      hostName: String(hostRow.host_name),
+      projectName: String(proj.project_name),
+      projectSerial: String(proj.project_serial),
+      fromDate: String(proj.from_date).slice(0, 10),
+      toDate: String(proj.to_date).slice(0, 10),
+      days: newQuote.days,
+      total: newQuote.total,
+      usageFee: newQuote.usageFee,
+      mobileDesignFee: newQuote.mobileDesignFee,
+      faviconFee: newQuote.faviconFee,
+      initialSetupFee: newQuote.initialSetupFee,
+      projectId,
+      hostId: host.id,
+      requoteNote,
+    });
+  } catch (e) {
+    // 메일 실패는 경고만 — 상태는 이미 변경됨
+  }
+
+  res.json({
+    ok: true,
+    prev_status: prevStatus,
+    new_status: "quoted",
+    new_quote: newQuote.total,
+    tax_invoice_notice: needsTaxInvoice,
+  });
+});
+
+// 프로젝트 방문 현황 통계 — 모달에서 시각화에 사용
+router.get("/projects/:id/visit-stats", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+
+  // 1) 활성 목적지 + 각 목적지별 방문자 수
+  const [locRows] = await pool.execute(
+    `SELECT pl.id, pl.display_seq, pl.location_name,
+            (SELECT COUNT(DISTINCT vv.visitor_id)
+               FROM visitor_visits vv
+              WHERE vv.location_id = pl.id) AS visitor_count
+       FROM project_locations pl
+      WHERE pl.project_id = ? AND pl.disabled = 0
+      ORDER BY pl.display_seq ASC`,
+    [projectId],
+  );
+  const locations = (Array.isArray(locRows) ? locRows : []) as any[];
+  const totalActiveLocations = locations.length;
+
+  // 2) 전체 방문자 / 완주자 + 예산/발급액/소진액 (금액 기준)
+  const [sumRows] = await pool.execute(
+    `SELECT
+       (SELECT budget_amount FROM projects WHERE id = ?) AS total_budget,
+       (SELECT COUNT(*) FROM visitors WHERE project_id = ?) AS total_visitors,
+       (SELECT COUNT(*) FROM (
+          SELECT v.id
+            FROM visitors v
+            JOIN visitor_visits vv ON vv.visitor_id = v.id
+            JOIN project_locations pl ON pl.id = vv.location_id AND pl.disabled = 0
+           WHERE v.project_id = ?
+           GROUP BY v.id
+          HAVING COUNT(DISTINCT vv.location_id) >= ?
+       ) AS t) AS completed_visitors,
+       (SELECT COUNT(*) FROM gifts WHERE project_id = ?) AS gift_issued,
+       (SELECT COUNT(*) FROM gifts WHERE project_id = ? AND status = 'used') AS gift_used,
+       (SELECT COALESCE(SUM(amount), 0) FROM gifts WHERE project_id = ?) AS gift_issued_amount,
+       (SELECT COALESCE(SUM(amount), 0) FROM gifts WHERE project_id = ? AND status = 'used') AS gift_used_amount`,
+    [projectId, projectId, projectId, totalActiveLocations || 0, projectId, projectId, projectId, projectId],
+  );
+  const s = (sumRows as any[])[0] || {};
+
+  // 3) 일자별 방문자 (당일에 1회 이상 방문한 unique visitor)
+  const [dailyRows] = await pool.execute(
+    `SELECT DATE(visited_at) AS d, COUNT(DISTINCT visitor_id) AS visitors
+       FROM visitor_visits
+      WHERE project_id = ?
+      GROUP BY DATE(visited_at)
+      ORDER BY d ASC`,
+    [projectId],
+  );
+  const dailyVisitors = (Array.isArray(dailyRows) ? dailyRows : []) as any[];
+
+  // 4) visitor별 마지막 방문일(완주 시점) — HAVING으로 완주자만
+  const [completionRows] = await pool.execute(
+    `SELECT DATE(MAX(vv.visited_at)) AS d, COUNT(*) AS completed
+       FROM (
+         SELECT v.id AS vid, MAX(vv.visited_at) AS last_visit
+           FROM visitors v
+           JOIN visitor_visits vv ON vv.visitor_id = v.id
+           JOIN project_locations pl ON pl.id = vv.location_id AND pl.disabled = 0
+          WHERE v.project_id = ?
+          GROUP BY v.id
+         HAVING COUNT(DISTINCT vv.location_id) >= ?
+       ) AS done
+       JOIN visitor_visits vv ON vv.visitor_id = done.vid AND vv.visited_at = done.last_visit
+      GROUP BY DATE(vv.visited_at)
+      ORDER BY d ASC`,
+    [projectId, totalActiveLocations || 0],
+  );
+  const dailyCompletions = (Array.isArray(completionRows) ? completionRows : []) as any[];
+
+  // 두 일자 시리즈를 union → 모든 날짜에 0 채우기
+  const dateSet = new Set<string>();
+  for (const r of dailyVisitors) dateSet.add(String(r.d).slice(0, 10));
+  for (const r of dailyCompletions) dateSet.add(String(r.d).slice(0, 10));
+  const allDates = Array.from(dateSet).sort();
+  const visMap = new Map<string, number>();
+  for (const r of dailyVisitors) visMap.set(String(r.d).slice(0, 10), Number(r.visitors));
+  const compMap = new Map<string, number>();
+  for (const r of dailyCompletions) compMap.set(String(r.d).slice(0, 10), Number(r.completed));
+
+  res.json({
+    ok: true,
+    locations: locations.map((l) => ({
+      id: l.id,
+      display_seq: l.display_seq,
+      name: l.location_name,
+      visitor_count: Number(l.visitor_count),
+    })),
+    total_visitors: Number(s.total_visitors || 0),
+    completed_visitors: Number(s.completed_visitors || 0),
+    gift_issued: Number(s.gift_issued || 0),
+    gift_used: Number(s.gift_used || 0),
+    total_budget: Number(s.total_budget || 0),
+    gift_issued_amount: Number(s.gift_issued_amount || 0),
+    gift_used_amount: Number(s.gift_used_amount || 0),
+    total_locations: totalActiveLocations,
+    daily: allDates.map((d) => ({
+      date: d,
+      visitors: visMap.get(d) || 0,
+      completed: compMap.get(d) || 0,
+    })),
+  });
 });
 
 router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), async (req, res) => {
@@ -519,6 +845,11 @@ router.put("/projects/:projectId/locations/:locationId/disable", requireHost, as
     "UPDATE project_locations SET disabled = 1, display_seq = location_seq, updated_at = NOW() WHERE id = ? AND project_id = ?",
     [locationId, projectId],
   );
+  // 연계 퀴즈도 같이 비활성화
+  await pool.execute(
+    "UPDATE project_quizzes SET disabled = 1, updated_at = NOW() WHERE location_id = ? AND project_id = ?",
+    [locationId, projectId],
+  );
   res.json({ ok: true });
 });
 
@@ -543,6 +874,11 @@ router.put("/projects/:projectId/locations/:locationId/enable", requireHost, asy
   await pool.execute(
     "UPDATE project_locations SET disabled = 0, display_seq = ?, updated_at = NOW() WHERE id = ? AND project_id = ? AND disabled = 1",
     [numbers.displaySeq, locationId, projectId],
+  );
+  // 연계 퀴즈도 같이 활성화
+  await pool.execute(
+    "UPDATE project_quizzes SET disabled = 0, updated_at = NOW() WHERE location_id = ? AND project_id = ?",
+    [locationId, projectId],
   );
   await regenerateQrsIfReady(projectId);
   res.json({ ok: true });
@@ -633,11 +969,16 @@ router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
+  // admin 화면용 — 비활성 퀴즈도 함께 노출 (활성/비활성 토글 위해)
   const [quizRows] = await pool.execute(
-    `SELECT id, question, choice_type, display_seq, disabled, created_at
-     FROM project_quizzes
-     WHERE project_id = ? AND disabled = 0
-     ORDER BY display_seq ASC, id ASC`,
+    `SELECT q.id, q.question, q.question_image_path, q.choice_type, q.location_id,
+            l.location_name AS location_name, l.display_seq AS location_display_seq,
+            l.disabled AS location_disabled,
+            q.display_seq, q.disabled, q.created_at
+     FROM project_quizzes q
+     LEFT JOIN project_locations l ON l.id = q.location_id
+     WHERE q.project_id = ?
+     ORDER BY q.disabled ASC, q.display_seq ASC, q.id ASC`,
     [projectId],
   );
   const quizzes = (Array.isArray(quizRows) ? quizRows : []) as any[];
@@ -646,7 +987,7 @@ router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
   if (quizzes.length) {
     const ids = quizzes.map((q) => q.id);
     const [choiceRows] = await pool.query(
-      `SELECT id, quiz_id, choice_text, is_correct, display_seq
+      `SELECT id, quiz_id, choice_text, choice_image_path, is_correct, display_seq
        FROM project_quiz_choices
        WHERE quiz_id IN (?)
        ORDER BY quiz_id ASC, display_seq ASC, id ASC`,
@@ -656,6 +997,7 @@ router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
       (choicesByQuiz[c.quiz_id] ??= []).push({
         id: c.id,
         text: c.choice_text,
+        image_url: toUploadUrl(c.choice_image_path),
         is_correct: Number(c.is_correct) === 1,
         display_seq: c.display_seq,
       });
@@ -667,98 +1009,330 @@ router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
     data: quizzes.map((q: any) => ({
       id: q.id,
       question: q.question,
+      question_image_url: toUploadUrl(q.question_image_path),
       choice_type: q.choice_type,
+      location_id: q.location_id,
+      location_name: q.location_name,
+      location_display_seq: q.location_display_seq,
+      location_disabled: q.location_disabled === null ? null : Number(q.location_disabled),
       display_seq: q.display_seq,
+      disabled: Number(q.disabled),
       created_at: q.created_at,
       choices: choicesByQuiz[q.id] ?? [],
     })),
   });
 });
 
-router.post("/projects/:id/quizzes", requireHost, async (req, res) => {
+// 퀴즈 활성/비활성 토글 — 비연계 퀴즈만 허용 (연계 퀴즈는 목적지 상태를 따름)
+router.put("/projects/:id/quizzes/:qid/toggle", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
-  const { question, choice_type, choices } = req.body as {
-    question?: string;
-    choice_type?: "single" | "multi";
-    choices?: Array<{ text: string; is_correct: boolean }>;
-  };
-
+  const quizId = Number(req.params.qid);
   if (!(await ensureHostOwnsProject(projectId, host.id))) {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
-  if (!question || !question.trim()) {
-    res.status(400).json({ error: "질문을 입력해 주세요." });
+  const [rows] = await pool.execute(
+    "SELECT id, location_id, disabled FROM project_quizzes WHERE id = ? AND project_id = ?",
+    [quizId, projectId],
+  );
+  const q = (rows as any[])[0];
+  if (!q) {
+    res.status(404).json({ error: "quiz_not_found" });
     return;
   }
-  if (question.length > 500) {
-    res.status(400).json({ error: "질문은 500자 이내여야 합니다." });
+  if (q.location_id !== null) {
+    res.status(400).json({ error: "연계 목적지의 활성 상태를 따릅니다. 목적지를 활성/비활성화하면 자동 적용됩니다." });
     return;
   }
-  if (choice_type !== "single" && choice_type !== "multi") {
-    res.status(400).json({ error: "선택 유형은 single 또는 multi 여야 합니다." });
-    return;
-  }
-  if (!Array.isArray(choices) || choices.length < 2) {
-    res.status(400).json({ error: "보기는 최소 2개 이상 입력해 주세요." });
-    return;
-  }
-  const cleanChoices = choices
-    .map((c) => ({ text: String(c?.text ?? "").trim(), is_correct: !!c?.is_correct }))
-    .filter((c) => c.text.length > 0);
-  if (cleanChoices.length < 2) {
-    res.status(400).json({ error: "내용이 있는 보기를 2개 이상 입력해 주세요." });
-    return;
-  }
-  if (cleanChoices.some((c) => c.text.length > 500)) {
-    res.status(400).json({ error: "보기는 각 500자 이내여야 합니다." });
-    return;
-  }
-  const correctCount = cleanChoices.filter((c) => c.is_correct).length;
-  if (correctCount < 1) {
-    res.status(400).json({ error: "정답을 1개 이상 선택해 주세요." });
-    return;
-  }
-  if (choice_type === "single" && correctCount !== 1) {
-    res.status(400).json({ error: "단일 선택은 정답이 정확히 1개여야 합니다." });
-    return;
-  }
+  const newDisabled = Number(q.disabled) === 1 ? 0 : 1;
+  await pool.execute(
+    "UPDATE project_quizzes SET disabled = ?, updated_at = NOW() WHERE id = ? AND project_id = ?",
+    [newDisabled, quizId, projectId],
+  );
+  res.json({ ok: true, disabled: newDisabled });
+});
 
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const [seqRows] = await connection.execute(
-      "SELECT COALESCE(MAX(display_seq), 0) + 1 AS next_seq FROM project_quizzes WHERE project_id = ?",
-      [projectId],
-    );
-    const nextSeq = Number((seqRows as any)[0].next_seq);
-
-    const [insertResult] = await connection.execute(
-      `INSERT INTO project_quizzes (project_id, question, choice_type, display_seq)
-       VALUES (?, ?, ?, ?)`,
-      [projectId, question.trim(), choice_type, nextSeq],
-    );
-    const quizId = Number((insertResult as any).insertId);
-
-    for (let i = 0; i < cleanChoices.length; i++) {
-      const c = cleanChoices[i];
-      await connection.execute(
-        `INSERT INTO project_quiz_choices (quiz_id, choice_text, is_correct, display_seq)
-         VALUES (?, ?, ?, ?)`,
-        [quizId, c.text, c.is_correct ? 1 : 0, i + 1],
-      );
+router.post(
+  "/projects/:id/quizzes",
+  requireHost,
+  quizImageUpload.any(),
+  async (req, res) => {
+    const host = req.session.host!;
+    const projectId = Number(req.params.id);
+    const question = String(req.body.question ?? "").trim();
+    const locationIdRaw = req.body.location_id;
+    const locationId =
+      locationIdRaw === undefined || locationIdRaw === null || locationIdRaw === "" || locationIdRaw === "null"
+        ? null
+        : Number(locationIdRaw);
+    const files = (req.files as Express.Multer.File[]) || [];
+    const questionFile = files.find((f) => f.fieldname === "question_image");
+    let choices: Array<{ text: string; is_correct: boolean }> = [];
+    try {
+      choices = JSON.parse(String(req.body.choices ?? "[]"));
+    } catch {
+      res.status(400).json({ error: "보기 데이터 형식이 올바르지 않습니다." });
+      return;
     }
 
-    await connection.commit();
-    res.json({ ok: true, id: quizId });
-  } catch (e) {
-    await connection.rollback();
-    res.status(500).json({ error: "퀴즈 등록에 실패했습니다." });
-  } finally {
-    connection.release();
-  }
-});
+    if (!(await ensureHostOwnsProject(projectId, host.id))) {
+      res.status(404).json({ error: "project_not_found" });
+      return;
+    }
+    if (!question) {
+      res.status(400).json({ error: "질문을 입력해 주세요." });
+      return;
+    }
+    if (question.length > 500) {
+      res.status(400).json({ error: "질문은 500자 이내여야 합니다." });
+      return;
+    }
+    if (!Array.isArray(choices) || choices.length < 2) {
+      res.status(400).json({ error: "보기는 최소 2개 이상 입력해 주세요." });
+      return;
+    }
+    const cleanChoices = choices
+      .map((c) => ({ text: String(c?.text ?? "").trim(), is_correct: !!c?.is_correct }))
+      .filter((c) => c.text.length > 0);
+    if (cleanChoices.length < 2) {
+      res.status(400).json({ error: "내용이 있는 보기를 2개 이상 입력해 주세요." });
+      return;
+    }
+    if (cleanChoices.some((c) => c.text.length > 500)) {
+      res.status(400).json({ error: "보기는 각 500자 이내여야 합니다." });
+      return;
+    }
+    const correctCount = cleanChoices.filter((c) => c.is_correct).length;
+    if (correctCount < 1) {
+      res.status(400).json({ error: "정답을 1개 이상 선택해 주세요." });
+      return;
+    }
+    // 정답 개수에 따라 단일/다중 자동 결정
+    const choice_type: "single" | "multi" = correctCount === 1 ? "single" : "multi";
+
+    if (locationId !== null) {
+      if (!Number.isFinite(locationId) || locationId <= 0) {
+        res.status(400).json({ error: "연계 목적지가 올바르지 않습니다." });
+        return;
+      }
+      const [locRows] = await pool.execute(
+        "SELECT id FROM project_locations WHERE id = ? AND project_id = ? AND disabled = 0",
+        [locationId, projectId],
+      );
+      if (!(locRows as any[]).length) {
+        res.status(400).json({ error: "선택한 목적지가 이 프로젝트에 존재하지 않습니다." });
+        return;
+      }
+    }
+
+    const questionImagePath = questionFile ? path.join("uploads", "quiz-images", questionFile.filename) : null;
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [seqRows] = await connection.execute(
+        "SELECT COALESCE(MAX(display_seq), 0) + 1 AS next_seq FROM project_quizzes WHERE project_id = ?",
+        [projectId],
+      );
+      const nextSeq = Number((seqRows as any)[0].next_seq);
+
+      const [insertResult] = await connection.execute(
+        `INSERT INTO project_quizzes
+           (project_id, location_id, question, question_image_path, choice_type, display_seq)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [projectId, locationId, question, questionImagePath, choice_type, nextSeq],
+      );
+      const quizId = Number((insertResult as any).insertId);
+
+      for (let i = 0; i < cleanChoices.length; i++) {
+        const c = cleanChoices[i];
+        const choiceFile = files.find((f) => f.fieldname === `choice_image_${i}`);
+        const choiceImagePath = choiceFile
+          ? path.join("uploads", "quiz-images", choiceFile.filename)
+          : null;
+        await connection.execute(
+          `INSERT INTO project_quiz_choices (quiz_id, choice_text, choice_image_path, is_correct, display_seq)
+           VALUES (?, ?, ?, ?, ?)`,
+          [quizId, c.text, choiceImagePath, c.is_correct ? 1 : 0, i + 1],
+        );
+      }
+
+      await connection.commit();
+      res.json({ ok: true, id: quizId, choice_type });
+    } catch (e) {
+      await connection.rollback();
+      res.status(500).json({ error: "퀴즈 등록에 실패했습니다." });
+    } finally {
+      connection.release();
+    }
+  },
+);
+
+router.put(
+  "/projects/:id/quizzes/:qid",
+  requireHost,
+  quizImageUpload.any(),
+  async (req, res) => {
+    const host = req.session.host!;
+    const projectId = Number(req.params.id);
+    const quizId = Number(req.params.qid);
+    const question = String(req.body.question ?? "").trim();
+    const locationIdRaw = req.body.location_id;
+    const locationId =
+      locationIdRaw === undefined || locationIdRaw === null || locationIdRaw === "" || locationIdRaw === "null"
+        ? null
+        : Number(locationIdRaw);
+    const removeImage = String(req.body.remove_image ?? "") === "1";
+    const files = (req.files as Express.Multer.File[]) || [];
+    const questionFile = files.find((f) => f.fieldname === "question_image");
+    // choices 페이로드: [{id?:number, text, is_correct, remove_image?:bool}]
+    let choices: Array<{
+      id?: number | null;
+      text: string;
+      is_correct: boolean;
+      remove_image?: boolean;
+    }> = [];
+    try {
+      choices = JSON.parse(String(req.body.choices ?? "[]"));
+    } catch {
+      res.status(400).json({ error: "보기 데이터 형식이 올바르지 않습니다." });
+      return;
+    }
+
+    if (!(await ensureHostOwnsProject(projectId, host.id))) {
+      res.status(404).json({ error: "project_not_found" });
+      return;
+    }
+    const [qRows] = await pool.execute(
+      "SELECT id, question_image_path FROM project_quizzes WHERE id = ? AND project_id = ? AND disabled = 0",
+      [quizId, projectId],
+    );
+    if (!(qRows as any[]).length) {
+      res.status(404).json({ error: "quiz_not_found" });
+      return;
+    }
+    const oldImagePath = (qRows as any[])[0].question_image_path as string | null;
+
+    if (!question) {
+      res.status(400).json({ error: "질문을 입력해 주세요." });
+      return;
+    }
+    if (question.length > 500) {
+      res.status(400).json({ error: "질문은 500자 이내여야 합니다." });
+      return;
+    }
+    if (!Array.isArray(choices) || choices.length < 2) {
+      res.status(400).json({ error: "보기는 최소 2개 이상 입력해 주세요." });
+      return;
+    }
+    const cleanChoices = choices
+      .map((c) => ({
+        id: c?.id != null ? Number(c.id) : null,
+        text: String(c?.text ?? "").trim(),
+        is_correct: !!c?.is_correct,
+        remove_image: !!c?.remove_image,
+      }))
+      .filter((c) => c.text.length > 0);
+    if (cleanChoices.length < 2) {
+      res.status(400).json({ error: "내용이 있는 보기를 2개 이상 입력해 주세요." });
+      return;
+    }
+    if (cleanChoices.some((c) => c.text.length > 500)) {
+      res.status(400).json({ error: "보기는 각 500자 이내여야 합니다." });
+      return;
+    }
+    const correctCount = cleanChoices.filter((c) => c.is_correct).length;
+    if (correctCount < 1) {
+      res.status(400).json({ error: "정답을 1개 이상 선택해 주세요." });
+      return;
+    }
+    const choice_type: "single" | "multi" = correctCount === 1 ? "single" : "multi";
+
+    if (locationId !== null) {
+      if (!Number.isFinite(locationId) || locationId <= 0) {
+        res.status(400).json({ error: "연계 목적지가 올바르지 않습니다." });
+        return;
+      }
+      const [locRows] = await pool.execute(
+        "SELECT id FROM project_locations WHERE id = ? AND project_id = ? AND disabled = 0",
+        [locationId, projectId],
+      );
+      if (!(locRows as any[]).length) {
+        res.status(400).json({ error: "선택한 목적지가 이 프로젝트에 존재하지 않습니다." });
+        return;
+      }
+    }
+
+    // 질문 이미지: 새 파일 / remove_image / 유지
+    let newImagePath: string | null = oldImagePath;
+    if (questionFile) {
+      newImagePath = path.join("uploads", "quiz-images", questionFile.filename);
+    } else if (removeImage) {
+      newImagePath = null;
+    }
+
+    // 옛 choices의 image_path를 id로 lookup
+    const [oldChoiceRows] = await pool.execute(
+      "SELECT id, choice_image_path FROM project_quiz_choices WHERE quiz_id = ?",
+      [quizId],
+    );
+    const oldChoiceImageMap = new Map<number, string | null>();
+    (oldChoiceRows as any[]).forEach((r) => oldChoiceImageMap.set(Number(r.id), r.choice_image_path));
+
+    // 각 새 choice의 최종 image_path 결정
+    const choicesWithImage = cleanChoices.map((c, i) => {
+      const newFile = files.find((f) => f.fieldname === `choice_image_${i}`);
+      let imagePath: string | null = null;
+      if (newFile) {
+        imagePath = path.join("uploads", "quiz-images", newFile.filename);
+      } else if (c.id != null && !c.remove_image) {
+        imagePath = oldChoiceImageMap.get(c.id) ?? null;
+      }
+      return { ...c, imagePath };
+    });
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `UPDATE project_quizzes
+            SET location_id = ?, question = ?, question_image_path = ?, choice_type = ?, updated_at = NOW()
+          WHERE id = ? AND project_id = ?`,
+        [locationId, question, newImagePath, choice_type, quizId, projectId],
+      );
+      await connection.execute("DELETE FROM project_quiz_choices WHERE quiz_id = ?", [quizId]);
+      for (let i = 0; i < choicesWithImage.length; i++) {
+        const c = choicesWithImage[i];
+        await connection.execute(
+          `INSERT INTO project_quiz_choices (quiz_id, choice_text, choice_image_path, is_correct, display_seq)
+           VALUES (?, ?, ?, ?, ?)`,
+          [quizId, c.text, c.imagePath, c.is_correct ? 1 : 0, i + 1],
+        );
+      }
+      await connection.commit();
+
+      // 질문 이미지 cleanup
+      if (oldImagePath && newImagePath !== oldImagePath) {
+        try { fs.unlinkSync(path.join(process.cwd(), oldImagePath)); } catch {}
+      }
+      // 답항 이미지 cleanup — 더 이상 사용되지 않는 옛 image_path 삭제
+      const stillUsed = new Set(choicesWithImage.map((c) => c.imagePath).filter(Boolean));
+      for (const [, oldPath] of oldChoiceImageMap) {
+        if (oldPath && !stillUsed.has(oldPath)) {
+          try { fs.unlinkSync(path.join(process.cwd(), oldPath)); } catch {}
+        }
+      }
+
+      res.json({ ok: true, id: quizId, choice_type });
+    } catch (e) {
+      await connection.rollback();
+      res.status(500).json({ error: "퀴즈 수정에 실패했습니다." });
+    } finally {
+      connection.release();
+    }
+  },
+);
 
 router.delete("/projects/:id/quizzes/:qid", requireHost, async (req, res) => {
   const host = req.session.host!;
@@ -1142,7 +1716,7 @@ router.get("/settlement", requireHost, async (req, res) => {
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
 
   const [rows] = await pool.execute(
-    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount,
+    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
@@ -1156,6 +1730,55 @@ router.get("/settlement", requireHost, async (req, res) => {
   );
 
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+});
+
+// ── 정산: 특정 프로젝트의 일별 정산 내역 (상세보기 팝업) ──
+router.get("/settlement/:projectId/daily", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const projectId = Number(req.params.projectId);
+
+  const [projRows] = await pool.execute(
+    `SELECT id, project_name, project_serial, gift_amount, prize_amount, status
+       FROM projects WHERE id = ? AND host_id = ?`,
+    [projectId, hostId],
+  );
+  if (!Array.isArray(projRows) || projRows.length === 0) {
+    res.status(404).json({ error: "project_not_found" });
+    return;
+  }
+  const proj = (projRows as any)[0];
+
+  const [dailyRows] = await pool.execute(
+    `SELECT DATE(redeemed_at) AS d,
+            SUM(CASE WHEN redemption_type='normal' THEN 1 ELSE 0 END) AS used_count,
+            SUM(CASE WHEN redemption_type='normal' THEN amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN redemption_type='grant' THEN 1 ELSE 0 END) AS grant_count,
+            SUM(CASE WHEN redemption_type='grant' THEN amount ELSE 0 END) AS grant_amount
+       FROM gift_redemptions
+      WHERE project_id = ?
+      GROUP BY DATE(redeemed_at)
+      ORDER BY d ASC`,
+    [projectId],
+  );
+
+  res.json({
+    ok: true,
+    project: {
+      id: proj.id,
+      name: proj.project_name,
+      serial: proj.project_serial,
+      gift_amount: Number(proj.gift_amount || 0),
+      prize_amount: Number(proj.prize_amount || 0),
+      status: proj.status,
+    },
+    daily: (Array.isArray(dailyRows) ? dailyRows : []).map((r: any) => ({
+      date: r.d,
+      used_count: Number(r.used_count || 0),
+      used_amount: Number(r.used_amount || 0),
+      grant_count: Number(r.grant_count || 0),
+      grant_amount: Number(r.grant_amount || 0),
+    })),
+  });
 });
 
 // ── 정산: 특정 프로젝트의 Gift 사용/증정 상세내역 ──

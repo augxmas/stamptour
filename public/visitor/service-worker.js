@@ -1,16 +1,38 @@
-// 방문자 PWA 서비스워커 — /v/ 스코프에서 동작
-const CACHE = 'tracker-visitor-v5';
-const SHELL = ['/visitor/index.html', '/favicon.svg'];
+// 방문자 PWA 서비스워커 — 프로젝트별 스코프 /v/{serial}/ 에서 동작
+// 스코프에서 프로젝트 일련번호를 추출하여 캐시를 프로젝트별로 분리
+const CACHE_VERSION = 'v7';
+let PROJECT_SERIAL = 'default';
+let CACHE = `tracker-visitor-${PROJECT_SERIAL}-${CACHE_VERSION}`;
+let SHELL = ['/visitor/index.html', '/favicon.svg'];
+
+function deriveScope() {
+  try {
+    const scopePath = new URL(self.registration.scope).pathname;
+    const m = scopePath.match(/^\/v\/([^/]+)/);
+    if (m) {
+      PROJECT_SERIAL = m[1];
+      CACHE = `tracker-visitor-${PROJECT_SERIAL}-${CACHE_VERSION}`;
+      SHELL = [`/v/${PROJECT_SERIAL}`, '/favicon.svg'];
+    }
+  } catch (e) { /* noop */ }
+}
 
 self.addEventListener('install', (e) => {
+  deriveScope();
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
+  deriveScope();
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        // 본인(프로젝트) 캐시의 옛 버전만 삭제 — 다른 프로젝트 캐시는 건드리지 않음
+        keys
+          .filter(k => k.startsWith(`tracker-visitor-${PROJECT_SERIAL}-`) && k !== CACHE)
+          .map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });

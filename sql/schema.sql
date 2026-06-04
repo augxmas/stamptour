@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS projects (
   gift_qty INT NOT NULL DEFAULT 0,
   prize_amount BIGINT NOT NULL DEFAULT 0,
   prize_qty INT NOT NULL DEFAULT 0,
+  quiz_bonus_per_correct INT NOT NULL DEFAULT 0,
   budget_amount BIGINT NOT NULL,
   pin_hash VARCHAR(80) NOT NULL,
   pin_enc VARCHAR(255) NULL, -- 가맹점 승인 메일에 PIN을 동봉하기 위한 복호화 가능 저장값(fn_encrypt)
@@ -124,6 +125,7 @@ CREATE TABLE IF NOT EXISTS project_locations (
   kakao_lng DECIMAL(12,8) NULL,
   location_desc VARCHAR(50) NULL,
   image_path VARCHAR(255) NULL,
+  quiz_required TINYINT(1) NOT NULL DEFAULT 0,
   disabled TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -135,20 +137,42 @@ CREATE TABLE IF NOT EXISTS project_locations (
 CREATE TABLE IF NOT EXISTS project_quizzes (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   project_id BIGINT NOT NULL,
+  location_id BIGINT NULL,
   question VARCHAR(500) NOT NULL,
+  question_image_path VARCHAR(500) NULL,
   choice_type ENUM('single', 'multi') NOT NULL DEFAULT 'single',
+  correct_image_path VARCHAR(500) NULL,
+  correct_sound_path VARCHAR(500) NULL,
+  wrong_image_path VARCHAR(500) NULL,
+  wrong_sound_path VARCHAR(500) NULL,
   display_seq INT NOT NULL,
   disabled TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_project (project_id),
-  FOREIGN KEY (project_id) REFERENCES projects(id)
+  KEY idx_location (location_id),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (location_id) REFERENCES project_locations(id)
+);
+
+CREATE TABLE IF NOT EXISTS visitor_quiz_attempts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  visitor_id BIGINT NOT NULL,
+  quiz_id BIGINT NOT NULL,
+  is_correct TINYINT(1) NOT NULL DEFAULT 0,
+  selected_choice_ids JSON NULL,
+  attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_attempt (visitor_id, quiz_id),
+  KEY idx_quiz (quiz_id),
+  FOREIGN KEY (visitor_id) REFERENCES visitors(id),
+  FOREIGN KEY (quiz_id) REFERENCES project_quizzes(id)
 );
 
 CREATE TABLE IF NOT EXISTS project_quiz_choices (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   quiz_id BIGINT NOT NULL,
   choice_text VARCHAR(500) NOT NULL,
+  choice_image_path VARCHAR(500) NULL,
   is_correct TINYINT(1) NOT NULL DEFAULT 0,
   display_seq INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -210,6 +234,8 @@ CREATE TABLE IF NOT EXISTS gifts (
   amount BIGINT NOT NULL,
   status ENUM('issued','used') NOT NULL DEFAULT 'issued',
   qr_image_path VARCHAR(255) NULL,
+  qr_view_pin_hash VARCHAR(255) NULL,
+  qr_view_pin_set_at DATETIME NULL,
   issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   used_at DATETIME NULL,
   UNIQUE KEY uq_gift_token (token),

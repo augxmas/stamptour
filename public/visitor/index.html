@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>스탬프투어</title>
   <meta name="theme-color" content="#0d3b66">
@@ -87,6 +90,56 @@
     .dl-on  { font-size: 12px; font-weight: 800; color: #138a36; white-space: nowrap; }
     .dl-off { font-size: 12px; font-weight: 700; color: #b0b8c4; white-space: nowrap; }
 
+    /* 프로젝트 설명 (host가 등록한 내용) */
+    .prog-desc { background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; border-radius: 10px;
+                 padding: 12px 14px; margin: 12px 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; display: none; }
+    .prog-desc.show { display: block; }
+
+    /* 퀴즈 */
+    .quiz-list { margin-top: 22px; text-align: left; }
+    .ql-title { font-size: 14px; font-weight: 800; color: #16243a; margin-bottom: 8px; }
+    .quiz-card { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(20,30,60,.04); }
+    .quiz-card.locked { background: #f8fafc; border-color: #e5e7eb; }
+    .quiz-card.solved { background: #f0fdf4; border-color: #86efac; }
+    .qc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .qc-no { background:#3b82f6;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0; }
+    .qc-card.locked .qc-no { background:#cbd5e1; }
+    .qc-loc { font-size: 11px; background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:999px; font-weight:600; }
+    .qc-toggle { margin-left: auto; color:#94a3b8; font-size: 12px; }
+    .qc-status { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+    .qc-q-preview { font-size: 13px; color: #64748b; padding: 6px 4px 0; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qc-type { font-size: 11px; color:#64748b; font-weight:600; }
+    .qc-status.locked { background:#f1f5f9; color:#94a3b8; }
+    .qc-status.unsolved { background:#fef3c7; color:#92400e; }
+    .qc-status.correct { background:#dcfce7; color:#166534; }
+    .qc-status.wrong { background:#fee2e2; color:#991b1b; }
+    .qc-q { font-size: 14px; font-weight: 600; color: #16243a; margin-bottom: 8px; line-height: 1.5; }
+    .qc-img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 10px; background:#f1f5f9; }
+    .qc-locked-msg { background:#f1f5f9; color:#64748b; padding:10px 12px; border-radius:8px; font-size:12px; text-align:center; }
+    .qc-choices { display: flex; flex-direction: column; gap: 6px; }
+    .qc-choice { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 10px; cursor: pointer; background:#fff; user-select:none; }
+    .qc-choice:hover { border-color: #3b82f6; }
+    .qc-choice.sel { border-color: #3b82f6; background: #eff6ff; }
+    .qc-choice.disabled { cursor: default; opacity: 0.7; }
+    .qc-choice.disabled:hover { border-color: #e5e7eb; }
+    .qc-choice.correct-ans { border-color: #16a34a; background: #dcfce7; }
+    .qc-choice.wrong-ans { border-color: #dc2626; background: #fee2e2; }
+    .qc-choice-mark { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0; display:flex;align-items:center;justify-content:center; font-size:13px; color:#fff; }
+    .qc-choice.sel .qc-choice-mark { background:#3b82f6; border-color:#3b82f6; }
+    .qc-choice-img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid #e5e7eb; flex-shrink: 0; }
+    .qc-choice-text { flex: 1; font-size: 13px; color: #16243a; }
+    .qc-submit { width: 100%; margin-top: 10px; padding: 10px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .qc-submit:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .qc-retry { width: 100%; margin-top: 8px; padding: 8px; background: #fff; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    /* 정답/오답 결과 오버레이 */
+    #quiz-result-ov { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+    #quiz-result-ov.show { display: flex; }
+    .qr-box { background: #fff; border-radius: 16px; padding: 24px 20px; max-width: 320px; width: 100%; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,.30); }
+    .qr-img { width: 160px; height: 160px; margin: 0 auto 14px; display: block; }
+    .qr-msg { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .qr-sub { font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.5; }
+    .qr-close { width: 100%; padding: 10px; background: #16243a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
     /* Gift 카드 */
     .gift-box { margin-top: 14px; background: #fff7e6; border: 1.5px solid #ffd591; border-radius: 14px; padding: 16px; text-align: center; }
     .gift-box.gift-used { background: #f1f5f9; border-color: #cbd5e1; }
@@ -115,7 +168,9 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
+    <div class="card" style="position:relative;">
+      <button id="app-close" onclick="closeApp()" aria-label="닫기"
+        style="position:absolute;top:10px;right:10px;z-index:50;background:rgba(255,255,255,.9);border:1px solid #cbd5e1;color:#475569;border-radius:50%;width:36px;height:36px;font-size:18px;font-weight:700;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.1);">×</button>
       <div id="hero" class="hero hidden"><img id="hero-img" alt=""></div>
       <div class="brand">
         <img id="brand-icon" src="/favicon.svg" alt="">
@@ -188,8 +243,13 @@
       <section id="screen-progress" class="hidden">
         <div class="stamp" id="prog-emoji">🗺️</div>
         <h2 class="center" id="prog-title">진행현황</h2>
+        <div id="prog-desc" class="prog-desc"></div>
         <div id="prog-msg" class="msg ok center"></div>
-        <div class="prog-num"><b id="prog-visited">0</b><span id="prog-total"> / 0</span></div>
+        <div class="prog-num" style="text-align:center;font-size:18px;">
+          방문 <b id="prog-visited">0</b><span id="prog-total"> / 0</span>
+          <span style="margin:0 10px;color:#cbd5e1;">·</span>
+          퀴즈 <b id="prog-quiz-solved" style="color:#138a36;">0</b><span id="prog-quiz-total"> / 0</span>
+        </div>
         <div class="bar-wrap"><div class="bar" id="prog-bar"></div></div>
         <div class="stat">
           <div><div class="n" id="stat-visited" style="color:#138a36;">0</div><div class="l">방문완료</div></div>
@@ -197,6 +257,8 @@
           <div><div class="n" id="stat-total">0</div><div class="l">전체</div></div>
         </div>
         <div id="dest-list" class="dest-list"></div>
+        <button class="btn btn-primary" id="btn-quiz-toggle" style="margin-top:14px;" onclick="toggleQuizSection()" disabled>📝 퀴즈응시하기</button>
+        <div id="quiz-list" class="quiz-list hidden"></div>
         <div class="done-banner hidden" id="done-banner">🎉 모든 목적지를 방문했습니다!</div>
         <div id="gift-card" class="hidden"></div>
         <button class="btn btn-primary" id="btn-scan" style="display:none;">📷 QR 스캔하기</button>
@@ -237,17 +299,43 @@
     </div>
   </div>
 
+  <!-- 퀴즈 정답/오답 결과 오버레이 -->
+  <div id="quiz-result-ov">
+    <div class="qr-box">
+      <img id="qr-img" class="qr-img" src="/assets/quiz/correct.svg" alt="">
+      <div id="qr-msg" class="qr-msg">정답입니다!</div>
+      <div id="qr-sub" class="qr-sub"></div>
+      <button class="qr-close" onclick="closeQuizResult()">확인</button>
+    </div>
+  </div>
+
+  <script src="/assets/quiz/quiz-fx.js"></script>
   <script>
     const parts = location.pathname.split('/').filter(Boolean); // ['v', serial, seq?]
     const projectSerial = parts[1] || '';
     const locationSeq = parts[2] || null; // null이면 홈(진행현황) 모드
+
+    // 우상단 × 닫기 버튼
+    function closeApp() {
+      // PWA standalone 모드(설치된 앱)에서는 window.close() 가 보통 동작
+      try { window.close(); } catch (e) {}
+      // 일반 브라우저 탭은 window.close() 가 무시될 수 있음 — about:blank 로 이동
+      setTimeout(() => {
+        if (!document.hidden) {
+          try { window.location.href = 'about:blank'; } catch (e) {}
+        }
+      }, 250);
+    }
 
     // PWA: 프로젝트별 manifest 연결 + 서비스워커 등록
     if (projectSerial) {
       document.getElementById('manifest-link').setAttribute('href', `/api/visitor/manifest/${projectSerial}`);
     }
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/v/sw.js', { scope: '/v/' }).catch(() => {});
+      // 프로젝트별 SW 등록 — scope를 /v/{serial}/ 로 분리하여 프로젝트별 독립 PWA로 설치 가능
+      const swUrl = projectSerial ? `/v/${projectSerial}/sw.js` : '/v/sw.js';
+      const swScope = projectSerial ? `/v/${projectSerial}/` : '/v/';
+      navigator.serviceWorker.register(swUrl, { scope: swScope }).catch(() => {});
     }
 
     const SCREENS = ['screen-loading','screen-consent','screen-identify','screen-progress','screen-error'];
@@ -402,10 +490,14 @@
       if (d.alreadyVisited) {
         // 이미 방문한 목적지를 다시 촬영한 경우
         showProgressFrom(d, false);
+        // visit 응답에 quizzes 가 누락된 옛 캐시 대응 — 안전망
+        if (!d.quizzes) await loadProgress(false);
         uiAlert('이미, 방문하였습니다.', { icon: '✋' });
         return;
       }
       showProgressFrom(d, true);
+      // visit 응답에 quizzes 가 없으면 추가로 progress 로 갱신 → 퀴즈응시하기 즉시 활성화 보장
+      if (!d.quizzes) await loadProgress(false);
     }
 
     $('btn-refresh').addEventListener('click', () => loadProgress(false));
@@ -413,7 +505,7 @@
 
     function setMsg(id, cls, text) { const el = $(id); el.className = 'msg ' + (cls === 'center' ? 'center' : cls); el.textContent = text; }
 
-    function renderProgress(total, visited, justVisited) {
+    function renderProgress(total, visited, justVisited, quizzes) {
       const remain = Math.max(0, total - visited);
       const pct = total > 0 ? Math.round((visited / total) * 100) : 0;
       $('prog-visited').textContent = visited;
@@ -421,6 +513,12 @@
       $('stat-visited').textContent = visited;
       $('stat-remain').textContent = remain;
       $('stat-total').textContent = total;
+      // 퀴즈 진행 — 전체 활성 퀴즈 중 정답 맞춘 수
+      const qList = Array.isArray(quizzes) ? quizzes : [];
+      const qTotal = qList.length;
+      const qSolved = qList.filter(q => q.attempt && q.attempt.is_correct).length;
+      $('prog-quiz-solved').textContent = qSolved;
+      $('prog-quiz-total').textContent = ` / ${qTotal}`;
       $('prog-bar').style.width = pct + '%';
       const done = total > 0 && remain === 0;
       $('done-banner').classList.toggle('hidden', !done);
@@ -494,9 +592,19 @@
       }).join('');
     }
 
+    function renderProjectDesc(text) {
+      const el = $('prog-desc');
+      if (!el) return;
+      const t = (text || '').trim();
+      if (t) { el.textContent = t; el.classList.add('show'); }
+      else { el.textContent = ''; el.classList.remove('show'); }
+    }
     function showProgressFrom(d, justVisited) {
-      renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited);
+      const quizzes = d.quizzes || [];
+      renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited, quizzes);
+      renderProjectDesc(d.description);
       renderDestList(d.locations);
+      renderQuizzes(quizzes, Number(d.visitedLocations || 0));
     }
     async function loadProgress(justVisited) {
       const { ok, d } = await api(`/api/visitor/progress/${projectSerial}`);
@@ -504,8 +612,230 @@
         if (d.error === 'phone_required' || d.error === 'visitor_not_found') { show('screen-identify'); return; }
         showError('진행현황을 불러오지 못했습니다.', d.message); return;
       }
-      renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited);
+      const quizzes = d.quizzes || [];
+      renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited, quizzes);
+      renderProjectDesc(d.description);
       renderDestList(d.locations);
+      renderQuizzes(quizzes, Number(d.visitedLocations || 0));
+    }
+
+    // 퀴즈별 선택 상태 (응시 전): { quizId: Set<choiceId> }
+    const quizSel = {};
+    const quizExpanded = {}; // { quizId: bool } — 카드 펼침 여부
+    let lastQuizzes = null;  // 가장 최근 fetch된 퀴즈 데이터 (재렌더용)
+    function renderQuizzes(quizzes, visitedCount) {
+      lastQuizzes = quizzes;
+      lastVisitedCount = Number(visitedCount || 0);
+      const el = $('quiz-list');
+      const btn = $('btn-quiz-toggle');
+      const visited = Number(visitedCount || 0);
+      // 버튼은 항상 표시 — 비활성 조건만 결정
+      if (btn) {
+        btn.style.display = '';
+        if (!quizzes || !quizzes.length) {
+          btn.disabled = true;
+          btn.textContent = '📝 퀴즈응시하기 (등록된 퀴즈 없음)';
+          el.innerHTML = '';
+          el.classList.add('hidden');
+          return;
+        }
+        if (visited < 1) {
+          btn.disabled = true;
+          btn.textContent = '📝 퀴즈응시하기 (목적지 방문 후 응시 가능)';
+          el.innerHTML = '';
+          el.classList.add('hidden');
+          return;
+        }
+        btn.disabled = false;
+        const activeCount = quizzes.filter(q => q.activated && !(q.attempt && q.attempt.is_correct)).length;
+        const solvedCount = quizzes.filter(q => q.attempt && q.attempt.is_correct).length;
+        const open = !el.classList.contains('hidden');
+        btn.textContent = open
+          ? '📝 퀴즈 접기'
+          : `📝 퀴즈응시하기 (응시 가능 ${activeCount} · 정답 ${solvedCount}/${quizzes.length})`;
+      }
+      el.innerHTML = '<div class="ql-title">퀴즈</div>' + quizzes.map((q, i) => {
+        const attempt = q.attempt;
+        const isSolved = attempt && attempt.is_correct;
+        const isWrongAttempt = attempt && !attempt.is_correct;
+        const isLocked = !q.activated;
+        const typeLabel = q.choice_type === 'multi' ? '다중 선택' : '단일 선택';
+        const locBadge = q.location_id ? '<span class="qc-loc">📍</span>' : '';
+        let statusBadge = '';
+        if (isLocked) statusBadge = '<span class="qc-status locked">잠금</span>';
+        else if (isSolved) statusBadge = '<span class="qc-status correct">정답</span>';
+        else if (isWrongAttempt) statusBadge = '<span class="qc-status wrong">다시 시도</span>';
+        else statusBadge = '<span class="qc-status unsolved">미응시</span>';
+
+        // 카드 펼침 여부 (default: 잠금=접힘, 정답완료=접힘, 그 외=펼침). 한 번이라도 토글하면 그 상태 유지.
+        if (quizExpanded[q.id] === undefined) {
+          quizExpanded[q.id] = !(isLocked || isSolved);
+        }
+        const expanded = quizExpanded[q.id];
+        const toggleIcon = expanded ? '▲' : '▼';
+
+        const header = `<div class="qc-head" onclick="toggleQuizExpand(${q.id})" style="cursor:pointer;">
+            <div class="qc-no">${i + 1}</div>
+            ${locBadge}
+            <span class="qc-type">${typeLabel}</span>
+            ${statusBadge}
+            <span class="qc-toggle">${toggleIcon}</span>
+          </div>`;
+
+        if (isLocked) {
+          const body = expanded
+            ? `<div class="qc-locked-msg">🔒 ${esc(q.activation_reason || '아직 응시할 수 없습니다.')}</div>`
+            : '';
+          return `<div class="quiz-card locked">${header}${body}</div>`;
+        }
+
+        if (!expanded) {
+          // 접힌 상태 — 질문 한 줄만 미리보기로 표시
+          const preview = `<div class="qc-q-preview">${esc(q.question)}</div>`;
+          return `<div class="quiz-card ${isSolved ? 'solved' : ''}">${header}${preview}</div>`;
+        }
+
+        const imgBlock = q.question_image_url
+          ? `<img class="qc-img" src="${q.question_image_url}" alt="">`
+          : '';
+
+        // 응시 완료(정답)면 보기는 모두 disable + 정답 표시
+        // 오답이면 재시도 가능 — 보기는 선택 가능 상태
+        const showCorrectMarking = isSolved;
+        const correctSet = (showCorrectMarking && attempt && attempt.correct_choice_ids)
+          ? new Set(attempt.correct_choice_ids) : null;
+        if (!quizSel[q.id]) quizSel[q.id] = new Set();
+        const sel = quizSel[q.id];
+        const choices = (q.choices || []).map(c => {
+          const isSel = sel.has(c.id);
+          const isCorrectAns = correctSet && correctSet.has(c.id);
+          const cls = ['qc-choice'];
+          if (showCorrectMarking) cls.push('disabled');
+          if (isSel && !showCorrectMarking) cls.push('sel');
+          if (isCorrectAns) cls.push('correct-ans');
+          const imgEl = c.image_url ? `<img class="qc-choice-img" src="${c.image_url}" alt="">` : '';
+          const onclick = showCorrectMarking ? '' : `onclick="toggleQuizChoice(${q.id}, ${c.id}, '${q.choice_type}')"`;
+          const markChar = isCorrectAns ? '✓' : (isSel && !showCorrectMarking ? '✓' : '');
+          const markStyle = isCorrectAns
+            ? 'background:#16a34a;border-color:#16a34a;'
+            : '';
+          return `<div class="${cls.join(' ')}" data-choice-id="${c.id}" ${onclick}>
+            <div class="qc-choice-mark" style="${markStyle}">${markChar}</div>
+            ${imgEl}
+            <div class="qc-choice-text">${esc(c.text)}</div>
+          </div>`;
+        }).join('');
+
+        const actionBtn = showCorrectMarking
+          ? `<div style="text-align:center;margin-top:10px;color:#138a36;font-weight:700;font-size:13px;">✓ 정답을 맞췄습니다</div>`
+          : `<button class="qc-submit" id="qsub-${q.id}" onclick="submitQuizAnswer(${q.id})" ${sel.size === 0 ? 'disabled' : ''}>정답 확인</button>`;
+
+        return `<div class="quiz-card ${isSolved ? 'solved' : ''}">
+          ${header}
+          ${imgBlock}
+          <div class="qc-q">${esc(q.question)}</div>
+          <div class="qc-choices">${choices}</div>
+          ${actionBtn}
+        </div>`;
+      }).join('');
+    }
+
+    let lastVisitedCount = 0; // 가장 최근 visitedLocations 값 캐시
+    function toggleQuizExpand(quizId) {
+      quizExpanded[quizId] = !quizExpanded[quizId];
+      if (lastQuizzes) renderQuizzes(lastQuizzes, lastVisitedCount);
+    }
+
+    function toggleQuizSection() {
+      const el = $('quiz-list');
+      const btn = $('btn-quiz-toggle');
+      if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        if (btn) btn.textContent = '📝 퀴즈 접기';
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        el.classList.add('hidden');
+        if (lastQuizzes) renderQuizzes(lastQuizzes, lastVisitedCount);
+      }
+    }
+
+    function toggleQuizChoice(quizId, choiceId, type) {
+      if (!quizSel[quizId]) quizSel[quizId] = new Set();
+      const sel = quizSel[quizId];
+      if (type === 'single') {
+        sel.clear(); sel.add(choiceId);
+      } else {
+        if (sel.has(choiceId)) sel.delete(choiceId);
+        else sel.add(choiceId);
+      }
+      // 전체 재렌더 대신 해당 카드의 보기 시각만 갱신 (카드 collapse / 깜빡임 방지)
+      updateQuizChoiceVisuals(quizId);
+    }
+
+    function updateQuizChoiceVisuals(quizId) {
+      const sel = quizSel[quizId] || new Set();
+      const submitBtn = document.getElementById(`qsub-${quizId}`);
+      // 제출 버튼이 있는 카드 = 응시 가능한 카드
+      if (!submitBtn) return;
+      const card = submitBtn.closest('.quiz-card');
+      if (!card) return;
+      card.querySelectorAll('.qc-choice').forEach(el => {
+        if (el.classList.contains('disabled')) return; // 정답 확인 후 disabled 카드는 그대로
+        const cid = Number(el.dataset.choiceId);
+        const isSel = sel.has(cid);
+        el.classList.toggle('sel', isSel);
+        const mark = el.querySelector('.qc-choice-mark');
+        if (mark) mark.textContent = isSel ? '✓' : '';
+      });
+      submitBtn.disabled = sel.size === 0;
+    }
+
+    async function submitQuizAnswer(quizId) {
+      const sel = quizSel[quizId];
+      if (!sel || sel.size === 0) return;
+      const submitBtn = document.getElementById(`qsub-${quizId}`);
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '제출 중...'; }
+      const { ok, d } = await api('/api/visitor/quiz-answer', {
+        project_serial: projectSerial,
+        quiz_id: quizId,
+        selected_choice_ids: Array.from(sel),
+      });
+      if (!ok) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '정답 확인'; }
+        showError('응시 실패', (d && (d.error || d.message)) || '응시할 수 없습니다.');
+        return;
+      }
+      showQuizResult(d);
+      // 선택 초기화 + progress 다시 로드 (응시 상태 갱신)
+      delete quizSel[quizId];
+      await loadProgress(false);
+    }
+
+    function showQuizResult(d) {
+      const isCorrect = !!d.is_correct;
+      const ov = $('quiz-result-ov');
+      $('qr-img').src = isCorrect ? '/assets/quiz/correct.svg' : '/assets/quiz/wrong.svg';
+      $('qr-msg').textContent = isCorrect ? '🎉 정답입니다!' : '😢 오답입니다';
+      $('qr-msg').style.color = isCorrect ? '#138a36' : '#dc2626';
+      const fmt = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+      if (isCorrect) {
+        const bonus = Number(d.bonus_added || 0);
+        if (bonus > 0) {
+          $('qr-sub').innerHTML = `Prize 보상액 <b style="color:#138a36;">${fmt(bonus)}</b>이 Gift에 추가되었습니다.<br>` +
+            `<span style="color:#64748b;">현재까지의 Gift 예상 금액: <b style="color:#16243a;">${fmt(d.expected_total)}</b></span>`;
+        } else {
+          $('qr-sub').textContent = '잘 하셨습니다. 다음 퀴즈도 도전해 보세요!';
+        }
+      } else {
+        $('qr-sub').textContent = '다시 한번 도전해 보세요.';
+      }
+      ov.classList.add('show');
+      try {
+        if (window.QuizFx) isCorrect ? QuizFx.playCorrect() : QuizFx.playWrong();
+      } catch (e) {}
+    }
+    function closeQuizResult() {
+      $('quiz-result-ov').classList.remove('show');
     }
 
     function showError(title, msg) { $('err-title').textContent = title || '안내'; $('err-msg').textContent = msg || ''; show('screen-error'); }

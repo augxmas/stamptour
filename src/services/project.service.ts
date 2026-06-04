@@ -59,10 +59,10 @@ export function validateProjectDates(fromDate: string, toDate: string): { ok: bo
   }
 
   const minTo = new Date(from);
-  minTo.setDate(minTo.getDate() + 5);
+  minTo.setDate(minTo.getDate() + 4);
 
   if (to.getTime() < minTo.getTime()) {
-    return { ok: false, message: "종료일은 시작일로부터 최소 5일 이후여야 합니다." };
+    return { ok: false, message: "프로젝트 이용일은 최소 5일 이상이어야 합니다." };
   }
 
   return { ok: true };

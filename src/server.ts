@@ -91,6 +91,12 @@ app.get("/v/sw.js", (_req, res) => {
   res.type("application/javascript");
   res.sendFile(path.join(process.cwd(), "public", "visitor", "service-worker.js"));
 });
+// 프로젝트별 SW — 스코프를 /v/{serial}/ 로 분리하여 프로젝트별 독립 PWA 가능
+app.get("/v/:projectSerial/sw.js", (_req, res) => {
+  res.setHeader("Service-Worker-Allowed", "/v/");
+  res.type("application/javascript");
+  res.sendFile(path.join(process.cwd(), "public", "visitor", "service-worker.js"));
+});
 // 목적지 QR 진입: /v/:serial/:seq, 설치된 PWA 홈: /v/:serial (진행현황만)
 app.get("/v/:projectSerial/:locationSeq", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "visitor", "index.html"));

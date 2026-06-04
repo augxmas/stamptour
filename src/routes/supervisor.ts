@@ -158,8 +158,8 @@ router.get("/hosts", requireSupervisor, async (req, res) => {
             (SELECT COUNT(*) FROM projects p WHERE p.host_id = h.id) AS project_count
      FROM hosts h ${where}
      ORDER BY ${orderCol} ${orderDir}
-     LIMIT ? OFFSET ?`,
-    [k, k, k, k, ...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [k, k, k, k, ...params],
   );
 
   res.json({ ok: true, data: rows, total, status_counts, page: pageNo, size: pageSize });
@@ -449,8 +449,8 @@ router.get("/merchants", requireSupervisor, async (req, res) => {
             m.status, m.status_reason, m.created_at, m.updated_at
      FROM merchants m ${where}
      ORDER BY ${orderCol} ${orderDir}
-     LIMIT ? OFFSET ?`,
-    [k, k, k, ...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [k, k, k, ...params],
   );
 
   res.json({ ok: true, data: rows, total, status_counts, page: pageNo, size: pageSize });
@@ -648,8 +648,8 @@ router.get("/projects", requireSupervisor, async (req, res) => {
      INNER JOIN hosts h ON h.id = p.host_id
      ${where}
      ORDER BY ${orderCol} ${orderDir}
-     LIMIT ? OFFSET ?`,
-    [k, k, ...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [k, k, ...params],
   );
 
   res.json({ ok: true, data: rows, total, page: pageNo, size: pageSize });
@@ -705,8 +705,8 @@ router.get("/visit-status", requireSupervisor, async (req, res) => {
      FROM projects p INNER JOIN hosts h ON h.id = p.host_id
      ${where}
      ORDER BY ${orderCol} ${orderDir}
-     LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [...params],
   );
 
   const data = (Array.isArray(rows) ? rows : []).map((r: any) => {
@@ -1075,8 +1075,8 @@ router.get("/batch-logs", requireSupervisor, async (req, res) => {
             TIMESTAMPDIFF(MICROSECOND, started_at, finished_at) / 1000 AS duration_ms
      FROM batch_logs ${where}
      ORDER BY id DESC
-     LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset],
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [...params],
   );
 
   // 작업별 distinct list (필터 UI 에 사용)

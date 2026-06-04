@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Host Admin · 모노라마 트래커</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
@@ -50,10 +53,60 @@
     .fg input.ok  { border-color: #16a34a !important; }
     .fm { font-size: 11px; margin-top: 3px; min-height: 15px; }
     .fm.e { color: #dc2626; } .fm.g { color: #16a34a; }
+    #pj-to-fm.e { font-size: 13px; font-weight: 600; background:#fef2f2; border:1px solid #fecaca; padding:6px 10px; border-radius:6px; margin-top:6px; }
+    /* 방문 현황 통계 시각화 */
+    .vs-cards { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:16px; }
+    .vs-card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:10px; text-align:center; }
+    .vs-label { font-size:11px; color:#64748b; margin-bottom:4px; }
+    .vs-num { font-size:22px; font-weight:800; color:#16243a; }
+    .vs-h { font-size:13px; font-weight:700; color:#1e293b; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #e5e7eb; cursor:pointer; list-style:none; display:flex; align-items:center; user-select:none; }
+    .vs-h::-webkit-details-marker { display:none; }
+    .vs-h::after {
+      content:'＋'; margin-left:auto; font-size:14px; font-weight:700;
+      width:24px; height:24px; border:1.5px solid #3b82f6; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; color:#3b82f6;
+      background:#fff; line-height:1; transition:background .15s, color .15s, transform .15s;
+    }
+    .vs-h:hover::after { background:#3b82f6; color:#fff; }
+    details[open] > .vs-h::after { content:'−'; background:#3b82f6; color:#fff; border-color:#3b82f6; }
+    details[open] > .vs-h:hover::after { background:#1d4ed8; }
+    .vs-section { margin-bottom:4px; }
+    .vs-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px; }
+    .vs-bar-label { width:130px; flex-shrink:0; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vs-bar-track { flex:1; height:22px; background:#f1f5f9; border-radius:4px; overflow:hidden; position:relative; }
+    .vs-bar-text { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:11px; font-weight:800; color:#0f172a; white-space:nowrap; pointer-events:none;
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px rgba(255,255,255,.95); }
+    .vs-bar-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#1d4ed8); }
+    .vs-bar-fill.green { background:linear-gradient(90deg,#22c55e,#15803d); }
+    .vs-bar-fill.orange { background:linear-gradient(90deg,#f97316,#c2410c); }
+    .vs-bar-val { width:60px; flex-shrink:0; text-align:right; color:#16243a; font-weight:700; }
+    .vs-daily-row { display:grid; grid-template-columns:80px 1fr 1fr; gap:8px; align-items:center; padding:4px 0; border-bottom:1px solid #f1f5f9; }
+    .vs-daily-row:last-child { border-bottom:none; }
+    .vs-daily-date { color:#475569; font-weight:600; }
+    .vs-daily-cell { display:flex; align-items:center; gap:6px; }
+    .vs-daily-cell .vs-bar-track { height:14px; }
+    .vs-daily-cell-val { width:30px; text-align:right; font-weight:700; color:#16243a; }
+    .vs-empty { color:#94a3b8; font-size:12px; text-align:center; padding:14px; }
+    .qf-loc-select { position: relative; }
+    .qf-loc-trigger { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; background:#fff; user-select:none; display:flex; align-items:center; min-height:46px; }
+    .qf-loc-trigger img { width:32px; height:32px; border-radius:4px; object-fit:cover; border:1px solid #e5e7eb; }
+    .qf-loc-options { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1.5px solid #cbd5e1; border-radius:8px; max-height:320px; overflow-y:auto; z-index:50; box-shadow:0 4px 16px rgba(0,0,0,0.10); }
+    .qf-loc-option { padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:13px; border-bottom:1px solid #f1f5f9; }
+    .qf-loc-option:last-child { border-bottom:none; }
+    .qf-loc-option:hover { background:#f0fdf4; }
+    .qf-loc-option.act { background:#dcfce7; font-weight:600; }
+    .qf-loc-option img { width:48px; height:48px; border-radius:6px; object-fit:cover; border:1px solid #e5e7eb; flex-shrink:0; }
+    .qf-loc-noimg { width:48px; height:48px; border-radius:6px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:18px; flex-shrink:0; }
 
     /* ── 비밀번호 ── */
     .pw-wrap { position: relative; }
     .pw-wrap input { padding-right: 40px; }
+    .pw-wrap input::-ms-reveal,
+    .pw-wrap input::-ms-clear { display: none; }
+    #pj-gift:focus::placeholder,
+    #pj-qty:focus::placeholder,
+    #pj-prize:focus::placeholder,
+    #pj-prize-qty:focus::placeholder { color: transparent; }
     .pw-tog { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
               background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 15px; padding: 0; }
     .pw-bar-wrap { height: 4px; border-radius: 4px; margin-top: 4px; background: #e2e8f0; overflow: hidden; }
@@ -106,6 +159,7 @@
                color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
     .tab-btn.act { color: #16a34a; border-bottom-color: #16a34a; }
     .tab-panel { display: none; } .tab-panel.act { display: block; }
+    #tab-new { width: 90%; margin: 0 auto; }
     /* 등록 폼은 기존 너비 유지(넓은 대시보드에서 과도하게 늘어나지 않도록) */
     #tab-new { max-width: 1020px; }
     .panel-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; }
@@ -127,17 +181,27 @@
     .bd  { background: #dbeafe; color: #1e40af; }
     .bc  { background: #fee2e2; color: #991b1b; }
 
-    /* ── 목적지 관리 패널 ── */
-    #loc-panel { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08);
-                 padding: 24px; margin-top: 16px; display: none; }
-    #loc-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-    #loc-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
-
-    /* ── 퀴즈 관리 패널 ── */
-    #quiz-panel { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08);
-                  padding: 24px; margin-top: 16px; display: none; }
-    #quiz-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-    #quiz-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+    /* ── 목적지/퀴즈 관리 패널 — 팝업 형태 ── */
+    #loc-panel, #quiz-panel {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 100;
+      padding: 20px; overflow-y: auto;
+    }
+    #loc-panel.open, #quiz-panel.open {
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .panel-modal-box {
+      background: #fff; border-radius: 14px; padding: 0;
+      width: 100%; max-width: 920px;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+      margin: auto 0;
+      overflow: hidden;
+    }
+    .panel-modal-box .card-body { padding: 24px; }
+    .panel-modal-box .card-header { position: relative; padding: 16px 56px; text-align: center; }
+    .panel-modal-box .card-header h2 { width: 100%; text-align: center; }
+    #loc-panel h3, #quiz-panel h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    #loc-panel .sub, #quiz-panel .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
     .quiz-list { display: flex; flex-direction: column; gap: 10px; }
     .quiz-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; background: #f8fafc; }
     .quiz-card .qhead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -167,6 +231,10 @@
                              font-size: 14px; padding: 4px 8px; border-radius: 6px; }
     .qf-choice-row .qf-rm:hover { background: #fee2e2; }
     .qf-choice-row .qf-rm:disabled { color: #cbd5e1; cursor: not-allowed; }
+    .qf-choice-row input[type=file] { flex: 0 0 auto; max-width: 130px; font-size: 11px; }
+    .qf-choice-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid #e5e7eb; flex-shrink: 0; }
+    .qf-choice-imgrm { background: none; border: 1px solid #fecaca; color: #dc2626; border-radius: 6px; padding: 2px 6px; font-size: 11px; cursor: pointer; flex-shrink: 0; }
+    .qf-choice-imgrm:hover { background: #fee2e2; }
 
     /* ── Kakao 주소 검색 ── */
     .search-wrap { position: relative; }
@@ -316,6 +384,10 @@
       <div class="pw-wrap"><input id="li-pw" type="password" placeholder="비밀번호" autocomplete="current-password"
           onkeydown="if(event.key==='Enter')doLogin()">
         <button class="pw-tog" onclick="togPw('li-pw',this)">👁</button></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin:8px 0 4px;font-size:13px;color:#475569;">
+      <input id="li-remember" type="checkbox" style="margin:0;cursor:pointer;">
+      <label for="li-remember" style="cursor:pointer;user-select:none;">이메일 저장</label>
     </div>
     <div id="li-msg" class="msg"></div>
     <button class="btn btn-p btn-full" onclick="doLogin()">로그인</button>
@@ -517,7 +589,7 @@
   <!-- ─ 내 프로젝트 탭 ─ -->
   <div class="tab-panel act" id="tab-proj">
     <div class="panel-card">
-      <h3>내 프로젝트</h3>
+      <h3>내 프로젝트 <span id="proj-summary" style="font-size:13px;font-weight:500;color:#64748b;margin-left:10px;"></span></h3>
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
         <input id="pf-name" type="text" placeholder="프로젝트명 검색"
           style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
@@ -556,11 +628,13 @@
 
     <!-- 목적지 관리 패널 -->
     <div id="loc-panel">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
-        <button class="btn btn-o btn-sm" onclick="closeLoc()">← 목록으로</button>
-        <h3 id="loc-proj-name" style="margin-bottom:0;"></h3>
+      <div class="panel-modal-box">
+      <div class="card-header">
+        <h2 id="loc-proj-name"></h2>
+        <button class="modal-close" onclick="closeLoc()">×</button>
       </div>
-      <p class="sub" id="loc-proj-serial"></p>
+      <div class="card-body">
+      <p class="sub" id="loc-proj-serial" style="text-align:center;"></p>
 
       <!-- 목적지 요약 + 제출 -->
       <div class="loc-summary" id="loc-summary"></div>
@@ -641,15 +715,22 @@
 
       <div id="loc-msg" class="msg"></div>
       <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addLocation()">+ 목적지 추가</button>
+      <div style="display:flex;justify-content:center;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
+        <button class="btn btn-o" style="min-width:120px;" onclick="closeLoc()">닫기</button>
+      </div>
+      </div>
+      </div>
     </div>
 
     <!-- 퀴즈 관리 패널 -->
     <div id="quiz-panel">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
-        <button class="btn btn-o btn-sm" onclick="closeQuiz()">← 목록으로</button>
-        <h3 id="quiz-proj-name" style="margin-bottom:0;"></h3>
+      <div class="panel-modal-box">
+      <div class="card-header">
+        <h2 id="quiz-proj-name"></h2>
+        <button class="modal-close" onclick="closeQuiz()">×</button>
       </div>
-      <p class="sub" id="quiz-proj-serial"></p>
+      <div class="card-body">
+      <p class="sub" id="quiz-proj-serial" style="text-align:center;"></p>
 
       <!-- 등록된 퀴즈 목록 -->
       <div class="quiz-list" id="quiz-list"></div>
@@ -659,6 +740,21 @@
       <h3 style="margin-bottom:14px;">퀴즈 추가</h3>
 
       <div class="fg">
+        <label>연계 목적지 <span class="hint">(선택 — 이 퀴즈가 특정 목적지와 연계되면 선택)</span></label>
+        <div class="qf-loc-select" id="qf-loc-select">
+          <div class="qf-loc-trigger" onclick="toggleLocDropdown()">
+            <span id="qf-loc-trigger-label" style="display:flex;align-items:center;gap:8px;flex:1;">— 연계 안 함 (프로젝트 전체) —</span>
+            <span style="color:#94a3b8;font-size:12px;">▼</span>
+          </div>
+          <div class="qf-loc-options" id="qf-loc-options" style="display:none;"></div>
+        </div>
+        <input type="hidden" id="qf-location" value="">
+        <div class="hint" style="margin-top:4px;color:#94a3b8;">
+          ※ 1개 퀴즈라도 목적지에 연계되면 모든 퀴즈가 연계되어야 합니다.
+        </div>
+      </div>
+
+      <div class="fg">
         <label>질문 <span class="req">*</span> <span class="hint">(최대 500자)</span></label>
         <textarea id="qf-question" placeholder="문제를 입력하세요" maxlength="500"
           style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;
@@ -666,10 +762,16 @@
       </div>
 
       <div class="fg">
-        <label>선택 유형 <span class="req">*</span></label>
-        <div class="seg" id="qf-type-seg">
-          <button type="button" class="seg-btn act" data-type="single" onclick="setQuizType('single')">○ 단일 선택</button>
-          <button type="button" class="seg-btn" data-type="multi" onclick="setQuizType('multi')">☑ 다중 선택</button>
+        <label>질문 설명 이미지 <span class="hint">(선택, 권장 720×540, 최대 5MB)</span></label>
+        <input id="qf-question-image" type="file" accept="image/*" onchange="onQfImageChange(this)"
+          style="font-size:12px;">
+        <div id="qf-question-image-preview" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="fg">
+        <label>선택 유형 <span class="hint">(정답 개수에 따라 자동 결정)</span></label>
+        <div id="qf-type-auto" style="display:inline-block;padding:6px 12px;border-radius:6px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:600;">
+          정답을 선택하면 자동 표기됩니다
         </div>
       </div>
 
@@ -680,7 +782,15 @@
       </div>
 
       <div id="qf-msg" class="msg"></div>
-      <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addQuiz()">+ 퀴즈 등록</button>
+      <div id="qf-buttons" style="display:flex;gap:8px;margin-top:4px;">
+        <button id="qf-submit-btn" class="btn btn-g btn-sm" onclick="submitQuiz()">+ 퀴즈 등록</button>
+        <button id="qf-cancel-btn" class="btn btn-o btn-sm" onclick="cancelEditQuiz()" style="display:none;">수정 취소</button>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
+        <button class="btn btn-o" style="min-width:120px;" onclick="closeQuiz()">닫기</button>
+      </div>
+      </div>
+      </div>
     </div>
   </div>
 
@@ -724,17 +834,22 @@
       <h3>프로젝트 등록</h3>
       <div class="fg"><label>프로젝트명 <span class="req">*</span></label>
         <input id="pj-name" type="text" placeholder="프로젝트명칭" disabled></div>
-      <div class="fg"><label>설명 <span class="req">*</span> <span style="font-size:11px;color:#94a3b8;font-weight:400;">(최대 200자)</span></label>
-        <textarea id="pj-desc" placeholder="설명을 상세히 작성해 주세요" maxlength="200"
+      <div class="fg"><label>설명 <span class="req">*</span> <span style="font-size:11px;color:#94a3b8;font-weight:400;">(최대 200자 · 방문자 앱에도 노출됨)</span></label>
+        <textarea id="pj-desc" placeholder="예: 모든 미션을 수행하면 10,000원 상당의 Gift가 발급되고 00카페에서 이를 사용할 수 있습니다." maxlength="200"
           style="resize:vertical;min-height:70px;" disabled></textarea></div>
       <div class="grid2">
         <div class="fg"><label>시작일 <span class="req">*</span></label><input id="pj-from" type="date" disabled onchange="onFromDateChange()"></div>
-        <div class="fg"><label>종료일 <span class="req">*</span></label><input id="pj-to" type="date" disabled></div>
+        <div class="fg"><label>종료일 <span class="req">*</span></label>
+          <input id="pj-to" type="date" disabled oninput="validateToDate()" onchange="validateToDate()" onblur="validateToDate()">
+          <div id="pj-to-fm" class="fm"></div>
+        </div>
         <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pj-gift" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-gift')"></div>
-        <div class="fg"><label>발급수량 <span class="req">*</span></label><input id="pj-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-qty')"></div>
+        <div class="fg"><label>Gift 발급 수량 <span class="req">*</span></label><input id="pj-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-qty')"></div>
         <div class="fg"><label>Prize 단가 금액</label><input id="pj-prize" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize')"></div>
         <div class="fg"><label>Prize 발급 수량</label><input id="pj-prize-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize-qty')"></div>
-        <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(단가 × 발급수량 자동 계산)</span></label>
+        <div class="fg" style="grid-column:1/-1;"><label>퀴즈 정답 보너스 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(정답 1개당 Gift 단가에 추가되는 금액)</span></label>
+          <input id="pj-quiz-bonus" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-quiz-bonus')"></div>
+        <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(Gift 단가 × Gift 발급 수량 자동 계산)</span></label>
           <input id="pj-budget" type="text" inputmode="numeric" placeholder="자동 계산" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
       <div id="pj-msg" class="msg"></div>
@@ -764,15 +879,24 @@
         <table>
           <thead>
             <tr>
-              <th>프로젝트명</th>
-              <th>상태</th>
-              <th style="text-align:right;">Gift 단가</th>
-              <th style="text-align:center;">Gift 사용개수</th>
-              <th style="text-align:center;">Gift 증정개수</th>
-              <th style="text-align:right;">Gift 사용금액</th>
-              <th style="text-align:right;">Gift 증정금액</th>
-              <th style="text-align:right;">총 Gift 금액</th>
-              <th style="text-align:center;">사용자현황</th>
+              <th rowspan="2">프로젝트명</th>
+              <th rowspan="2">상태</th>
+              <th colspan="6" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>
+              <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Prize</th>
+              <th rowspan="2" style="text-align:right;">총 Reward 금액</th>
+              <th rowspan="2" style="text-align:center;">사용자현황</th>
+              <th rowspan="2" style="text-align:center;">상세보기</th>
+            </tr>
+            <tr>
+              <th style="text-align:right;">단가</th>
+              <th style="text-align:center;">사용개수</th>
+              <th style="text-align:center;">증정개수</th>
+              <th style="text-align:right;">사용금액</th>
+              <th style="text-align:right;">증정금액</th>
+              <th style="text-align:right;">합계</th>
+              <th style="text-align:right;">단가</th>
+              <th style="text-align:center;">지급개수</th>
+              <th style="text-align:right;">사용금액</th>
             </tr>
           </thead>
           <tbody id="settle-tbody"></tbody>
@@ -1036,6 +1160,87 @@
   </div>
 </div>
 
+<!-- 정산 상세보기(일별) 모달 -->
+<div class="modal-ov" id="modal-daily-settle">
+  <div class="modal" style="width:96vw;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="ds-title">정산 상세 (일별)</h2>
+      <button class="modal-close" onclick="closeDailySettle()">×</button></div>
+    <div class="card-body" id="ds-body" style="overflow:auto;"></div>
+  </div>
+</div>
+
+<!-- 방문 현황 통계 모달 -->
+<div class="modal-ov" id="modal-visit-stats">
+  <div class="modal" style="max-width:760px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="vs-title">방문 현황</h2>
+      <button class="modal-close" onclick="closeVisitStats()">×</button></div>
+    <div class="card-body" id="vs-body" style="overflow-y:auto;">
+      <div id="vs-loading" style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중…</div>
+      <div id="vs-content" style="display:none;">
+        <!-- 요약 카드 -->
+        <div class="vs-cards">
+          <div class="vs-card"><div class="vs-label">전체 방문자</div><div class="vs-num" id="vs-total">0</div></div>
+          <div class="vs-card"><div class="vs-label">모두 방문 완료</div><div class="vs-num" id="vs-done" style="color:#16a34a;">0</div></div>
+          <div class="vs-card"><div class="vs-label">Gift 발급</div><div class="vs-num" id="vs-gift-issued">0</div></div>
+          <div class="vs-card"><div class="vs-label">Gift 소진</div><div class="vs-num" id="vs-gift-used" style="color:#ea580c;">0</div></div>
+        </div>
+
+        <details class="vs-section" open>
+          <summary class="vs-h">목적지별 방문자 수</summary>
+          <div id="vs-loc-bars"></div>
+        </details>
+
+        <details class="vs-section" open>
+          <summary class="vs-h">전체 방문자 대비 모두 방문 완료</summary>
+          <div id="vs-completion-bar"></div>
+        </details>
+
+        <details class="vs-section" open>
+          <summary class="vs-h">일자별 방문자 / 모두 방문 완료</summary>
+          <div id="vs-daily" style="font-size:12px;"></div>
+        </details>
+
+        <details class="vs-section" open>
+          <summary class="vs-h">완주자 대비 Gift 소진</summary>
+          <div id="vs-gift-bar"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 프로젝트 상세/수정 모달 -->
+<div class="modal-ov" id="modal-project-edit">
+  <div class="modal" style="max-width:640px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="pe-title">프로젝트 상세</h2>
+      <button class="modal-close" onclick="closeProjectEdit()">×</button></div>
+    <div class="card-body" id="pe-body" style="overflow-y:auto;">
+      <div id="pe-status-bar" style="background:#f0f9ff;border:1px solid #bae6fd;color:#0c4a6e;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none;"></div>
+      <div class="fg"><label>프로젝트명 <span class="req">*</span></label>
+        <input id="pe-name" type="text" maxlength="60"></div>
+      <div class="fg"><label>설명 <span class="req">*</span> <span class="hint">(최대 200자 · 방문자 앱에도 노출됨)</span></label>
+        <textarea id="pe-desc" maxlength="200" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;min-height:70px;font-family:inherit;outline:none;"></textarea></div>
+      <div class="grid2">
+        <div class="fg"><label>시작일 <span class="req">*</span></label><input id="pe-from" type="date"></div>
+        <div class="fg"><label>종료일 <span class="req">*</span></label><input id="pe-to" type="date"></div>
+        <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pe-gift" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-gift'); calcPeBudget();"></div>
+        <div class="fg"><label>Gift 발급 수량 <span class="req">*</span></label><input id="pe-qty" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-qty'); calcPeBudget();"></div>
+        <div class="fg"><label>Prize 단가 금액</label><input id="pe-prize" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize')"></div>
+        <div class="fg"><label>Prize 발급 수량</label><input id="pe-prize-qty" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize-qty')"></div>
+        <div class="fg" style="grid-column:1/-1;"><label>퀴즈 정답 보너스 <span class="hint">(정답 1개당 Gift 단가에 추가)</span></label>
+          <input id="pe-quiz-bonus" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-quiz-bonus')"></div>
+        <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span class="hint">(자동 계산)</span></label>
+          <input id="pe-budget" type="text" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
+      </div>
+      <div id="pe-msg" class="msg"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-p" style="flex:1;" id="pe-save-btn" onclick="saveProjectEdit()">저장</button>
+        <button class="btn btn-o" style="flex:1;" onclick="closeProjectEdit()">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const PW_RE  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 const EM_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1235,15 +1440,34 @@ function applyCert(f) {
 }
 
 // ── 로그인 ──
+// 페이지 로드 시 저장된 이메일 복원
+(function restoreSavedEmail() {
+  try {
+    const saved = localStorage.getItem('tracker_host_remembered_email');
+    if (saved) {
+      const emailEl = document.getElementById('li-email');
+      const rememberEl = document.getElementById('li-remember');
+      if (emailEl) emailEl.value = saved;
+      if (rememberEl) rememberEl.checked = true;
+    }
+  } catch (e) {}
+})();
+
 async function doLogin() {
   clrMsg('li-msg');
   const host_email = document.getElementById('li-email').value.trim();
   const password   = document.getElementById('li-pw').value;
+  const remember   = document.getElementById('li-remember').checked;
   if (!host_email||!EM_RE.test(host_email)) { setMsg('li-msg','e','올바른 이메일 주소를 입력해 주세요.'); return; }
   if (!password) { setMsg('li-msg','e','비밀번호를 입력해 주세요.'); return; }
   const r = await fetch('/api/host/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host_email,password})});
   const d = await r.json();
   if (!r.ok) { setMsg('li-msg','e',d.error||'로그인에 실패했습니다.'); return; }
+  // 로그인 성공 시 이메일 저장 여부 처리
+  try {
+    if (remember) localStorage.setItem('tracker_host_remembered_email', host_email);
+    else localStorage.removeItem('tracker_host_remembered_email');
+  } catch (e) {}
   document.getElementById('d-name').textContent = d.host?.name||'';
   document.getElementById('topbar-brand').textContent = '주최측' + (d.host?.organization_name ? ' ' + d.host.organization_name : '');
   show('sec-dashboard');
@@ -1404,21 +1628,20 @@ const STATUS_CLS = { quoted:'bq',deposit_wait:'bq',deposit_confirmed:'bd',
 
 // 정렬 가능한 컬럼 정의 (num: 숫자 정렬, 그 외 문자 정렬)
 const PROJ_COLS = [
-  { key:'project_serial', label:'일련번호' },
   { key:'project_name',   label:'프로젝트명' },
   { key:'from_date',      label:'기간' },
   { key:'status',         label:'상태' },
-  { key:'gift_amount',    label:'Gift 단가', num:true },
-  { key:'gift_qty',       label:'Gift 수량', num:true },
-  { key:'budget_amount',  label:'예산', num:true },
-  { key:'issued_gifts',   label:'Gift 발급수량', num:true },
-  { key:'used_gifts',     label:'Gift 사용 개수', num:true },
-  { key:'grant_gifts',    label:'Gift 증정 개수', num:true },
-  { key:'used_gift_amount', label:'Gift 사용액', num:true },
-  { key:'grant_gift_amount',  label:'Gift 증정액', num:true },
-  { key:'gift_spent',     label:'Gift 전체소진금액', num:true },
+  { key:'gift_amount',    label:'단가',         group:'Gift', num:true },
+  { key:'gift_qty',       label:'수량',         group:'Gift', num:true },
+  { key:'budget_amount',  label:'예산',         group:'Gift', num:true },
+  { key:'issued_gifts',   label:'발급수량',     group:'Gift', num:true },
+  { key:'used_gifts',     label:'사용 개수',    group:'Gift', num:true },
+  { key:'grant_gifts',    label:'증정 개수',    group:'Gift', num:true },
+  { key:'used_gift_amount',  label:'사용액',    group:'Gift', num:true },
+  { key:'grant_gift_amount', label:'증정액',    group:'Gift', num:true },
+  { key:'gift_spent',     label:'전체소진금액', group:'Gift', num:true },
   { key:'budget_consumption_rate', label:'소진율', num:true },
-  { key:'active_locations', label:'목적지', num:true },
+  { key:'active_locations', label:'방문현황' },
   { key:'visitor_count',  label:'방문객수', num:true },
 ];
 const PROJ_NUM_KEYS = new Set(PROJ_COLS.filter(c => c.num).map(c => c.key));
@@ -1486,6 +1709,26 @@ function renderProjPager(totalPages, total) {
 function renderProjectsTable() {
   const excelBtn = document.getElementById('proj-excel');
   if (excelBtn) excelBtn.disabled = !projData.length;   // 조회결과 있을 때만 활성화
+  // 좌상단 요약 — 상태별 개수
+  const summaryEl = document.getElementById('proj-summary');
+  if (summaryEl) {
+    const total = projData.length;
+    if (total === 0) {
+      summaryEl.textContent = '';
+    } else {
+      const cnt = { quoted: 0, deposit_wait: 0, deposit_confirmed: 0, ready_to_start: 0, started: 0, completed: 0, cancelled: 0 };
+      projData.forEach(p => { if (cnt[p.status] !== undefined) cnt[p.status]++; });
+      const parts = [];
+      if (cnt.started)           parts.push(`진행중: ${cnt.started}개`);
+      if (cnt.ready_to_start)    parts.push(`시작대기: ${cnt.ready_to_start}개`);
+      if (cnt.deposit_confirmed) parts.push(`입금확인: ${cnt.deposit_confirmed}개`);
+      if (cnt.deposit_wait)      parts.push(`입금대기: ${cnt.deposit_wait}개`);
+      if (cnt.quoted)            parts.push(`견적: ${cnt.quoted}개`);
+      if (cnt.completed)         parts.push(`완료: ${cnt.completed}개`);
+      if (cnt.cancelled)         parts.push(`취소: ${cnt.cancelled}개`);
+      summaryEl.textContent = `총 ${total}개${parts.length ? ' (' + parts.join(' / ') + ')' : ''}`;
+    }
+  }
   const k = projSort.key;
   const list = projData.slice().sort((a, b) => {
     let av, bv;
@@ -1497,9 +1740,22 @@ function renderProjectsTable() {
   });
 
   const arr = key => projSort.key === key ? (projSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
-  document.getElementById('proj-thead').innerHTML = '<tr>' +
-    PROJ_COLS.map(c => `<th class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
-    '<th>가맹점지원현황</th><th>목적지관리</th><th>퀴즈관리</th><th>미리보기</th></tr>';
+  const giftStart = PROJ_COLS.findIndex(c => c.group === 'Gift');
+  const giftCols  = PROJ_COLS.filter(c => c.group === 'Gift');
+  const beforeG   = PROJ_COLS.slice(0, giftStart);
+  const afterG    = PROJ_COLS.slice(giftStart + giftCols.length);
+  document.getElementById('proj-thead').innerHTML =
+    '<tr>' +
+      beforeG.map(c => `<th rowspan="2" class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
+      `<th colspan="${giftCols.length}" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>` +
+      afterG.map(c => `<th rowspan="2" class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
+      '<th rowspan="2">가맹점지원현황</th>' +
+      '<th colspan="3" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">관리</th>' +
+    '</tr>' +
+    '<tr>' +
+      giftCols.map(c => `<th class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
+      '<th>목적지</th><th>퀴즈</th><th>미리보기</th>' +
+    '</tr>';
 
   // 페이징: 선택한 표시 개수 기준으로 현재 페이지만 렌더
   const pageSize = Number((document.getElementById('pf-size') || {}).value) || 10;
@@ -1509,14 +1765,16 @@ function renderProjectsTable() {
   const pageList = list.slice((projPage - 1) * pageSize, (projPage - 1) * pageSize + pageSize);
 
   const fmt = (v) => v ? Number(v).toLocaleString('ko-KR') + '원' : '-';
+  const fmtYmd = s => s ? `${String(s).slice(2,4)}.${String(s).slice(5,7)}.${String(s).slice(8,10)}` : '-';
   document.getElementById('proj-tbody').innerHTML = pageList.map(p => {
-    const from = p.from_date ? p.from_date.slice(0,10) : '-';
-    const to   = p.to_date ? p.to_date.slice(0,10) : '-';
+    const from = fmtYmd(p.from_date);
+    const to   = fmtYmd(p.to_date);
     const cls  = STATUS_CLS[p.status] || '';
+    const fullName = p.project_name || '';
+    const dispName = fullName.length > 10 ? fullName.slice(0, 10) + '…' : fullName;
     return `<tr>
-      <td><code style="font-size:12px;">${p.project_serial}</code></td>
-      <td><b>${p.project_name}</b></td>
-      <td style="font-size:12px;">${from} ~ ${to}</td>
+      <td><a href="#" onclick="openProjectEdit(${p.id}); return false;" title="${esc(fullName)}" style="color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px dashed #93c5fd;">${esc(dispName)}<span style="color:#64748b;font-weight:400;font-size:11px;margin-left:4px;">(${p.project_serial})</span></a></td>
+      <td style="font-size:12px;white-space:nowrap;">${from} ~ ${to}</td>
       <td><span class="badge ${cls}">${STATUS_LABEL[p.status]||p.status}</span></td>
       <td style="text-align:right;">${p.gift_amount ? Number(p.gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
       <td style="text-align:center;">${p.gift_qty ?? 0}개</td>
@@ -1528,14 +1786,14 @@ function renderProjectsTable() {
       <td style="text-align:right;">${p.grant_gift_amount ? Number(p.grant_gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
       <td style="text-align:right;">${fmt(p.gift_spent)}</td>
       <td style="text-align:right;">${(Number(p.budget_consumption_rate)||0).toFixed(2)}%</td>
-      <td style="text-align:center;">${p.active_locations??0}개</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitStats(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">보기</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitors(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">${p.visitor_count??0}명</button></td>
       <td style="text-align:center;"><button class="btn ${Number(p.applied_count)>Number(p.approved_count)?'btn-p':'btn-o'} btn-sm" onclick="openApplications(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">지원 ${p.applied_count??0} · 승인 ${p.approved_count??0}</button></td>
-      <td><button class="btn btn-o btn-sm" onclick="openLoc(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">목적지관리</button></td>
-      <td><button class="btn btn-o btn-sm" onclick="openQuiz(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">퀴즈관리 (${p.quiz_count ?? 0})</button></td>
-      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openLoc(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">${p.active_locations ?? 0}</button></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openQuiz(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">${p.quiz_count ?? 0}</button></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">보기</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
   renderProjPager(totalPages, list.length);
 }
 
@@ -1548,63 +1806,189 @@ async function openLoc(pid, pname, pserial) {
   currentProjectId = pid;
   document.getElementById('loc-proj-name').textContent = pname;
   document.getElementById('loc-proj-serial').textContent = '일련번호: ' + pserial;
-  document.getElementById('loc-panel').style.display = 'block';
-  const qp = document.getElementById('quiz-panel'); if (qp) qp.style.display = 'none';
-  document.getElementById('loc-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  const lp = document.getElementById('loc-panel');
+  lp.style.display = ''; lp.classList.add('open');
+  const qp = document.getElementById('quiz-panel');
+  if (qp) { qp.classList.remove('open'); qp.style.display = ''; }
   resetLocForm();
   await loadLocations();
 }
 
 function closeLoc() {
-  document.getElementById('loc-panel').style.display = 'none';
+  const lp = document.getElementById('loc-panel');
+  lp.classList.remove('open');
+  lp.style.display = '';
   currentProjectId = null;
 }
 
 // ── 퀴즈 관리 ──
 let currentQuizProjectId = null;
-let qfType = 'single';
 let qfChoices = []; // [{ text, is_correct }]
+let qfLocations = []; // 해당 프로젝트의 활성 목적지 [{id, name, seq}]
+let qfEditingQuizId = null;     // 수정 중인 퀴즈 id (null이면 새로 등록 모드)
+let qfEditingHadImage = false;  // 수정 중일 때 원래 질문 이미지가 있었는지 (제거 플래그 결정용)
+let qfRemoveImage = false;      // 수정 시 기존 이미지를 제거할지
+
+// 정답 개수에 따라 단일/다중 자동 결정
+function qfChoiceType() {
+  const n = qfChoices.filter(c => c.is_correct).length;
+  return n <= 1 ? 'single' : 'multi';
+}
 
 async function openQuiz(pid, pname, pserial) {
   currentQuizProjectId = pid;
   document.getElementById('quiz-proj-name').textContent = pname;
   document.getElementById('quiz-proj-serial').textContent = '일련번호: ' + pserial;
-  document.getElementById('quiz-panel').style.display = 'block';
-  document.getElementById('loc-panel').style.display = 'none';
-  document.getElementById('quiz-panel').scrollIntoView({ behavior:'smooth', block:'start' });
+  const qp = document.getElementById('quiz-panel');
+  qp.style.display = ''; qp.classList.add('open');
+  const lp = document.getElementById('loc-panel');
+  if (lp) { lp.classList.remove('open'); lp.style.display = ''; }
   resetQuizForm();
-  await loadQuizzes();
+  await Promise.all([loadQuizLocations(), loadQuizzes()]);
 }
 function closeQuiz() {
-  document.getElementById('quiz-panel').style.display = 'none';
+  const qp = document.getElementById('quiz-panel');
+  qp.classList.remove('open');
+  qp.style.display = '';
   currentQuizProjectId = null;
 }
 
+// 해당 프로젝트의 활성 목적지 목록을 fetch해서 dropdown 채움
+async function loadQuizLocations() {
+  qfLocations = [];
+  try {
+    const r = await fetch(`/api/host/projects/${currentQuizProjectId}/locations`);
+    if (r.ok) {
+      const d = await r.json();
+      const list = (d.data || []).filter(l => !l.disabled);
+      qfLocations = list.map(l => ({
+        id: l.id,
+        name: l.location_name,
+        seq: l.display_seq,
+        image_url: l.image_url || null,
+      }));
+    }
+  } catch {}
+  renderLocDropdown();
+}
+
+function renderLocDropdown() {
+  const opts = document.getElementById('qf-loc-options');
+  if (!opts) return;
+  const selectedId = (document.getElementById('qf-location') || {}).value || '';
+  const items = [{ id: '', name: '— 연계 안 함 (프로젝트 전체) —', image_url: null, seq: null }]
+    .concat(qfLocations);
+  opts.innerHTML = items.map(it => {
+    const idStr = String(it.id);
+    const isAct = idStr === String(selectedId);
+    const thumb = it.image_url
+      ? `<img src="${it.image_url}" alt="">`
+      : (idStr === '' ? '' : '<div class="qf-loc-noimg">📍</div>');
+    const label = idStr === ''
+      ? esc(it.name)
+      : `<b>${it.seq}.</b> ${esc(it.name)}`;
+    const argName = esc(it.name).replace(/'/g, "\\'");
+    const argImg  = it.image_url ? `'${esc(it.image_url).replace(/'/g, "\\'")}'` : 'null';
+    return `<div class="qf-loc-option ${isAct?'act':''}" onclick="selectQfLoc('${idStr}','${argName}',${argImg})">${thumb}<span style="flex:1;">${label}</span></div>`;
+  }).join('');
+}
+
+function selectQfLoc(id, name, image_url) {
+  document.getElementById('qf-location').value = id;
+  const trig = document.getElementById('qf-loc-trigger-label');
+  if (trig) {
+    const imgHTML = image_url ? `<img src="${image_url}" alt="">` : '';
+    trig.innerHTML = `${imgHTML}<span>${esc(name)}</span>`;
+  }
+  const opts = document.getElementById('qf-loc-options');
+  if (opts) opts.style.display = 'none';
+  renderLocDropdown();
+}
+
+function toggleLocDropdown() {
+  const el = document.getElementById('qf-loc-options');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// 외부 클릭 시 dropdown 닫기
+document.addEventListener('click', e => {
+  const sel = document.getElementById('qf-loc-select');
+  const opts = document.getElementById('qf-loc-options');
+  if (!sel || !opts) return;
+  if (!sel.contains(e.target)) opts.style.display = 'none';
+});
+
 function resetQuizForm() {
   document.getElementById('qf-question').value = '';
-  qfType = 'single';
-  document.querySelectorAll('#qf-type-seg .seg-btn').forEach(b => {
-    b.classList.toggle('act', b.dataset.type === 'single');
-  });
+  const fileEl = document.getElementById('qf-question-image');
+  if (fileEl) fileEl.value = '';
+  const pv = document.getElementById('qf-question-image-preview');
+  if (pv) pv.innerHTML = '';
+  selectQfLoc('', '— 연계 안 함 (프로젝트 전체) —', null);
   qfChoices = [
-    { text: '', is_correct: false },
-    { text: '', is_correct: false },
+    { id: null, text: '', is_correct: false, image_url: null, file: null, file_url: null, remove_image: false },
+    { id: null, text: '', is_correct: false, image_url: null, file: null, file_url: null, remove_image: false },
   ];
+  qfEditingQuizId = null;
+  qfEditingHadImage = false;
+  qfRemoveImage = false;
+  const sub = document.getElementById('qf-submit-btn');
+  const can = document.getElementById('qf-cancel-btn');
+  if (sub) sub.textContent = '+ 퀴즈 등록';
+  if (can) can.style.display = 'none';
   renderQuizChoiceRows();
+  updateQuizTypeAuto();
   clrMsg('qf-msg');
 }
 
-function setQuizType(t) {
-  if (t !== 'single' && t !== 'multi') return;
-  qfType = t;
-  document.querySelectorAll('#qf-type-seg .seg-btn').forEach(b => {
-    b.classList.toggle('act', b.dataset.type === t);
+// 폼 활성/비활성 (퀴즈 수=목적지 수일 때 잠금)
+function setQuizFormEnabled(enabled) {
+  const ids = ['qf-question','qf-question-image','qf-submit-btn'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !enabled; });
+  const trig = document.querySelector('#qf-loc-select .qf-loc-trigger');
+  if (trig) { trig.style.pointerEvents = enabled ? '' : 'none'; trig.style.opacity = enabled ? '' : '0.55'; }
+  document.querySelectorAll('#qf-choices input, #qf-choices button').forEach(el => el.disabled = !enabled);
+  // "+ 보기 추가" 버튼
+  const addBtns = document.querySelectorAll('button');
+  addBtns.forEach(b => {
+    if (b.getAttribute('onclick') === 'addQuizChoiceRow()') b.disabled = !enabled;
   });
-  // 단일선택으로 바꿀 때 정답이 여러개면 첫 정답만 남김
-  if (t === 'single') {
-    const firstIdx = qfChoices.findIndex(c => c.is_correct);
-    qfChoices = qfChoices.map((c, i) => ({ ...c, is_correct: i === firstIdx }));
-    renderQuizChoiceRows();
+}
+
+// 질문 이미지 미리보기
+function onQfImageChange(input) {
+  const pv = document.getElementById('qf-question-image-preview');
+  if (!pv) return;
+  pv.innerHTML = '';
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    setMsg('qf-msg', 'e', '이미지 크기는 최대 5MB입니다.');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    pv.innerHTML = `<img src="${e.target.result}" style="max-width:160px;max-height:120px;border-radius:6px;border:1px solid #e5e7eb;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// 정답 개수에 따라 단일/다중 자동 표시 갱신
+function updateQuizTypeAuto() {
+  const n = qfChoices.filter(c => c.is_correct).length;
+  const el = document.getElementById('qf-type-auto');
+  if (!el) return;
+  if (n === 0) {
+    el.style.background = '#f1f5f9'; el.style.color = '#64748b';
+    el.textContent = '정답을 선택하면 자동 표기됩니다';
+  } else if (n === 1) {
+    el.style.background = '#dbeafe'; el.style.color = '#1e40af';
+    el.textContent = '○ 단일 선택 (정답 1개)';
+  } else {
+    el.style.background = '#dcfce7'; el.style.color = '#166534';
+    el.textContent = `☑ 다중 선택 (정답 ${n}개)`;
   }
 }
 
@@ -1613,7 +1997,7 @@ function addQuizChoiceRow() {
     setMsg('qf-msg', 'e', '보기는 최대 10개까지 추가할 수 있습니다.');
     return;
   }
-  qfChoices.push({ text: '', is_correct: false });
+  qfChoices.push({ id: null, text: '', is_correct: false, image_url: null, file: null, file_url: null, remove_image: false });
   renderQuizChoiceRows();
 }
 
@@ -1629,20 +2013,24 @@ function onQuizChoiceText(idx, value) {
 
 function onQuizChoiceMark(idx) {
   if (!qfChoices[idx]) return;
-  if (qfType === 'single') {
-    qfChoices = qfChoices.map((c, i) => ({ ...c, is_correct: i === idx }));
-  } else {
-    qfChoices[idx].is_correct = !qfChoices[idx].is_correct;
-  }
+  qfChoices[idx].is_correct = !qfChoices[idx].is_correct;
   renderQuizChoiceRows();
+  updateQuizTypeAuto();
 }
 
 function renderQuizChoiceRows() {
   const wrap = document.getElementById('qf-choices');
-  const isSingle = qfType === 'single';
-  const markChar = isSingle ? '○' : '☐';
-  const checkedChar = isSingle ? '●' : '☑';
-  wrap.innerHTML = qfChoices.map((c, i) => `
+  const markChar = '☐';
+  const checkedChar = '☑';
+  wrap.innerHTML = qfChoices.map((c, i) => {
+    let imgPreview = '';
+    if (c.file_url) {
+      imgPreview = `<img src="${c.file_url}" alt="" class="qf-choice-thumb">`;
+    } else if (c.image_url && !c.remove_image) {
+      imgPreview = `<img src="${c.image_url}" alt="" class="qf-choice-thumb">`;
+    }
+    const hasImg = !!imgPreview;
+    return `
     <div class="qf-choice-row">
       <button type="button" class="qf-mark" onclick="onQuizChoiceMark(${i})"
         style="background:${c.is_correct ? '#dcfce7' : '#fff'};border:1.5px solid ${c.is_correct ? '#16a34a' : '#cbd5e1'};
@@ -1650,42 +2038,176 @@ function renderQuizChoiceRows() {
                cursor:pointer;font-weight:700;">${c.is_correct ? checkedChar : markChar}</button>
       <input type="text" maxlength="500" placeholder="보기 ${i + 1}"
         value="${esc(c.text)}" oninput="onQuizChoiceText(${i}, this.value)">
+      ${imgPreview}
+      <input type="file" accept="image/*" id="qf-choice-file-${i}"
+        onchange="onQuizChoiceFileChange(${i}, this)">
+      ${hasImg ? `<button type="button" class="qf-choice-imgrm" onclick="onQuizChoiceImageRemove(${i})" title="이미지 제거">🗑</button>` : ''}
       <button type="button" class="qf-rm" onclick="removeQuizChoiceRow(${i})"
-        ${qfChoices.length <= 2 ? 'disabled' : ''} title="삭제">✕</button>
-    </div>`).join('');
+        ${qfChoices.length <= 2 ? 'disabled' : ''} title="보기 삭제">✕</button>
+    </div>`;
+  }).join('');
 }
 
+// 답항 이미지 파일 선택 핸들러
+function onQuizChoiceFileChange(idx, input) {
+  if (!qfChoices[idx]) return;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    setMsg('qf-msg', 'e', '답항 이미지는 최대 5MB입니다.');
+    input.value = '';
+    return;
+  }
+  qfChoices[idx].file = file;
+  qfChoices[idx].remove_image = false;
+  const reader = new FileReader();
+  reader.onload = e => {
+    qfChoices[idx].file_url = e.target.result;
+    renderQuizChoiceRows();
+  };
+  reader.readAsDataURL(file);
+}
+
+// 답항 이미지 제거 (새 파일이면 폐기, 기존이면 remove 플래그)
+function onQuizChoiceImageRemove(idx) {
+  if (!qfChoices[idx]) return;
+  qfChoices[idx].file = null;
+  qfChoices[idx].file_url = null;
+  if (qfChoices[idx].image_url) qfChoices[idx].remove_image = true;
+  renderQuizChoiceRows();
+}
+
+let qfQuizCache = []; // 가장 최근 fetch한 퀴즈 목록 (수정 시 폼 채우기에 사용)
 async function loadQuizzes() {
   const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes`);
   const d = await r.json().catch(() => ({}));
   const el = document.getElementById('quiz-list');
   if (!r.ok) { el.innerHTML = `<div style="color:#dc2626;padding:14px;">${d.error || '불러오기에 실패했습니다.'}</div>`; return; }
   const list = d.data || [];
+  qfQuizCache = list;
+  // 폼 활성/비활성 결정: 등록된 활성 목적지 개수와 퀴즈 개수 비교
+  const locCount = qfLocations.length;
+  const isFull = locCount > 0 && list.length >= locCount && !qfEditingQuizId;
+  if (locCount === 0) {
+    setQuizFormEnabled(false);
+    setMsg('qf-msg','e','먼저 목적지를 1개 이상 등록해 주세요. 목적지를 등록한 후 퀴즈를 추가할 수 있습니다.');
+  } else if (isFull) {
+    setQuizFormEnabled(false);
+    setMsg('qf-msg','e',`퀴즈는 목적지 개수와 1:1로만 등록할 수 있습니다. (현재 퀴즈 ${list.length} / 목적지 ${locCount}). 퀴즈를 삭제하면 새 퀴즈를 추가할 수 있습니다.`);
+  } else if (!qfEditingQuizId) {
+    setQuizFormEnabled(true);
+    clrMsg('qf-msg');
+  }
   if (!list.length) {
     el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:14px;">등록된 퀴즈가 없습니다.</div>';
     return;
   }
   el.innerHTML = list.map((q, i) => {
     const isSingle = q.choice_type === 'single';
+    const isDisabled = Number(q.disabled) === 1;
+    const isLinked = q.location_id !== null && q.location_id !== undefined;
     const typeBadge = `<span class="qtype ${isSingle ? 'single' : 'multi'}">${isSingle ? '단일' : '다중'}</span>`;
+    const locBadge = isLinked
+      ? `<span class="qtype" style="background:#dbeafe;color:#1e40af;">📍 ${esc(q.location_name || ('목적지 #' + q.location_id))}</span>`
+      : '';
+    const statusBadge = isDisabled
+      ? '<span class="qtype" style="background:#f1f5f9;color:#94a3b8;">비활성</span>'
+      : '<span class="qtype" style="background:#dcfce7;color:#166534;">활성</span>';
+    const imgBlock = q.question_image_url
+      ? `<div style="margin:6px 0;"><img src="${q.question_image_url}" style="max-width:240px;max-height:160px;border-radius:6px;border:1px solid #e5e7eb;"></div>`
+      : '';
     const choices = (q.choices || []).map(c => `
       <div class="qchoice ${c.is_correct ? 'qok' : ''}">
         <span class="qmark">${c.is_correct ? '✓' : '·'}</span>
         <span>${esc(c.text)}</span>
       </div>`).join('');
-    return `<div class="quiz-card">
+    // 비연계 퀴즈만 활성/비활성 토글 버튼. 연계 퀴즈는 목적지 상태를 따름 (UI에서 안내만)
+    const toggleBtn = isLinked
+      ? `<span style="font-size:11px;color:#94a3b8;margin-right:4px;" title="목적지 상태를 따름">🔗 자동</span>`
+      : `<button class="btn ${isDisabled ? 'btn-g' : 'btn-o'} btn-sm" style="padding:2px 10px;font-size:11px;margin-right:4px;" onclick="toggleQuizDisabled(${q.id})">${isDisabled ? '활성화' : '비활성화'}</button>`;
+    return `<div class="quiz-card" style="${isDisabled ? 'opacity:0.55;background:#f8fafc;' : ''}">
       <div class="qhead">
         <span class="qno">${i + 1}</span>
         ${typeBadge}
+        ${locBadge}
+        ${statusBadge}
         <div class="qtitle">${esc(q.question)}</div>
-        <button class="qdel" onclick="deleteQuiz(${q.id})">삭제</button>
+        <button class="btn btn-o btn-sm" style="padding:2px 10px;font-size:11px;margin-right:4px;" onclick="editQuiz(${q.id})">수정</button>
+        ${toggleBtn}
       </div>
+      ${imgBlock}
       <div class="qchoices">${choices}</div>
     </div>`;
   }).join('');
 }
 
-async function addQuiz() {
+async function toggleQuizDisabled(qid) {
+  const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes/${qid}/toggle`, { method: 'PUT' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '상태 변경에 실패했습니다.'); return; }
+  await loadQuizzes();
+  loadProjects(1);
+}
+
+// 수정 모드 진입 — 폼에 기존 데이터 채움
+function editQuiz(qid) {
+  const q = qfQuizCache.find(x => x.id === qid);
+  if (!q) { setMsg('qf-msg','e','퀴즈 정보를 찾을 수 없습니다.'); return; }
+  qfEditingQuizId = qid;
+  qfEditingHadImage = !!q.question_image_url;
+  qfRemoveImage = false;
+  document.getElementById('qf-question').value = q.question || '';
+  // 질문 이미지 미리보기 (기존)
+  const pv = document.getElementById('qf-question-image-preview');
+  if (pv) {
+    pv.innerHTML = q.question_image_url
+      ? `<div style="display:flex;gap:8px;align-items:center;">
+           <img src="${q.question_image_url}" style="max-width:160px;max-height:120px;border-radius:6px;border:1px solid #e5e7eb;">
+           <button type="button" class="btn btn-o btn-sm" style="padding:2px 8px;font-size:11px;" onclick="markRemoveQuestionImage()">기존 이미지 제거</button>
+         </div>`
+      : '';
+  }
+  const fileEl = document.getElementById('qf-question-image');
+  if (fileEl) fileEl.value = '';
+  // 목적지 선택
+  if (q.location_id) {
+    const loc = qfLocations.find(l => l.id === q.location_id);
+    selectQfLoc(String(q.location_id), loc ? loc.name : (q.location_name || ''), loc ? loc.image_url : null);
+  } else {
+    selectQfLoc('', '— 연계 안 함 (프로젝트 전체) —', null);
+  }
+  // 보기 (기존 image_url 도 함께 채움)
+  qfChoices = (q.choices || []).map(c => ({
+    id: c.id, text: c.text, is_correct: !!c.is_correct,
+    image_url: c.image_url || null, file: null, file_url: null, remove_image: false,
+  }));
+  if (qfChoices.length < 2) {
+    while (qfChoices.length < 2) qfChoices.push({ id: null, text: '', is_correct: false, image_url: null, file: null, file_url: null, remove_image: false });
+  }
+  renderQuizChoiceRows();
+  updateQuizTypeAuto();
+  const sub = document.getElementById('qf-submit-btn');
+  const can = document.getElementById('qf-cancel-btn');
+  if (sub) sub.textContent = '✓ 수정 저장';
+  if (can) can.style.display = '';
+  setQuizFormEnabled(true);
+  clrMsg('qf-msg');
+  // 폼으로 스크롤
+  document.getElementById('qf-question').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function markRemoveQuestionImage() {
+  qfRemoveImage = true;
+  const pv = document.getElementById('qf-question-image-preview');
+  if (pv) pv.innerHTML = '<span style="color:#dc2626;font-size:12px;">기존 이미지 제거 예정 (저장 시 적용)</span>';
+}
+
+function cancelEditQuiz() {
+  resetQuizForm();
+  loadQuizzes();
+}
+
+async function submitQuiz() {
   clrMsg('qf-msg');
   const question = document.getElementById('qf-question').value.trim();
   if (!question) { setMsg('qf-msg', 'e', '질문을 입력해 주세요.'); return; }
@@ -1693,19 +2215,50 @@ async function addQuiz() {
   if (filled.length < 2) { setMsg('qf-msg', 'e', '내용이 있는 보기를 2개 이상 입력해 주세요.'); return; }
   const correct = filled.filter(c => c.is_correct).length;
   if (correct < 1) { setMsg('qf-msg', 'e', '정답을 1개 이상 선택해 주세요.'); return; }
-  if (qfType === 'single' && correct !== 1) { setMsg('qf-msg', 'e', '단일 선택은 정답이 1개여야 합니다.'); return; }
 
-  const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, choice_type: qfType, choices: filled }),
+  const fileEl = document.getElementById('qf-question-image');
+  const locVal = (document.getElementById('qf-location') || {}).value || '';
+  const fd = new FormData();
+  fd.append('question', question);
+  // 답항 payload: 백엔드가 id/remove_image를 보고 기존 이미지를 유지/교체/제거
+  const choicesPayload = qfChoices
+    .filter(c => (c.text || '').trim())
+    .map(c => ({
+      id: c.id || null,
+      text: c.text.trim(),
+      is_correct: !!c.is_correct,
+      remove_image: !!c.remove_image,
+    }));
+  fd.append('choices', JSON.stringify(choicesPayload));
+  if (locVal) fd.append('location_id', locVal);
+  if (fileEl && fileEl.files && fileEl.files[0]) {
+    fd.append('question_image', fileEl.files[0]);
+  }
+  if (qfEditingQuizId && qfRemoveImage) {
+    fd.append('remove_image', '1');
+  }
+  // 답항 파일들 — index 기준 (text 필터 후의 순서와 일치하도록 매핑)
+  const filteredOriginalIdx = qfChoices
+    .map((c, i) => ((c.text || '').trim() ? i : -1))
+    .filter(i => i >= 0);
+  filteredOriginalIdx.forEach((origIdx, newIdx) => {
+    const c = qfChoices[origIdx];
+    if (c.file) fd.append(`choice_image_${newIdx}`, c.file);
   });
+
+  const isEdit = !!qfEditingQuizId;
+  const url = isEdit
+    ? `/api/host/projects/${currentQuizProjectId}/quizzes/${qfEditingQuizId}`
+    : `/api/host/projects/${currentQuizProjectId}/quizzes`;
+  const r = await fetch(url, { method: isEdit ? 'PUT' : 'POST', body: fd });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { setMsg('qf-msg', 'e', d.error || '등록에 실패했습니다.'); return; }
+  if (!r.ok) { setMsg('qf-msg', 'e', d.error || (isEdit ? '수정에 실패했습니다.' : '등록에 실패했습니다.')); return; }
   resetQuizForm();
   await loadQuizzes();
   loadProjects(1);
 }
+// 하위 호환 (혹시 다른 곳에서 호출)
+function addQuiz() { return submitQuiz(); }
 
 async function deleteQuiz(qid) {
   const ok = await uiConfirm('이 퀴즈를 삭제하시겠습니까?', { title: '퀴즈 삭제', okText: '삭제', danger: true });
@@ -1871,7 +2424,7 @@ let settleData = [];
 function stWon(v) { return v ? Number(v).toLocaleString('ko-KR') + '원' : '-'; }
 async function loadSettlement() {
   const tbody = document.getElementById('settle-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
   const qs = new URLSearchParams({
     project_name: document.getElementById('sf-name').value.trim(),
     status: document.getElementById('sf-status').value,
@@ -1882,7 +2435,7 @@ async function loadSettlement() {
     if (!r.ok) throw 0;
     d = await r.json();
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
     return;
   }
   settleData = d.data || [];
@@ -1891,23 +2444,156 @@ async function loadSettlement() {
 function renderSettlement() {
   const tbody = document.getElementById('settle-tbody');
   if (!settleData.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
     return;
   }
   tbody.innerHTML = settleData.map(p => {
     const cls = STATUS_CLS[p.status] || 'bq';
+    const giftAmt   = Number(p.gift_amount || 0);
+    const prizeAmt  = Number(p.prize_amount || 0);
+    const usedCnt   = Number(p.used_count || 0);
+    const grantCnt  = Number(p.grant_count || 0);
+    const usedTotal = Number(p.used_amount || 0);   // 사용된 Gift들의 amount 합 (base + prize)
+    const grantTot  = Number(p.grant_amount || 0);  // 증정된 Gift들의 amount 합
+    // Gift 사용금액 = base × 사용건수 (prize 보너스 제외)
+    const giftUsed  = giftAmt * usedCnt;
+    // Prize 사용금액 = 사용된 Gift들의 amount 합 - 위의 base 부분
+    const prizeUsed = Math.max(0, usedTotal - giftUsed);
+    // Prize 지급개수 = Prize 사용금액 / 단가
+    const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+    // Gift 그룹 합계 = 사용금액 + 증정금액
+    const giftSum   = giftUsed + grantTot;
+    // 총 Reward 금액 = Gift 사용금액 + Prize 사용금액 (두 그룹의 사용금액 총합)
+    const totalReward = giftUsed + prizeUsed;
     return `<tr>
       <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
       <td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>
-      <td style="text-align:right;">${stWon(p.gift_amount)}</td>
-      <td style="text-align:center;">${Number(p.used_count || 0)}개</td>
-      <td style="text-align:center;">${Number(p.grant_count || 0)}개</td>
-      <td style="text-align:right;">${stWon(p.used_amount)}</td>
-      <td style="text-align:right;">${stWon(p.grant_amount)}</td>
-      <td style="text-align:right;"><b>${stWon(Number(p.used_amount || 0) + Number(p.grant_amount || 0))}</b></td>
+      <td style="text-align:right;">${stWon(giftAmt)}</td>
+      <td style="text-align:center;">${usedCnt}개</td>
+      <td style="text-align:center;">${grantCnt}개</td>
+      <td style="text-align:right;">${stWon(giftUsed)}</td>
+      <td style="text-align:right;">${stWon(grantTot)}</td>
+      <td style="text-align:right;"><b>${stWon(giftSum)}</b></td>
+      <td style="text-align:right;">${stWon(prizeAmt)}</td>
+      <td style="text-align:center;">${prizeCnt}개</td>
+      <td style="text-align:right;">${stWon(prizeUsed)}</td>
+      <td style="text-align:right;"><b style="color:#1d4ed8;">${stWon(totalReward)}</b></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openDailySettle(${p.id})">보기</button></td>
     </tr>`;
   }).join('');
+}
+
+// ── 정산 상세보기 (일별) 모달 ──
+async function openDailySettle(pid) {
+  document.getElementById('modal-daily-settle').classList.add('open');
+  document.getElementById('ds-title').textContent = '정산 상세 (일별)';
+  document.getElementById('ds-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중…</div>';
+  const r = await fetch(`/api/host/settlement/${pid}/daily`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    document.getElementById('ds-body').innerHTML = `<div style="color:#dc2626;padding:18px;">${d.error || '불러오지 못했습니다.'}</div>`;
+    return;
+  }
+  renderDailySettle(d);
+}
+function closeDailySettle() {
+  document.getElementById('modal-daily-settle').classList.remove('open');
+}
+function renderDailySettle(d) {
+  const proj = d.project || {};
+  const giftAmt = Number(proj.gift_amount || 0);
+  const prizeAmt = Number(proj.prize_amount || 0);
+  document.getElementById('ds-title').textContent = `정산 상세 — ${proj.name || ''} (${proj.serial || ''})`;
+  const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
+  const fmtYmd = s => {
+    if (!s) return '-';
+    const dt = new Date(s);
+    if (isNaN(dt.getTime())) return String(s);
+    const y = String(dt.getFullYear()).slice(2);
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+  const days = d.daily || [];
+  if (!days.length) {
+    document.getElementById('ds-body').innerHTML = '<div style="color:#94a3b8;padding:24px;text-align:center;">정산 내역이 없습니다.</div>';
+    return;
+  }
+  // 일별 계산 — 상위 grid와 동일 공식
+  const rows = days.map(x => {
+    const usedCnt = Number(x.used_count || 0);
+    const grantCnt = Number(x.grant_count || 0);
+    const usedTotal = Number(x.used_amount || 0);
+    const grantTot = Number(x.grant_amount || 0);
+    const giftUsed = giftAmt * usedCnt;
+    const prizeUsed = Math.max(0, usedTotal - giftUsed);
+    const prizeCnt = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+    const giftSum = giftUsed + grantTot;
+    const totalReward = giftUsed + prizeUsed;
+    return { date: x.date, giftAmt, usedCnt, grantCnt, giftUsed, grantTot, giftSum, prizeAmt, prizeCnt, prizeUsed, totalReward };
+  });
+  // 합계 행
+  const sum = rows.reduce((a, r) => ({
+    usedCnt: a.usedCnt + r.usedCnt, grantCnt: a.grantCnt + r.grantCnt,
+    giftUsed: a.giftUsed + r.giftUsed, grantTot: a.grantTot + r.grantTot,
+    giftSum: a.giftSum + r.giftSum,
+    prizeCnt: a.prizeCnt + r.prizeCnt, prizeUsed: a.prizeUsed + r.prizeUsed,
+    totalReward: a.totalReward + r.totalReward,
+  }), { usedCnt:0, grantCnt:0, giftUsed:0, grantTot:0, giftSum:0, prizeCnt:0, prizeUsed:0, totalReward:0 });
+
+  document.getElementById('ds-body').innerHTML = `
+    <div class="tbl-wrap" style="overflow-x:auto;">
+      <table style="font-size:12px;white-space:nowrap;">
+        <thead>
+          <tr>
+            <th rowspan="2">일자</th>
+            <th colspan="6" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>
+            <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Prize</th>
+            <th rowspan="2" style="text-align:right;">총 Reward 금액</th>
+          </tr>
+          <tr>
+            <th style="text-align:right;">단가</th>
+            <th style="text-align:center;">사용개수</th>
+            <th style="text-align:center;">증정개수</th>
+            <th style="text-align:right;">사용금액</th>
+            <th style="text-align:right;">증정금액</th>
+            <th style="text-align:right;">합계</th>
+            <th style="text-align:right;">단가</th>
+            <th style="text-align:center;">지급개수</th>
+            <th style="text-align:right;">사용금액</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td>${fmtYmd(r.date)}</td>
+            <td style="text-align:right;">${won(r.giftAmt)}</td>
+            <td style="text-align:center;">${r.usedCnt}개</td>
+            <td style="text-align:center;">${r.grantCnt}개</td>
+            <td style="text-align:right;">${won(r.giftUsed)}</td>
+            <td style="text-align:right;">${won(r.grantTot)}</td>
+            <td style="text-align:right;"><b>${won(r.giftSum)}</b></td>
+            <td style="text-align:right;">${won(r.prizeAmt)}</td>
+            <td style="text-align:center;">${r.prizeCnt}개</td>
+            <td style="text-align:right;">${won(r.prizeUsed)}</td>
+            <td style="text-align:right;"><b style="color:#1d4ed8;">${won(r.totalReward)}</b></td>
+          </tr>`).join('')}
+          <tr style="background:#f1f5f9;font-weight:700;">
+            <td>합계</td>
+            <td style="text-align:right;">-</td>
+            <td style="text-align:center;">${sum.usedCnt}개</td>
+            <td style="text-align:center;">${sum.grantCnt}개</td>
+            <td style="text-align:right;">${won(sum.giftUsed)}</td>
+            <td style="text-align:right;">${won(sum.grantTot)}</td>
+            <td style="text-align:right;">${won(sum.giftSum)}</td>
+            <td style="text-align:right;">-</td>
+            <td style="text-align:center;">${sum.prizeCnt}개</td>
+            <td style="text-align:right;">${won(sum.prizeUsed)}</td>
+            <td style="text-align:right;"><b style="color:#1d4ed8;">${won(sum.totalReward)}</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
 }
 let usageData = [];
 const USAGE_COLS = [
@@ -2666,13 +3352,44 @@ function getTomorrow() {
 function onFromDateChange() {
   const fromVal = document.getElementById('pj-from').value;
   const toEl = document.getElementById('pj-to');
-  if (!fromVal) { toEl.min = ''; return; }
-  const from = new Date(fromVal + 'T00:00:00');
-  from.setDate(from.getDate() + 5);
+  if (!fromVal) { toEl.min = ''; validateToDate(); return; }
+  const from = new Date(fromVal + 'T00:00:00Z');
+  from.setUTCDate(from.getUTCDate() + 4);
   const minTo = from.toISOString().slice(0, 10);
   toEl.min = minTo;
-  if (toEl.value && toEl.value < minTo) toEl.value = minTo;
+  validateToDate();
 }
+
+function validateToDate() {
+  const toEl = document.getElementById('pj-to');
+  const fromVal = document.getElementById('pj-from').value;
+  const btn = document.getElementById('btn-create-proj');
+  if (!toEl.value) { clrFm('pj-to-fm'); toEl.style.border=''; if(btn)btn.disabled=!verifiedPin; return; }
+  if (fromVal) {
+    const fromD = new Date(fromVal + 'T00:00:00Z');
+    fromD.setUTCDate(fromD.getUTCDate() + 4);
+    const minTo = fromD.toISOString().slice(0,10);
+    if (toEl.value < minTo) {
+      setFm('pj-to-fm','e', `⚠ 프로젝트 이용일은 최소 5일 이상이어야 합니다. (가능한 가장 빠른 종료일: ${minTo})`);
+      toEl.style.border = '2px solid #dc2626';
+      if (btn) btn.disabled = true;
+      return;
+    }
+  }
+  clrFm('pj-to-fm');
+  toEl.style.border = '';
+  if (btn) btn.disabled = !verifiedPin;
+}
+
+// 안전망: HTML 인라인 핸들러가 어떤 이유로 안 잡혀도 polling으로 잡아냄
+(function pollPjTo(){
+  let last = '';
+  setInterval(() => {
+    const el = document.getElementById('pj-to');
+    if (!el) return;
+    if (el.value !== last) { last = el.value; validateToDate(); }
+  }, 200);
+})();
 
 function parseNum(s) { return parseInt(String(s).replace(/,/g,''), 10) || 0; }
 function onAmountInput(el) {
@@ -2687,13 +3404,14 @@ function calcBudget() {
 }
 
 function enableProjectForm(on) {
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','btn-create-proj']
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-quiz-bonus','btn-create-proj']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; });
   if (on) {
     const fromEl = document.getElementById('pj-from');
     const tmr = getTomorrow();
     fromEl.min = tmr;
-    if (!fromEl.value) { fromEl.value = tmr; onFromDateChange(); }
+    if (!fromEl.value) fromEl.value = tmr;
+    onFromDateChange();
   }
 }
 
@@ -2719,13 +3437,14 @@ async function loadQuoteConfig() {
   document.getElementById('quote-info-body').innerHTML = `
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:8px;">
       <tr style="background:#f8fafc;"><td style="font-weight:600;width:50%;">항목</td><td style="font-weight:600;">금액</td></tr>
-      <tr><td>이용료 (1일 × 일수)</td><td>${fmt(c.dailyFee)} × 이용일수</td></tr>
-      <tr><td>모바일 디자인 (${c.mobileCount}안)</td><td>${fmt(c.mobileUnitFee)} × ${c.mobileCount} = ${fmt(c.mobileUnitFee * c.mobileCount)}</td></tr>
-      <tr><td>파비콘</td><td>${fmt(c.faviconFee)}</td></tr>
+      <tr><td>이용료(일 사용료 × 일수 )</td><td>${fmt(c.dailyFee)} × 이용일수</td></tr>
+      <tr><td>랜딩페이지 디자인 ${c.mobileCount}안<br><span style="font-size:11px;color:#94a3b8;">랜딩페이지 디자인 제공 시 불요</span></td><td>${fmt(c.mobileUnitFee)} × ${c.mobileCount} = ${fmt(c.mobileUnitFee * c.mobileCount)}</td></tr>
+      <tr><td>모바일앱 아이콘<br><span style="font-size:11px;color:#94a3b8;">디자인 제공 시 불요</span></td><td>${fmt(c.faviconFee)}</td></tr>
       <tr><td>초기 세팅</td><td>${fmt(c.initialSetupFee)}</td></tr>
       <tr style="background:#f0f9ff;"><td style="font-weight:600;">총액</td><td style="font-weight:600;">이용료 + ${fmt(c.mobileUnitFee * c.mobileCount + c.faviconFee + c.initialSetupFee)}</td></tr>
     </table>
-    <p style="font-size:12px;color:#64748b;">※ 이용료 = 1일 ${fmt(c.dailyFee)} × 프로젝트 기간(일수). 추가 디자인 시안은 별도 견적입니다.</p>`;
+    <p style="font-size:12px;color:#64748b;">※ 이용료 = 1일 ${fmt(c.dailyFee)} × 프로젝트 기간(일수). 추가 디자인 시안은 별도 견적입니다.</p>
+    <p style="font-size:12px;color:#64748b;margin-top:4px;">※ 이용일은 최소 5일 이상입니다.</p>`;
   quoteConfigLoaded = true;
 }
 
@@ -2743,8 +3462,19 @@ async function createProject() {
   if (!desc) { setMsg('pj-msg','e','설명을 입력해 주세요.'); return; }
   if (!from) { setMsg('pj-msg','e','시작일을 선택해 주세요.'); return; }
   if (!to)   { setMsg('pj-msg','e','종료일을 선택해 주세요.'); return; }
+  {
+    const fromD = new Date(from + 'T00:00:00Z');
+    fromD.setUTCDate(fromD.getUTCDate() + 4);
+    const minTo = fromD.toISOString().slice(0,10);
+    if (to < minTo) {
+      setMsg('pj-msg','e', `프로젝트 이용일은 최소 5일 이상이어야 합니다. (가능한 가장 빠른 종료일: ${minTo})`);
+      validateToDate();
+      document.getElementById('pj-to').focus();
+      return;
+    }
+  }
   if (giftNum <= 0) { setMsg('pj-msg','e','Gift 단가 금액을 입력해 주세요.'); return; }
-  if (qtyNum  < 1)  { setMsg('pj-msg','e','발급수량을 1 이상 입력해 주세요.'); return; }
+  if (qtyNum  < 1)  { setMsg('pj-msg','e','Gift 발급 수량을 1 이상 입력해 주세요.'); return; }
   clrMsg('pj-msg');
   document.getElementById('quote-confirm-msg').className = 'msg';
   document.getElementById('quote-confirm-msg').textContent = '';
@@ -2763,6 +3493,7 @@ async function confirmCreateProject() {
     gift_qty:     String(parseNum(document.getElementById('pj-qty').value)),
     prize_amount: String(parseNum(document.getElementById('pj-prize').value)),
     prize_qty:    String(parseNum(document.getElementById('pj-prize-qty').value)),
+    quiz_bonus_per_correct: String(parseNum(document.getElementById('pj-quiz-bonus').value)),
     pin_input:    verifiedPin,
   };
   const r = await fetch('/api/host/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -2774,11 +3505,236 @@ async function confirmCreateProject() {
     return;
   }
   document.getElementById('modal-quote-confirm').classList.remove('open');
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-budget'].forEach(id => {
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-quiz-bonus','pj-budget'].forEach(id => {
     document.getElementById(id).value = '';
   });
   resetPinState();
   switchTab('proj');
+}
+
+// ── 방문 현황 통계 모달 ──
+async function openVisitStats(pid, pname) {
+  document.getElementById('vs-title').textContent = `방문 현황 — ${pname}`;
+  document.getElementById('vs-loading').style.display = '';
+  document.getElementById('vs-content').style.display = 'none';
+  document.getElementById('modal-visit-stats').classList.add('open');
+  const r = await fetch(`/api/host/projects/${pid}/visit-stats`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    document.getElementById('vs-loading').textContent = d.error || '데이터를 불러오지 못했습니다.';
+    return;
+  }
+  renderVisitStats(d);
+  document.getElementById('vs-loading').style.display = 'none';
+  document.getElementById('vs-content').style.display = '';
+}
+function closeVisitStats() {
+  document.getElementById('modal-visit-stats').classList.remove('open');
+}
+function renderVisitStats(d) {
+  const fmtN = n => Number(n||0).toLocaleString('ko-KR');
+  document.getElementById('vs-total').textContent      = fmtN(d.total_visitors);
+  document.getElementById('vs-done').textContent       = fmtN(d.completed_visitors);
+  document.getElementById('vs-gift-issued').textContent = fmtN(d.gift_issued);
+  document.getElementById('vs-gift-used').textContent   = fmtN(d.gift_used);
+
+  // 1) 목적지별 방문자 막대
+  const locs = d.locations || [];
+  const maxLoc = Math.max(1, ...locs.map(l => l.visitor_count));
+  const locEl = document.getElementById('vs-loc-bars');
+  locEl.innerHTML = locs.length ? locs.map(l => {
+    const pct = Math.max(2, Math.round((l.visitor_count / maxLoc) * 100));
+    return `<div class="vs-bar-row">
+      <div class="vs-bar-label" title="${esc(l.name)}">${l.display_seq}. ${esc(l.name)}</div>
+      <div class="vs-bar-track"><div class="vs-bar-fill" style="width:${pct}%;"></div></div>
+      <div class="vs-bar-val">${fmtN(l.visitor_count)}명</div>
+    </div>`;
+  }).join('') : '<div class="vs-empty">등록된 목적지가 없습니다.</div>';
+
+  // 2) 전체 vs 완주 비교 — 막대 두 개
+  const totalV = Number(d.total_visitors || 0);
+  const doneV  = Number(d.completed_visitors || 0);
+  const maxV   = Math.max(1, totalV);
+  const cmpEl  = document.getElementById('vs-completion-bar');
+  const donePct = totalV > 0 ? Math.round((doneV / totalV) * 100) : 0;
+  cmpEl.innerHTML = `
+    <div class="vs-bar-row">
+      <div class="vs-bar-label">전체 방문자</div>
+      <div class="vs-bar-track"><div class="vs-bar-fill" style="width:${Math.max(2, Math.round((totalV / maxV) * 100))}%;"></div></div>
+      <div class="vs-bar-val">${fmtN(totalV)}명</div>
+    </div>
+    <div class="vs-bar-row">
+      <div class="vs-bar-label">모두 방문 완료</div>
+      <div class="vs-bar-track"><div class="vs-bar-fill green" style="width:${Math.max(2, Math.round((doneV / maxV) * 100))}%;"></div></div>
+      <div class="vs-bar-val">${fmtN(doneV)}명 (${donePct}%)</div>
+    </div>`;
+
+  // 3) 일자별 — 두 컬럼 가로 막대
+  const daily = d.daily || [];
+  const maxDailyV = Math.max(1, ...daily.map(x => x.visitors));
+  const maxDailyC = Math.max(1, ...daily.map(x => x.completed));
+  const dailyEl = document.getElementById('vs-daily');
+  // 어떤 형식의 입력이 와도 안전하게 yy.mm.dd 로 변환
+  const fmtYmd = s => {
+    if (!s) return '-';
+    const dt = new Date(s);
+    if (isNaN(dt.getTime())) return String(s);
+    const y = String(dt.getFullYear()).slice(2);
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+  if (!daily.length) {
+    dailyEl.innerHTML = '<div class="vs-empty">방문 데이터가 없습니다.</div>';
+  } else {
+    dailyEl.innerHTML = `<div class="vs-daily-row" style="background:#f1f5f9;font-weight:700;color:#475569;">
+        <div class="vs-daily-date">날짜</div>
+        <div style="font-size:11px;text-align:center;">방문자</div>
+        <div style="font-size:11px;text-align:center;">완료자</div>
+      </div>` + daily.map(x => {
+      const pctV = Math.max(2, Math.round((x.visitors / maxDailyV) * 100));
+      const pctC = Math.max(0, Math.round((x.completed / maxDailyC) * 100));
+      return `<div class="vs-daily-row">
+        <div class="vs-daily-date">${fmtYmd(x.date)}</div>
+        <div class="vs-daily-cell">
+          <div class="vs-bar-track"><div class="vs-bar-fill" style="width:${pctV}%;"></div></div>
+          <div class="vs-daily-cell-val">${x.visitors}</div>
+        </div>
+        <div class="vs-daily-cell">
+          <div class="vs-bar-track"><div class="vs-bar-fill green" style="width:${pctC}%;"></div></div>
+          <div class="vs-daily-cell-val">${x.completed}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // 4) Gift 발급 vs 소진 — 금액 기준 막대 + 막대 안에 금액 표시
+  const issued = Number(d.gift_issued || 0);
+  const used   = Number(d.gift_used || 0);
+  const issuedAmt = Number(d.gift_issued_amount || 0);
+  const usedAmt   = Number(d.gift_used_amount || 0);
+  const totalBudget = Number(d.total_budget || 0);
+  const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+  // 예산 대비 발급 비율
+  const issuedPctBudget = totalBudget > 0 ? Math.round((issuedAmt / totalBudget) * 100) : 0;
+  // 발급액 대비 소진 비율
+  const usedPctIssued = issuedAmt > 0 ? Math.round((usedAmt / issuedAmt) * 100) : 0;
+  const giftEl = document.getElementById('vs-gift-bar');
+  giftEl.innerHTML = `
+    <div class="vs-bar-row">
+      <div class="vs-bar-label">Gift 발급</div>
+      <div class="vs-bar-track">
+        <div class="vs-bar-fill green" style="width:${Math.max(2, issuedPctBudget)}%;"></div>
+        <span class="vs-bar-text">${won(issuedAmt)} / ${won(totalBudget)} (${issuedPctBudget}%)</span>
+      </div>
+      <div class="vs-bar-val">${fmtN(issued)}건</div>
+    </div>
+    <div class="vs-bar-row">
+      <div class="vs-bar-label">Gift 소진(사용)</div>
+      <div class="vs-bar-track">
+        <div class="vs-bar-fill orange" style="width:${Math.max(2, usedPctIssued)}%;"></div>
+        <span class="vs-bar-text">${won(usedAmt)} / ${won(issuedAmt)} (${usedPctIssued}%)</span>
+      </div>
+      <div class="vs-bar-val">${fmtN(used)}건</div>
+    </div>`;
+}
+
+// ── 프로젝트 상세/수정 ──
+const STATUS_KO_PE = {
+  quoted: '견적', deposit_wait: '입금대기', deposit_confirmed: '입금확인',
+  ready_to_start: '시작대기', started: '진행중', completed: '완료', cancelled: '취소'
+};
+let pcId = null;
+let pcEditable = false;
+
+async function openProjectEdit(id) {
+  pcId = id;
+  const r = await fetch(`/api/host/projects/${id}`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { await uiAlert(d.error || '프로젝트 정보를 불러오지 못했습니다.'); return; }
+  const p = d.project;
+  pcEditable = !!d.editable;
+  const bar = document.getElementById('pe-status-bar');
+  const statusName = STATUS_KO_PE[p.status] || p.status;
+  bar.style.display = '';
+  bar.textContent = pcEditable
+    ? `현재 상태: ${statusName} — 수정 가능합니다. 견적금액이 변경되면 재견적 안내가 표시됩니다.`
+    : `현재 상태: ${statusName} — 이 상태에서는 수정할 수 없습니다 (보기 전용).`;
+  bar.style.background = pcEditable ? '#f0f9ff' : '#f1f5f9';
+  bar.style.borderColor = pcEditable ? '#bae6fd' : '#cbd5e1';
+  bar.style.color = pcEditable ? '#0c4a6e' : '#475569';
+  document.getElementById('pe-title').textContent = pcEditable ? '프로젝트 수정' : '프로젝트 상세';
+  document.getElementById('pe-name').value = p.project_name || '';
+  document.getElementById('pe-desc').value = p.description || '';
+  document.getElementById('pe-from').value = String(p.from_date || '').slice(0,10);
+  document.getElementById('pe-to').value = String(p.to_date || '').slice(0,10);
+  document.getElementById('pe-gift').value = Number(p.gift_amount || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-qty').value = Number(p.gift_qty || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-prize').value = Number(p.prize_amount || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-prize-qty').value = Number(p.prize_qty || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-quiz-bonus').value = Number(p.quiz_bonus_per_correct || 0).toLocaleString('ko-KR');
+  calcPeBudget();
+  ['pe-name','pe-desc','pe-from','pe-to','pe-gift','pe-qty','pe-prize','pe-prize-qty','pe-quiz-bonus','pe-save-btn']
+    .forEach(eid => { const el = document.getElementById(eid); if (el) el.disabled = !pcEditable; });
+  clrMsg('pe-msg');
+  document.getElementById('modal-project-edit').classList.add('open');
+}
+
+function closeProjectEdit() {
+  pcId = null;
+  document.getElementById('modal-project-edit').classList.remove('open');
+}
+
+function calcPeBudget() {
+  const g = parseNum(document.getElementById('pe-gift').value);
+  const q = parseNum(document.getElementById('pe-qty').value);
+  document.getElementById('pe-budget').value = g > 0 && q > 0 ? (g * q).toLocaleString('ko-KR') : '';
+}
+
+async function saveProjectEdit() {
+  if (!pcId || !pcEditable) return;
+  clrMsg('pe-msg');
+  const body = {
+    project_name: document.getElementById('pe-name').value.trim(),
+    description: document.getElementById('pe-desc').value.trim(),
+    from_date: document.getElementById('pe-from').value,
+    to_date: document.getElementById('pe-to').value,
+    gift_amount: String(parseNum(document.getElementById('pe-gift').value)),
+    gift_qty: String(parseNum(document.getElementById('pe-qty').value)),
+    prize_amount: String(parseNum(document.getElementById('pe-prize').value)),
+    prize_qty: String(parseNum(document.getElementById('pe-prize-qty').value)),
+    quiz_bonus_per_correct: String(parseNum(document.getElementById('pe-quiz-bonus').value)),
+  };
+  if (!body.project_name || !body.description || !body.from_date || !body.to_date) {
+    setMsg('pe-msg','e','필수값을 입력해 주세요.'); return;
+  }
+  const btn = document.getElementById('pe-save-btn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const r = await fetch(`/api/host/projects/${pcId}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(() => ({}));
+  btn.disabled = false; btn.textContent = '저장';
+  if (!r.ok) { setMsg('pe-msg','e', d.error || '저장에 실패했습니다.'); return; }
+  if (d.quote_changed) {
+    const fmt = n => Number(n||0).toLocaleString('ko-KR');
+    const isTaxStatus = (d.current_status === 'deposit_confirmed' || d.current_status === 'ready_to_start');
+    const taxNote = isTaxStatus
+      ? ' ⚠ 현재 입금이 확인된 상태이므로 재견적 발송 시 기존 세금계산서가 취소발행되고 새로운 견적금액으로 재발행됩니다.'
+      : '';
+    const message = `견적금액이 변경되었습니다. 기존 ${fmt(d.old_quote)}원 → 새 견적 ${fmt(d.new_quote)}원. 재견적을 받아보시겠습니까?${taxNote}`;
+    const ok = await uiConfirm(message, { title: '재견적 안내', okText: '재견적 받기', cancelText: '나중에' });
+    if (ok) {
+      const rr = await fetch(`/api/host/projects/${pcId}/re-quote`, { method: 'POST' });
+      const dd = await rr.json().catch(() => ({}));
+      if (!rr.ok) { await uiAlert(dd.error || '재견적 발송에 실패했습니다.'); return; }
+      await uiAlert("재견적 메일이 발송되었습니다. 프로젝트 상태가 '견적'으로 변경되었습니다.");
+    }
+  } else {
+    await uiAlert('저장되었습니다.');
+  }
+  closeProjectEdit();
+  loadProjects(1);
 }
 
 // ── 초기 로그인 상태 확인 ──

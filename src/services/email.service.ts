@@ -252,6 +252,7 @@ export async function sendQuoteEmail(input: {
   initialSetupFee: number;
   projectId: number;
   hostId: number;
+  requoteNote?: string;
 }): Promise<void> {
   // 견적서 확인 링크는 호스트가 메일 클라이언트에서 클릭하므로 공개 도메인으로 보낸다.
   // .env DOMAIN 이 비어있을 때만 BASE_URL(개발용)로 폴백한다.
@@ -265,9 +266,12 @@ export async function sendQuoteEmail(input: {
   await sendEmail({
     templateKey: "project_quote",
     to: input.hostEmail,
-    subject: `[모노라마] 견적서 - ${input.projectName}`,
+    subject: input.requoteNote
+      ? `[모노라마] 재견적서 - ${input.projectName}`
+      : `[모노라마] 견적서 - ${input.projectName}`,
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
-      <h2 style="color:#2563eb;">프로젝트 견적서</h2>
+      <h2 style="color:#2563eb;">${input.requoteNote ? '프로젝트 재견적서' : '프로젝트 견적서'}</h2>
+      ${input.requoteNote ? `<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px;line-height:1.6;">${input.requoteNote}</div>` : ''}
       <p>${input.hostName}님, 요청하신 견적 내역입니다.</p>
       <table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;width:100%;margin:16px 0;">
         <tr><td style="background:#f8fafc;font-weight:600;">프로젝트명</td><td>${input.projectName}</td></tr>
