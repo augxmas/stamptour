@@ -55,16 +55,21 @@
     .fm.e { color: #dc2626; } .fm.g { color: #2563eb; }
     #pj-to-fm.e { font-size: 13px; font-weight: 600; background:#fef2f2; border:1px solid #fecaca; padding:6px 10px; border-radius:6px; margin-top:6px; }
     /* 방문 현황 통계 시각화 */
-    .vs-cards { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:20px; }
+    .vs-cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:20px; }
     .vs-card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:18px 14px; text-align:center; }
     .vs-label { font-size:13px; color:#64748b; margin-bottom:8px; font-weight:600; }
-    .vs-num { font-size:32px; font-weight:800; color:#16243a; line-height:1.1; }
+    .vs-num { font-size:24px; font-weight:800; color:#16243a; line-height:1.2; white-space:nowrap; }
+    .vs-num .arrow { color:#94a3b8; margin:0 4px; font-weight:700; }
+    .vs-sub { font-size:14px; color:#1d4ed8; margin-top:6px; font-weight:800; }
     /* 4개 섹션을 2x2 그리드로 배치 — 큰 화면에서 가로 공간 활용 */
     .vs-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 24px; }
     @media (max-width:900px) { .vs-grid { grid-template-columns:1fr; } }
     .vs-grid .vs-section { margin-bottom:0; }
     .vs-h { font-size:13px; font-weight:700; color:#1e293b; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #e5e7eb; cursor:pointer; list-style:none; display:flex; align-items:center; user-select:none; }
     .vs-h::-webkit-details-marker { display:none; }
+    /* 섹션 제목 앞 파란색 mid-point 점 */
+    .vs-h::before { content:''; display:inline-block; width:8px; height:8px; border-radius:50%;
+                    background:#2563eb; margin-right:8px; flex-shrink:0; }
     .vs-h::after {
       content:'＋'; margin-left:auto; font-size:14px; font-weight:700;
       width:24px; height:24px; border:1.5px solid #3b82f6; border-radius:50%;
@@ -78,6 +83,9 @@
     .vs-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:13px; }
     .vs-bar-label { width:150px; flex-shrink:0; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
     .vs-bar-track { flex:1; height:28px; background:#f1f5f9; border-radius:6px; overflow:hidden; position:relative; }
+    /* 각 바의 50% 지점 mid-point 마커 */
+    .vs-bar-track::after { content:''; position:absolute; left:50%; top:3px; bottom:3px; width:1px;
+                          background:rgba(15,23,42,0.35); pointer-events:none; z-index:2; }
     .vs-bar-text { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:13px; font-weight:800; color:#0f172a; white-space:nowrap; pointer-events:none;
       text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px rgba(255,255,255,.95); }
     /* 일반 데이터(방문자 등)는 amber, 완주·실적·성과는 green, 소진은 orange */
@@ -1337,12 +1345,23 @@
     <div class="card-body" id="vs-body" style="overflow-y:auto;">
       <div id="vs-loading" style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중…</div>
       <div id="vs-content" style="display:none;">
-        <!-- 요약 카드 -->
+        <!-- 요약 카드: 3개 합산 (방문 / Gift / 예산) -->
         <div class="vs-cards">
-          <div class="vs-card"><div class="vs-label">전체 방문자</div><div class="vs-num" id="vs-total">0</div></div>
-          <div class="vs-card"><div class="vs-label">모두 방문 완료</div><div class="vs-num" id="vs-done" style="color:#15803d;">0</div></div>
-          <div class="vs-card"><div class="vs-label">Gift 발급</div><div class="vs-num" id="vs-gift-issued" style="color:#15803d;">0</div></div>
-          <div class="vs-card"><div class="vs-label">Gift 소진</div><div class="vs-num" id="vs-gift-used" style="color:#ea580c;">0</div></div>
+          <div class="vs-card">
+            <div class="vs-label">전체 방문자 → 모두 방문 완료</div>
+            <div class="vs-num"><span id="vs-total">0</span>명<span class="arrow">→</span><span id="vs-done" style="color:#15803d;">0</span>명</div>
+            <div class="vs-sub" id="vs-done-pct">0%</div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-label">Gift 발급 → 소진</div>
+            <div class="vs-num"><span id="vs-gift-issued" style="color:#15803d;">0</span>건<span class="arrow">→</span><span id="vs-gift-used" style="color:#ea580c;">0</span>건</div>
+            <div class="vs-sub" id="vs-gift-used-pct">0%</div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-label">예산 대비 소진 Gift 금액</div>
+            <div class="vs-num"><span id="vs-budget-spent" style="color:#ea580c;">0원</span><span class="arrow">/</span><span id="vs-budget-total">0원</span></div>
+            <div class="vs-sub" id="vs-budget-pct">0%</div>
+          </div>
         </div>
 
         <div class="vs-grid">
@@ -4202,10 +4221,28 @@ function closeVisitStats() {
 }
 function renderVisitStats(d) {
   const fmtN = n => Number(n||0).toLocaleString('ko-KR');
-  document.getElementById('vs-total').textContent      = fmtN(d.total_visitors);
-  document.getElementById('vs-done').textContent       = fmtN(d.completed_visitors);
-  document.getElementById('vs-gift-issued').textContent = fmtN(d.gift_issued);
-  document.getElementById('vs-gift-used').textContent   = fmtN(d.gift_used);
+  const wonN = n => Number(n||0).toLocaleString('ko-KR') + '원';
+  // 카드 1: 방문 비율
+  const totalVc = Number(d.total_visitors || 0);
+  const doneVc  = Number(d.completed_visitors || 0);
+  const donePctC = totalVc > 0 ? Math.round((doneVc / totalVc) * 100) : 0;
+  document.getElementById('vs-total').textContent      = fmtN(totalVc);
+  document.getElementById('vs-done').textContent       = fmtN(doneVc);
+  document.getElementById('vs-done-pct').textContent   = `${donePctC}%`;
+  // 카드 2: Gift 발급 → 소진 비율
+  const issuedC = Number(d.gift_issued || 0);
+  const usedC   = Number(d.gift_used || 0);
+  const usedPctC = issuedC > 0 ? Math.round((usedC / issuedC) * 100) : 0;
+  document.getElementById('vs-gift-issued').textContent = fmtN(issuedC);
+  document.getElementById('vs-gift-used').textContent   = fmtN(usedC);
+  document.getElementById('vs-gift-used-pct').textContent = `${usedPctC}%`;
+  // 카드 3: 예산 대비 소진 금액
+  const usedAmtC = Number(d.gift_used_amount || 0);
+  const budgetC  = Number(d.total_budget || 0);
+  const budgetPctC = budgetC > 0 ? Math.round((usedAmtC / budgetC) * 100) : 0;
+  document.getElementById('vs-budget-spent').textContent = wonN(usedAmtC);
+  document.getElementById('vs-budget-total').textContent = wonN(budgetC);
+  document.getElementById('vs-budget-pct').textContent   = `${budgetPctC}%`;
 
   // 1) 목적지별 방문자 막대
   const locs = d.locations || [];
