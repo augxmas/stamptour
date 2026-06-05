@@ -119,6 +119,7 @@ router.post("/projects", requireHost, async (req, res) => {
     prize_amount = "0",
     prize_qty = "0",
     quiz_bonus_per_correct = "0",
+    stop_on_budget_exceed = "0",
     pin_input,
   } = req.body as Record<string, string>;
 
@@ -136,6 +137,7 @@ router.post("/projects", requireHost, async (req, res) => {
   const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
   const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
   const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
+  const stopOverbudget = String(stop_on_budget_exceed) === "1" ? 1 : 0;
 
   if (description.length > 200) {
     res.status(400).json({ error: "설명은 200자 이내여야 합니다." });
@@ -207,12 +209,36 @@ router.post("/projects", requireHost, async (req, res) => {
 
     const [insertResult] = await connection.execute(
       `INSERT INTO projects
-       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
-      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
+       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, stop_on_budget_exceed, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
+      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, stopOverbudget, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
     );
 
     const projectId = Number((insertResult as any).insertId);
+
+    // Gift 단계별 보상 (gift_tiers) — 100% tier 는 기본으로 gift_amount 사용
+    let tiersToInsert: Array<{ pct: number; amount: number }> = [];
+    try {
+      const raw = (req.body as any).gift_tiers;
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (Array.isArray(parsed)) {
+        tiersToInsert = parsed
+          .map((t: any) => ({ pct: Math.floor(Number(t.pct) || 0), amount: Math.max(0, Math.floor(Number(t.amount) || 0)) }))
+          .filter((t) => t.pct >= 1 && t.pct <= 100 && t.amount > 0);
+      }
+    } catch { /* noop */ }
+    // 100% tier 는 항상 Gift 단가로 강제 (사용자 입력 무시)
+    tiersToInsert = tiersToInsert.filter((t) => t.pct < 100);
+    tiersToInsert.push({ pct: 100, amount: giftAmountNum });
+    // 중복 제거 (pct 기준 마지막 값 유지)
+    const tierMap = new Map<number, number>();
+    for (const t of tiersToInsert) tierMap.set(t.pct, t.amount);
+    for (const [pct, amount] of tierMap) {
+      await connection.execute(
+        "INSERT INTO project_gift_tiers (project_id, threshold_pct, amount) VALUES (?, ?, ?)",
+        [projectId, pct, amount],
+      );
+    }
 
     await connection.execute("UPDATE hosts SET project_pin_fail_count = 0 WHERE id = ?", [host.id]);
     await connection.execute("UPDATE host_project_pin_codes SET used = 1 WHERE id = ?", [pinRow.id]);
@@ -283,6 +309,7 @@ router.get("/projects", requireHost, async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT p.*,
+            (SELECT COUNT(*) FROM project_gift_tiers t WHERE t.project_id = p.id AND t.threshold_pct < 100) AS extra_tier_count,
             (SELECT COUNT(*) FROM project_locations pl WHERE pl.project_id = p.id AND pl.disabled = 0) AS active_locations,
             (SELECT COUNT(DISTINCT vv.visitor_id)
                FROM visitor_visits vv
@@ -433,6 +460,7 @@ router.get("/projects/:id", requireHost, async (req, res) => {
   const [rows] = await pool.execute(
     `SELECT id, project_name, project_serial, description, from_date, to_date,
             gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct,
+            stop_on_budget_exceed,
             budget_amount, status, quote_amount, quote_days,
             quote_sent_at, quote_read_at, deposit_confirmed_at, approved_at, started_at,
             created_at, updated_at
@@ -444,9 +472,16 @@ router.get("/projects/:id", requireHost, async (req, res) => {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
+  // Gift 단계별 보상
+  const [tRows] = await pool.execute(
+    "SELECT threshold_pct, amount FROM project_gift_tiers WHERE project_id = ? ORDER BY threshold_pct ASC",
+    [projectId],
+  );
+  const gift_tiers = (tRows as any[]).map((r) => ({ pct: Number(r.threshold_pct), amount: Number(r.amount) }));
   res.json({
     ok: true,
     project: proj,
+    gift_tiers,
     editable: EDITABLE_STATUSES.has(String(proj.status)),
   });
 });
@@ -483,6 +518,7 @@ router.put("/projects/:id", requireHost, async (req, res) => {
     prize_amount = "0",
     prize_qty = "0",
     quiz_bonus_per_correct = "0",
+    stop_on_budget_exceed = "0",
   } = req.body as Record<string, string>;
   if (!project_name || !description || !from_date || !to_date || !gift_amount || !gift_qty) {
     res.status(400).json({ error: "필수값을 입력해 주세요." });
@@ -502,6 +538,7 @@ router.put("/projects/:id", requireHost, async (req, res) => {
   const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
   const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
   const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
+  const stopOverbudget2 = String(stop_on_budget_exceed) === "1" ? 1 : 0;
   const budgetAmount = giftAmountNum * giftQtyNum;
   const newQuote = calculateQuote(from_date, to_date);
 
@@ -509,14 +546,59 @@ router.put("/projects/:id", requireHost, async (req, res) => {
     `UPDATE projects SET
         project_name = ?, description = ?, from_date = ?, to_date = ?,
         gift_amount = ?, gift_qty = ?, prize_amount = ?, prize_qty = ?,
-        quiz_bonus_per_correct = ?, budget_amount = ?, updated_at = NOW()
+        quiz_bonus_per_correct = ?, stop_on_budget_exceed = ?, budget_amount = ?, updated_at = NOW()
       WHERE id = ?`,
     [
       project_name, description, from_date, to_date,
       giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum,
-      quizBonusNum, budgetAmount, projectId,
+      quizBonusNum, stopOverbudget2, budgetAmount, projectId,
     ],
   );
+
+  // Gift 단계별 보상 — DELETE 후 재INSERT
+  let tiersToSave: Array<{ pct: number; amount: number }> = [];
+  try {
+    const raw = (req.body as any).gift_tiers;
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (Array.isArray(parsed)) {
+      tiersToSave = parsed
+        .map((t: any) => ({ pct: Math.floor(Number(t.pct) || 0), amount: Math.max(0, Math.floor(Number(t.amount) || 0)) }))
+        .filter((t) => t.pct >= 1 && t.pct <= 100 && t.amount > 0);
+    }
+  } catch { /* noop */ }
+  // 단계별 보상 사용 시(2단계 이상) — 단계 수 == 활성 목적지 수 (정확히 같아야 함)
+  const extraTiersCount = tiersToSave.filter((t) => t.pct < 100).length;
+  if (extraTiersCount > 0) {
+    const totalTiersCount = extraTiersCount + 1; // 100% 포함
+    const [locCntRows] = await pool.execute(
+      "SELECT COUNT(*) AS n FROM project_locations WHERE project_id = ? AND disabled = 0",
+      [projectId],
+    );
+    const activeLocs = Number((locCntRows as any[])[0]?.n || 0);
+    if (activeLocs !== totalTiersCount) {
+      res.status(400).json({
+        error: `단계별 보상 사용 시 단계 수(${totalTiersCount})와 활성 목적지 수(${activeLocs})가 같아야 합니다.`,
+      });
+      return;
+    }
+    const bad = tiersToSave.find((t) => t.pct < 100 && t.amount >= giftAmountNum);
+    if (bad) {
+      res.status(400).json({ error: `${bad.pct}% 단계 보상은 Gift 단가(${giftAmountNum.toLocaleString("ko-KR")}원) 미만이어야 합니다.` });
+      return;
+    }
+  }
+  // 100% tier 는 항상 Gift 단가로 강제
+  tiersToSave = tiersToSave.filter((t) => t.pct < 100);
+  tiersToSave.push({ pct: 100, amount: giftAmountNum });
+  const tierMap2 = new Map<number, number>();
+  for (const t of tiersToSave) tierMap2.set(t.pct, t.amount);
+  await pool.execute("DELETE FROM project_gift_tiers WHERE project_id = ?", [projectId]);
+  for (const [pct, amount] of tierMap2) {
+    await pool.execute(
+      "INSERT INTO project_gift_tiers (project_id, threshold_pct, amount) VALUES (?, ?, ?)",
+      [projectId, pct, amount],
+    );
+  }
 
   const oldQuote = Number(cur.quote_amount || 0);
   const quoteChanged = newQuote.total !== oldQuote;
@@ -735,21 +817,29 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   const imagePath = req.file ? req.file.path : null;
 
   if (destType === "location") {
-    if (!locationName || !kakaoLat || !kakaoLng || !locationDesc) {
-      res.status(400).json({ error: "장소·좌표·설명을 모두 입력해 주세요." });
+    if (!locationName || !kakaoLat || !kakaoLng) {
+      res.status(400).json({ error: "장소명·좌표를 모두 입력해 주세요." });
       return;
     }
-    if (locationDesc.length > 50) {
-      res.status(400).json({ error: "위치설명은 50자 이내여야 합니다." });
+    if (locationName.length > 100) {
+      res.status(400).json({ error: "장소명은 100자 이내여야 합니다." });
+      return;
+    }
+    if (locationDesc.length > 500) {
+      res.status(400).json({ error: "설명은 500자 이내여야 합니다." });
       return;
     }
   } else {
     if (!locationName) {
-      res.status(400).json({ error: "전시물 설명을 입력해 주세요." });
+      res.status(400).json({ error: "제목을 입력해 주세요." });
       return;
     }
     if (locationName.length > 100) {
-      res.status(400).json({ error: "전시물 설명은 100자 이내여야 합니다." });
+      res.status(400).json({ error: "제목은 100자 이내여야 합니다." });
+      return;
+    }
+    if (locationDesc.length > 500) {
+      res.status(400).json({ error: "전시물 설명은 500자 이내여야 합니다." });
       return;
     }
   }
@@ -800,30 +890,58 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   res.json({ ok: true, locationSeq: numbers.locationSeq, displaySeq: numbers.displaySeq });
 });
 
-router.put("/projects/:projectId/locations/:locationId", requireHost, async (req, res) => {
+router.put("/projects/:projectId/locations/:locationId", requireHost, iconUpload.single("image"), async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.projectId);
   const locationId = Number(req.params.locationId);
-  const { location_name, kakao_lat, kakao_lng, location_desc, pin_input } = req.body as Record<string, string>;
+  const location_name = String(req.body.location_name ?? "").trim();
+  const location_desc = String(req.body.location_desc ?? "").trim();
+  const kakao_lat = req.body.kakao_lat;
+  const kakao_lng = req.body.kakao_lng;
+  const removeImage = String(req.body.remove_image ?? "") === "1";
 
-  const [projectRows] = await pool.execute("SELECT pin_hash FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
+  const [projectRows] = await pool.execute("SELECT id FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
-
-  const pinHash = String((projectRows as any)[0].pin_hash);
-  const pinOk = await verifyPin(pin_input ?? "", pinHash);
-  if (!pinOk) {
-    res.status(400).json({ error: "비밀전호가 일치하지 않습니다" });
+  const [locRows] = await pool.execute(
+    "SELECT id, image_path FROM project_locations WHERE id = ? AND project_id = ?",
+    [locationId, projectId],
+  );
+  const oldRow = (locRows as any[])[0];
+  if (!oldRow) {
+    res.status(404).json({ error: "location_not_found" });
     return;
+  }
+  if (!location_name) {
+    res.status(400).json({ error: "이름을 입력해 주세요." });
+    return;
+  }
+  if (location_name.length > 100) {
+    res.status(400).json({ error: "이름은 100자 이내여야 합니다." });
+    return;
+  }
+  if (location_desc.length > 500) {
+    res.status(400).json({ error: "설명은 500자 이내여야 합니다." });
+    return;
+  }
+  // 이미지 처리 — 새 파일 / remove_image / 유지
+  let imagePath: string | null = oldRow.image_path;
+  if (req.file) {
+    imagePath = req.file.path;
+  } else if (removeImage) {
+    imagePath = null;
   }
 
   await pool.execute(
     `UPDATE project_locations
-     SET location_name = ?, kakao_lat = ?, kakao_lng = ?, location_desc = ?, updated_at = NOW()
+     SET location_name = ?, kakao_lat = ?, kakao_lng = ?, location_desc = ?, image_path = ?, updated_at = NOW()
      WHERE id = ? AND project_id = ?`,
-    [location_name, Number(kakao_lat), Number(kakao_lng), location_desc, locationId, projectId],
+    [location_name,
+     kakao_lat !== undefined && kakao_lat !== null && kakao_lat !== "" ? Number(kakao_lat) : null,
+     kakao_lng !== undefined && kakao_lng !== null && kakao_lng !== "" ? Number(kakao_lng) : null,
+     location_desc, imagePath, locationId, projectId],
   );
 
   res.json({ ok: true });
@@ -942,12 +1060,20 @@ router.get("/projects/:id/locations", requireHost, async (req, res) => {
     qr_image_url: qrReady ? toUploadUrl(r.qr_image_path) : null,
   }));
 
+  // 단계별 보상 tier 개수 — 100% 포함 (단계별 보상 사용 시 N >= 2)
+  const [tCntRows] = await pool.execute(
+    "SELECT COUNT(*) AS n FROM project_gift_tiers WHERE project_id = ?",
+    [projectId],
+  );
+  const tierCount = Number((tCntRows as any[])[0]?.n || 0);
+
   res.json({
     ok: true,
     data,
     status: project.status,
     started: project.status === "started",
     qr_ready: qrReady,
+    tier_count: tierCount,
     locations_submitted: Number(project.locations_submitted) === 1,
   });
 });
@@ -1716,7 +1842,7 @@ router.get("/settlement", requireHost, async (req, res) => {
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
 
   const [rows] = await pool.execute(
-    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount,
+    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount, p.budget_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
@@ -1732,13 +1858,317 @@ router.get("/settlement", requireHost, async (req, res) => {
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
 });
 
+// ── 정산(가맹점별): 프로젝트 × 가맹점 그룹 집계 ──
+router.get("/settlement/by-merchant", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+  const k = encKey();
+
+  let where = "WHERE p.host_id = ? AND p.status IN ('ready_to_start','started','completed')";
+  const params: Array<string | number> = [k, hostId];
+  if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            gr.merchant_id,
+            COALESCE(fn_decrypt(m.merchant_name, ?), '(미기록)') AS merchant_name,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END) AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN 1 ELSE 0 END) AS grant_count,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN gr.amount ELSE 0 END) AS grant_amount,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='normal' THEN gr.visitor_id END) AS used_users,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='grant' THEN gr.visitor_id END) AS grant_users
+     FROM projects p
+     JOIN gift_redemptions gr ON gr.project_id = p.id
+     LEFT JOIN merchants m ON m.id = gr.merchant_id
+     ${where}
+     GROUP BY p.id, gr.merchant_id
+     ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC, merchant_name ASC`,
+    params,
+  );
+
+  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+});
+
+// ── 정산(일별): 프로젝트 × 일자 × 가맹점 그룹 집계 ──
+router.get("/settlement/by-day", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+  const k = encKey();
+
+  let where = "WHERE p.host_id = ? AND p.status IN ('ready_to_start','started','completed')";
+  const params: Array<string | number> = [k, hostId];
+  if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            DATE(gr.redeemed_at) AS day,
+            gr.merchant_id,
+            COALESCE(fn_decrypt(m.merchant_name, ?), '(미기록)') AS merchant_name,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END) AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN 1 ELSE 0 END) AS grant_count,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN gr.amount ELSE 0 END) AS grant_amount,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='normal' THEN gr.visitor_id END) AS used_users,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='grant' THEN gr.visitor_id END) AS grant_users
+     FROM projects p
+     JOIN gift_redemptions gr ON gr.project_id = p.id
+     LEFT JOIN merchants m ON m.id = gr.merchant_id
+     ${where}
+     GROUP BY p.id, day, gr.merchant_id
+     ORDER BY day DESC, p.project_name ASC, merchant_name ASC`,
+    params,
+  );
+
+  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+});
+
+// ───── 정산 엑셀 다운로드 (3개: 프로젝트별 / 가맹점별 / 일별) ─────
+const STT_STATUS_KO: Record<string, string> = { ready_to_start: "시작대기", started: "진행중", completed: "완료" };
+
+function settleMetrics(r: any) {
+  const giftAmt = Number(r.gift_amount || 0);
+  const prizeAmt = Number(r.prize_amount || 0);
+  const budget = Number(r.budget_amount || 0);
+  const usedCnt = Number(r.used_count || 0);
+  const grantCnt = Number(r.grant_count || 0);
+  const usedTotal = Number(r.used_amount || 0);
+  const grantTot = Number(r.grant_amount || 0);
+  const giftUsed = giftAmt * usedCnt;
+  const prizeUsed = Math.max(0, usedTotal - giftUsed);
+  const prizeCnt = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+  const giftSum = giftUsed + grantTot;
+  const totalReward = giftUsed + prizeUsed;
+  return { giftAmt, prizeAmt, budget, usedCnt, grantCnt, giftUsed, grantTot, prizeUsed, prizeCnt, giftSum, totalReward };
+}
+
+function applyMoneyFmt(ws: ExcelJS.Worksheet, keys: string[]) {
+  keys.forEach((key) => {
+    const col = ws.getColumn(key);
+    if (col) { col.numFmt = "#,##0"; col.alignment = { horizontal: "right" }; }
+  });
+}
+
+async function sendXlsx(res: any, wb: ExcelJS.Workbook, baseName: string) {
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(baseName)}.xlsx`);
+  await wb.xlsx.write(res);
+  res.end();
+}
+
+// 프로젝트별 (host)
+router.get("/settlement/export", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+  let where = "WHERE p.host_id = ? AND p.status IN ('ready_to_start','started','completed')";
+  const params: Array<string | number> = [hostId];
+  if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount, p.budget_amount,
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_amount,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_users,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_users
+     FROM projects p ${where}
+     ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("정산-프로젝트별");
+  ws.columns = [
+    { header: "프로젝트명", key: "name", width: 26 },
+    { header: "일련번호", key: "serial", width: 16 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "Gift 단가(X)", key: "giftAmt", width: 14 },
+    { header: "Gift 사용개수(Y)", key: "usedCnt", width: 14 },
+    { header: "Gift 증정개수(Z)", key: "grantCnt", width: 14 },
+    { header: "Gift 사용금액(a=X×Y)", key: "giftUsed", width: 18 },
+    { header: "Gift 증정금액(b=X×Z)", key: "grantTot", width: 18 },
+    { header: "Gift 합계(c=a+b)", key: "giftSum", width: 16 },
+    { header: "Quiz 단가(a)", key: "prizeAmt", width: 14 },
+    { header: "Quiz 지급개수(b)", key: "prizeCnt", width: 14 },
+    { header: "Quiz 사용금액(c=a×b)", key: "prizeUsed", width: 18 },
+    { header: "총 Reward 금액", key: "totalReward", width: 16 },
+    { header: "예산", key: "budget", width: 14 },
+    { header: "사용자(사용/증정)", key: "users", width: 16 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  for (const p of list) {
+    const m = settleMetrics(p);
+    ws.addRow({
+      name: p.project_name,
+      serial: p.project_serial,
+      status: STT_STATUS_KO[p.status as string] ?? p.status,
+      giftAmt: m.giftAmt, usedCnt: m.usedCnt, grantCnt: m.grantCnt,
+      giftUsed: m.giftUsed, grantTot: m.grantTot, giftSum: m.giftSum,
+      prizeAmt: m.prizeAmt, prizeCnt: m.prizeCnt, prizeUsed: m.prizeUsed,
+      totalReward: m.totalReward, budget: m.budget,
+      users: `${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}`,
+    });
+  }
+  applyMoneyFmt(ws, ["giftAmt", "giftUsed", "grantTot", "giftSum", "prizeAmt", "prizeUsed", "totalReward", "budget"]);
+  await sendXlsx(res, wb, "정산-프로젝트별");
+});
+
+// 가맹점별 (host)
+router.get("/settlement/by-merchant/export", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+  const k = encKey();
+  let where = "WHERE p.host_id = ? AND p.status IN ('ready_to_start','started','completed')";
+  const params: Array<string | number> = [k, hostId];
+  if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            gr.merchant_id,
+            COALESCE(fn_decrypt(m.merchant_name, ?), '(미기록)') AS merchant_name,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END) AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN 1 ELSE 0 END) AS grant_count,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN gr.amount ELSE 0 END) AS grant_amount,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='normal' THEN gr.visitor_id END) AS used_users,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='grant' THEN gr.visitor_id END) AS grant_users
+     FROM projects p
+     JOIN gift_redemptions gr ON gr.project_id = p.id
+     LEFT JOIN merchants m ON m.id = gr.merchant_id
+     ${where}
+     GROUP BY p.id, gr.merchant_id
+     ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC, merchant_name ASC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("정산-가맹점별");
+  ws.columns = [
+    { header: "프로젝트명", key: "name", width: 26 },
+    { header: "일련번호", key: "serial", width: 16 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "가맹점명", key: "merchant", width: 22 },
+    { header: "Gift 단가(X)", key: "giftAmt", width: 14 },
+    { header: "Gift 사용(Y)", key: "usedCnt", width: 12 },
+    { header: "Gift 증정(Z)", key: "grantCnt", width: 12 },
+    { header: "Gift 사용금액(a=X×Y)", key: "giftUsed", width: 18 },
+    { header: "Gift 증정금액(b=X×Z)", key: "grantTot", width: 18 },
+    { header: "Gift 합계(c=a+b)", key: "giftSum", width: 16 },
+    { header: "Quiz 단가(a)", key: "prizeAmt", width: 14 },
+    { header: "Quiz 지급(b)", key: "prizeCnt", width: 12 },
+    { header: "Quiz 사용금액(c=a×b)", key: "prizeUsed", width: 18 },
+    { header: "총 Reward 금액", key: "totalReward", width: 16 },
+    { header: "사용자(사용/증정)", key: "users", width: 16 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  for (const p of list) {
+    const m = settleMetrics(p);
+    ws.addRow({
+      name: p.project_name, serial: p.project_serial,
+      status: STT_STATUS_KO[p.status as string] ?? p.status,
+      merchant: p.merchant_name || "(미기록)",
+      giftAmt: m.giftAmt, usedCnt: m.usedCnt, grantCnt: m.grantCnt,
+      giftUsed: m.giftUsed, grantTot: m.grantTot, giftSum: m.giftSum,
+      prizeAmt: m.prizeAmt, prizeCnt: m.prizeCnt, prizeUsed: m.prizeUsed,
+      totalReward: m.totalReward,
+      users: `${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}`,
+    });
+  }
+  applyMoneyFmt(ws, ["giftAmt", "giftUsed", "grantTot", "giftSum", "prizeAmt", "prizeUsed", "totalReward"]);
+  await sendXlsx(res, wb, "정산-가맹점별");
+});
+
+// 일별 (host) — 프로젝트 × 일자 × 가맹점
+router.get("/settlement/by-day/export", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+  const k = encKey();
+  let where = "WHERE p.host_id = ? AND p.status IN ('ready_to_start','started','completed')";
+  const params: Array<string | number> = [k, hostId];
+  if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            DATE(gr.redeemed_at) AS day,
+            gr.merchant_id,
+            COALESCE(fn_decrypt(m.merchant_name, ?), '(미기록)') AS merchant_name,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END) AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN 1 ELSE 0 END) AS grant_count,
+            SUM(CASE WHEN gr.redemption_type='grant' THEN gr.amount ELSE 0 END) AS grant_amount,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='normal' THEN gr.visitor_id END) AS used_users,
+            COUNT(DISTINCT CASE WHEN gr.redemption_type='grant' THEN gr.visitor_id END) AS grant_users
+     FROM projects p
+     JOIN gift_redemptions gr ON gr.project_id = p.id
+     LEFT JOIN merchants m ON m.id = gr.merchant_id
+     ${where}
+     GROUP BY p.id, day, gr.merchant_id
+     ORDER BY day DESC, p.project_name ASC, merchant_name ASC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("정산-일별");
+  ws.columns = [
+    { header: "일자", key: "day", width: 12 },
+    { header: "프로젝트명", key: "name", width: 26 },
+    { header: "일련번호", key: "serial", width: 16 },
+    { header: "가맹점명", key: "merchant", width: 22 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "Gift 단가(X)", key: "giftAmt", width: 14 },
+    { header: "Gift 사용(Y)", key: "usedCnt", width: 12 },
+    { header: "Gift 증정(Z)", key: "grantCnt", width: 12 },
+    { header: "Gift 사용금액(a=X×Y)", key: "giftUsed", width: 18 },
+    { header: "Gift 증정금액(b=X×Z)", key: "grantTot", width: 18 },
+    { header: "Gift 합계(c=a+b)", key: "giftSum", width: 16 },
+    { header: "Quiz 단가(a)", key: "prizeAmt", width: 14 },
+    { header: "Quiz 지급(b)", key: "prizeCnt", width: 12 },
+    { header: "Quiz 사용금액(c=a×b)", key: "prizeUsed", width: 18 },
+    { header: "총 Reward 금액", key: "totalReward", width: 16 },
+    { header: "사용자(사용/증정)", key: "users", width: 16 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  for (const p of list) {
+    const m = settleMetrics(p);
+    ws.addRow({
+      day: p.day ? String(p.day).slice(0, 10) : "",
+      merchant: p.merchant_name || "(미기록)",
+      name: p.project_name, serial: p.project_serial,
+      status: STT_STATUS_KO[p.status as string] ?? p.status,
+      giftAmt: m.giftAmt, usedCnt: m.usedCnt, grantCnt: m.grantCnt,
+      giftUsed: m.giftUsed, grantTot: m.grantTot, giftSum: m.giftSum,
+      prizeAmt: m.prizeAmt, prizeCnt: m.prizeCnt, prizeUsed: m.prizeUsed,
+      totalReward: m.totalReward,
+      users: `${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}`,
+    });
+  }
+  applyMoneyFmt(ws, ["giftAmt", "giftUsed", "grantTot", "giftSum", "prizeAmt", "prizeUsed", "totalReward"]);
+  await sendXlsx(res, wb, "정산-일별");
+});
+
 // ── 정산: 특정 프로젝트의 일별 정산 내역 (상세보기 팝업) ──
 router.get("/settlement/:projectId/daily", requireHost, async (req, res) => {
   const hostId = req.session.host!.id;
   const projectId = Number(req.params.projectId);
 
   const [projRows] = await pool.execute(
-    `SELECT id, project_name, project_serial, gift_amount, prize_amount, status
+    `SELECT id, project_name, project_serial, gift_amount, prize_amount, budget_amount, status
        FROM projects WHERE id = ? AND host_id = ?`,
     [projectId, hostId],
   );
@@ -1769,6 +2199,7 @@ router.get("/settlement/:projectId/daily", requireHost, async (req, res) => {
       serial: proj.project_serial,
       gift_amount: Number(proj.gift_amount || 0),
       prize_amount: Number(proj.prize_amount || 0),
+      budget_amount: Number(proj.budget_amount || 0),
       status: proj.status,
     },
     daily: (Array.isArray(dailyRows) ? dailyRows : []).map((r: any) => ({

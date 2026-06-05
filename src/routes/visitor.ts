@@ -2,7 +2,7 @@ import { Router } from "express";
 import QRCode from "qrcode";
 import pool from "../config/database";
 import { normalizePhone, verifyPin } from "../services/project.service";
-import { ensureGiftIfEligible, getVisitorGift, recomputeIssuedGiftAmount } from "../services/gift.service";
+import { ensureGiftIfEligible, ensureAllTierGifts, getVisitorGift, recomputeIssuedGiftAmount } from "../services/gift.service";
 import { vapidPublicKey, saveVisitorSubscription } from "../services/push.service";
 
 const router = Router();
@@ -25,7 +25,7 @@ function toUploadUrl(p?: string | null): string | null {
 // 활성 목적지 목록 + 해당 방문자의 목적지별 방문 여부
 async function getVisitorLocations(projectId: number, visitorId: number) {
   const [rows] = await pool.execute(
-    `SELECT pl.location_seq, pl.display_seq, pl.dest_type, pl.location_name, pl.image_path,
+    `SELECT pl.location_seq, pl.display_seq, pl.dest_type, pl.location_name, pl.location_desc, pl.image_path,
             (vv.id IS NOT NULL) AS visited
      FROM project_locations pl
      LEFT JOIN visitor_visits vv ON vv.location_id = pl.id AND vv.visitor_id = ?
@@ -38,6 +38,7 @@ async function getVisitorLocations(projectId: number, visitorId: number) {
     display_seq: r.display_seq,
     dest_type: r.dest_type,
     location_name: r.location_name,
+    location_desc: r.location_desc,
     image_url: toUploadUrl(r.image_path),
     visited: !!Number(r.visited),
   }));
@@ -154,17 +155,15 @@ router.post("/visit", async (req, res) => {
   const visitedLocations = Number(totals.visited_locations);
   const completed = totalLocations > 0 && visitedLocations >= totalLocations;
 
-  // 모든 목적지 방문 완료 시 Gift(QR) 발급
-  let gift: any = null;
-  if (completed) {
-    try {
-      const g = await ensureGiftIfEligible(projectId, visitorId);
-      if (g) gift = { status: g.status, amount: Number(g.amount), qr_url: g.status === "issued" ? `/uploads/gift-qr/${g.token}.png` : null, used_at: g.used_at };
-    } catch (e) { console.error("ensureGiftIfEligible failed:", e); }
-  }
+  // 진행률 기준 모든 도달 tier 의 Gift 발급 (이미 발급된 것은 skip)
+  let newlyIssued: any[] = [];
+  try {
+    newlyIssued = await ensureAllTierGifts(projectId, visitorId);
+  } catch (e) { console.error("ensureAllTierGifts failed:", e); }
 
   const locations = await getVisitorLocations(projectId, visitorId);
   const quizzes = await getVisitorQuizzes(projectId, visitorId, locations);
+  const giftData = await getVisitorGift(projectId, visitorId);
 
   res.json({
     ok: true,
@@ -177,7 +176,10 @@ router.post("/visit", async (req, res) => {
     progressRate: totalLocations > 0 ? Math.round((visitedLocations / totalLocations) * 100) : 0,
     locations,
     quizzes,
-    gift,
+    gift: giftData.eligible ? { status: giftData.status, amount: giftData.amount, qr_url: giftData.qr_url, used_at: giftData.used_at } : null,
+    gifts: giftData.gifts || [],
+    tiers: await getProjectTierStatus(projectId, visitorId, totalLocations, visitedLocations),
+    newly_issued_tiers: newlyIssued.map((g: any) => Number(g.threshold_pct)),
   });
 });
 
@@ -220,6 +222,10 @@ router.get("/progress/:projectSerial", async (req, res) => {
   const totals = (countRows as any)[0];
   const locations = await getVisitorLocations(projectId, visitorId);
   const quizzes = await getVisitorQuizzes(projectId, visitorId, locations);
+  // 진행률 기반 tier 자동 발급 + 현재 모든 Gift
+  try { await ensureAllTierGifts(projectId, visitorId); } catch (e) { /* noop */ }
+  const giftData = await getVisitorGift(projectId, visitorId);
+  const projTiers = await getProjectTierStatus(projectId, visitorId, Number(totals.total_locations), Number(totals.visited_locations));
 
   res.json({
     ok: true,
@@ -229,8 +235,32 @@ router.get("/progress/:projectSerial", async (req, res) => {
     visitedLocations: Number(totals.visited_locations),
     locations,
     quizzes,
+    gifts: giftData.gifts || [],
+    tiers: projTiers,
   });
 });
+
+// 프로젝트의 모든 tier + visitor 의 도달/발급 상태
+async function getProjectTierStatus(projectId: number, visitorId: number, total: number, visited: number) {
+  const [tRows] = await pool.execute(
+    "SELECT threshold_pct, amount FROM project_gift_tiers WHERE project_id = ? ORDER BY threshold_pct ASC",
+    [projectId],
+  );
+  const tiers = (Array.isArray(tRows) ? tRows : []) as any[];
+  if (!tiers.length) return [];
+  const pct = total > 0 ? Math.round((visited / total) * 100) : 0;
+  const [issuedRows] = await pool.execute(
+    "SELECT threshold_pct FROM gifts WHERE project_id = ? AND visitor_id = ?",
+    [projectId, visitorId],
+  );
+  const issuedSet = new Set<number>((issuedRows as any[]).map((r) => Number(r.threshold_pct)));
+  return tiers.map((t) => ({
+    pct: Number(t.threshold_pct),
+    amount: Number(t.amount),
+    reached: pct >= Number(t.threshold_pct),
+    issued: issuedSet.has(Number(t.threshold_pct)),
+  }));
+}
 
 // 방문자에게 노출할 퀴즈 목록 + 응시 상태 + 활성화 여부
 async function getVisitorQuizzes(projectId: number, visitorId: number, locations: any[]) {
@@ -422,13 +452,20 @@ router.post("/quiz-answer", async (req, res) => {
     [visitorId, quiz_id, isCorrect ? 1 : 0, JSON.stringify(Array.from(submittedIds))],
   );
 
-  // 이미 발급된(미사용) Gift 가 있다면 새 정답 보너스를 반영해 amount 즉시 갱신
-  if (isCorrect) {
-    try { await recomputeIssuedGiftAmount(projectId, visitorId); } catch (e) { /* noop */ }
-  }
+  // 진행률 기준으로 단일 Gift 발급/업그레이드 — Gift 단가 보너스는 100% 도달 시에만 반영됨
+  try { await ensureAllTierGifts(projectId, visitorId); } catch (e) { /* noop */ }
 
-  // 프로젝트 단가 + Prize 보상액 + 방문자의 누적 정답 수 → 예상 Gift 금액 계산
-  // 정답 1개당 prize_amount 만큼 Gift 에 추가
+  // 현재 발급된(미사용) Gift 의 실제 amount = expected_total
+  const [gRow] = await pool.execute(
+    `SELECT amount, threshold_pct FROM gifts
+      WHERE project_id = ? AND visitor_id = ? AND status = 'issued'
+      ORDER BY threshold_pct DESC LIMIT 1`,
+    [projectId, visitorId],
+  );
+  const curGift = (gRow as any[])[0];
+  const expectedTotal = curGift ? Number(curGift.amount) : 0;
+  const reachedTopTier = curGift && Number(curGift.threshold_pct) >= 100;
+
   const [pRows] = await pool.execute(
     "SELECT gift_amount, prize_amount FROM projects WHERE id = ?",
     [projectId],
@@ -436,25 +473,18 @@ router.post("/quiz-answer", async (req, res) => {
   const proj = (pRows as any[])[0] || {};
   const baseAmount = Number(proj.gift_amount || 0);
   const prizeAmount = Number(proj.prize_amount || 0);
-  const [cntRows] = await pool.execute(
-    `SELECT COUNT(*) AS n FROM visitor_quiz_attempts vqa
-       JOIN project_quizzes q ON q.id = vqa.quiz_id
-      WHERE vqa.visitor_id = ? AND vqa.is_correct = 1 AND q.project_id = ?`,
-    [visitorId, projectId],
-  );
-  const correctCount = Number((cntRows as any[])[0]?.n || 0);
-  const accumulatedBonus = prizeAmount * correctCount;
-  const expectedTotal = baseAmount + accumulatedBonus;
+  // Quiz 보너스는 정답 맞출 때마다 Gift 에 반영 (도달 tier 무관)
+  const bonusAdded = isCorrect ? prizeAmount : 0;
 
   res.json({
     ok: true,
     is_correct: isCorrect,
     correct_choice_ids: Array.from(correctIds),
     prize_amount: prizeAmount,
-    bonus_added: isCorrect ? prizeAmount : 0,
-    accumulated_bonus: accumulatedBonus,
+    bonus_added: bonusAdded,
     base_amount: baseAmount,
     expected_total: expectedTotal,
+    reached_top_tier: !!reachedTopTier,
   });
 });
 

@@ -14,10 +14,10 @@
     body { font-family: "Malgun Gothic", sans-serif; background: #f0f4f9; min-height: 100vh;
            display: flex; flex-direction: column; }
     .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 16px 40px; }
-    .logo { font-size: 22px; font-weight: 700; color: #16a34a; margin-bottom: 28px; }
+    .logo { font-size: 22px; font-weight: 700; color: #2563eb; margin-bottom: 28px; }
 
     /* ── 카드 헤더 (회원가입·팝업 공통) ── */
-    .card-header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    .card-header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
                    border-radius: 16px 16px 0 0; padding: 18px 28px;
                    text-align: center; position: relative; }
     .card-header h2, .card-header h3 { font-size: 18px; font-weight: 700; color: #fff; margin: 0; }
@@ -36,7 +36,7 @@
     .auth-card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 22px; }
     /* 로그인 제목 띠: 가운데 정렬 + 색 배경 (카드 상단 폭에 맞춰 꽉 채움) */
     .auth-card h2.login-band { text-align: center; color: #fff;
-      background: linear-gradient(135deg, #16a34a, #166534);
+      background: linear-gradient(135deg, #2563eb, #1e40af);
       margin: -36px -32px 24px; padding: 16px 32px; border-radius: 16px 16px 0 0; }
 
     /* ── 폼 공통 ── */
@@ -48,17 +48,21 @@
     .fg input[type=date], .fg input[type=number], .fg textarea {
       width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;
       font-size: 14px; outline: none; transition: border-color .2s; font-family: inherit; }
-    .fg input:focus, .fg textarea:focus { border-color: #16a34a; }
+    .fg input:focus, .fg textarea:focus { border-color: #2563eb; }
     .fg input.inv { border-color: #dc2626 !important; }
-    .fg input.ok  { border-color: #16a34a !important; }
+    .fg input.ok  { border-color: #2563eb !important; }
     .fm { font-size: 11px; margin-top: 3px; min-height: 15px; }
-    .fm.e { color: #dc2626; } .fm.g { color: #16a34a; }
+    .fm.e { color: #dc2626; } .fm.g { color: #2563eb; }
     #pj-to-fm.e { font-size: 13px; font-weight: 600; background:#fef2f2; border:1px solid #fecaca; padding:6px 10px; border-radius:6px; margin-top:6px; }
     /* 방문 현황 통계 시각화 */
-    .vs-cards { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:16px; }
-    .vs-card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:10px; text-align:center; }
-    .vs-label { font-size:11px; color:#64748b; margin-bottom:4px; }
-    .vs-num { font-size:22px; font-weight:800; color:#16243a; }
+    .vs-cards { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:20px; }
+    .vs-card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:18px 14px; text-align:center; }
+    .vs-label { font-size:13px; color:#64748b; margin-bottom:8px; font-weight:600; }
+    .vs-num { font-size:32px; font-weight:800; color:#16243a; line-height:1.1; }
+    /* 4개 섹션을 2x2 그리드로 배치 — 큰 화면에서 가로 공간 활용 */
+    .vs-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 24px; }
+    @media (max-width:900px) { .vs-grid { grid-template-columns:1fr; } }
+    .vs-grid .vs-section { margin-bottom:0; }
     .vs-h { font-size:13px; font-weight:700; color:#1e293b; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #e5e7eb; cursor:pointer; list-style:none; display:flex; align-items:center; user-select:none; }
     .vs-h::-webkit-details-marker { display:none; }
     .vs-h::after {
@@ -71,32 +75,47 @@
     details[open] > .vs-h::after { content:'−'; background:#3b82f6; color:#fff; border-color:#3b82f6; }
     details[open] > .vs-h:hover::after { background:#1d4ed8; }
     .vs-section { margin-bottom:4px; }
-    .vs-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px; }
-    .vs-bar-label { width:130px; flex-shrink:0; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .vs-bar-track { flex:1; height:22px; background:#f1f5f9; border-radius:4px; overflow:hidden; position:relative; }
-    .vs-bar-text { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:11px; font-weight:800; color:#0f172a; white-space:nowrap; pointer-events:none;
+    .vs-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:13px; }
+    .vs-bar-label { width:150px; flex-shrink:0; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+    .vs-bar-track { flex:1; height:28px; background:#f1f5f9; border-radius:6px; overflow:hidden; position:relative; }
+    .vs-bar-text { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:13px; font-weight:800; color:#0f172a; white-space:nowrap; pointer-events:none;
       text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px rgba(255,255,255,.95); }
-    .vs-bar-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#1d4ed8); }
+    /* 일반 데이터(방문자 등)는 amber, 완주·실적·성과는 green, 소진은 orange */
+    .vs-bar-fill { height:100%; background:linear-gradient(90deg,#f59e0b,#b45309); }
     .vs-bar-fill.green { background:linear-gradient(90deg,#22c55e,#15803d); }
-    .vs-bar-fill.orange { background:linear-gradient(90deg,#f97316,#c2410c); }
-    .vs-bar-val { width:60px; flex-shrink:0; text-align:right; color:#16243a; font-weight:700; }
-    .vs-daily-row { display:grid; grid-template-columns:80px 1fr 1fr; gap:8px; align-items:center; padding:4px 0; border-bottom:1px solid #f1f5f9; }
+    .vs-bar-fill.orange { background:linear-gradient(90deg,#fb923c,#c2410c); }
+    .vs-bar-val { width:80px; flex-shrink:0; text-align:right; color:#16243a; font-weight:700; font-size:13px; }
+    .vs-daily-row { display:grid; grid-template-columns:90px 1fr 1fr; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
     .vs-daily-row:last-child { border-bottom:none; }
-    .vs-daily-date { color:#475569; font-weight:600; }
-    .vs-daily-cell { display:flex; align-items:center; gap:6px; }
-    .vs-daily-cell .vs-bar-track { height:14px; }
-    .vs-daily-cell-val { width:30px; text-align:right; font-weight:700; color:#16243a; }
-    .vs-empty { color:#94a3b8; font-size:12px; text-align:center; padding:14px; }
+    .vs-daily-date { color:#475569; font-weight:700; }
+    .vs-daily-cell { display:flex; align-items:center; gap:8px; }
+    .vs-daily-cell .vs-bar-track { height:18px; }
+    .vs-daily-cell-val { width:36px; text-align:right; font-weight:700; color:#16243a; }
+    .vs-empty { color:#94a3b8; font-size:13px; text-align:center; padding:18px; }
     .qf-loc-select { position: relative; }
     .qf-loc-trigger { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; background:#fff; user-select:none; display:flex; align-items:center; min-height:46px; }
     .qf-loc-trigger img { width:32px; height:32px; border-radius:4px; object-fit:cover; border:1px solid #e5e7eb; }
     .qf-loc-options { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1.5px solid #cbd5e1; border-radius:8px; max-height:320px; overflow-y:auto; z-index:50; box-shadow:0 4px 16px rgba(0,0,0,0.10); }
     .qf-loc-option { padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:13px; border-bottom:1px solid #f1f5f9; }
     .qf-loc-option:last-child { border-bottom:none; }
-    .qf-loc-option:hover { background:#f0fdf4; }
-    .qf-loc-option.act { background:#dcfce7; font-weight:600; }
+    .qf-loc-option:hover { background:#eff6ff; }
+    .qf-loc-option.act { background:#dbeafe; font-weight:600; }
     .qf-loc-option img { width:48px; height:48px; border-radius:6px; object-fit:cover; border:1px solid #e5e7eb; flex-shrink:0; }
     .qf-loc-noimg { width:48px; height:48px; border-radius:6px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:18px; flex-shrink:0; }
+    /* Gift 단계별 보상 — 단계 수 N + 각 단계 금액 */
+    .gift-tiers-grid { display:flex; flex-direction:column; gap:6px; }
+    .gift-tier-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; }
+    .gift-tier-row .gt-pct { width:90px; font-size:12px; font-weight:700; color:#475569; flex-shrink:0; line-height:1.3; }
+    .gift-tier-row input[type=text] { flex:1; min-width:0; border:1.5px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:13px; outline:none; text-align:right; }
+    .gift-tier-row input[type=text]:disabled { background:#f1f5f9; color:#475569; cursor:not-allowed; font-weight:600; }
+    .gift-tier-row.last { background:#eff6ff; border-color:#bfdbfe; }
+    .gift-tier-row .gt-unit { color:#64748b; font-size:12px; flex-shrink:0; }
+    .gift-tier-row .gt-rm { background:none; border:none; color:#dc2626; cursor:pointer; padding:2px 8px; font-size:13px; border-radius:4px; flex-shrink:0; }
+    .gift-tier-row .gt-rm:hover { background:#fee2e2; }
+    .gift-tier-row .gt-rm:disabled { color:#cbd5e1; cursor:not-allowed; background:none; }
+    .gift-tier-row.last .gt-rm { visibility:hidden; }
+    #pj-tiers-count, #pe-tiers-count { width:80px; border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 10px; font-size:13px; outline:none; }
+    #pj-tiers-count:disabled, #pe-tiers-count:disabled { background:#f1f5f9; color:#94a3b8; }
 
     /* ── 비밀번호 ── */
     .pw-wrap { position: relative; }
@@ -116,28 +135,28 @@
     .file-drop { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 18px;
                  text-align: center; cursor: pointer; font-size: 13px; color: #94a3b8;
                  transition: border-color .2s, background .2s; }
-    .file-drop:hover, .file-drop.drag { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
-    .file-drop.has-file { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+    .file-drop:hover, .file-drop.drag { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+    .file-drop.has-file { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
     .file-drop input[type=file] { display: none; }
 
     /* ── 버튼 ── */
     .btn { padding: 11px 18px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
            cursor: pointer; transition: background .2s; }
     .btn-full { width: 100%; margin-top: 4px; }
-    .btn-p { background: #16a34a; color: #fff; } .btn-p:hover { background: #15803d; }
-    .btn-o { background: #fff; color: #16a34a; border: 1.5px solid #16a34a; }
-    .btn-o:hover { background: #f0fdf4; }
-    .btn-g { background: #16a34a; color: #fff; } .btn-g:hover { background: #15803d; }
+    .btn-p { background: #2563eb; color: #fff; } .btn-p:hover { background: #1d4ed8; }
+    .btn-o { background: #fff; color: #2563eb; border: 1.5px solid #2563eb; }
+    .btn-o:hover { background: #eff6ff; }
+    .btn-g { background: #2563eb; color: #fff; } .btn-g:hover { background: #1d4ed8; }
     .btn-r { background: #dc2626; color: #fff; } .btn-r:hover { background: #b91c1c; }
     .btn-sm { padding: 7px 14px; font-size: 13px; }
     .links { display: flex; justify-content: space-between; margin-top: 14px; }
-    .links a { font-size: 13px; color: #16a34a; cursor: pointer; }
+    .links a { font-size: 13px; color: #2563eb; cursor: pointer; }
     .links a:hover { text-decoration: underline; }
     .divider { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0; }
 
     /* ── 알림 메시지 ── */
     .msg { font-size: 13px; margin-top: 10px; padding: 10px 12px; border-radius: 8px; display: none; }
-    .msg.s { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: block; }
+    .msg.s { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; display: block; }
     .msg.e { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; display: block; }
 
     /* ── 섹션 ── */
@@ -146,18 +165,23 @@
     #sec-dashboard { align-items: stretch; width: 90vw; max-width: 90vw; }
 
     /* ── 대시보드 ── */
-    .topbar { position: fixed; top: 14px; right: 18px; z-index: 90;
-              display: flex; align-items: center; gap: 10px;
-              background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
-              padding: 6px 8px 6px 16px; box-shadow: 0 2px 12px rgba(20,30,60,.10); }
-    .topbar-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; }
-    .topbar-name span { color: #16a34a; }
-    .topbar-brand { font-size: 13px; font-weight: 800; color: #166534; white-space: nowrap;
-                    text-align: right; margin-right: 4px; padding-right: 10px; border-right: 1px solid #e2e8f0; }
+    /* supervisor와 동일한 상단 바 */
+    .topbar { display: none; background: #fff; border-bottom: 1px solid #e2e8f0;
+              padding: 0 32px; height: 60px; align-items: center; justify-content: space-between; }
+    .topbar.show { display: flex; }
+    .topbar .brand { font-size: 17px; font-weight: 700; color: #1e293b; white-space: nowrap; }
+    .topbar .user { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 12px; }
+    .topbar .user .name { font-weight: 700; color: #1e293b; white-space: nowrap; }
+    .topbar .user .name span { color: #2563eb; }
     .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
     .tab-btn { padding: 9px 18px; border: none; background: none; font-size: 14px; font-weight: 600;
                color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-    .tab-btn.act { color: #16a34a; border-bottom-color: #16a34a; }
+    .tab-btn.act { color: #2563eb; border-bottom-color: #2563eb; }
+    /* 정산 sub 탭 */
+    .stl-sub { padding:7px 14px; border:none; background:none; font-size:13px; font-weight:600;
+               color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .stl-sub:hover { color:#1d4ed8; }
     .tab-panel { display: none; } .tab-panel.act { display: block; }
     #tab-new { width: 90%; margin: 0 auto; }
     /* 등록 폼은 기존 너비 유지(넓은 대시보드에서 과도하게 늘어나지 않도록) */
@@ -171,17 +195,17 @@
     thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 11px 13px;
                text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
     thead th.sortable { cursor: pointer; user-select: none; }
-    thead th.sortable:hover { color: #16a34a; background: #f0fdf4; }
+    thead th.sortable:hover { color: #2563eb; background: #eff6ff; }
     tbody td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: #fafbfd; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .bq  { background: #fef9c3; color: #854d0e; }
-    .bs  { background: #dcfce7; color: #166534; }
+    .bs  { background: #dbeafe; color: #1e40af; }
     .bd  { background: #dbeafe; color: #1e40af; }
     .bc  { background: #fee2e2; color: #991b1b; }
 
-    /* ── 목적지/퀴즈 관리 패널 — 팝업 형태 ── */
+    /* ── 목적지/Quiz 관리 패널 — 팝업 형태 ── */
     #loc-panel, #quiz-panel {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,.5); z-index: 100;
@@ -217,16 +241,16 @@
     .quiz-card .qdel:hover { background: #fee2e2; }
     .quiz-card .qchoices { display: flex; flex-direction: column; gap: 4px; font-size: 13px; padding-left: 36px; }
     .quiz-card .qchoice { display: flex; align-items: center; gap: 8px; color: #475569; }
-    .quiz-card .qchoice.qok { color: #166534; font-weight: 600; }
+    .quiz-card .qchoice.qok { color: #1e40af; font-weight: 600; }
     .quiz-card .qmark { width: 16px; text-align: center; font-weight: 700; }
 
-    /* 퀴즈 추가 폼 */
+    /* Quiz 추가 폼 */
     .qf-choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
     .qf-choice-row { display: flex; align-items: center; gap: 8px; }
     .qf-choice-row .qf-mark { width: 36px; text-align: center; flex-shrink: 0; }
     .qf-choice-row input[type=text] { flex: 1; border: 1.5px solid #cbd5e1; border-radius: 8px;
                                        padding: 8px 12px; font-size: 13px; outline: none; }
-    .qf-choice-row input[type=text]:focus { border-color: #16a34a; }
+    .qf-choice-row input[type=text]:focus { border-color: #2563eb; }
     .qf-choice-row .qf-rm { background: none; border: none; color: #dc2626; cursor: pointer;
                              font-size: 14px; padding: 4px 8px; border-radius: 6px; }
     .qf-choice-row .qf-rm:hover { background: #fee2e2; }
@@ -241,32 +265,32 @@
     .search-wrap input { padding-right: 34px; }
     .search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
     .sug-box { position: absolute; top: 100%; left: 0; right: 0; background: #fff;
-               border: 1.5px solid #16a34a; border-top: none; border-radius: 0 0 10px 10px;
+               border: 1.5px solid #2563eb; border-top: none; border-radius: 0 0 10px 10px;
                box-shadow: 0 8px 24px rgba(20,30,60,.12); z-index: 50; max-height: 260px; overflow-y: auto; display: none; }
     .sug-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
     .sug-item:last-child { border-bottom: none; }
-    .sug-item:hover { background: #f0fdf4; }
+    .sug-item:hover { background: #eff6ff; }
     .sug-name { font-size: 13px; font-weight: 600; color: #1e293b; }
     .sug-addr { font-size: 12px; color: #64748b; margin-top: 2px; }
     .sug-empty { padding: 14px; text-align: center; font-size: 13px; color: #94a3b8; }
 
     /* ── 선택된 장소 프리뷰 ── */
-    .place-preview { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px;
+    .place-preview { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px;
                      padding: 12px 14px; margin-top: 10px; display: none; }
-    .place-preview .pname { font-size: 14px; font-weight: 700; color: #15803d; margin-bottom: 4px; }
+    .place-preview .pname { font-size: 14px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px; }
     .place-preview .paddr { font-size: 12px; color: #64748b; }
     .place-preview .pcoord { font-size: 12px; color: #475569; margin-top: 4px; }
     .map-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
-                font-size: 12px; font-weight: 600; color: #16a34a; text-decoration: none;
-                background: #fff; border: 1.5px solid #bbf7d0; padding: 5px 12px; border-radius: 20px; }
-    .map-link:hover { background: #dcfce7; }
+                font-size: 12px; font-weight: 600; color: #2563eb; text-decoration: none;
+                background: #fff; border: 1.5px solid #bfdbfe; padding: 5px 12px; border-radius: 20px; }
+    .map-link:hover { background: #dbeafe; }
 
     /* ── 목적지 목록 ── */
     .loc-list { margin-bottom: 20px; }
     .loc-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
                border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
     .loc-row:last-child { border-bottom: none; }
-    .loc-seq { width: 28px; height: 28px; background: #16a34a; color: #fff; border-radius: 50%;
+    .loc-seq { width: 28px; height: 28px; background: #2563eb; color: #fff; border-radius: 50%;
                display: flex; align-items: center; justify-content: center; font-size: 12px;
                font-weight: 700; flex-shrink: 0; }
     .loc-info { flex: 1; min-width: 0; }
@@ -280,7 +304,7 @@
     .seg-btn { background: #fff; border: none; padding: 9px 18px; font-size: 13px; font-weight: 600;
                color: #64748b; cursor: pointer; }
     .seg-btn + .seg-btn { border-left: 1.5px solid #cbd5e1; }
-    .seg-btn.act { background: #16a34a; color: #fff; }
+    .seg-btn.act { background: #2563eb; color: #fff; }
     .icon-up { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .icon-prev { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1.5px solid #e2e8f0; }
 
@@ -289,7 +313,7 @@
                    flex-wrap: wrap; margin-bottom: 12px; }
     .loc-counts { display: flex; gap: 8px; flex-wrap: wrap; }
     .cnt { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-    .cnt-on { background: #dcfce7; color: #166534; }
+    .cnt-on { background: #dbeafe; color: #1e40af; }
     .cnt-off { background: #fee2e2; color: #991b1b; }
     .cnt-qr { background: #dbeafe; color: #1e40af; }
 
@@ -299,7 +323,7 @@
     .loc-thumb-ph { display: flex; align-items: center; justify-content: center; background: #f1f5f9; font-size: 18px; }
     .loc-tag { display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 11px;
                font-weight: 700; margin-right: 4px; vertical-align: middle; }
-    .tag-loc { background: #dcfce7; color: #15803d; }
+    .tag-loc { background: #dbeafe; color: #1d4ed8; }
     .tag-exh { background: #f3e8ff; color: #7e22ce; }
     .loc-row.loc-off { opacity: .55; }
     .loc-row.loc-off .loc-seq { background: #94a3b8; }
@@ -308,12 +332,12 @@
 
     /* ── 방문자 현황 그리드 ── */
     .vf { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; outline: none; background: #fff; }
-    .vf:focus { border-color: #16a34a; }
+    .vf:focus { border-color: #2563eb; }
     .vis-table { width: 100%; }
     .vis-table th, .vis-table td { white-space: nowrap; padding: 9px 10px; }
     .vis-table .badge { white-space: nowrap; }
     .vis-table th.vis-sort { cursor: pointer; user-select: none; }
-    .vis-table th.vis-sort:hover { color: #16a34a; }
+    .vis-table th.vis-sort:hover { color: #2563eb; }
 
     /* ── 모달 ── */
     .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.5);
@@ -331,7 +355,8 @@
     .modal-close:hover { background: rgba(255,255,255,.2); color: #fff; }
     /* 정렬 가능한 헤더 */
     thead th.usort { cursor: pointer; user-select: none; white-space: nowrap; }
-    thead th.usort:hover { color: #16a34a; }
+    thead th.usort:hover { color: #2563eb; }
+    th.col-center { text-align: center; }
 
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
@@ -348,9 +373,9 @@
     .reg-card input[type=text], .reg-card input[type=email], .reg-card input[type=password] {
       width:100%; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px;
       font-size:14px; outline:none; transition:border-color .2s; font-family:inherit; }
-    .reg-card input:focus { border-color:#16a34a; }
+    .reg-card input:focus { border-color:#2563eb; }
     .reg-card input.inv { border-color:#dc2626 !important; }
-    .reg-card input.ok  { border-color:#16a34a !important; }
+    .reg-card input.ok  { border-color:#2563eb !important; }
     .reg-card .file-drop { padding:10px 16px; }
 
     /* disabled 폼 필드 */
@@ -366,8 +391,16 @@
   </style>
 </head>
 <body>
+<div class="topbar" id="topbar">
+  <div class="brand" id="topbar-brand">모노라마 트래커 · 주관기관</div>
+  <div class="user">
+    <span class="name"><span id="d-name"></span>님</span>
+    <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
+    <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
+  </div>
+</div>
 <div class="main-wrap">
-<div class="logo">모노라마 트래커 · 주최측</div>
+<div class="logo">모노라마 트래커 · 주관기관</div>
 
 <!-- ── 로그인 ── -->
 <section id="sec-login" class="active">
@@ -551,7 +584,7 @@
       </fieldset>
 
       <hr class="divider">
-      <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
+      <a style="font-size:13px;color:#2563eb;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
     </div><!-- /card-body -->
   </div>
 </section>
@@ -567,19 +600,12 @@
     <div id="fo-msg" class="msg"></div>
     <button class="btn btn-p btn-full" onclick="doForgot()">임시 비밀번호 발송</button>
     <hr class="divider">
-    <a style="font-size:13px;color:#16a34a;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
+    <a style="font-size:13px;color:#2563eb;cursor:pointer;" onclick="show('sec-login')">← 로그인으로 돌아가기</a>
   </div>
 </section>
 
 <!-- ── 대시보드 ── -->
 <section id="sec-dashboard">
-  <div class="topbar">
-    <span class="topbar-brand" id="topbar-brand">모노라마 트래커</span>
-    <span class="topbar-name"><span id="d-name"></span>님</span>
-    <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
-    <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
-  </div>
-
   <div class="tabs">
     <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">내 프로젝트</button>
     <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
@@ -665,7 +691,7 @@
               oninput="onLocSearch(this)" autocomplete="off">
             <div id="sug-box" class="sug-box"></div>
           </div>
-          <button type="button" class="map-link" style="margin-top:8px;cursor:pointer;border:1.5px solid #bbf7d0;"
+          <button type="button" class="map-link" style="margin-top:8px;cursor:pointer;border:1.5px solid #bfdbfe;"
             onclick="openMapPicker()">📌 지도에서 선택</button>
         </div>
 
@@ -685,8 +711,9 @@
             <input id="loc-name" type="text" placeholder="장소명" maxlength="100">
           </div>
           <div class="fg">
-            <label>목적지 설명 <span class="req">*</span> <span class="hint">(최대 50자)</span></label>
-            <input id="loc-desc" type="text" placeholder="예: 1번 부스 앞" maxlength="50">
+            <label>설명 <span class="hint">(선택, 최대 500자)</span></label>
+            <textarea id="loc-desc" placeholder="예: 1번 부스 앞" maxlength="500"
+              style="resize:vertical;min-height:60px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea>
             <div id="loc-desc-count" class="fm" style="text-align:right;"></div>
           </div>
           <input type="hidden" id="loc-lat">
@@ -697,9 +724,13 @@
       <!-- 전시물 입력부 -->
       <div id="mode-exhibit" style="display:none;">
         <div class="fg">
-          <label>전시물 설명 <span class="req">*</span> <span class="hint">(최대 100자)</span></label>
-          <textarea id="exh-desc" placeholder="전시물에 대한 설명을 간단히 입력해주세요" maxlength="100"
-            style="resize:vertical;min-height:60px;"></textarea>
+          <label>제목 <span class="req">*</span> <span class="hint">(최대 100자)</span></label>
+          <input id="exh-name" type="text" placeholder="전시물 제목" maxlength="100">
+        </div>
+        <div class="fg">
+          <label>전시물 설명 <span class="hint">(선택, 최대 500자)</span></label>
+          <textarea id="exh-desc" placeholder="전시물에 대한 상세 설명을 입력해주세요" maxlength="500"
+            style="resize:vertical;min-height:80px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea>
         </div>
       </div>
 
@@ -722,7 +753,7 @@
       </div>
     </div>
 
-    <!-- 퀴즈 관리 패널 -->
+    <!-- Quiz 관리 패널 -->
     <div id="quiz-panel">
       <div class="panel-modal-box">
       <div class="card-header">
@@ -732,15 +763,15 @@
       <div class="card-body">
       <p class="sub" id="quiz-proj-serial" style="text-align:center;"></p>
 
-      <!-- 등록된 퀴즈 목록 -->
+      <!-- 등록된 Quiz 목록 -->
       <div class="quiz-list" id="quiz-list"></div>
 
-      <!-- 퀴즈 추가 폼 -->
+      <!-- Quiz 추가 폼 -->
       <div class="divider"></div>
-      <h3 style="margin-bottom:14px;">퀴즈 추가</h3>
+      <h3 style="margin-bottom:14px;">Quiz 추가</h3>
 
       <div class="fg">
-        <label>연계 목적지 <span class="hint">(선택 — 이 퀴즈가 특정 목적지와 연계되면 선택)</span></label>
+        <label>연계 목적지 <span class="hint">(선택 — 이 Quiz가 특정 목적지와 연계되면 선택)</span></label>
         <div class="qf-loc-select" id="qf-loc-select">
           <div class="qf-loc-trigger" onclick="toggleLocDropdown()">
             <span id="qf-loc-trigger-label" style="display:flex;align-items:center;gap:8px;flex:1;">— 연계 안 함 (프로젝트 전체) —</span>
@@ -750,7 +781,7 @@
         </div>
         <input type="hidden" id="qf-location" value="">
         <div class="hint" style="margin-top:4px;color:#94a3b8;">
-          ※ 1개 퀴즈라도 목적지에 연계되면 모든 퀴즈가 연계되어야 합니다.
+          ※ 1개 Quiz라도 목적지에 연계되면 모든 Quiz가 연계되어야 합니다.
         </div>
       </div>
 
@@ -783,7 +814,7 @@
 
       <div id="qf-msg" class="msg"></div>
       <div id="qf-buttons" style="display:flex;gap:8px;margin-top:4px;">
-        <button id="qf-submit-btn" class="btn btn-g btn-sm" onclick="submitQuiz()">+ 퀴즈 등록</button>
+        <button id="qf-submit-btn" class="btn btn-g btn-sm" onclick="submitQuiz()">+ Quiz 등록</button>
         <button id="qf-cancel-btn" class="btn btn-o btn-sm" onclick="cancelEditQuiz()" style="display:none;">수정 취소</button>
       </div>
       <div style="display:flex;justify-content:center;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
@@ -845,10 +876,28 @@
         </div>
         <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pj-gift" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-gift')"></div>
         <div class="fg"><label>Gift 발급 수량 <span class="req">*</span></label><input id="pj-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-qty')"></div>
-        <div class="fg"><label>Prize 단가 금액</label><input id="pj-prize" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize')"></div>
-        <div class="fg"><label>Prize 발급 수량</label><input id="pj-prize-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize-qty')"></div>
-        <div class="fg" style="grid-column:1/-1;"><label>퀴즈 정답 보너스 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(정답 1개당 Gift 단가에 추가되는 금액)</span></label>
-          <input id="pj-quiz-bonus" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-quiz-bonus')"></div>
+        <div class="fg"><label>Quiz 단가 금액</label><input id="pj-prize" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize')"></div>
+        <div class="fg"><label>Quiz 발급 수량</label><input id="pj-prize-qty" type="text" inputmode="numeric" placeholder="0" disabled oninput="onAmountInput(this,'pj-prize-qty')"></div>
+        <div class="fg" style="grid-column:1/-1;">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pj-tiers-enable" disabled style="width:18px;height:18px;cursor:pointer;flex-shrink:0;" onchange="onGiftTiersEnableChange('pj')">
+            <span>Gift 단계별 보상 사용</span>
+            <span style="font-size:11px;color:#94a3b8;font-weight:400;">(체크 시 단계 수 만큼 도달 단계별로 별도 Gift 발급. 마지막 단계는 Gift 단가)</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <span style="font-size:13px;color:#475569;">단계 수</span>
+            <input type="number" id="pj-tiers-count" min="2" max="10" value="2" disabled onchange="onTiersCountChange('pj')" oninput="onTiersCountChange('pj')">
+            <span style="font-size:12px;color:#94a3b8;">단계 (2~10)</span>
+          </div>
+          <div id="pj-tiers-hint" style="font-size:11px;color:#3b82f6;margin-top:4px;display:none;"></div>
+          <div id="pj-gift-tiers" class="gift-tiers-grid" style="margin-top:8px;"></div>
+        </div>
+        <div class="fg" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="pj-stop-overbudget" disabled style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+          <label for="pj-stop-overbudget" style="cursor:pointer;font-size:13px;color:#475569;">
+            Reward(Gift+Quiz) 발급액이 예산을 초과하면 프로젝트를 중지시킴
+          </label>
+        </div>
         <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(Gift 단가 × Gift 발급 수량 자동 계산)</span></label>
           <input id="pj-budget" type="text" inputmode="numeric" placeholder="자동 계산" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
@@ -860,47 +909,122 @@
   <!-- ─ 정산 탭 ─ -->
   <div class="tab-panel" id="tab-settle">
     <div class="panel-card">
-      <h3>정산</h3>
+      <!-- sub 탭 -->
+      <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:14px;">
+        <button type="button" class="stl-sub active" data-sub="byproj" onclick="switchSettleSub('byproj')">프로젝트별</button>
+        <button type="button" class="stl-sub" data-sub="bymerch" onclick="switchSettleSub('bymerch')">가맹점별</button>
+        <button type="button" class="stl-sub" data-sub="byday" onclick="switchSettleSub('byday')">일별</button>
+      </div>
+
+      <!-- 공통 필터 -->
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
         <input id="sf-name" type="text" placeholder="프로젝트명 검색"
           style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
-          oninput="loadSettlement()">
-        <select id="sf-status" onchange="loadSettlement()"
+          oninput="loadSettleCurrent()">
+        <select id="sf-status" onchange="loadSettleCurrent()"
           style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
           <option value="">전체 상태</option>
           <option value="ready_to_start">시작대기</option>
           <option value="started">진행중</option>
           <option value="completed">완료</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="loadSettlement()">검색</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettlement()">초기화</button>
+        <button class="btn btn-primary btn-sm" onclick="loadSettleCurrent()">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettleCurrent()">초기화</button>
+        <button class="btn btn-o btn-sm" id="settle-excel" onclick="downloadSettleExcel()" disabled style="margin-left:auto;">⬇ 엑셀 다운로드</button>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th rowspan="2">프로젝트명</th>
-              <th rowspan="2">상태</th>
-              <th colspan="6" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>
-              <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Prize</th>
-              <th rowspan="2" style="text-align:right;">총 Reward 금액</th>
-              <th rowspan="2" style="text-align:center;">사용자현황</th>
-              <th rowspan="2" style="text-align:center;">상세보기</th>
-            </tr>
-            <tr>
-              <th style="text-align:right;">단가</th>
-              <th style="text-align:center;">사용개수</th>
-              <th style="text-align:center;">증정개수</th>
-              <th style="text-align:right;">사용금액</th>
-              <th style="text-align:right;">증정금액</th>
-              <th style="text-align:right;">합계</th>
-              <th style="text-align:right;">단가</th>
-              <th style="text-align:center;">지급개수</th>
-              <th style="text-align:right;">사용금액</th>
-            </tr>
-          </thead>
-          <tbody id="settle-tbody"></tbody>
-        </table>
+
+      <!-- 프로젝트별 -->
+      <div id="sub-byproj" class="stl-sub-pane">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ C)</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+                <th rowspan="2" style="text-align:center;">상세보기</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용개수(Y)</th>
+                <th style="text-align:center;">증정개수(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급개수(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 가맹점별 -->
+      <div id="sub-bymerch" class="stl-sub-pane" style="display:none;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">가맹점명</th>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용(Y)</th>
+                <th style="text-align:center;">증정(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-bymerch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 일별 -->
+      <div id="sub-byday" class="stl-sub-pane" style="display:none;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">일자</th>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">가맹점명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용(Y)</th>
+                <th style="text-align:center;">증정(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-byday-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -1018,7 +1142,8 @@
 <!-- ── 랜딩페이지 미리보기 모달 ── -->
 <div class="modal-ov" id="modal-preview">
   <div class="modal" style="max-width:420px;">
-    <div class="card-header"><h2>랜딩페이지 미리보기</h2></div>
+    <div class="card-header"><h2>랜딩페이지 미리보기</h2>
+      <button class="modal-close" onclick="closePreview()" aria-label="닫기">×</button></div>
     <div class="card-body" style="padding:0;background:#0f172a;">
       <iframe id="preview-frame" title="랜딩페이지 미리보기" style="width:100%;height:68vh;border:0;display:block;background:#fff;"></iframe>
     </div>
@@ -1032,7 +1157,8 @@
 <!-- ── 방문자 현황 모달 ── -->
 <div class="modal-ov" id="modal-visitors">
   <div class="modal" style="width:96vw;max-width:1200px;">
-    <div class="card-header"><h2>방문자 현황</h2></div>
+    <div class="card-header"><h2>방문자 현황</h2>
+      <button class="modal-close" onclick="closeVisitors()" aria-label="닫기">×</button></div>
     <div class="card-body">
       <p id="vis-proj" style="font-size:13px;color:#64748b;margin-bottom:6px;"></p>
       <p id="vis-summary" style="font-size:12px;color:#94a3b8;margin-bottom:10px;"></p>
@@ -1075,7 +1201,8 @@
 <!-- ── 가맹점 지원현황 모달 ── -->
 <div class="modal-ov" id="modal-apps">
   <div class="modal" style="width:96vw;max-width:1000px;">
-    <div class="card-header"><h2>가맹점 지원현황</h2></div>
+    <div class="card-header"><h2>가맹점 지원현황</h2>
+      <button class="modal-close" onclick="closeApplications()" aria-label="닫기">×</button></div>
     <div class="card-body">
       <p id="apps-proj" style="font-size:13px;color:#64748b;margin-bottom:6px;"></p>
       <p id="apps-summary" style="font-size:12px;color:#94a3b8;margin-bottom:10px;"></p>
@@ -1160,6 +1287,39 @@
   </div>
 </div>
 
+<!-- 목적지(전시물/위치) 수정 모달 -->
+<div class="modal-ov" id="modal-edit-loc">
+  <div class="modal" style="max-width:520px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="el-title">목적지 수정</h2>
+      <button class="modal-close" onclick="closeEditLoc()">×</button></div>
+    <div class="card-body" style="overflow-y:auto;">
+      <div class="fg"><label>유형</label>
+        <div id="el-type" style="padding:8px 12px;background:#f1f5f9;border-radius:8px;font-size:13px;font-weight:600;color:#475569;"></div>
+      </div>
+      <div class="fg"><label>제목 <span class="req">*</span></label>
+        <input id="el-name" type="text" maxlength="100"></div>
+      <div class="fg" id="el-desc-row"><label>설명 <span class="hint">(선택, 최대 500자)</span></label>
+        <textarea id="el-desc" maxlength="500" style="resize:vertical;min-height:80px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea></div>
+      <div id="el-coord-row" class="grid2" style="display:grid;">
+        <div class="fg"><label>위도 <span class="hint">(필요 시 수정)</span></label>
+          <input id="el-lat" type="text"></div>
+        <div class="fg"><label>경도</label>
+          <input id="el-lng" type="text"></div>
+      </div>
+      <div class="fg">
+        <label>이미지 <span class="hint">(선택, 5MB 이하 — 새 파일 선택 시 교체)</span></label>
+        <div id="el-img-preview" style="margin-bottom:8px;"></div>
+        <input id="el-image" type="file" accept="image/*" style="font-size:12px;" onchange="onElImgChange(this)">
+      </div>
+      <div id="el-msg" class="msg"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-p" style="flex:1;" id="el-save" onclick="saveEditLoc()">저장</button>
+        <button class="btn btn-o" style="flex:1;" onclick="closeEditLoc()">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 정산 상세보기(일별) 모달 -->
 <div class="modal-ov" id="modal-daily-settle">
   <div class="modal" style="width:96vw;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;">
@@ -1171,7 +1331,7 @@
 
 <!-- 방문 현황 통계 모달 -->
 <div class="modal-ov" id="modal-visit-stats">
-  <div class="modal" style="max-width:760px;max-height:92vh;display:flex;flex-direction:column;">
+  <div class="modal" style="width:80vw;max-width:none;height:80vh;max-height:none;display:flex;flex-direction:column;">
     <div class="card-header" style="flex-shrink:0;"><h2 id="vs-title">방문 현황</h2>
       <button class="modal-close" onclick="closeVisitStats()">×</button></div>
     <div class="card-body" id="vs-body" style="overflow-y:auto;">
@@ -1180,30 +1340,32 @@
         <!-- 요약 카드 -->
         <div class="vs-cards">
           <div class="vs-card"><div class="vs-label">전체 방문자</div><div class="vs-num" id="vs-total">0</div></div>
-          <div class="vs-card"><div class="vs-label">모두 방문 완료</div><div class="vs-num" id="vs-done" style="color:#16a34a;">0</div></div>
-          <div class="vs-card"><div class="vs-label">Gift 발급</div><div class="vs-num" id="vs-gift-issued">0</div></div>
+          <div class="vs-card"><div class="vs-label">모두 방문 완료</div><div class="vs-num" id="vs-done" style="color:#15803d;">0</div></div>
+          <div class="vs-card"><div class="vs-label">Gift 발급</div><div class="vs-num" id="vs-gift-issued" style="color:#15803d;">0</div></div>
           <div class="vs-card"><div class="vs-label">Gift 소진</div><div class="vs-num" id="vs-gift-used" style="color:#ea580c;">0</div></div>
         </div>
 
-        <details class="vs-section" open>
-          <summary class="vs-h">목적지별 방문자 수</summary>
-          <div id="vs-loc-bars"></div>
-        </details>
+        <div class="vs-grid">
+          <details class="vs-section" open>
+            <summary class="vs-h">목적지별 방문자 수</summary>
+            <div id="vs-loc-bars"></div>
+          </details>
 
-        <details class="vs-section" open>
-          <summary class="vs-h">전체 방문자 대비 모두 방문 완료</summary>
-          <div id="vs-completion-bar"></div>
-        </details>
+          <details class="vs-section" open>
+            <summary class="vs-h">전체 방문자 대비 모두 방문 완료</summary>
+            <div id="vs-completion-bar"></div>
+          </details>
 
-        <details class="vs-section" open>
-          <summary class="vs-h">일자별 방문자 / 모두 방문 완료</summary>
-          <div id="vs-daily" style="font-size:12px;"></div>
-        </details>
+          <details class="vs-section" open>
+            <summary class="vs-h">일자별 방문자 / 모두 방문 완료</summary>
+            <div id="vs-daily"></div>
+          </details>
 
-        <details class="vs-section" open>
-          <summary class="vs-h">완주자 대비 Gift 소진</summary>
-          <div id="vs-gift-bar"></div>
-        </details>
+          <details class="vs-section" open>
+            <summary class="vs-h">완주자 대비 Gift 소진</summary>
+            <div id="vs-gift-bar"></div>
+          </details>
+        </div>
       </div>
     </div>
   </div>
@@ -1225,10 +1387,28 @@
         <div class="fg"><label>종료일 <span class="req">*</span></label><input id="pe-to" type="date"></div>
         <div class="fg"><label>Gift 단가 금액 <span class="req">*</span></label><input id="pe-gift" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-gift'); calcPeBudget();"></div>
         <div class="fg"><label>Gift 발급 수량 <span class="req">*</span></label><input id="pe-qty" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-qty'); calcPeBudget();"></div>
-        <div class="fg"><label>Prize 단가 금액</label><input id="pe-prize" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize')"></div>
-        <div class="fg"><label>Prize 발급 수량</label><input id="pe-prize-qty" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize-qty')"></div>
-        <div class="fg" style="grid-column:1/-1;"><label>퀴즈 정답 보너스 <span class="hint">(정답 1개당 Gift 단가에 추가)</span></label>
-          <input id="pe-quiz-bonus" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-quiz-bonus')"></div>
+        <div class="fg"><label>Quiz 단가 금액</label><input id="pe-prize" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize')"></div>
+        <div class="fg"><label>Quiz 발급 수량</label><input id="pe-prize-qty" type="text" inputmode="numeric" oninput="onAmountInput(this,'pe-prize-qty')"></div>
+        <div class="fg" style="grid-column:1/-1;">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pe-tiers-enable" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;" onchange="onGiftTiersEnableChange('pe')">
+            <span>Gift 단계별 보상 사용</span>
+            <span class="hint">(체크 시 단계 수 만큼 도달 단계별로 별도 Gift 발급)</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <span style="font-size:13px;color:#475569;">단계 수</span>
+            <input type="number" id="pe-tiers-count" min="2" max="10" value="2" onchange="onTiersCountChange('pe')" oninput="onTiersCountChange('pe')">
+            <span style="font-size:12px;color:#94a3b8;">단계 (2~10)</span>
+          </div>
+          <div id="pe-tiers-hint" style="font-size:11px;color:#3b82f6;margin-top:4px;display:none;"></div>
+          <div id="pe-gift-tiers" class="gift-tiers-grid" style="margin-top:8px;"></div>
+        </div>
+        <div class="fg" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="pe-stop-overbudget" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+          <label for="pe-stop-overbudget" style="cursor:pointer;font-size:13px;color:#475569;">
+            Reward(Gift+Quiz) 발급액이 예산을 초과하면 프로젝트를 중지시킴
+          </label>
+        </div>
         <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span class="hint">(자동 계산)</span></label>
           <input id="pe-budget" type="text" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
@@ -1249,9 +1429,11 @@ const EM_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function show(id) {
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // 대시보드에서는 상단 로고 줄을 숨겨 페이지 높이를 확보 (브랜드는 우상단 바로 이동)
+  // 대시보드 진입 시 중앙 로고 숨기고 상단 풀폭 바 노출
   const logo = document.querySelector('.logo');
   if (logo) logo.style.display = (id === 'sec-dashboard') ? 'none' : '';
+  const topbar = document.getElementById('topbar');
+  if (topbar) topbar.classList.toggle('show', id === 'sec-dashboard');
 }
 function switchTab(name) {
   ['proj','new','settle'].forEach(t => {
@@ -1468,8 +1650,18 @@ async function doLogin() {
     if (remember) localStorage.setItem('tracker_host_remembered_email', host_email);
     else localStorage.removeItem('tracker_host_remembered_email');
   } catch (e) {}
+  // 로그인 성공 후 가장 최근 등록 프로젝트의 방문현황 모달 자동 표시
+  setTimeout(async () => {
+    try {
+      const pr = await fetch('/api/host/projects?page=1&size=1');
+      if (!pr.ok) return;
+      const pd = await pr.json();
+      const latest = (pd.data && pd.data[0]) || null;
+      if (latest && latest.id) openVisitStats(latest.id, latest.project_name);
+    } catch (e) {}
+  }, 400);
   document.getElementById('d-name').textContent = d.host?.name||'';
-  document.getElementById('topbar-brand').textContent = '주최측' + (d.host?.organization_name ? ' ' + d.host.organization_name : '');
+  document.getElementById('topbar-brand').textContent = '모노라마 트래커 · 주관기관' + (d.host?.organization_name ? ' · ' + d.host.organization_name : '');
   show('sec-dashboard');
   startSessionWatch();
   if (d.resetRequired) {
@@ -1631,18 +1823,10 @@ const PROJ_COLS = [
   { key:'project_name',   label:'프로젝트명' },
   { key:'from_date',      label:'기간' },
   { key:'status',         label:'상태' },
-  { key:'gift_amount',    label:'단가',         group:'Gift', num:true },
-  { key:'gift_qty',       label:'수량',         group:'Gift', num:true },
-  { key:'budget_amount',  label:'예산',         group:'Gift', num:true },
-  { key:'issued_gifts',   label:'발급수량',     group:'Gift', num:true },
-  { key:'used_gifts',     label:'사용 개수',    group:'Gift', num:true },
-  { key:'grant_gifts',    label:'증정 개수',    group:'Gift', num:true },
-  { key:'used_gift_amount',  label:'사용액',    group:'Gift', num:true },
-  { key:'grant_gift_amount', label:'증정액',    group:'Gift', num:true },
-  { key:'gift_spent',     label:'전체소진금액', group:'Gift', num:true },
-  { key:'budget_consumption_rate', label:'소진율', num:true },
-  { key:'active_locations', label:'방문현황' },
-  { key:'visitor_count',  label:'방문객수', num:true },
+  { key:'has_tiers',      label:'단계별<br>보상', cls:'col-center' },
+  { key:'stop_on_overbudget', label:'중도지급<br>중지', cls:'col-center' },
+  { key:'active_locations', label:'방문<br>현황', cls:'col-center' },
+  { key:'visitor_count',  label:'방문<br>객수', num:true, cls:'col-center' },
 ];
 const PROJ_NUM_KEYS = new Set(PROJ_COLS.filter(c => c.num).map(c => c.key));
 let projData = [];
@@ -1740,21 +1924,14 @@ function renderProjectsTable() {
   });
 
   const arr = key => projSort.key === key ? (projSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
-  const giftStart = PROJ_COLS.findIndex(c => c.group === 'Gift');
-  const giftCols  = PROJ_COLS.filter(c => c.group === 'Gift');
-  const beforeG   = PROJ_COLS.slice(0, giftStart);
-  const afterG    = PROJ_COLS.slice(giftStart + giftCols.length);
   document.getElementById('proj-thead').innerHTML =
     '<tr>' +
-      beforeG.map(c => `<th rowspan="2" class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
-      `<th colspan="${giftCols.length}" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>` +
-      afterG.map(c => `<th rowspan="2" class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
-      '<th rowspan="2">가맹점지원현황</th>' +
-      '<th colspan="3" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">관리</th>' +
+      PROJ_COLS.map(c => `<th rowspan="2" class="sortable ${c.cls||''}" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
+      '<th rowspan="2" style="text-align:center;">가맹점<br>지원현황</th>' +
+      '<th colspan="3" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">관리</th>' +
     '</tr>' +
     '<tr>' +
-      giftCols.map(c => `<th class="sortable" onclick="sortProjects('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') +
-      '<th>목적지</th><th>퀴즈</th><th>미리보기</th>' +
+      '<th>목적지</th><th>Quiz</th><th>미리보기</th>' +
     '</tr>';
 
   // 페이징: 선택한 표시 개수 기준으로 현재 페이지만 렌더
@@ -1776,16 +1953,8 @@ function renderProjectsTable() {
       <td><a href="#" onclick="openProjectEdit(${p.id}); return false;" title="${esc(fullName)}" style="color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px dashed #93c5fd;">${esc(dispName)}<span style="color:#64748b;font-weight:400;font-size:11px;margin-left:4px;">(${p.project_serial})</span></a></td>
       <td style="font-size:12px;white-space:nowrap;">${from} ~ ${to}</td>
       <td><span class="badge ${cls}">${STATUS_LABEL[p.status]||p.status}</span></td>
-      <td style="text-align:right;">${p.gift_amount ? Number(p.gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
-      <td style="text-align:center;">${p.gift_qty ?? 0}개</td>
-      <td style="text-align:right;">${fmt(p.budget_amount)}</td>
-      <td style="text-align:center;">${p.issued_gifts ?? 0}개</td>
-      <td style="text-align:center;">${p.used_gifts ?? 0}개</td>
-      <td style="text-align:center;">${p.grant_gifts ?? 0}개</td>
-      <td style="text-align:right;">${p.used_gift_amount ? Number(p.used_gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
-      <td style="text-align:right;">${p.grant_gift_amount ? Number(p.grant_gift_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
-      <td style="text-align:right;">${fmt(p.gift_spent)}</td>
-      <td style="text-align:right;">${(Number(p.budget_consumption_rate)||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:${Number(p.extra_tier_count)>0?'#15803d':'#94a3b8'};">${Number(p.extra_tier_count)>0?'Y':'N'}</td>
+      <td style="text-align:center;font-weight:700;color:${Number(p.stop_on_budget_exceed)===1?'#dc2626':'#94a3b8'};">${Number(p.stop_on_budget_exceed)===1?'Y':'N'}</td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitStats(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">보기</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitors(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">${p.visitor_count??0}명</button></td>
       <td style="text-align:center;"><button class="btn ${Number(p.applied_count)>Number(p.approved_count)?'btn-p':'btn-o'} btn-sm" onclick="openApplications(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">지원 ${p.applied_count??0} · 승인 ${p.approved_count??0}</button></td>
@@ -1793,7 +1962,7 @@ function renderProjectsTable() {
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openQuiz(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">${p.quiz_count ?? 0}</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">보기</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
   renderProjPager(totalPages, list.length);
 }
 
@@ -1821,11 +1990,11 @@ function closeLoc() {
   currentProjectId = null;
 }
 
-// ── 퀴즈 관리 ──
+// ── Quiz 관리 ──
 let currentQuizProjectId = null;
 let qfChoices = []; // [{ text, is_correct }]
 let qfLocations = []; // 해당 프로젝트의 활성 목적지 [{id, name, seq}]
-let qfEditingQuizId = null;     // 수정 중인 퀴즈 id (null이면 새로 등록 모드)
+let qfEditingQuizId = null;     // 수정 중인 Quiz id (null이면 새로 등록 모드)
 let qfEditingHadImage = false;  // 수정 중일 때 원래 질문 이미지가 있었는지 (제거 플래그 결정용)
 let qfRemoveImage = false;      // 수정 시 기존 이미지를 제거할지
 
@@ -1935,14 +2104,14 @@ function resetQuizForm() {
   qfRemoveImage = false;
   const sub = document.getElementById('qf-submit-btn');
   const can = document.getElementById('qf-cancel-btn');
-  if (sub) sub.textContent = '+ 퀴즈 등록';
+  if (sub) sub.textContent = '+ Quiz 등록';
   if (can) can.style.display = 'none';
   renderQuizChoiceRows();
   updateQuizTypeAuto();
   clrMsg('qf-msg');
 }
 
-// 폼 활성/비활성 (퀴즈 수=목적지 수일 때 잠금)
+// 폼 활성/비활성 (Quiz 수=목적지 수일 때 잠금)
 function setQuizFormEnabled(enabled) {
   const ids = ['qf-question','qf-question-image','qf-submit-btn'];
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !enabled; });
@@ -1987,7 +2156,7 @@ function updateQuizTypeAuto() {
     el.style.background = '#dbeafe'; el.style.color = '#1e40af';
     el.textContent = '○ 단일 선택 (정답 1개)';
   } else {
-    el.style.background = '#dcfce7'; el.style.color = '#166534';
+    el.style.background = '#dbeafe'; el.style.color = '#1e40af';
     el.textContent = `☑ 다중 선택 (정답 ${n}개)`;
   }
 }
@@ -2033,8 +2202,8 @@ function renderQuizChoiceRows() {
     return `
     <div class="qf-choice-row">
       <button type="button" class="qf-mark" onclick="onQuizChoiceMark(${i})"
-        style="background:${c.is_correct ? '#dcfce7' : '#fff'};border:1.5px solid ${c.is_correct ? '#16a34a' : '#cbd5e1'};
-               border-radius:8px;padding:6px 0;font-size:14px;color:${c.is_correct ? '#166534' : '#94a3b8'};
+        style="background:${c.is_correct ? '#dbeafe' : '#fff'};border:1.5px solid ${c.is_correct ? '#2563eb' : '#cbd5e1'};
+               border-radius:8px;padding:6px 0;font-size:14px;color:${c.is_correct ? '#1e40af' : '#94a3b8'};
                cursor:pointer;font-weight:700;">${c.is_correct ? checkedChar : markChar}</button>
       <input type="text" maxlength="500" placeholder="보기 ${i + 1}"
         value="${esc(c.text)}" oninput="onQuizChoiceText(${i}, this.value)">
@@ -2077,7 +2246,7 @@ function onQuizChoiceImageRemove(idx) {
   renderQuizChoiceRows();
 }
 
-let qfQuizCache = []; // 가장 최근 fetch한 퀴즈 목록 (수정 시 폼 채우기에 사용)
+let qfQuizCache = []; // 가장 최근 fetch한 Quiz 목록 (수정 시 폼 채우기에 사용)
 async function loadQuizzes() {
   const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes`);
   const d = await r.json().catch(() => ({}));
@@ -2085,21 +2254,21 @@ async function loadQuizzes() {
   if (!r.ok) { el.innerHTML = `<div style="color:#dc2626;padding:14px;">${d.error || '불러오기에 실패했습니다.'}</div>`; return; }
   const list = d.data || [];
   qfQuizCache = list;
-  // 폼 활성/비활성 결정: 등록된 활성 목적지 개수와 퀴즈 개수 비교
+  // 폼 활성/비활성 결정: 등록된 활성 목적지 개수와 Quiz 개수 비교
   const locCount = qfLocations.length;
   const isFull = locCount > 0 && list.length >= locCount && !qfEditingQuizId;
   if (locCount === 0) {
     setQuizFormEnabled(false);
-    setMsg('qf-msg','e','먼저 목적지를 1개 이상 등록해 주세요. 목적지를 등록한 후 퀴즈를 추가할 수 있습니다.');
+    setMsg('qf-msg','e','먼저 목적지를 1개 이상 등록해 주세요. 목적지를 등록한 후 Quiz를 추가할 수 있습니다.');
   } else if (isFull) {
     setQuizFormEnabled(false);
-    setMsg('qf-msg','e',`퀴즈는 목적지 개수와 1:1로만 등록할 수 있습니다. (현재 퀴즈 ${list.length} / 목적지 ${locCount}). 퀴즈를 삭제하면 새 퀴즈를 추가할 수 있습니다.`);
+    setMsg('qf-msg','e',`Quiz는 목적지 개수와 1:1로만 등록할 수 있습니다. (현재 Quiz ${list.length} / 목적지 ${locCount}). Quiz를 삭제하면 새 Quiz를 추가할 수 있습니다.`);
   } else if (!qfEditingQuizId) {
     setQuizFormEnabled(true);
     clrMsg('qf-msg');
   }
   if (!list.length) {
-    el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:14px;">등록된 퀴즈가 없습니다.</div>';
+    el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:14px;">등록된 Quiz가 없습니다.</div>';
     return;
   }
   el.innerHTML = list.map((q, i) => {
@@ -2112,7 +2281,7 @@ async function loadQuizzes() {
       : '';
     const statusBadge = isDisabled
       ? '<span class="qtype" style="background:#f1f5f9;color:#94a3b8;">비활성</span>'
-      : '<span class="qtype" style="background:#dcfce7;color:#166534;">활성</span>';
+      : '<span class="qtype" style="background:#dbeafe;color:#1e40af;">활성</span>';
     const imgBlock = q.question_image_url
       ? `<div style="margin:6px 0;"><img src="${q.question_image_url}" style="max-width:240px;max-height:160px;border-radius:6px;border:1px solid #e5e7eb;"></div>`
       : '';
@@ -2121,7 +2290,7 @@ async function loadQuizzes() {
         <span class="qmark">${c.is_correct ? '✓' : '·'}</span>
         <span>${esc(c.text)}</span>
       </div>`).join('');
-    // 비연계 퀴즈만 활성/비활성 토글 버튼. 연계 퀴즈는 목적지 상태를 따름 (UI에서 안내만)
+    // 비연계 Quiz만 활성/비활성 토글 버튼. 연계 Quiz는 목적지 상태를 따름 (UI에서 안내만)
     const toggleBtn = isLinked
       ? `<span style="font-size:11px;color:#94a3b8;margin-right:4px;" title="목적지 상태를 따름">🔗 자동</span>`
       : `<button class="btn ${isDisabled ? 'btn-g' : 'btn-o'} btn-sm" style="padding:2px 10px;font-size:11px;margin-right:4px;" onclick="toggleQuizDisabled(${q.id})">${isDisabled ? '활성화' : '비활성화'}</button>`;
@@ -2152,7 +2321,7 @@ async function toggleQuizDisabled(qid) {
 // 수정 모드 진입 — 폼에 기존 데이터 채움
 function editQuiz(qid) {
   const q = qfQuizCache.find(x => x.id === qid);
-  if (!q) { setMsg('qf-msg','e','퀴즈 정보를 찾을 수 없습니다.'); return; }
+  if (!q) { setMsg('qf-msg','e','Quiz 정보를 찾을 수 없습니다.'); return; }
   qfEditingQuizId = qid;
   qfEditingHadImage = !!q.question_image_url;
   qfRemoveImage = false;
@@ -2261,7 +2430,7 @@ async function submitQuiz() {
 function addQuiz() { return submitQuiz(); }
 
 async function deleteQuiz(qid) {
-  const ok = await uiConfirm('이 퀴즈를 삭제하시겠습니까?', { title: '퀴즈 삭제', okText: '삭제', danger: true });
+  const ok = await uiConfirm('이 Quiz를 삭제하시겠습니까?', { title: 'Quiz 삭제', okText: '삭제', danger: true });
   if (!ok) return;
   const r = await fetch(`/api/host/projects/${currentQuizProjectId}/quizzes/${qid}`, { method: 'DELETE' });
   const d = await r.json().catch(() => ({}));
@@ -2419,6 +2588,57 @@ async function downloadVisitorsExcel() {
   } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
 }
 
+// ── 정산 sub 탭 (프로젝트별 / 가맹점별 / 일별) ──
+let settleSub = 'byproj';
+function switchSettleSub(name) {
+  settleSub = name;
+  document.querySelectorAll('.stl-sub').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
+  document.querySelectorAll('.stl-sub-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('sub-' + name).style.display = '';
+  loadSettleCurrent();
+}
+function loadSettleCurrent() {
+  if (settleSub === 'byproj')  return loadSettlement();
+  if (settleSub === 'bymerch') return loadSettleByMerchant();
+  if (settleSub === 'byday')   return loadSettleByDay();
+}
+// 현재 sub 탭 데이터 유무에 따라 엑셀 버튼 활성/비활성
+function updateSettleExcelBtn() {
+  const btn = document.getElementById('settle-excel');
+  if (!btn) return;
+  const has = (settleSub === 'byproj' && (settleData||[]).length)
+           || (settleSub === 'bymerch' && (settleMerchData||[]).length)
+           || (settleSub === 'byday' && (settleDayData||[]).length);
+  btn.disabled = !has;
+}
+function settleQs() {
+  return new URLSearchParams({
+    project_name: document.getElementById('sf-name').value.trim(),
+    status: document.getElementById('sf-status').value,
+  }).toString();
+}
+async function downloadSettleExcel() {
+  const btn = document.getElementById('settle-excel');
+  if (!btn || btn.disabled) return;
+  const path = settleSub === 'bymerch' ? '/api/host/settlement/by-merchant/export'
+             : settleSub === 'byday'   ? '/api/host/settlement/by-day/export'
+                                       : '/api/host/settlement/export';
+  try {
+    const r = await fetch(path + '?' + settleQs());
+    if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+    const blob = await r.blob();
+    let fname = 'settlement.xlsx';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+}
+
 // ── 정산 (가맹점 정산과 동일 구성: 프로젝트별 Gift 사용/증정 집계 + 사용자현황) ──
 let settleData = [];
 function stWon(v) { return v ? Number(v).toLocaleString('ko-KR') + '원' : '-'; }
@@ -2440,6 +2660,7 @@ async function loadSettlement() {
   }
   settleData = d.data || [];
   renderSettlement();
+  updateSettleExcelBtn();
 }
 function renderSettlement() {
   const tbody = document.getElementById('settle-tbody');
@@ -2451,20 +2672,26 @@ function renderSettlement() {
     const cls = STATUS_CLS[p.status] || 'bq';
     const giftAmt   = Number(p.gift_amount || 0);
     const prizeAmt  = Number(p.prize_amount || 0);
+    const budget    = Number(p.budget_amount || 0);
     const usedCnt   = Number(p.used_count || 0);
     const grantCnt  = Number(p.grant_count || 0);
     const usedTotal = Number(p.used_amount || 0);   // 사용된 Gift들의 amount 합 (base + prize)
     const grantTot  = Number(p.grant_amount || 0);  // 증정된 Gift들의 amount 합
-    // Gift 사용금액 = base × 사용건수 (prize 보너스 제외)
     const giftUsed  = giftAmt * usedCnt;
-    // Prize 사용금액 = 사용된 Gift들의 amount 합 - 위의 base 부분
     const prizeUsed = Math.max(0, usedTotal - giftUsed);
-    // Prize 지급개수 = Prize 사용금액 / 단가
     const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
-    // Gift 그룹 합계 = 사용금액 + 증정금액
     const giftSum   = giftUsed + grantTot;
-    // 총 Reward 금액 = Gift 사용금액 + Prize 사용금액 (두 그룹의 사용금액 총합)
     const totalReward = giftUsed + prizeUsed;
+    // 소진율 = 실사용 / 예산
+    const pct = budget > 0 ? Math.round((totalReward / budget) * 1000) / 10 : 0;
+    const over = budget > 0 && totalReward > budget;
+    const fmtN = n => Number(n||0).toLocaleString('ko-KR');
+    const rewardCellStyle = over
+      ? 'color:#dc2626;font-weight:800;'
+      : 'color:#1d4ed8;font-weight:700;';
+    const rewardCell = budget > 0
+      ? `<span style="${rewardCellStyle}">${fmtN(totalReward)}/${fmtN(budget)}원(${pct}%)</span>`
+      : `<span style="${rewardCellStyle}">${stWon(totalReward)}</span>`;
     return `<tr>
       <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
       <td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>
@@ -2477,11 +2704,114 @@ function renderSettlement() {
       <td style="text-align:right;">${stWon(prizeAmt)}</td>
       <td style="text-align:center;">${prizeCnt}개</td>
       <td style="text-align:right;">${stWon(prizeUsed)}</td>
-      <td style="text-align:right;"><b style="color:#1d4ed8;">${stWon(totalReward)}</b></td>
+      <td style="text-align:right;white-space:nowrap;">${rewardCell}</td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openDailySettle(${p.id})">보기</button></td>
     </tr>`;
   }).join('');
+}
+
+// ── 정산(가맹점별) ──
+let settleMerchData = [];
+async function loadSettleByMerchant() {
+  const tbody = document.getElementById('settle-bymerch-tbody');
+  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  const qs = new URLSearchParams({
+    project_name: document.getElementById('sf-name').value.trim(),
+    status: document.getElementById('sf-status').value,
+  });
+  let d;
+  try {
+    const r = await fetch('/api/host/settlement/by-merchant?' + qs.toString());
+    if (!r.ok) throw 0;
+    d = await r.json();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  settleMerchData = d.data || [];
+  renderSettleByMerchant();
+  updateSettleExcelBtn();
+}
+function renderSettleByMerchant() {
+  const tbody = document.getElementById('settle-bymerch-tbody');
+  if (!settleMerchData.length) {
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = settleMerchData.map(r => renderSettleSubRow(r, { extraColHead: 'merchant' })).join('');
+}
+
+// ── 정산(일별) ──
+let settleDayData = [];
+async function loadSettleByDay() {
+  const tbody = document.getElementById('settle-byday-tbody');
+  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  const qs = new URLSearchParams({
+    project_name: document.getElementById('sf-name').value.trim(),
+    status: document.getElementById('sf-status').value,
+  });
+  let d;
+  try {
+    const r = await fetch('/api/host/settlement/by-day?' + qs.toString());
+    if (!r.ok) throw 0;
+    d = await r.json();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  settleDayData = d.data || [];
+  renderSettleByDay();
+  updateSettleExcelBtn();
+}
+function renderSettleByDay() {
+  const tbody = document.getElementById('settle-byday-tbody');
+  if (!settleDayData.length) {
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = settleDayData.map(r => renderSettleSubRow(r, { extraColHead: 'day' })).join('');
+}
+
+// 가맹점별/일별 공통 행 렌더링
+function renderSettleSubRow(p, opts) {
+  const cls = STATUS_CLS[p.status] || 'bq';
+  const giftAmt   = Number(p.gift_amount || 0);
+  const prizeAmt  = Number(p.prize_amount || 0);
+  const usedCnt   = Number(p.used_count || 0);
+  const grantCnt  = Number(p.grant_count || 0);
+  const usedTotal = Number(p.used_amount || 0);
+  const grantTot  = Number(p.grant_amount || 0);
+  const giftUsed  = giftAmt * usedCnt;
+  const prizeUsed = Math.max(0, usedTotal - giftUsed);
+  const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+  const giftSum   = giftUsed + grantTot;
+  const totalReward = giftUsed + prizeUsed;
+  const usedUsers = Number(p.used_users || 0);
+  const grantUsers = Number(p.grant_users || 0);
+  const projCell = `<td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>`;
+  const stateCell = `<td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>`;
+  let leadingCells = '';
+  if (opts.extraColHead === 'merchant') {
+    leadingCells = `<td>${esc(p.merchant_name || '(미기록)')}</td>` + projCell + stateCell;
+  } else if (opts.extraColHead === 'day') {
+    const dayStr = p.day ? String(p.day).slice(0, 10) : '-';
+    leadingCells = `<td style="white-space:nowrap;">${dayStr}</td>` + projCell + `<td>${esc(p.merchant_name || '(미기록)')}</td>` + stateCell;
+  }
+  return `<tr>
+    ${leadingCells}
+    <td style="text-align:right;">${stWon(giftAmt)}</td>
+    <td style="text-align:center;">${usedCnt}개</td>
+    <td style="text-align:center;">${grantCnt}개</td>
+    <td style="text-align:right;">${stWon(giftUsed)}</td>
+    <td style="text-align:right;">${stWon(grantTot)}</td>
+    <td style="text-align:right;"><b>${stWon(giftSum)}</b></td>
+    <td style="text-align:right;">${stWon(prizeAmt)}</td>
+    <td style="text-align:center;">${prizeCnt}개</td>
+    <td style="text-align:right;">${stWon(prizeUsed)}</td>
+    <td style="text-align:right;white-space:nowrap;"><span style="color:#1d4ed8;font-weight:700;">${stWon(totalReward)}</span></td>
+    <td style="text-align:center;">${usedUsers} / ${grantUsers}</td>
+  </tr>`;
 }
 
 // ── 정산 상세보기 (일별) 모달 ──
@@ -2504,6 +2834,7 @@ function renderDailySettle(d) {
   const proj = d.project || {};
   const giftAmt = Number(proj.gift_amount || 0);
   const prizeAmt = Number(proj.prize_amount || 0);
+  const budget = Number(proj.budget_amount || 0);
   document.getElementById('ds-title').textContent = `정산 상세 — ${proj.name || ''} (${proj.serial || ''})`;
   const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
   const fmtYmd = s => {
@@ -2548,20 +2879,20 @@ function renderDailySettle(d) {
         <thead>
           <tr>
             <th rowspan="2">일자</th>
-            <th colspan="6" style="text-align:center;background:#f0fdf4;color:#15803d;border-bottom:1px solid #d1fae5;">Gift</th>
-            <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Prize</th>
-            <th rowspan="2" style="text-align:right;">총 Reward 금액</th>
+            <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+            <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+            <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ C)</th>
           </tr>
           <tr>
-            <th style="text-align:right;">단가</th>
-            <th style="text-align:center;">사용개수</th>
-            <th style="text-align:center;">증정개수</th>
-            <th style="text-align:right;">사용금액</th>
-            <th style="text-align:right;">증정금액</th>
-            <th style="text-align:right;">합계</th>
-            <th style="text-align:right;">단가</th>
-            <th style="text-align:center;">지급개수</th>
-            <th style="text-align:right;">사용금액</th>
+            <th style="text-align:right;">단가(X)</th>
+            <th style="text-align:center;">사용개수(Y)</th>
+            <th style="text-align:center;">증정개수(Z)</th>
+            <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+            <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+            <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+            <th style="text-align:right;">단가(a)</th>
+            <th style="text-align:center;">지급개수(b)</th>
+            <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
           </tr>
         </thead>
         <tbody>
@@ -2578,19 +2909,28 @@ function renderDailySettle(d) {
             <td style="text-align:right;">${won(r.prizeUsed)}</td>
             <td style="text-align:right;"><b style="color:#1d4ed8;">${won(r.totalReward)}</b></td>
           </tr>`).join('')}
-          <tr style="background:#f1f5f9;font-weight:700;">
-            <td>합계</td>
-            <td style="text-align:right;">-</td>
-            <td style="text-align:center;">${sum.usedCnt}개</td>
-            <td style="text-align:center;">${sum.grantCnt}개</td>
-            <td style="text-align:right;">${won(sum.giftUsed)}</td>
-            <td style="text-align:right;">${won(sum.grantTot)}</td>
-            <td style="text-align:right;">${won(sum.giftSum)}</td>
-            <td style="text-align:right;">-</td>
-            <td style="text-align:center;">${sum.prizeCnt}개</td>
-            <td style="text-align:right;">${won(sum.prizeUsed)}</td>
-            <td style="text-align:right;"><b style="color:#1d4ed8;">${won(sum.totalReward)}</b></td>
-          </tr>
+          ${(() => {
+            const fmtN = n => Number(n||0).toLocaleString('ko-KR');
+            const pct = budget > 0 ? Math.round((sum.totalReward / budget) * 1000) / 10 : 0;
+            const over = budget > 0 && sum.totalReward > budget;
+            const cs = over ? 'color:#dc2626;font-weight:800;' : 'color:#1d4ed8;font-weight:800;';
+            const cell = budget > 0
+              ? `<span style="${cs}">${fmtN(sum.totalReward)}/${fmtN(budget)}원(${pct}%)</span>`
+              : `<span style="${cs}">${won(sum.totalReward)}</span>`;
+            return `<tr style="background:#f1f5f9;font-weight:700;">
+              <td>합계</td>
+              <td style="text-align:right;">-</td>
+              <td style="text-align:center;">${sum.usedCnt}개</td>
+              <td style="text-align:center;">${sum.grantCnt}개</td>
+              <td style="text-align:right;">${won(sum.giftUsed)}</td>
+              <td style="text-align:right;">${won(sum.grantTot)}</td>
+              <td style="text-align:right;">${won(sum.giftSum)}</td>
+              <td style="text-align:right;">-</td>
+              <td style="text-align:center;">${sum.prizeCnt}개</td>
+              <td style="text-align:right;">${won(sum.prizeUsed)}</td>
+              <td style="text-align:right;white-space:nowrap;">${cell}</td>
+            </tr>`;
+          })()}
         </tbody>
       </table>
     </div>`;
@@ -2744,7 +3084,7 @@ async function saveProfile() {
   btn.disabled = false;
   if (!r.ok) { setMsg('pf-host-msg', 'e', d.error || '저장에 실패했습니다.'); return; }
   document.getElementById('d-name').textContent = v('pf-host-name');
-  document.getElementById('topbar-brand').textContent = '주최측' + (v('pf-host-org') ? ' ' + v('pf-host-org') : '');
+  document.getElementById('topbar-brand').textContent = '모노라마 트래커 · 주관기관' + (v('pf-host-org') ? ' · ' + v('pf-host-org') : '');
   closeProfile();
   await uiAlert(d.message || '기본 정보가 저장되었습니다.');
 }
@@ -2909,11 +3249,13 @@ async function confirmDocsThenRegister() {
   if (ok) show('sec-register');
 }
 
+let locDataCache = [];
 async function loadLocations() {
   const r = await fetch(`/api/host/projects/${currentProjectId}/locations`);
   const d = await r.json();
   if (!r.ok) return;
   const all = d.data || [];
+  locDataCache = all;
   const active = all.filter(l => !l.disabled);
   const off = all.filter(l => l.disabled);
 
@@ -2935,9 +3277,48 @@ async function loadLocations() {
   const el = document.getElementById('loc-list');
   if (!all.length) {
     el.innerHTML = '<div class="loc-empty">등록된 목적지가 없습니다.</div>';
-    return;
+  } else {
+    el.innerHTML = all.map(l => renderLocRow(l, d.started)).join('');
   }
-  el.innerHTML = all.map(l => renderLocRow(l, d.started)).join('');
+  // 단계별 보상 사용(tier_count >= 2) + 활성 목적지 >= 단계 수 → '목적지 추가' 폼 disable
+  const tierCount = Number(d.tier_count || 0);
+  const usingTiers = tierCount >= 2;
+  const locked = usingTiers && active.length >= tierCount;
+  setLocFormLocked(locked, tierCount, active.length);
+}
+
+// '목적지 추가' 폼 전체 잠금 (단계별 보상 + 활성 목적지 >= 단계 수)
+function setLocFormLocked(locked, tierCount, activeCount) {
+  const ids = ['loc-search','loc-name','loc-desc','loc-lat','loc-lng','exh-name','exh-desc','loc-image'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !!locked; });
+  // 추가 버튼
+  document.querySelectorAll('button[onclick="addLocation()"]').forEach(b => { b.disabled = !!locked; });
+  // 유형 선택 segment
+  document.querySelectorAll('#dest-type-seg .seg-btn').forEach(b => {
+    if (locked) { b.setAttribute('disabled',''); b.style.pointerEvents='none'; b.style.opacity='0.5'; }
+    else { b.removeAttribute('disabled'); b.style.pointerEvents=''; b.style.opacity=''; }
+  });
+  // 주소 검색/지도 버튼
+  document.querySelectorAll('button[onclick="openPostcodeLoc()"], button[onclick="openMapPicker()"]').forEach(b => { b.disabled = !!locked; });
+  // 안내 메시지
+  let hint = document.getElementById('loc-lock-hint');
+  if (!hint) {
+    const msgEl = document.getElementById('loc-msg');
+    if (msgEl && msgEl.parentNode) {
+      hint = document.createElement('div');
+      hint.id = 'loc-lock-hint';
+      hint.style.cssText = 'background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;display:none;';
+      msgEl.parentNode.insertBefore(hint, msgEl);
+    }
+  }
+  if (hint) {
+    if (locked) {
+      hint.style.display = '';
+      hint.textContent = `※ 단계별 보상 ${tierCount}단계 사용 중입니다. 활성 목적지(${activeCount}개)가 단계 수와 일치하므로 '목적지 추가'가 잠겼습니다. 단계를 추가하거나 목적지를 비활성화해야 추가할 수 있습니다.`;
+    } else {
+      hint.style.display = 'none';
+    }
+  }
 }
 
 function renderLocRow(l, started) {
@@ -2958,7 +3339,8 @@ function renderLocRow(l, started) {
   const toggle = off
     ? `<button class="btn btn-g btn-sm" onclick="enableLoc(${l.id})">활성화</button>`
     : `<button class="btn btn-r btn-sm" onclick="disableLoc(${l.id})">비활성화</button>`;
-  return `<div class="loc-row${off ? ' loc-off' : ''}">
+  const editBtn = `<button class="btn btn-o btn-sm" onclick="openEditLoc(${l.id})">수정</button>`;
+  return `<div class="loc-row${off ? ' loc-off' : ''}" onclick="onLocCardClick(event, ${l.id})" style="cursor:pointer;">
     <div class="loc-seq">${off ? '–' : l.display_seq}</div>
     ${thumb}
     <div class="loc-info">
@@ -2968,8 +3350,121 @@ function renderLocRow(l, started) {
     </div>
     ${qr}
     ${mapLink}
+    ${editBtn}
     ${toggle}
   </div>`;
+}
+
+// 카드 영역 클릭 — 버튼/링크 외 빈 영역 클릭 시 수정 모달
+function onLocCardClick(e, id) {
+  if (e.target.closest('button, a, input, select, .loc-qr')) return;
+  openEditLoc(id);
+}
+
+// ── 목적지(전시물/위치) 수정 ──
+let editingLocId = null;
+let elRemoveImage = false;
+async function openEditLoc(locId) {
+  const l = locDataCache.find(x => Number(x.id) === Number(locId));
+  if (!l) { await uiAlert('목적지 정보를 찾을 수 없습니다.'); return; }
+  editingLocId = locId;
+  elRemoveImage = false;
+  // 초기 진입은 보기 모드 — 저장 버튼 비활성, 사용자가 값을 변경하면 활성화
+  document.getElementById('el-save').disabled = true;
+  const isExhibit = l.dest_type === 'exhibit';
+  document.getElementById('el-title').textContent = isExhibit ? '전시물 수정' : '위치 수정';
+  document.getElementById('el-type').textContent = isExhibit ? '🎨 전시물' : '📍 위치';
+  document.getElementById('el-name').value = l.location_name || '';
+  document.getElementById('el-name').maxLength = 100;
+  document.getElementById('el-desc-row').style.display = '';
+  document.getElementById('el-coord-row').style.display = isExhibit ? 'none' : '';
+  document.getElementById('el-desc').value = l.location_desc || '';
+  document.getElementById('el-lat').value = l.kakao_lat != null ? l.kakao_lat : '';
+  document.getElementById('el-lng').value = l.kakao_lng != null ? l.kakao_lng : '';
+  const fileEl = document.getElementById('el-image');
+  if (fileEl) fileEl.value = '';
+  const pv = document.getElementById('el-img-preview');
+  if (pv) {
+    pv.innerHTML = l.image_url
+      ? `<div style="display:flex;gap:10px;align-items:center;">
+           <img src="${l.image_url}" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid #e5e7eb;object-fit:cover;">
+           <button type="button" class="btn btn-o btn-sm" style="padding:4px 10px;font-size:11px;" onclick="markRemoveElImage()">기존 이미지 제거</button>
+         </div>`
+      : '<span style="font-size:12px;color:#94a3b8;">등록된 이미지 없음</span>';
+  }
+  clrMsg('el-msg');
+  document.getElementById('modal-edit-loc').classList.add('open');
+}
+function closeEditLoc() {
+  editingLocId = null;
+  document.getElementById('modal-edit-loc').classList.remove('open');
+}
+function onElImgChange(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    setMsg('el-msg','e','이미지는 최대 5MB입니다.');
+    input.value = '';
+    return;
+  }
+  elRemoveImage = false;
+  elMarkChanged();
+  const reader = new FileReader();
+  reader.onload = e => {
+    const pv = document.getElementById('el-img-preview');
+    if (pv) pv.innerHTML = `<img src="${e.target.result}" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid #e5e7eb;object-fit:cover;">
+      <div style="font-size:11px;color:#1d4ed8;margin-top:4px;">새 이미지로 교체됩니다 (저장 시 적용)</div>`;
+  };
+  reader.readAsDataURL(file);
+}
+function markRemoveElImage() {
+  elRemoveImage = true;
+  elMarkChanged();
+  const pv = document.getElementById('el-img-preview');
+  if (pv) pv.innerHTML = '<span style="color:#dc2626;font-size:12px;">기존 이미지 제거 예정 (저장 시 적용)</span>';
+}
+function elMarkChanged() {
+  const btn = document.getElementById('el-save');
+  if (btn) btn.disabled = false;
+}
+// 모달 input 들의 변경 감지를 한 번만 등록 (script 시점에 모달 DOM 이미 존재)
+(function attachElChangeListeners() {
+  ['el-name','el-desc','el-lat','el-lng'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', elMarkChanged);
+    el.addEventListener('change', elMarkChanged);
+  });
+})();
+async function saveEditLoc() {
+  if (!editingLocId) return;
+  clrMsg('el-msg');
+  const name = document.getElementById('el-name').value.trim();
+  const desc = document.getElementById('el-desc').value.trim();
+  const lat  = document.getElementById('el-lat').value.trim();
+  const lng  = document.getElementById('el-lng').value.trim();
+  if (!name) { setMsg('el-msg','e','이름을 입력해 주세요.'); return; }
+  const ok = await uiConfirm('저장하시겠습니까?', { title: '저장 확인', okText: '저장', cancelText: '취소' });
+  if (!ok) return;
+  const btn = document.getElementById('el-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const fd = new FormData();
+  fd.append('location_name', name);
+  fd.append('location_desc', desc);
+  if (lat) fd.append('kakao_lat', lat);
+  if (lng) fd.append('kakao_lng', lng);
+  if (elRemoveImage) fd.append('remove_image', '1');
+  const fileEl = document.getElementById('el-image');
+  if (fileEl && fileEl.files && fileEl.files[0]) fd.append('image', fileEl.files[0]);
+  const r = await fetch(`/api/host/projects/${currentProjectId}/locations/${editingLocId}`, {
+    method:'PUT', body: fd,
+  });
+  const d = await r.json().catch(() => ({}));
+  btn.disabled = false; btn.textContent = '저장';
+  if (!r.ok) { setMsg('el-msg','e', d.error || '저장에 실패했습니다.'); return; }
+  closeEditLoc();
+  await loadLocations();
+  loadProjects(1);
 }
 
 async function disableLoc(locId) {
@@ -3184,7 +3679,10 @@ function clearSelectedPlace() {
 function resetLocForm() {
   setDestType('location');
   document.getElementById('loc-search').value = '';
+  const exhN = document.getElementById('exh-name'); if (exhN) exhN.value = '';
   const exh = document.getElementById('exh-desc'); if (exh) exh.value = '';
+  const ld = document.getElementById('loc-desc'); if (ld) ld.value = '';
+  const ldc = document.getElementById('loc-desc-count'); if (ldc) ldc.textContent = '';
   clearIcon();
   clearSelectedPlace();
 }
@@ -3255,8 +3753,8 @@ function closeMapPicker() { document.getElementById('modal-map').classList.remov
 document.getElementById('loc-desc').addEventListener('input', function() {
   const n = this.value.length;
   const el = document.getElementById('loc-desc-count');
-  el.textContent = `${n}/50`;
-  el.className = 'fm ' + (n>50?'e':'g');
+  el.textContent = `${n}/500`;
+  el.className = 'fm ' + (n>500?'e':'g');
 });
 
 async function addLocation() {
@@ -3271,15 +3769,16 @@ async function addLocation() {
     const kakao_lng = document.getElementById('loc-lng').value;
     if (!kakao_lat || !kakao_lng) { setMsg('loc-msg','e','주소 검색 또는 지도에서 장소를 선택해 주세요.'); return; }
     if (!location_name) { setMsg('loc-msg','e','장소명을 입력해 주세요.'); return; }
-    if (!location_desc) { setMsg('loc-msg','e','목적지 설명을 입력해 주세요.'); return; }
     fd.append('location_name', location_name);
     fd.append('location_desc', location_desc);
     fd.append('kakao_lat', kakao_lat);
     fd.append('kakao_lng', kakao_lng);
   } else {
+    const exhibit_name = document.getElementById('exh-name').value.trim();
     const exhibit_desc = document.getElementById('exh-desc').value.trim();
-    if (!exhibit_desc) { setMsg('loc-msg','e','전시물 설명을 입력해 주세요.'); return; }
-    fd.append('location_name', exhibit_desc);
+    if (!exhibit_name) { setMsg('loc-msg','e','전시물 제목을 입력해 주세요.'); return; }
+    fd.append('location_name', exhibit_name);
+    fd.append('location_desc', exhibit_desc);
   }
 
   const img = document.getElementById('loc-image').files[0];
@@ -3401,10 +3900,161 @@ function calcBudget() {
   const gift = parseNum(document.getElementById('pj-gift').value);
   const qty  = parseNum(document.getElementById('pj-qty').value);
   document.getElementById('pj-budget').value = gift > 0 && qty > 0 ? (gift * qty).toLocaleString('ko-KR') : '';
+  // Gift 단가 변경 시 마지막 단계 동기화 + 모든 tier 재검증
+  syncLastTierAmount('pj');
+  revalidateAllGiftTiers('pj');
+}
+
+// 단계 수 N + 각 단계 금액. 마지막 단계는 Gift 단가로 자동 채워지고 disabled.
+function renderGiftTiers(containerId, prefix, savedTiers) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const countEl = document.getElementById(prefix + '-tiers-count');
+  let n = 2;
+  if (savedTiers && savedTiers.length) {
+    n = Math.max(2, Math.min(10, savedTiers.length));
+    if (countEl) countEl.value = String(n);
+  } else if (countEl) {
+    n = Math.max(2, Math.min(10, Number(countEl.value || 0) || 2));
+  }
+  const sortedSaved = (savedTiers || []).slice().sort((a,b) => Number(a.pct) - Number(b.pct));
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    const pct = Math.round((100 * i) / n);
+    const isLast = i === n;
+    const savedAmt = sortedSaved[i - 1];
+    const amtStr = (!isLast && savedAmt) ? Number(savedAmt.amount).toLocaleString('ko-KR') : '';
+    const canRemove = !isLast && n > 2;
+    html += `<div class="gift-tier-row ${isLast ? 'last' : ''}" data-idx="${i}" data-pct="${pct}">
+      <div class="gt-pct">${i}단계 <span style="color:#94a3b8;">(${pct}%)</span></div>
+      <input type="text" inputmode="numeric" placeholder="${isLast ? '(Gift 단가)' : '금액'}"
+        ${isLast ? 'disabled' : ''} value="${amtStr}"
+        oninput="onGiftTierAmountInput('${prefix}',${i},this)">
+      <span class="gt-unit">원</span>
+      <button type="button" class="gt-rm" ${canRemove ? '' : 'disabled'} onclick="onRemoveTier('${prefix}',${i})" title="${canRemove ? '이 단계 삭제' : '최소 2단계는 유지해야 합니다'}">✕</button>
+    </div>`;
+  }
+  el.innerHTML = html;
+  syncLastTierAmount(prefix);
+}
+
+function syncLastTierAmount(prefix) {
+  const giftEl = document.getElementById(prefix === 'pj' ? 'pj-gift' : 'pe-gift');
+  const containerId = prefix + '-gift-tiers';
+  const lastRow = document.querySelector(`#${containerId} .gift-tier-row:last-child`);
+  if (!lastRow || !giftEl) return;
+  const giftAmt = Number(String(giftEl.value || '').replace(/,/g, '')) || 0;
+  const amt = lastRow.querySelector('input[type=text]');
+  if (amt) amt.value = giftAmt > 0 ? giftAmt.toLocaleString('ko-KR') : '';
+}
+
+// 특정 단계 삭제 — 단계 수 1 감소 + 기존 값 유지하며 진행률 재계산
+function onRemoveTier(prefix, idx) {
+  const containerId = prefix + '-gift-tiers';
+  const countEl = document.getElementById(prefix + '-tiers-count');
+  const n = Math.max(2, Number((countEl && countEl.value) || 0) || 2);
+  if (n <= 2) return; // 최소 2단계 유지
+  // 현재 입력값 수집 (마지막=100% 자동 제외)
+  const amounts = [];
+  document.querySelectorAll(`#${containerId} .gift-tier-row`).forEach(r => {
+    if (r.classList.contains('last')) return;
+    const amt = r.querySelector('input[type=text]');
+    const v = Number(String((amt && amt.value) || '').replace(/,/g, '')) || 0;
+    amounts.push(v);
+  });
+  // idx-1 위치 제거 (idx는 1-based)
+  if (idx >= 1 && idx <= amounts.length) amounts.splice(idx - 1, 1);
+  const newN = n - 1;
+  countEl.value = String(newN);
+  // 남은 amount 들로 saved 구성 — pct 는 renderGiftTiers 가 새로 계산
+  const giftEl = document.getElementById(prefix === 'pj' ? 'pj-gift' : 'pe-gift');
+  const giftAmt = Number(String((giftEl && giftEl.value) || '').replace(/,/g, '')) || 0;
+  const saved = amounts.map((amt, i) => ({
+    pct: Math.round((100 * (i + 1)) / newN),
+    amount: amt,
+  }));
+  saved.push({ pct: 100, amount: giftAmt }); // 마지막 100% 추가
+  renderGiftTiers(containerId, prefix, saved);
+  updateTierLocationHint(prefix);
+}
+
+function onTiersCountChange(prefix) {
+  const countEl = document.getElementById(prefix + '-tiers-count');
+  if (countEl) {
+    const v = Math.max(2, Math.min(10, Math.floor(Number(countEl.value) || 0) || 2));
+    if (countEl.value !== String(v)) countEl.value = String(v);
+  }
+  renderGiftTiers(prefix + '-gift-tiers', prefix);
+  updateTierLocationHint(prefix);
+}
+// '단계별 보상 사용' 체크박스 토글
+function onGiftTiersEnableChange(prefix) {
+  const enableEl = document.getElementById(prefix + '-tiers-enable');
+  const countEl = document.getElementById(prefix + '-tiers-count');
+  const containerId = prefix + '-gift-tiers';
+  const enabled = !!(enableEl && enableEl.checked);
+  if (countEl) countEl.disabled = !enabled;
+  if (!enabled) {
+    document.getElementById(containerId).innerHTML = '';
+  } else {
+    // 이미 row 가 채워져 있으면 그대로 유지 (savedTiers 데이터 보존)
+    const hasRows = document.querySelectorAll(`#${containerId} .gift-tier-row`).length > 0;
+    if (!hasRows) renderGiftTiers(containerId, prefix);
+  }
+  updateTierLocationHint(prefix);
+}
+
+// 단계 수 N — 도달 가능한 목적지 N개 이상 필요
+function updateTierLocationHint(prefix) {
+  const enableEl = document.getElementById(prefix + '-tiers-enable');
+  const hintEl = document.getElementById(prefix + '-tiers-hint');
+  if (!hintEl) return;
+  if (!enableEl || !enableEl.checked) { hintEl.style.display = 'none'; hintEl.textContent = ''; return; }
+  const countEl = document.getElementById(prefix + '-tiers-count');
+  const n = Math.max(2, Number(countEl?.value || 0) || 0);
+  hintEl.style.display = '';
+  hintEl.style.color = '#3b82f6';
+  hintEl.textContent = `※ ${n}단계 사용 시 활성 목적지가 ${n}개와 정확히 같아야 합니다.`;
+}
+
+function onGiftTierAmountInput(prefix, idx, el) {
+  // 콤마 자동 포맷
+  el.value = el.value.replace(/[^0-9]/g, '');
+  el.value = el.value ? Number(el.value).toLocaleString('ko-KR') : '';
+  const row = el.closest('.gift-tier-row');
+  if (row && !row.classList.contains('last')) validateGiftTierRow(prefix, row);
+}
+function validateGiftTierRow(prefix, row) {
+  const giftEl = document.getElementById(prefix === 'pj' ? 'pj-gift' : 'pe-gift');
+  const tierEl = row.querySelector('input[type=text]');
+  if (!giftEl || !tierEl || tierEl.disabled) return true;
+  const giftAmt = Number(String(giftEl.value || '').replace(/,/g, '')) || 0;
+  const tierAmt = Number(String(tierEl.value || '').replace(/,/g, '')) || 0;
+  const ok = !(giftAmt > 0 && tierAmt > 0 && tierAmt >= giftAmt);
+  tierEl.style.borderColor = ok ? '' : '#dc2626';
+  tierEl.style.background = ok ? '' : '#fef2f2';
+  tierEl.title = ok ? '' : `Gift 단가(${giftAmt.toLocaleString('ko-KR')}원) 미만이어야 합니다.`;
+  return ok;
+}
+function revalidateAllGiftTiers(prefix) {
+  const containerId = prefix + '-gift-tiers';
+  document.querySelectorAll(`#${containerId} .gift-tier-row`).forEach(r => {
+    if (!r.classList.contains('last')) validateGiftTierRow(prefix, r);
+  });
+}
+function collectGiftTiers(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .gift-tier-row`);
+  const out = [];
+  rows.forEach(r => {
+    const amt = r.querySelector('input[type=text]');
+    const v = Number(String((amt && amt.value) || '').replace(/,/g, '')) || 0;
+    if (v > 0) out.push({ pct: Number(r.dataset.pct), amount: v });
+  });
+  return out;
 }
 
 function enableProjectForm(on) {
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-quiz-bonus','btn-create-proj']
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-stop-overbudget','pj-tiers-enable','btn-create-proj']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; });
   if (on) {
     const fromEl = document.getElementById('pj-from');
@@ -3412,6 +4062,8 @@ function enableProjectForm(on) {
     fromEl.min = tmr;
     if (!fromEl.value) fromEl.value = tmr;
     onFromDateChange();
+    renderGiftTiers('pj-gift-tiers', 'pj');
+    onGiftTiersEnableChange('pj'); // default unchecked → tier 영역 비활성
   }
 }
 
@@ -3475,6 +4127,21 @@ async function createProject() {
   }
   if (giftNum <= 0) { setMsg('pj-msg','e','Gift 단가 금액을 입력해 주세요.'); return; }
   if (qtyNum  < 1)  { setMsg('pj-msg','e','Gift 발급 수량을 1 이상 입력해 주세요.'); return; }
+  // Gift 단계별 보상 — 사용 체크 OFF 면 tier 모두 무시 (입력 자체 차단됨)
+  const tiersEnabled = document.getElementById('pj-tiers-enable').checked;
+  const tiers = tiersEnabled ? collectGiftTiers('pj-gift-tiers') : [];
+  if (tiersEnabled) {
+    // 100% 단계는 Gift 단가와 동일하므로 검증 제외
+    const bad = tiers.find(t => Number(t.pct) < 100 && t.amount >= giftNum);
+    if (bad) {
+      setMsg('pj-msg','e', `${bad.pct}% 단계 보상(${bad.amount.toLocaleString('ko-KR')}원)은 Gift 단가(${giftNum.toLocaleString('ko-KR')}원) 미만이어야 합니다.`);
+      return;
+    }
+    if (tiers.length === 0) {
+      setMsg('pj-msg','e','단계별 보상을 사용하려면 최소 1개 이상의 단계를 선택해 주세요.');
+      return;
+    }
+  }
   clrMsg('pj-msg');
   document.getElementById('quote-confirm-msg').className = 'msg';
   document.getElementById('quote-confirm-msg').textContent = '';
@@ -3493,7 +4160,8 @@ async function confirmCreateProject() {
     gift_qty:     String(parseNum(document.getElementById('pj-qty').value)),
     prize_amount: String(parseNum(document.getElementById('pj-prize').value)),
     prize_qty:    String(parseNum(document.getElementById('pj-prize-qty').value)),
-    quiz_bonus_per_correct: String(parseNum(document.getElementById('pj-quiz-bonus').value)),
+    stop_on_budget_exceed: document.getElementById('pj-stop-overbudget').checked ? '1' : '0',
+    gift_tiers:   collectGiftTiers('pj-gift-tiers'),
     pin_input:    verifiedPin,
   };
   const r = await fetch('/api/host/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -3505,9 +4173,10 @@ async function confirmCreateProject() {
     return;
   }
   document.getElementById('modal-quote-confirm').classList.remove('open');
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-quiz-bonus','pj-budget'].forEach(id => {
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-budget'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('pj-stop-overbudget').checked = false;
   resetPinState();
   switchTab('proj');
 }
@@ -3672,9 +4341,15 @@ async function openProjectEdit(id) {
   document.getElementById('pe-qty').value = Number(p.gift_qty || 0).toLocaleString('ko-KR');
   document.getElementById('pe-prize').value = Number(p.prize_amount || 0).toLocaleString('ko-KR');
   document.getElementById('pe-prize-qty').value = Number(p.prize_qty || 0).toLocaleString('ko-KR');
-  document.getElementById('pe-quiz-bonus').value = Number(p.quiz_bonus_per_correct || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-stop-overbudget').checked = Number(p.stop_on_budget_exceed) === 1;
+  // Gift 단계별 보상 — 100% 외 추가 tier 가 있으면 사용 ON
+  const extraTiers = (d.gift_tiers || []).filter(t => Number(t.pct) < 100);
+  const enableEl = document.getElementById('pe-tiers-enable');
+  if (enableEl) enableEl.checked = extraTiers.length > 0;
+  renderGiftTiers('pe-gift-tiers', 'pe', d.gift_tiers || []);
+  onGiftTiersEnableChange('pe');
   calcPeBudget();
-  ['pe-name','pe-desc','pe-from','pe-to','pe-gift','pe-qty','pe-prize','pe-prize-qty','pe-quiz-bonus','pe-save-btn']
+  ['pe-name','pe-desc','pe-from','pe-to','pe-gift','pe-qty','pe-prize','pe-prize-qty','pe-stop-overbudget','pe-save-btn']
     .forEach(eid => { const el = document.getElementById(eid); if (el) el.disabled = !pcEditable; });
   clrMsg('pe-msg');
   document.getElementById('modal-project-edit').classList.add('open');
@@ -3689,6 +4364,8 @@ function calcPeBudget() {
   const g = parseNum(document.getElementById('pe-gift').value);
   const q = parseNum(document.getElementById('pe-qty').value);
   document.getElementById('pe-budget').value = g > 0 && q > 0 ? (g * q).toLocaleString('ko-KR') : '';
+  syncLastTierAmount('pe');
+  revalidateAllGiftTiers('pe');
 }
 
 async function saveProjectEdit() {
@@ -3703,10 +4380,26 @@ async function saveProjectEdit() {
     gift_qty: String(parseNum(document.getElementById('pe-qty').value)),
     prize_amount: String(parseNum(document.getElementById('pe-prize').value)),
     prize_qty: String(parseNum(document.getElementById('pe-prize-qty').value)),
-    quiz_bonus_per_correct: String(parseNum(document.getElementById('pe-quiz-bonus').value)),
+    stop_on_budget_exceed: document.getElementById('pe-stop-overbudget').checked ? '1' : '0',
+    gift_tiers: document.getElementById('pe-tiers-enable').checked ? collectGiftTiers('pe-gift-tiers') : [],
   };
   if (!body.project_name || !body.description || !body.from_date || !body.to_date) {
     setMsg('pe-msg','e','필수값을 입력해 주세요.'); return;
+  }
+  // Gift 단계별 보상 검증
+  {
+    const peGift = parseNum(document.getElementById('pe-gift').value);
+    const tiers = body.gift_tiers || [];
+    const tiersEnabled = document.getElementById('pe-tiers-enable').checked;
+    if (tiersEnabled && tiers.length === 0) {
+      setMsg('pe-msg','e','단계별 보상을 사용하려면 최소 1개 이상의 단계를 선택해 주세요.'); return;
+    }
+    // 100% 단계는 Gift 단가와 동일이므로 검증 제외
+    const bad = tiers.find(t => Number(t.pct) < 100 && t.amount >= peGift);
+    if (bad) {
+      setMsg('pe-msg','e', `${bad.pct}% 단계 보상(${bad.amount.toLocaleString('ko-KR')}원)은 Gift 단가(${peGift.toLocaleString('ko-KR')}원) 미만이어야 합니다.`);
+      return;
+    }
   }
   const btn = document.getElementById('pe-save-btn');
   btn.disabled = true; btn.textContent = '저장 중...';
@@ -3743,7 +4436,7 @@ async function saveProjectEdit() {
   if (r.ok) {
     const d = await r.json();
     document.getElementById('d-name').textContent = d.host?.name||'';
-    document.getElementById('topbar-brand').textContent = '주최측' + (d.host?.organization_name ? ' ' + d.host.organization_name : '');
+    document.getElementById('topbar-brand').textContent = '모노라마 트래커 · 주관기관' + (d.host?.organization_name ? ' · ' + d.host.organization_name : '');
     show('sec-dashboard');
     startSessionWatch();
     loadQuoteConfig();

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS projects (
   prize_amount BIGINT NOT NULL DEFAULT 0,
   prize_qty INT NOT NULL DEFAULT 0,
   quiz_bonus_per_correct INT NOT NULL DEFAULT 0,
+  stop_on_budget_exceed TINYINT(1) NOT NULL DEFAULT 0,
   budget_amount BIGINT NOT NULL,
   pin_hash VARCHAR(80) NOT NULL,
   pin_enc VARCHAR(255) NULL, -- 가맹점 승인 메일에 PIN을 동봉하기 위한 복호화 가능 저장값(fn_encrypt)
@@ -123,7 +124,7 @@ CREATE TABLE IF NOT EXISTS project_locations (
   location_name VARCHAR(100) NOT NULL,
   kakao_lat DECIMAL(12,8) NULL,
   kakao_lng DECIMAL(12,8) NULL,
-  location_desc VARCHAR(50) NULL,
+  location_desc VARCHAR(500) NULL,
   image_path VARCHAR(255) NULL,
   quiz_required TINYINT(1) NOT NULL DEFAULT 0,
   disabled TINYINT(1) NOT NULL DEFAULT 0,
@@ -218,12 +219,26 @@ CREATE TABLE IF NOT EXISTS gift_redemptions (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   project_id BIGINT NOT NULL,
   visitor_id BIGINT NOT NULL,
+  merchant_id BIGINT NULL,
   redemption_type ENUM('normal','grant') NOT NULL,
   amount BIGINT NOT NULL,
   eligible TINYINT(1) NOT NULL DEFAULT 0,
   redeemed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_gr_merchant (merchant_id),
   FOREIGN KEY (project_id) REFERENCES projects(id),
-  FOREIGN KEY (visitor_id) REFERENCES visitors(id)
+  FOREIGN KEY (visitor_id) REFERENCES visitors(id),
+  FOREIGN KEY (merchant_id) REFERENCES merchants(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_gift_tiers (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  project_id BIGINT NOT NULL,
+  threshold_pct INT NOT NULL,
+  amount BIGINT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_tier (project_id, threshold_pct),
+  KEY idx_project (project_id),
+  FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
 CREATE TABLE IF NOT EXISTS gifts (
@@ -232,6 +247,7 @@ CREATE TABLE IF NOT EXISTS gifts (
   visitor_id BIGINT NOT NULL,
   token VARCHAR(64) NOT NULL,
   amount BIGINT NOT NULL,
+  threshold_pct INT NOT NULL DEFAULT 100,
   status ENUM('issued','used') NOT NULL DEFAULT 'issued',
   qr_image_path VARCHAR(255) NULL,
   qr_view_pin_hash VARCHAR(255) NULL,
@@ -239,7 +255,7 @@ CREATE TABLE IF NOT EXISTS gifts (
   issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   used_at DATETIME NULL,
   UNIQUE KEY uq_gift_token (token),
-  UNIQUE KEY uq_gift_visitor (project_id, visitor_id),
+  UNIQUE KEY uq_gift_visitor_tier (project_id, visitor_id, threshold_pct),
   FOREIGN KEY (project_id) REFERENCES projects(id),
   FOREIGN KEY (visitor_id) REFERENCES visitors(id)
 );

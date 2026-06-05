@@ -89,6 +89,14 @@
     .ptbl tbody tr:hover td { background:#fafbfd; }
     .ptbl td.c, .ptbl th.c { text-align:center; }
     .ptbl td.r, .ptbl th.r { text-align:right; }
+    /* 인증코드 셀(마스킹/평문) 코드 칩 */
+    .pin-wrap { display:inline-flex; align-items:center; gap:6px; }
+    .pin-code { font-family: ui-monospace, "Consolas", "Menlo", monospace; font-size:13px; font-weight:600;
+                letter-spacing:2px; background:#f1f5f9; color:#0f172a; padding:3px 8px; border-radius:4px;
+                border:1px solid #e2e8f0; display:inline-block; min-width:48px; text-align:center; }
+    .pin-btn  { background:none; border:none; cursor:pointer; color:#64748b; padding:2px;
+                display:inline-flex; align-items:center; }
+    .pin-btn:hover { color:#0f172a; }
     /* 탭 */
     .tabs { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin:0 0 18px; }
     .tab { background:none; border:none; padding:9px 18px; font-size:14px; font-weight:600; color:#94a3b8;
@@ -902,16 +910,24 @@
     { key: 'from_date',         label: '프로젝트 기간', cls: '' },
     { key: 'remaining_days',    label: '잔여일', cls: 'c', num: true },
     { key: 'status',            label: '상태', cls: 'c' },
-    { key: 'gift_amount',       label: 'Gift 단가', cls: 'r', num: true },
+    { key: 'pin_code',          label: '인증코드', cls: 'c' },
     { key: 'application_status',label: '지원', cls: 'c' },
   ];
   let projData = [];
   let projSort = { key: 'from_date', dir: 'desc' };
   let projPage = 1;
+  const pinShown = new Set();  // 인증코드 노출 행 id 집합
+
+  function togglePin(id) {
+    if (pinShown.has(id)) pinShown.delete(id);
+    else pinShown.add(id);
+    renderProjects();
+  }
 
   function projVal(p, key) {
     if (key === 'remaining_days') return p.status === 'completed' ? -99999 : (p.remaining_days == null ? -99998 : Number(p.remaining_days));
     if (key === 'gift_amount') return Number(p.gift_amount || 0);
+    if (key === 'pin_code') return p.pin_code ? 0 : 1;  // 인증코드 있는 행을 위로
     if (key === 'from_date') return p.from_date ? new Date(p.from_date).getTime() : 0;
     if (key === 'status') return STATUS_RANK[p.status] ?? 9;
     if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
@@ -1017,13 +1033,24 @@
           } else {
             action = '<span style="color:#cbd5e1;">-</span>';
           }
+          let pinCell;
+          if (!p.pin_code) {
+            pinCell = '<span style="color:#cbd5e1;">-</span>';
+          } else {
+            const shown = pinShown.has(p.id);
+            const txt = shown ? esc(String(p.pin_code)) : String(p.pin_code).replace(/./g, '•');
+            const eye = shown
+              ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+              : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            pinCell = `<span class="pin-wrap"><span class="pin-code">${txt}</span><button type="button" class="pin-btn" onclick="togglePin(${p.id})" title="${shown ? '숨기기' : '보기'}">${eye}</button></span>`;
+          }
           return `<tr>
             <td>${esc(p.organization_name) || '-'}</td>
             <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
             <td style="font-size:12px;color:#64748b;">${from} ~ ${to}</td>
             <td class="c" style="font-size:12px;">${remainLabel(p)}</td>
             <td class="c"><span class="badge ${STATUS_BADGE[p.status] || 'b-stat'}">${STATUS_LABEL[p.status] || p.status}</span></td>
-            <td class="r">${won(p.gift_amount)}</td>
+            <td class="c">${pinCell}</td>
             <td class="c">${action}</td>
           </tr>`;
         }).join('')}</tbody>
@@ -1160,7 +1187,7 @@
     const arr = key => settleSort.key === key ? (settleSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
     const thead = STT_COLS.map(c =>
       `<th class="sortable ${c.cls}" onclick="sortSettle('${c.key}')">${c.label}${arr(c.key)}</th>`).join('')
-      + '<th class="c">사용자현황</th>';
+      + '<th class="c">사용자현황<br>(사용/증정)</th>';
     body.innerHTML = `
       <div class="tbl-wrap"><table class="ptbl">
         <thead><tr>${thead}</tr></thead>

@@ -7,7 +7,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>스탬프투어</title>
-  <meta name="theme-color" content="#0d3b66">
+  <meta name="theme-color" content="#15803d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" id="manifest-link" href="/visitor/manifest.json">
@@ -32,28 +32,28 @@
     label.lab { display: block; font-size: 13px; font-weight: 600; color: #33415c; margin-bottom: 6px; }
     input[type=tel] { width: 100%; padding: 13px 14px; font-size: 16px; border: 1.5px solid #c9d6ea;
                       border-radius: 10px; outline: none; }
-    input[type=tel]:focus { border-color: #0d3b66; }
+    input[type=tel]:focus { border-color: #15803d; }
     .btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border: none; border-radius: 12px;
            cursor: pointer; margin-top: 12px; }
-    .btn-primary { background: #0d3b66; color: #fff; }
-    .btn-primary:disabled { background: #9fb2cc; cursor: not-allowed; }
-    .btn-ghost { background: #eef3fb; color: #0d3b66; }
+    .btn-primary { background: #15803d; color: #fff; }
+    .btn-primary:disabled { background: #a7f3d0; cursor: not-allowed; }
+    .btn-ghost { background: #eef3fb; color: #15803d; }
     .doc { max-height: 150px; overflow: auto; border: 1px solid #e6ecf5; border-radius: 10px;
            padding: 12px; font-size: 12px; line-height: 1.6; color: #4a5870; background: #fbfcfe; }
     .doc h4 { margin: 10px 0 4px; font-size: 12.5px; color: #16243a; }
     .doc p { margin: 0 0 6px; }
     .agree-row { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0 4px; font-size: 13px; }
-    .agree-row input { width: 19px; height: 19px; margin-top: 1px; flex-shrink: 0; accent-color: #0d3b66; }
+    .agree-row input { width: 19px; height: 19px; margin-top: 1px; flex-shrink: 0; accent-color: #15803d; }
     .agree-all { background: #eef3fb; border-radius: 10px; padding: 11px 12px; font-weight: 700; }
     .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
     .msg.err { color: #d62828; }
     .msg.ok { color: #138a36; }
     .stamp { text-align: center; font-size: 56px; margin: 6px 0 2px; }
     .prog-num { text-align: center; margin: 10px 0 4px; }
-    .prog-num b { font-size: 40px; color: #0d3b66; }
+    .prog-num b { font-size: 40px; color: #15803d; }
     .prog-num span { font-size: 16px; color: #5b6b85; }
     .bar-wrap { height: 12px; background: #e6ecf5; border-radius: 8px; overflow: hidden; margin: 14px 0 8px; }
-    .bar { height: 100%; width: 0; background: linear-gradient(90deg,#2a7de1,#0d3b66); transition: width .5s; }
+    .bar { height: 100%; width: 0; background: linear-gradient(90deg,#2a7de1,#15803d); transition: width .5s; }
     .stat { display: flex; justify-content: space-around; text-align: center; margin: 14px 0 4px; }
     .stat .n { font-size: 22px; font-weight: 800; }
     .stat .l { font-size: 12px; color: #5b6b85; }
@@ -61,7 +61,7 @@
                    font-weight: 700; margin-top: 10px; }
     .install-bar { margin-top: 14px; display: none; }
     .center { text-align: center; }
-    .spin { display: inline-block; width: 26px; height: 26px; border: 3px solid #d3deef; border-top-color: #0d3b66;
+    .spin { display: inline-block; width: 26px; height: 26px; border: 3px solid #d3deef; border-top-color: #15803d;
             border-radius: 50%; animation: r 1s linear infinite; }
     @keyframes r { to { transform: rotate(360deg); } }
     .hidden { display: none; }
@@ -85,17 +85,40 @@
     .dl-row.dl-done .dl-seq { background: #138a36; }
     .dl-ico { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; flex-shrink: 0; border: 1px solid #e6ecf5; }
     .dl-ico-ph { display: flex; align-items: center; justify-content: center; background: #f1f5f9; font-size: 16px; }
-    .dl-name { flex: 1; min-width: 0; font-size: 13px; color: #33415c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dl-name { flex: 1; min-width: 0; font-size: 13px; color: #33415c; display: flex; align-items: center; gap: 6px; }
+    .dl-name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dl-row.dl-done .dl-name { color: #16243a; font-weight: 600; }
+    .dl-info { background:none; border:none; color:#3b82f6; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
+    .dl-info:hover { color:#1d4ed8; }
+    /* 전시물 설명 오버레이 */
+    #dest-desc-ov { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:2000; display:none; align-items:center; justify-content:center; padding:20px; }
+    #dest-desc-ov.show { display:flex; }
+    .dd-box { background:#fff; border-radius:14px; padding:20px 20px 16px; max-width:360px; width:100%; box-shadow:0 16px 48px rgba(0,0,0,.30); }
+    .dd-title { font-size:16px; font-weight:800; color:#16243a; margin-bottom:10px; border-bottom:1px solid #e5e7eb; padding-bottom:8px; }
+    .dd-body { font-size:13px; color:#33415c; line-height:1.6; white-space:pre-wrap; max-height:50vh; overflow-y:auto; margin-bottom:14px; }
+    .dd-close { width:100%; padding:10px; background:#16243a; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
     .dl-on  { font-size: 12px; font-weight: 800; color: #138a36; white-space: nowrap; }
     .dl-off { font-size: 12px; font-weight: 700; color: #b0b8c4; white-space: nowrap; }
+
+    /* 단계별 보상 진행 list */
+    .tier-list { margin-top:18px; }
+    .tl-title { font-size:14px; font-weight:800; color:#16243a; margin-bottom:6px; }
+    .tl-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; margin-bottom:4px; background:#f1f5f9; }
+    .tl-row.reached { background:#dcfce7; }
+    .tl-row.issued { background:#e7f8ee; border:1px solid #16a34a; }
+    .tl-mark { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
+    .tl-mark.off { background:#cbd5e1; color:#fff; }
+    .tl-mark.on { background:#16a34a; color:#fff; }
+    .tl-pct { font-weight:700; color:#16243a; font-size:13px; min-width:50px; }
+    .tl-name { flex:1; font-size:13px; color:#33415c; }
+    .tl-amount { font-weight:800; color:#16243a; font-size:13px; white-space:nowrap; }
 
     /* 프로젝트 설명 (host가 등록한 내용) */
     .prog-desc { background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; border-radius: 10px;
                  padding: 12px 14px; margin: 12px 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; display: none; }
     .prog-desc.show { display: block; }
 
-    /* 퀴즈 */
+    /* Quiz */
     .quiz-list { margin-top: 22px; text-align: left; }
     .ql-title { font-size: 14px; font-weight: 800; color: #16243a; margin-bottom: 8px; }
     .quiz-card { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(20,30,60,.04); }
@@ -248,7 +271,7 @@
         <div class="prog-num" style="text-align:center;font-size:18px;">
           방문 <b id="prog-visited">0</b><span id="prog-total"> / 0</span>
           <span style="margin:0 10px;color:#cbd5e1;">·</span>
-          퀴즈 <b id="prog-quiz-solved" style="color:#138a36;">0</b><span id="prog-quiz-total"> / 0</span>
+          Quiz <b id="prog-quiz-solved" style="color:#138a36;">0</b><span id="prog-quiz-total"> / 0</span>
         </div>
         <div class="bar-wrap"><div class="bar" id="prog-bar"></div></div>
         <div class="stat">
@@ -256,8 +279,9 @@
           <div><div class="n" id="stat-remain" style="color:#d62828;">0</div><div class="l">남은 목적지</div></div>
           <div><div class="n" id="stat-total">0</div><div class="l">전체</div></div>
         </div>
+        <div id="tier-list" class="tier-list"></div>
         <div id="dest-list" class="dest-list"></div>
-        <button class="btn btn-primary" id="btn-quiz-toggle" style="margin-top:14px;" onclick="toggleQuizSection()" disabled>📝 퀴즈응시하기</button>
+        <button class="btn btn-primary" id="btn-quiz-toggle" style="margin-top:14px;" onclick="toggleQuizSection()" disabled>📝 Quiz응시하기</button>
         <div id="quiz-list" class="quiz-list hidden"></div>
         <div class="done-banner hidden" id="done-banner">🎉 모든 목적지를 방문했습니다!</div>
         <div id="gift-card" class="hidden"></div>
@@ -293,13 +317,22 @@
       <div class="alert-ico" id="alert-ico">ℹ️</div>
       <div class="alert-msg" id="alert-msg"></div>
       <div style="display:flex;gap:8px;">
-        <button class="btn" id="alert-cancel" style="display:none;flex:1;background:#eef3fb;color:#0d3b66;">나중에</button>
+        <button class="btn" id="alert-cancel" style="display:none;flex:1;background:#eef3fb;color:#15803d;">나중에</button>
         <button class="btn btn-primary" id="alert-ok" style="flex:1;">확인</button>
       </div>
     </div>
   </div>
 
-  <!-- 퀴즈 정답/오답 결과 오버레이 -->
+  <!-- 전시물/목적지 설명 오버레이 -->
+  <div id="dest-desc-ov">
+    <div class="dd-box">
+      <div id="dd-title" class="dd-title"></div>
+      <div id="dd-body" class="dd-body"></div>
+      <button class="dd-close" onclick="closeDestDesc()">확인</button>
+    </div>
+  </div>
+
+  <!-- Quiz 정답/오답 결과 오버레이 -->
   <div id="quiz-result-ov">
     <div class="qr-box">
       <img id="qr-img" class="qr-img" src="/assets/quiz/correct.svg" alt="">
@@ -496,8 +529,16 @@
         return;
       }
       showProgressFrom(d, true);
-      // visit 응답에 quizzes 가 없으면 추가로 progress 로 갱신 → 퀴즈응시하기 즉시 활성화 보장
+      // visit 응답에 quizzes 가 없으면 추가로 progress 로 갱신 → Quiz응시하기 즉시 활성화 보장
       if (!d.quizzes) await loadProgress(false);
+      // 새로 도달한 tier 가 있으면 안내
+      if (Array.isArray(d.newly_issued_tiers) && d.newly_issued_tiers.length) {
+        const pcts = d.newly_issued_tiers.sort((a,b)=>a-b);
+        const msg = pcts.length === 1
+          ? `🎉 ${pcts[0]}% 달성! 새로운 Gift QR 이 발급되었습니다.`
+          : `🎉 ${pcts.join('%, ')}% 달성! 새로운 Gift QR 이 ${pcts.length}장 발급되었습니다.`;
+        uiAlert(msg, { icon: '🎁' });
+      }
     }
 
     $('btn-refresh').addEventListener('click', () => loadProgress(false));
@@ -513,7 +554,7 @@
       $('stat-visited').textContent = visited;
       $('stat-remain').textContent = remain;
       $('stat-total').textContent = total;
-      // 퀴즈 진행 — 전체 활성 퀴즈 중 정답 맞춘 수
+      // Quiz 진행 — 전체 활성 Quiz 중 정답 맞춘 수
       const qList = Array.isArray(quizzes) ? quizzes : [];
       const qTotal = qList.length;
       const qSolved = qList.filter(q => q.attempt && q.attempt.is_correct).length;
@@ -527,7 +568,8 @@
       setMsg('prog-msg', 'ok center', justVisited ? '방문이 확인되었습니다!' : '');
       $('btn-scan').style.display = (total > 0 && remain > 0) ? 'block' : 'none';
       show('screen-progress');
-      if (done) loadGift(); else { $('gift-card').classList.add('hidden'); giftRenderedStatus = null; stopGiftPoll(); }
+      // 항상 Gift 카드 갱신 시도 (tier 발급된 게 있을 수 있음)
+      loadGift();
     }
 
     // ── Gift 카드: 발급(issued) 동안 자동 폴링 → 사용(Paid)되면 reload 없이 자동 갱신 ──
@@ -539,57 +581,87 @@
       giftPollTimer = setInterval(async () => {
         const { ok, d } = await api(`/api/visitor/gift/${projectSerial}`);
         if (!ok || !d.eligible) return;
-        if (d.status !== giftRenderedStatus) {     // 상태가 바뀐 경우에만 다시 그림(깜빡임 방지)
-          renderGift(d);
-          if (d.status === 'used') stopGiftPoll();
-        }
+        renderGifts(d.gifts || []);
       }, 5000);
     }
-    function renderGift(d) {
-      giftRenderedStatus = d.status;
+    function renderGifts(gifts) {
       const card = $('gift-card');
-      if (d.status === 'used') {
-        const when = d.used_at ? new Date(d.used_at).toLocaleString('ko-KR') : '';
-        card.innerHTML = `<div class="gift-box gift-used">
-            <div class="gift-ttl">🎁 Gift 사용 완료</div>
-            ${d.qr_url ? `<img class="gift-qr" src="${d.qr_url}" alt="사용 완료(Paid)">` : ''}
+      if (!gifts || !gifts.length) {
+        card.classList.add('hidden'); giftRenderedStatus = null; stopGiftPoll(); return;
+      }
+      const fmt = n => Number(n||0).toLocaleString('ko-KR');
+      card.innerHTML = gifts.map(g => {
+        const isUsed = g.status === 'used';
+        const tier = Number(g.threshold_pct || 100);
+        if (isUsed) {
+          const when = g.used_at ? new Date(g.used_at).toLocaleString('ko-KR') : '';
+          return `<div class="gift-box gift-used">
+            <div class="gift-ttl">🎁 ${tier}% 달성 Gift 사용 완료</div>
+            ${g.qr_url ? `<img class="gift-qr" src="${g.qr_url}" alt="사용 완료(Paid)">` : ''}
             <div class="gift-sub">${when ? '사용일시 ' + when : '이미 사용되었습니다.'}</div>
           </div>`;
-      } else {
-        card.innerHTML = `<div class="gift-box">
-            <div class="gift-ttl">🎁 Gift 발급완료 · ${Number(d.amount).toLocaleString('ko-KR')}원</div>
-            <img class="gift-qr" src="${d.qr_url}" alt="Gift QR">
+        }
+        return `<div class="gift-box">
+            <div class="gift-ttl">🎁 ${tier}% 달성! Gift ${fmt(g.amount)}원</div>
+            ${g.qr_url ? `<img class="gift-qr" src="${g.qr_url}" alt="Gift QR">` : ''}
             <div class="gift-sub">가맹점에서 이 QR을 제시하세요</div>
           </div>`;
-      }
+      }).join('');
+      // 폴링 상태 — 발급된 게 하나라도 있으면 poll (사용 시 갱신용)
+      const anyIssued = gifts.some(g => g.status === 'issued');
+      if (anyIssued) startGiftPoll(); else stopGiftPoll();
       card.classList.remove('hidden');
+      giftRenderedStatus = anyIssued ? 'issued' : 'used';
+    }
+    // 하위호환 — 단일 응답 형태도 처리
+    function renderGift(d) {
+      if (d.gifts && Array.isArray(d.gifts)) { renderGifts(d.gifts); return; }
+      // 단일 형태 fallback
+      const g = { status: d.status, amount: d.amount, qr_url: d.qr_url, used_at: d.used_at, threshold_pct: 100 };
+      renderGifts([g]);
     }
     async function loadGift() {
-      const card = $('gift-card');
       const { ok, d } = await api(`/api/visitor/gift/${projectSerial}`);
-      if (!ok || !d.eligible) { card.classList.add('hidden'); giftRenderedStatus = null; stopGiftPoll(); return; }
-      renderGift(d);
-      if (d.status === 'used') stopGiftPoll(); else startGiftPoll();  // 발급 상태면 사용될 때까지 자동 확인
+      if (!ok || !d.eligible) { renderGifts([]); return; }
+      renderGifts(d.gifts || []);
     }
     function esc(s) {
       return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
 
+    let destDescCache = {};
     function renderDestList(locations) {
       const el = $('dest-list');
+      destDescCache = {};
       if (!locations || !locations.length) { el.innerHTML = ''; return; }
       el.innerHTML = '<div class="dl-title">목적지 방문 현황</div>' + locations.map(l => {
+        destDescCache[l.display_seq] = { name: l.location_name, desc: l.location_desc || '' };
         const icon = l.image_url
           ? `<img class="dl-ico" src="${l.image_url}" alt="">`
           : `<div class="dl-ico dl-ico-ph">${l.dest_type === 'exhibit' ? '🎨' : '📍'}</div>`;
         const mark = l.visited ? '<span class="dl-on">✓ 방문완료</span>' : '<span class="dl-off">○ 미방문</span>';
+        const info = (l.location_desc && l.location_desc.trim())
+          ? `<button class="dl-info" onclick="showDestDesc(${l.display_seq})" title="설명 보기" aria-label="설명 보기">ⓘ</button>`
+          : '';
         return `<div class="dl-row${l.visited ? ' dl-done' : ''}">
             <div class="dl-seq">${l.display_seq}</div>
             ${icon}
-            <div class="dl-name">${esc(l.location_name)}</div>
+            <div class="dl-name"><span class="dl-name-text">${esc(l.location_name)}</span>${info}</div>
             ${mark}
           </div>`;
       }).join('');
+    }
+
+    function showDestDesc(seq) {
+      const item = destDescCache[seq];
+      if (!item) return;
+      const ov = $('dest-desc-ov');
+      $('dd-title').textContent = item.name || '';
+      $('dd-body').textContent = item.desc || '(설명이 없습니다)';
+      ov.classList.add('show');
+    }
+    function closeDestDesc() {
+      $('dest-desc-ov').classList.remove('show');
     }
 
     function renderProjectDesc(text) {
@@ -603,26 +675,48 @@
       const quizzes = d.quizzes || [];
       renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited, quizzes);
       renderProjectDesc(d.description);
+      renderTierList(d.tiers || []);
       renderDestList(d.locations);
       renderQuizzes(quizzes, Number(d.visitedLocations || 0));
     }
     async function loadProgress(justVisited) {
       const { ok, d } = await api(`/api/visitor/progress/${projectSerial}`);
-      if (!ok) { // 쿠키 만료 등 → 식별부터 다시
+      if (!ok) {
         if (d.error === 'phone_required' || d.error === 'visitor_not_found') { show('screen-identify'); return; }
         showError('진행현황을 불러오지 못했습니다.', d.message); return;
       }
       const quizzes = d.quizzes || [];
       renderProgress(Number(d.totalLocations || 0), Number(d.visitedLocations || 0), justVisited, quizzes);
       renderProjectDesc(d.description);
+      renderTierList(d.tiers || []);
       renderDestList(d.locations);
       renderQuizzes(quizzes, Number(d.visitedLocations || 0));
     }
 
-    // 퀴즈별 선택 상태 (응시 전): { quizId: Set<choiceId> }
+    // 단계별 보상 list (단계가 2개 이상일 때만)
+    function renderTierList(tiers) {
+      const el = $('tier-list');
+      if (!el) return;
+      // tier 가 1개(100%만) 또는 없으면 표시 안 함 (단계별 미사용)
+      if (!tiers || tiers.length < 2) { el.innerHTML = ''; return; }
+      const fmt = n => Number(n||0).toLocaleString('ko-KR');
+      el.innerHTML = '<div class="tl-title">단계별 보상</div>' + tiers.map((t, i) => {
+        const cls = t.issued ? 'issued' : (t.reached ? 'reached' : '');
+        const mark = (t.issued || t.reached) ? '<span class="tl-mark on">✓</span>' : '<span class="tl-mark off">' + (i+1) + '</span>';
+        const status = t.issued ? '🎁 발급완료' : (t.reached ? '✓ 도달' : '○ 미도달');
+        return `<div class="tl-row ${cls}">
+          ${mark}
+          <span class="tl-pct">${t.pct}%</span>
+          <span class="tl-name">${status}</span>
+          <span class="tl-amount">${fmt(t.amount)}원</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Quiz별 선택 상태 (응시 전): { quizId: Set<choiceId> }
     const quizSel = {};
     const quizExpanded = {}; // { quizId: bool } — 카드 펼침 여부
-    let lastQuizzes = null;  // 가장 최근 fetch된 퀴즈 데이터 (재렌더용)
+    let lastQuizzes = null;  // 가장 최근 fetch된 Quiz 데이터 (재렌더용)
     function renderQuizzes(quizzes, visitedCount) {
       lastQuizzes = quizzes;
       lastVisitedCount = Number(visitedCount || 0);
@@ -634,14 +728,14 @@
         btn.style.display = '';
         if (!quizzes || !quizzes.length) {
           btn.disabled = true;
-          btn.textContent = '📝 퀴즈응시하기 (등록된 퀴즈 없음)';
+          btn.textContent = '📝 Quiz응시하기 (등록된 Quiz 없음)';
           el.innerHTML = '';
           el.classList.add('hidden');
           return;
         }
         if (visited < 1) {
           btn.disabled = true;
-          btn.textContent = '📝 퀴즈응시하기 (목적지 방문 후 응시 가능)';
+          btn.textContent = '📝 Quiz응시하기 (목적지 방문 후 응시 가능)';
           el.innerHTML = '';
           el.classList.add('hidden');
           return;
@@ -651,10 +745,10 @@
         const solvedCount = quizzes.filter(q => q.attempt && q.attempt.is_correct).length;
         const open = !el.classList.contains('hidden');
         btn.textContent = open
-          ? '📝 퀴즈 접기'
-          : `📝 퀴즈응시하기 (응시 가능 ${activeCount} · 정답 ${solvedCount}/${quizzes.length})`;
+          ? '📝 Quiz 접기'
+          : `📝 Quiz응시하기 (응시 가능 ${activeCount} · 정답 ${solvedCount}/${quizzes.length})`;
       }
-      el.innerHTML = '<div class="ql-title">퀴즈</div>' + quizzes.map((q, i) => {
+      el.innerHTML = '<div class="ql-title">Quiz</div>' + quizzes.map((q, i) => {
         const attempt = q.attempt;
         const isSolved = attempt && attempt.is_correct;
         const isWrongAttempt = attempt && !attempt.is_correct;
@@ -751,7 +845,7 @@
       const btn = $('btn-quiz-toggle');
       if (el.classList.contains('hidden')) {
         el.classList.remove('hidden');
-        if (btn) btn.textContent = '📝 퀴즈 접기';
+        if (btn) btn.textContent = '📝 Quiz 접기';
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         el.classList.add('hidden');
@@ -821,10 +915,10 @@
       if (isCorrect) {
         const bonus = Number(d.bonus_added || 0);
         if (bonus > 0) {
-          $('qr-sub').innerHTML = `Prize 보상액 <b style="color:#138a36;">${fmt(bonus)}</b>이 Gift에 추가되었습니다.<br>` +
+          $('qr-sub').innerHTML = `Quiz 보상액 <b style="color:#138a36;">${fmt(bonus)}</b>이 Gift에 추가되었습니다.<br>` +
             `<span style="color:#64748b;">현재까지의 Gift 예상 금액: <b style="color:#16243a;">${fmt(d.expected_total)}</b></span>`;
         } else {
-          $('qr-sub').textContent = '잘 하셨습니다. 다음 퀴즈도 도전해 보세요!';
+          $('qr-sub').textContent = '잘 하셨습니다. 다음 Quiz도 도전해 보세요!';
         }
       } else {
         $('qr-sub').textContent = '다시 한번 도전해 보세요.';

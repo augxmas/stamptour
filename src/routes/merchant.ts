@@ -407,10 +407,10 @@ router.post("/gift-grant", requireMerchant, async (req, res) => {
     filledVisits = Number((fill as any).affectedRows || 0);
   }
 
-  // Gift 증정(grant) 기록
+  // Gift 증정(grant) 기록 — 가맹점 세션 merchantId 함께 기록
   await pool.execute(
-    "INSERT INTO gift_redemptions (project_id, visitor_id, redemption_type, amount, eligible, redeemed_at) VALUES (?, ?, 'grant', ?, 1, NOW())",
-    [pid, visitorId, amount],
+    "INSERT INTO gift_redemptions (project_id, visitor_id, merchant_id, redemption_type, amount, eligible, redeemed_at) VALUES (?, ?, ?, 'grant', ?, 1, NOW())",
+    [pid, visitorId, merchantId, amount],
   );
 
   res.json({
@@ -518,13 +518,14 @@ router.get("/projects", requireMerchant, async (req, res) => {
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.from_date, p.to_date,
             p.gift_amount, p.gift_qty, h.organization_name,
             DATEDIFF(p.to_date, CURDATE()) AS remaining_days,
-            pa.status AS application_status, pa.applied_at, pa.decided_at
+            pa.status AS application_status, pa.applied_at, pa.decided_at,
+            CASE WHEN pa.status = 'approved' THEN fn_decrypt(p.pin_enc, ?) ELSE NULL END AS pin_code
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
      LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    params,
+    [encKey(), ...params],
   );
 
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
@@ -677,18 +678,18 @@ router.get("/settlement", requireMerchant, async (req, res) => {
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, h.organization_name,
             pa.status AS application_status,
-            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
-            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
-            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
-            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_amount,
-            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_users,
-            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_users
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_amount,
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_amount,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_users,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_users
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
      LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    params,
+    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
   );
 
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
@@ -710,18 +711,18 @@ router.get("/settlement/export", requireMerchant, async (req, res) => {
   const [rows] = await pool.execute(
     `SELECT p.project_name, p.project_serial, p.status, p.gift_amount, h.organization_name,
             pa.status AS application_status,
-            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
-            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
-            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
-            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_amount,
-            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_users,
-            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_users
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_amount,
+            (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_count,
+            (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_amount,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'normal') AS used_users,
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_users
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
      LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    params,
+    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
   );
   const list = Array.isArray(rows) ? (rows as any[]) : [];
 
@@ -799,9 +800,9 @@ router.get("/settlement/:projectId/usage", requireMerchant, async (req, res) => 
     `SELECT v.phone, gr.redemption_type, gr.amount, gr.redeemed_at
      FROM gift_redemptions gr
      JOIN visitors v ON v.id = gr.visitor_id
-     WHERE gr.project_id = ?
+     WHERE gr.project_id = ? AND gr.merchant_id = ?
      ORDER BY gr.redeemed_at DESC, gr.id DESC`,
-    [projectId],
+    [projectId, merchantId],
   );
 
   res.json({

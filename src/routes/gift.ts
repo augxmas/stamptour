@@ -36,7 +36,8 @@ router.post("/:token/use", async (req, res) => {
     return;
   }
 
-  const result = await useGift(req.params.token, pin.trim());
+  const merchantId = req.session?.merchant?.id ?? null;
+  const result = await useGift(req.params.token, pin.trim(), merchantId);
   if (!result.ok) {
     const messages: Record<string, string> = {
       gift_not_found: "유효하지 않은 Gift입니다.",

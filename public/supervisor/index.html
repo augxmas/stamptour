@@ -85,7 +85,30 @@
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 100; }
     .modal-overlay.open { display: flex; }
     #loc-list-modal { z-index: 420; }
+    #quiz-list-modal { z-index: 425; }
+    #vs-visitors-modal { z-index: 426; }
+    #ds-modal { z-index: 428; }
     #preview-modal { z-index: 430; }
+    /* 정산 sub 탭 (admin과 동일) */
+    .stl-sub { padding:7px 14px; border:none; background:none; font-size:13px; font-weight:600;
+               color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .stl-sub:hover { color:#1d4ed8; }
+    /* admin과 동일한 Quiz 카드 스타일 (읽기전용) */
+    .quiz-list { display: flex; flex-direction: column; gap: 10px; }
+    .quiz-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; background: #f8fafc; }
+    .quiz-card .qhead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .quiz-card .qno { background: #1e293b; color: #fff; font-weight: 700; font-size: 12px;
+                      width: 26px; height: 26px; border-radius: 50%; display: inline-flex;
+                      align-items: center; justify-content: center; flex-shrink: 0; }
+    .quiz-card .qtype { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+    .quiz-card .qtype.single { background: #dbeafe; color: #1e40af; }
+    .quiz-card .qtype.multi  { background: #fef3c7; color: #92400e; }
+    .quiz-card .qtitle { flex: 1; font-size: 14px; font-weight: 700; color: #1e293b; }
+    .quiz-card .qchoices { display: flex; flex-direction: column; gap: 4px; font-size: 13px; padding-left: 36px; }
+    .quiz-card .qchoice { display: flex; align-items: center; gap: 8px; color: #475569; }
+    .quiz-card .qchoice.qok { color: #1e40af; font-weight: 600; }
+    .quiz-card .qmark { width: 16px; text-align: center; font-weight: 700; }
     #support-modal { z-index: 435; }
     #file-modal { z-index: 440; }
     #image-modal { z-index: 450; }
@@ -237,6 +260,10 @@
       <label>비밀번호</label>
       <input id="sv-password" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}">
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:6px 0 4px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="sv-remember" style="width:16px;height:16px;cursor:pointer;">
+      <span>아이디 저장</span>
+    </label>
     <div id="login-msg" class="msg" style="display:none;"></div>
     <button class="btn btn-primary btn-full" style="margin-top:4px;" onclick="doLogin()">로그인</button>
   </div>
@@ -345,6 +372,7 @@
               <th class="sortable" onclick="sortProjects('organization_name')">소속기관<span class="sort-icon" id="psi-organization_name"></span></th>
               <th class="sortable" onclick="sortProjects('project_name')">프로젝트명<span class="sort-icon" id="psi-project_name"></span></th>
               <th class="sortable" onclick="sortProjects('project_serial')">일련번호<span class="sort-icon" id="psi-project_serial"></span></th>
+              <th class="sortable" onclick="sortProjects('created_at')">등록일<span class="sort-icon" id="psi-created_at"></span></th>
               <th class="sortable" onclick="sortProjects('from_date')">시작일<span class="sort-icon" id="psi-from_date"></span></th>
               <th class="sortable" onclick="sortProjects('to_date')">종료일<span class="sort-icon" id="psi-to_date"></span></th>
               <th class="sortable" onclick="sortProjects('status')">상태<span class="sort-icon" id="psi-status"></span></th>
@@ -353,7 +381,7 @@
               <th class="sortable" onclick="sortProjects('deposit_confirmed_at')">입금확인일<span class="sort-icon" id="psi-deposit_confirmed_at"></span></th>
               <th>입금여부</th>
               <th>목적지정보</th>
-              <th class="sortable" onclick="sortProjects('created_at')">등록일<span class="sort-icon" id="psi-created_at"></span></th>
+              <th>Quiz정보</th>
               <th>상세보기</th>
               <th>미리보기</th>
             </tr>
@@ -426,36 +454,124 @@
       <div class="pager" id="mc-pager"></div>
     </div>
 
-    <!-- 정산 탭 (소속기관·프로젝트별 Gift 사용/증정) -->
+    <!-- 정산 탭 (admin과 동일 sub 탭: 프로젝트별/가맹점별/일별 + 소속기관 추가) -->
     <div class="tab-panel" id="tab-settle">
+      <!-- sub 탭 -->
+      <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:14px;">
+        <button type="button" class="stl-sub active" data-sub="byproj" onclick="switchSettleSub('byproj')">소속기관별</button>
+        <button type="button" class="stl-sub" data-sub="bymerch" onclick="switchSettleSub('bymerch')">가맹점별</button>
+        <button type="button" class="stl-sub" data-sub="byday" onclick="switchSettleSub('byday')">일별</button>
+      </div>
+      <!-- 공통 필터 -->
       <div class="filter-bar">
-        <input id="sf-org" type="text" placeholder="소속기관명" style="width:150px;" oninput="loadSettlement()">
-        <input id="sf-name" type="text" placeholder="프로젝트명" style="width:160px;" oninput="loadSettlement()">
-        <select id="sf-status" onchange="loadSettlement()">
+        <input id="sf-org" type="text" placeholder="소속기관명" style="width:150px;" oninput="loadSettleCurrent()">
+        <input id="sf-name" type="text" placeholder="프로젝트명" style="width:160px;" oninput="loadSettleCurrent()">
+        <select id="sf-status" onchange="loadSettleCurrent()">
           <option value="">전체 상태</option>
           <option value="ready_to_start">시작대기</option>
           <option value="started">진행중</option>
           <option value="completed">완료</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="loadSettlement()">검색</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-org').value='';document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettlement()">초기화</button>
+        <button class="btn btn-primary btn-sm" onclick="loadSettleCurrent()">검색</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('sf-org').value='';document.getElementById('sf-name').value='';document.getElementById('sf-status').value='';loadSettleCurrent()">초기화</button>
+        <button class="btn btn-outline btn-sm" id="settle-excel" onclick="downloadSettleExcel()" disabled style="margin-left:auto;">⬇ 엑셀 다운로드</button>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>소속기관</th>
-            <th>프로젝트</th>
-            <th style="text-align:center;">상태</th>
-            <th style="text-align:right;">Gift 단가</th>
-            <th style="text-align:center;">Gift 사용개수</th>
-            <th style="text-align:center;">Gift 증정개수</th>
-            <th style="text-align:right;">Gift 사용금액</th>
-            <th style="text-align:right;">Gift 증정금액</th>
-            <th style="text-align:right;">총 Gift 금액</th>
-            <th style="text-align:center;">사용자현황</th>
-          </tr></thead>
-          <tbody id="settle-tbody"></tbody>
-        </table>
+
+      <!-- 소속기관별 -->
+      <div id="sub-byproj" class="stl-sub-pane">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">소속기관</th>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ C)</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+                <th rowspan="2" style="text-align:center;">상세보기</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용개수(Y)</th>
+                <th style="text-align:center;">증정개수(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급개수(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 가맹점별 -->
+      <div id="sub-bymerch" class="stl-sub-pane" style="display:none;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">가맹점명</th>
+                <th rowspan="2">소속기관</th>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용(Y)</th>
+                <th style="text-align:center;">증정(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-bymerch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 일별 -->
+      <div id="sub-byday" class="stl-sub-pane" style="display:none;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2">일자</th>
+                <th rowspan="2">소속기관</th>
+                <th rowspan="2">프로젝트명</th>
+                <th rowspan="2">가맹점명</th>
+                <th rowspan="2">상태</th>
+                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
+                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">단가(X)</th>
+                <th style="text-align:center;">사용(Y)</th>
+                <th style="text-align:center;">증정(Z)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">단가(a)</th>
+                <th style="text-align:center;">지급(b)</th>
+                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+              </tr>
+            </thead>
+            <tbody id="settle-byday-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -826,12 +942,44 @@
 
 <!-- 목적지 목록 모달 -->
 <div class="modal-overlay" id="loc-list-modal" onclick="if(event.target===this)closeProjectLocations()">
-  <div class="modal" style="max-width:720px;">
+  <div class="modal" style="width:80vw;max-width:80vw;">
     <div class="card-header"><h3>목적지 목록</h3><button class="modal-close" onclick="closeProjectLocations()">✕</button></div>
     <div class="card-body">
       <p id="loc-list-proj" style="font-size:13px;color:#64748b;margin-bottom:10px;"></p>
       <div id="loc-list-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
     </div>
+  </div>
+</div>
+
+<!-- Quiz 목록 모달 (읽기전용) -->
+<div class="modal-overlay" id="quiz-list-modal" onclick="if(event.target===this)closeProjectQuizzes()">
+  <div class="modal" style="width:80vw;max-width:80vw;">
+    <div class="card-header"><h3>Quiz 목록</h3><button class="modal-close" onclick="closeProjectQuizzes()">✕</button></div>
+    <div class="card-body">
+      <p id="quiz-list-proj" style="font-size:13px;color:#64748b;margin-bottom:4px;"></p>
+      <p id="quiz-list-serial" style="font-size:12px;color:#94a3b8;margin-bottom:12px;"></p>
+      <div id="quiz-list-body" style="max-height:65vh;overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 방문자 목록 모달 (방문현황 탭에서 사용) -->
+<div class="modal-overlay" id="vs-visitors-modal" onclick="if(event.target===this)closeVsVisitors()">
+  <div class="modal" style="width:80vw;max-width:80vw;">
+    <div class="card-header"><h3 id="vsv-title">방문자 목록</h3><button class="modal-close" onclick="closeVsVisitors()">✕</button></div>
+    <div class="card-body">
+      <p id="vsv-proj" style="font-size:13px;color:#64748b;margin-bottom:4px;"></p>
+      <p id="vsv-summary" style="font-size:12px;color:#94a3b8;margin-bottom:12px;"></p>
+      <div id="vsv-body" style="max-height:65vh;overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 정산 상세보기(일별) 모달 -->
+<div class="modal-overlay" id="ds-modal" onclick="if(event.target===this)closeDailySettle()">
+  <div class="modal" style="width:96vw;max-width:1100px;">
+    <div class="card-header"><h3 id="ds-title">정산 상세 (일별)</h3><button class="modal-close" onclick="closeDailySettle()">✕</button></div>
+    <div class="card-body" id="ds-body" style="overflow:auto;max-height:80vh;"></div>
   </div>
 </div>
 
@@ -1020,46 +1168,311 @@
       : '<span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600;background:#dcfce7;color:#166534;">Gift사용</span>';
   }
 
-  let settleData = [];
-  async function loadSettlement() {
-    const tbody = document.getElementById('settle-tbody');
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
-    const qs = new URLSearchParams({
+  // ── 정산 sub 탭 (admin과 동일 구성: 프로젝트별 / 가맹점별 / 일별) ──
+  let settleSub = 'byproj';
+  function switchSettleSub(name) {
+    settleSub = name;
+    document.querySelectorAll('.stl-sub').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
+    document.querySelectorAll('.stl-sub-pane').forEach(p => p.style.display = 'none');
+    document.getElementById('sub-' + name).style.display = '';
+    loadSettleCurrent();
+  }
+  function loadSettleCurrent() {
+    if (settleSub === 'byproj')  return loadSettlement();
+    if (settleSub === 'bymerch') return loadSettleByMerchant();
+    if (settleSub === 'byday')   return loadSettleByDay();
+  }
+  function updateSettleExcelBtn() {
+    const btn = document.getElementById('settle-excel');
+    if (!btn) return;
+    const has = (settleSub === 'byproj' && (settleData||[]).length)
+             || (settleSub === 'bymerch' && (settleMerchData||[]).length)
+             || (settleSub === 'byday' && (settleDayData||[]).length);
+    btn.disabled = !has;
+  }
+  async function downloadSettleExcel() {
+    const btn = document.getElementById('settle-excel');
+    if (!btn || btn.disabled) return;
+    const path = settleSub === 'bymerch' ? '/api/supervisor/settlement/by-merchant/export'
+               : settleSub === 'byday'   ? '/api/supervisor/settlement/by-day/export'
+                                         : '/api/supervisor/settlement/export';
+    try {
+      const r = await fetch(path + '?' + settleQs());
+      if (!r.ok) { alert('엑셀 다운로드에 실패했습니다.'); return; }
+      const blob = await r.blob();
+      let fname = 'settlement.xlsx';
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert('엑셀 다운로드에 실패했습니다.'); }
+  }
+  function settleQs() {
+    return new URLSearchParams({
       organization_name: document.getElementById('sf-org').value.trim(),
       project_name: document.getElementById('sf-name').value.trim(),
       status: document.getElementById('sf-status').value,
-    });
+    }).toString();
+  }
+
+  // 프로젝트별
+  let settleData = [];
+  async function loadSettlement() {
+    const tbody = document.getElementById('settle-tbody');
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
     let d;
     try {
-      const r = await fetch('/api/supervisor/settlement?' + qs.toString());
+      const r = await fetch('/api/supervisor/settlement?' + settleQs());
       if (!r.ok) throw 0;
       d = await r.json();
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
       return;
     }
     settleData = d.data || [];
     renderSettlement();
+    updateSettleExcelBtn();
   }
   function renderSettlement() {
     const tbody = document.getElementById('settle-tbody');
     if (!settleData.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
       return;
     }
-    tbody.innerHTML = settleData.map(p => `
-      <tr>
+    tbody.innerHTML = settleData.map(p => {
+      const m = settleRowMetrics(p);
+      const rewardCellStyle = m.over ? 'color:#dc2626;font-weight:800;' : 'color:#1d4ed8;font-weight:700;';
+      const rewardCell = m.budget > 0
+        ? `<span style="${rewardCellStyle}">${fmtN(m.totalReward)}/${fmtN(m.budget)}원(${m.pct}%)</span>`
+        : `<span style="${rewardCellStyle}">${stWon(m.totalReward)}</span>`;
+      return `<tr>
         <td>${esc(p.organization_name) || '-'}</td>
         <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
         <td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
-        <td style="text-align:right;">${stWon(p.gift_amount)}</td>
-        <td style="text-align:center;">${Number(p.used_count || 0)}개</td>
-        <td style="text-align:center;">${Number(p.grant_count || 0)}개</td>
-        <td style="text-align:right;">${stWon(p.used_amount)}</td>
-        <td style="text-align:right;">${stWon(p.grant_amount)}</td>
-        <td style="text-align:right;"><b>${stWon(Number(p.used_amount || 0) + Number(p.grant_amount || 0))}</b></td>
+        <td style="text-align:right;">${stWon(m.giftAmt)}</td>
+        <td style="text-align:center;">${m.usedCnt}개</td>
+        <td style="text-align:center;">${m.grantCnt}개</td>
+        <td style="text-align:right;">${stWon(m.giftUsed)}</td>
+        <td style="text-align:right;">${stWon(m.grantTot)}</td>
+        <td style="text-align:right;"><b>${stWon(m.giftSum)}</b></td>
+        <td style="text-align:right;">${stWon(m.prizeAmt)}</td>
+        <td style="text-align:center;">${m.prizeCnt}개</td>
+        <td style="text-align:right;">${stWon(m.prizeUsed)}</td>
+        <td style="text-align:right;white-space:nowrap;">${rewardCell}</td>
         <td style="text-align:center;"><button class="btn btn-outline btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
-      </tr>`).join('');
+        <td style="text-align:center;"><button class="btn btn-outline btn-sm" onclick="openDailySettle(${p.id})">보기</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 가맹점별
+  let settleMerchData = [];
+  async function loadSettleByMerchant() {
+    const tbody = document.getElementById('settle-bymerch-tbody');
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+    let d;
+    try {
+      const r = await fetch('/api/supervisor/settlement/by-merchant?' + settleQs());
+      if (!r.ok) throw 0;
+      d = await r.json();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+      return;
+    }
+    settleMerchData = d.data || [];
+    updateSettleExcelBtn();
+    const tbody2 = document.getElementById('settle-bymerch-tbody');
+    if (!settleMerchData.length) {
+      tbody2.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+      return;
+    }
+    tbody2.innerHTML = settleMerchData.map(r => renderSettleSubRow(r, { extraColHead: 'merchant' })).join('');
+  }
+
+  // 일별
+  let settleDayData = [];
+  async function loadSettleByDay() {
+    const tbody = document.getElementById('settle-byday-tbody');
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+    let d;
+    try {
+      const r = await fetch('/api/supervisor/settlement/by-day?' + settleQs());
+      if (!r.ok) throw 0;
+      d = await r.json();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+      return;
+    }
+    settleDayData = d.data || [];
+    updateSettleExcelBtn();
+    const tbody2 = document.getElementById('settle-byday-tbody');
+    if (!settleDayData.length) {
+      tbody2.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+      return;
+    }
+    tbody2.innerHTML = settleDayData.map(r => renderSettleSubRow(r, { extraColHead: 'day' })).join('');
+  }
+
+  // 정산 행 metric 공통 계산
+  function fmtN(n) { return Number(n || 0).toLocaleString('ko-KR'); }
+  function settleRowMetrics(p) {
+    const giftAmt   = Number(p.gift_amount || 0);
+    const prizeAmt  = Number(p.prize_amount || 0);
+    const budget    = Number(p.budget_amount || 0);
+    const usedCnt   = Number(p.used_count || 0);
+    const grantCnt  = Number(p.grant_count || 0);
+    const usedTotal = Number(p.used_amount || 0);
+    const grantTot  = Number(p.grant_amount || 0);
+    const giftUsed  = giftAmt * usedCnt;
+    const prizeUsed = Math.max(0, usedTotal - giftUsed);
+    const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+    const giftSum   = giftUsed + grantTot;
+    const totalReward = giftUsed + prizeUsed;
+    const pct = budget > 0 ? Math.round((totalReward / budget) * 1000) / 10 : 0;
+    const over = budget > 0 && totalReward > budget;
+    return { giftAmt, prizeAmt, budget, usedCnt, grantCnt, giftUsed, grantTot, prizeUsed, prizeCnt, giftSum, totalReward, pct, over };
+  }
+
+  // 가맹점별·일별 공통 행 렌더링
+  function renderSettleSubRow(p, opts) {
+    const m = settleRowMetrics(p);
+    const projCell  = `<td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>`;
+    const orgCell   = `<td>${esc(p.organization_name || '-')}</td>`;
+    const stateCell = `<td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>`;
+    const usedUsers = Number(p.used_users || 0);
+    const grantUsers = Number(p.grant_users || 0);
+    let leadingCells = '';
+    if (opts.extraColHead === 'merchant') {
+      leadingCells = `<td>${esc(p.merchant_name || '(미기록)')}</td>` + orgCell + projCell + stateCell;
+    } else if (opts.extraColHead === 'day') {
+      const dayStr = p.day ? String(p.day).slice(0, 10) : '-';
+      leadingCells = `<td style="white-space:nowrap;">${dayStr}</td>` + orgCell + projCell + `<td>${esc(p.merchant_name || '(미기록)')}</td>` + stateCell;
+    }
+    return `<tr>
+      ${leadingCells}
+      <td style="text-align:right;">${stWon(m.giftAmt)}</td>
+      <td style="text-align:center;">${m.usedCnt}개</td>
+      <td style="text-align:center;">${m.grantCnt}개</td>
+      <td style="text-align:right;">${stWon(m.giftUsed)}</td>
+      <td style="text-align:right;">${stWon(m.grantTot)}</td>
+      <td style="text-align:right;"><b>${stWon(m.giftSum)}</b></td>
+      <td style="text-align:right;">${stWon(m.prizeAmt)}</td>
+      <td style="text-align:center;">${m.prizeCnt}개</td>
+      <td style="text-align:right;">${stWon(m.prizeUsed)}</td>
+      <td style="text-align:right;white-space:nowrap;"><span style="color:#1d4ed8;font-weight:700;">${stWon(m.totalReward)}</span></td>
+      <td style="text-align:center;">${usedUsers} / ${grantUsers}</td>
+    </tr>`;
+  }
+
+  // ── 정산 상세보기 (일별) ──
+  async function openDailySettle(pid) {
+    document.getElementById('ds-modal').classList.add('open');
+    document.getElementById('ds-title').textContent = '정산 상세 (일별)';
+    document.getElementById('ds-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중…</div>';
+    const r = await fetch(`/api/supervisor/settlement/${pid}/daily`);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { document.getElementById('ds-body').innerHTML = `<div style="color:#dc2626;padding:18px;">${d.error || '불러오지 못했습니다.'}</div>`; return; }
+    renderDailySettle(d);
+  }
+  function closeDailySettle() { document.getElementById('ds-modal').classList.remove('open'); }
+  function renderDailySettle(d) {
+    const proj = d.project || {};
+    const giftAmt = Number(proj.gift_amount || 0);
+    const prizeAmt = Number(proj.prize_amount || 0);
+    const budget = Number(proj.budget_amount || 0);
+    document.getElementById('ds-title').textContent = `정산 상세 — ${proj.organization_name || ''} · ${proj.name || ''} (${proj.serial || ''})`;
+    const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
+    const fmtYmd = s => {
+      if (!s) return '-';
+      const dt = new Date(s); if (isNaN(dt.getTime())) return String(s);
+      return `${String(dt.getFullYear()).slice(2)}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+    };
+    const days = d.daily || [];
+    if (!days.length) {
+      document.getElementById('ds-body').innerHTML = '<div style="color:#94a3b8;padding:24px;text-align:center;">정산 내역이 없습니다.</div>';
+      return;
+    }
+    const rows = days.map(x => {
+      const usedCnt = Number(x.used_count || 0);
+      const grantCnt = Number(x.grant_count || 0);
+      const usedTotal = Number(x.used_amount || 0);
+      const grantTot = Number(x.grant_amount || 0);
+      const giftUsed = giftAmt * usedCnt;
+      const prizeUsed = Math.max(0, usedTotal - giftUsed);
+      const prizeCnt = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+      const giftSum = giftUsed + grantTot;
+      const totalReward = giftUsed + prizeUsed;
+      return { date: x.date, giftAmt, usedCnt, grantCnt, giftUsed, grantTot, giftSum, prizeAmt, prizeCnt, prizeUsed, totalReward };
+    });
+    const sum = rows.reduce((a, r) => ({
+      usedCnt: a.usedCnt + r.usedCnt, grantCnt: a.grantCnt + r.grantCnt,
+      giftUsed: a.giftUsed + r.giftUsed, grantTot: a.grantTot + r.grantTot,
+      giftSum: a.giftSum + r.giftSum,
+      prizeCnt: a.prizeCnt + r.prizeCnt, prizeUsed: a.prizeUsed + r.prizeUsed,
+      totalReward: a.totalReward + r.totalReward,
+    }), { usedCnt:0, grantCnt:0, giftUsed:0, grantTot:0, giftSum:0, prizeCnt:0, prizeUsed:0, totalReward:0 });
+    const pct = budget > 0 ? Math.round((sum.totalReward / budget) * 1000) / 10 : 0;
+    const over = budget > 0 && sum.totalReward > budget;
+    const cs = over ? 'color:#dc2626;font-weight:800;' : 'color:#1d4ed8;font-weight:800;';
+    const sumCell = budget > 0
+      ? `<span style="${cs}">${fmtN(sum.totalReward)}/${fmtN(budget)}원(${pct}%)</span>`
+      : `<span style="${cs}">${won(sum.totalReward)}</span>`;
+    document.getElementById('ds-body').innerHTML = `
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table style="font-size:12px;white-space:nowrap;">
+          <thead>
+            <tr>
+              <th rowspan="2">일자</th>
+              <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
+              <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
+              <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ C)</th>
+            </tr>
+            <tr>
+              <th style="text-align:right;">단가(X)</th>
+              <th style="text-align:center;">사용개수(Y)</th>
+              <th style="text-align:center;">증정개수(Z)</th>
+              <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
+              <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
+              <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+              <th style="text-align:right;">단가(a)</th>
+              <th style="text-align:center;">지급개수(b)</th>
+              <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `<tr>
+              <td>${fmtYmd(r.date)}</td>
+              <td style="text-align:right;">${won(r.giftAmt)}</td>
+              <td style="text-align:center;">${r.usedCnt}개</td>
+              <td style="text-align:center;">${r.grantCnt}개</td>
+              <td style="text-align:right;">${won(r.giftUsed)}</td>
+              <td style="text-align:right;">${won(r.grantTot)}</td>
+              <td style="text-align:right;"><b>${won(r.giftSum)}</b></td>
+              <td style="text-align:right;">${won(r.prizeAmt)}</td>
+              <td style="text-align:center;">${r.prizeCnt}개</td>
+              <td style="text-align:right;">${won(r.prizeUsed)}</td>
+              <td style="text-align:right;"><b style="color:#1d4ed8;">${won(r.totalReward)}</b></td>
+            </tr>`).join('')}
+            <tr style="background:#f1f5f9;font-weight:700;">
+              <td>합계</td>
+              <td style="text-align:right;">-</td>
+              <td style="text-align:center;">${sum.usedCnt}개</td>
+              <td style="text-align:center;">${sum.grantCnt}개</td>
+              <td style="text-align:right;">${won(sum.giftUsed)}</td>
+              <td style="text-align:right;">${won(sum.grantTot)}</td>
+              <td style="text-align:right;">${won(sum.giftSum)}</td>
+              <td style="text-align:right;">-</td>
+              <td style="text-align:center;">${sum.prizeCnt}개</td>
+              <td style="text-align:right;">${won(sum.prizeUsed)}</td>
+              <td style="text-align:right;white-space:nowrap;">${sumCell}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
   }
 
   // 사용자현황 팝업 (정렬 + 필터)
@@ -1574,10 +1987,34 @@
     document.getElementById('vs-thead').innerHTML = '<tr>' +
       VS_COLS.map(c => `<th class="sortable" onclick="sortVs('${c.key}')">${c.label}${arr(c.key)}</th>`).join('') + '</tr>';
     const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+    const pnEsc = p => String(p.project_name || '').replace(/'/g, "\\'");
     const cell = (p, c) => {
       const v = p[c.key];
+      // 목적지 / 전체방문자수 / Gift수령자수 → 버튼으로 popup
+      if (c.key === 'active_locations') {
+        const n = Number(v || 0);
+        return `<td style="text-align:center;">${n > 0
+          ? `<button class="btn btn-outline btn-sm" onclick="openProjectLocations(${p.id}, '${pnEsc(p)}')">${n}</button>`
+          : '0'}</td>`;
+      }
+      if (c.key === 'visitor_count') {
+        const n = Number(v || 0);
+        return `<td style="text-align:center;">${n > 0
+          ? `<button class="btn btn-outline btn-sm" onclick="openVsVisitors(${p.id}, '${pnEsc(p)}', 'all')">${n}</button>`
+          : '0'}</td>`;
+      }
+      if (c.key === 'gift_recipients') {
+        const n = Number(v || 0);
+        return `<td style="text-align:center;">${n > 0
+          ? `<button class="btn btn-outline btn-sm" onclick="openVsVisitors(${p.id}, '${pnEsc(p)}', 'gift')">${n}</button>`
+          : '0'}</td>`;
+      }
       if (c.won) return `<td style="text-align:right;">${won(v)}</td>`;
-      if (c.pct) return `<td style="text-align:right;">${(Number(v) || 0).toFixed(2)}%</td>`;
+      if (c.pct) {
+        const n = Number(v) || 0;
+        const txt = c.key === 'gift_receipt_rate' ? `${Math.round(n)}%` : `${n.toFixed(2)}%`;
+        return `<td style="text-align:right;">${txt}</td>`;
+      }
       if (c.cen) return `<td style="text-align:center;">${v ?? 0}</td>`;
       if (c.key === 'status') return `<td><span class="badge ${PROJ_STATUS_BADGE[p.status] ?? ''}">${PROJ_STATUS_LABEL[p.status] ?? p.status}</span></td>`;
       return `<td>${esc(v ?? '-')}</td>`;
@@ -1672,24 +2109,156 @@
     if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">등록된 목적지가 없습니다.</div>'; return; }
     const typeLabel = t => t === 'exhibit' ? '전시물' : '위치';
     body.innerHTML = `
-      <table>
+      <table style="table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:56px;">
+          <col style="width:80px;">
+          <col style="width:200px;">
+          <col>
+          <col style="width:200px;">
+          <col style="width:120px;">
+          <col style="width:70px;">
+        </colgroup>
         <thead><tr>
-          <th style="text-align:center;">번호</th><th>유형</th><th>목적지명</th><th>설명</th>
-          <th>좌표</th><th style="text-align:center;">이미지</th><th style="text-align:center;">상태</th>
+          <th style="text-align:center;">번호</th>
+          <th style="white-space:nowrap;">유형</th>
+          <th style="white-space:nowrap;">목적지명</th>
+          <th>설명</th>
+          <th>좌표</th>
+          <th style="text-align:center;">이미지</th>
+          <th style="text-align:center;">상태</th>
         </tr></thead>
         <tbody>${list.map(l => `
           <tr style="${l.disabled ? 'opacity:.5;' : ''}">
             <td style="text-align:center;">${l.disabled ? '-' : l.display_seq}</td>
-            <td>${typeLabel(l.dest_type)}</td>
-            <td><b>${esc(l.location_name)}</b></td>
-            <td>${esc(l.location_desc || '-')}</td>
+            <td style="white-space:nowrap;">${typeLabel(l.dest_type)}</td>
+            <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.location_name)}"><b>${esc(l.location_name)}</b></td>
+            <td style="font-size:12px;color:#475569;word-break:break-word;">${esc(l.location_desc || '-')}</td>
             <td style="font-size:12px;color:#64748b;white-space:nowrap;">${(l.kakao_lat != null && l.kakao_lng != null) ? (l.kakao_lat + ', ' + l.kakao_lng) : '-'}</td>
-            <td style="text-align:center;">${l.image_url ? `<button class="btn btn-outline btn-sm" onclick="showImageUrl('${l.image_url}','목적지 이미지')">보기</button>` : '-'}</td>
+            <td style="text-align:center;">${l.image_url
+              ? `<img src="${l.image_url}" alt="" style="max-width:100px;max-height:60px;border-radius:6px;border:1px solid #e5e7eb;cursor:zoom-in;object-fit:cover;" onclick="showImageUrl('${l.image_url}','목적지 이미지')">`
+              : '-'}</td>
             <td style="text-align:center;">${l.disabled ? '<span style="color:#94a3b8;font-weight:700;">비활성</span>' : '<span style="color:#138a36;font-weight:700;">활성</span>'}</td>
           </tr>`).join('')}</tbody>
       </table>`;
   }
   function closeProjectLocations() { document.getElementById('loc-list-modal').classList.remove('open'); }
+
+  // ── Quiz 목록 팝업 (admin /api/host/projects/:id/quizzes 와 동일한 데이터, 읽기전용) ──
+  async function openProjectQuizzes(id, name, serial) {
+    document.getElementById('quiz-list-proj').textContent = name || '';
+    document.getElementById('quiz-list-serial').textContent = serial ? ('일련번호: ' + serial) : '';
+    const body = document.getElementById('quiz-list-body');
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+    document.getElementById('quiz-list-modal').classList.add('open');
+    const r = await apiFetch(`/api/supervisor/projects/${id}/quizzes`);
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { body.innerHTML = `<div style="color:#dc2626;padding:18px;">${d.error || '불러오지 못했습니다.'}</div>`; return; }
+    const list = d.data || [];
+    if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">등록된 Quiz가 없습니다.</div>'; return; }
+    body.innerHTML = '<div class="quiz-list">' + list.map((q, i) => {
+      const isSingle = q.choice_type === 'single';
+      const isDisabled = Number(q.disabled) === 1;
+      const isLinked = q.location_id !== null && q.location_id !== undefined;
+      const typeBadge = `<span class="qtype ${isSingle ? 'single' : 'multi'}">${isSingle ? '단일' : '다중'}</span>`;
+      const locBadge = isLinked
+        ? `<span class="qtype" style="background:#dbeafe;color:#1e40af;">📍 ${esc(q.location_name || ('목적지 #' + q.location_id))}</span>`
+        : '';
+      const statusBadge = isDisabled
+        ? '<span class="qtype" style="background:#f1f5f9;color:#94a3b8;">비활성</span>'
+        : '<span class="qtype" style="background:#dbeafe;color:#1e40af;">활성</span>';
+      const imgBlock = q.question_image_url
+        ? `<div style="margin:6px 0;"><img src="${q.question_image_url}" style="max-width:240px;max-height:160px;border-radius:6px;border:1px solid #e5e7eb;"></div>`
+        : '';
+      const choices = (q.choices || []).map(c => `
+        <div class="qchoice ${c.is_correct ? 'qok' : ''}">
+          <span class="qmark">${c.is_correct ? '✓' : '·'}</span>
+          <span>${esc(c.text)}</span>
+          ${c.image_url ? `<img src="${c.image_url}" style="max-width:60px;max-height:40px;border-radius:4px;border:1px solid #e5e7eb;margin-left:6px;">` : ''}
+        </div>`).join('');
+      return `<div class="quiz-card" style="${isDisabled ? 'opacity:0.55;background:#f8fafc;' : ''}">
+        <div class="qhead">
+          <span class="qno">${i + 1}</span>
+          ${typeBadge}
+          ${locBadge}
+          ${statusBadge}
+          <div class="qtitle">${esc(q.question)}</div>
+        </div>
+        ${imgBlock}
+        <div class="qchoices">${choices}</div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+  function closeProjectQuizzes() { document.getElementById('quiz-list-modal').classList.remove('open'); }
+
+  // ── 방문자 목록 팝업 (방문현황 탭: 전체방문자수 / Gift수령자수 클릭) ──
+  function fmtDT(s) {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
+  function fmtPhone(p) {
+    const s = String(p || '').replace(/[^0-9]/g, '');
+    if (s.length === 11) return `${s.slice(0,3)}-${s.slice(3,7)}-${s.slice(7)}`;
+    if (s.length === 10) return `${s.slice(0,3)}-${s.slice(3,6)}-${s.slice(6)}`;
+    return s || '-';
+  }
+  async function openVsVisitors(id, name, mode) {
+    const title = mode === 'gift' ? 'Gift 수령자 목록' : '전체 방문자 목록';
+    document.getElementById('vsv-title').textContent = title;
+    document.getElementById('vsv-proj').textContent = name || '';
+    document.getElementById('vsv-summary').textContent = '';
+    const body = document.getElementById('vsv-body');
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">불러오는 중...</div>';
+    document.getElementById('vs-visitors-modal').classList.add('open');
+    const r = await apiFetch(`/api/supervisor/projects/${id}/visitors`);
+    if (!r) return;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { body.innerHTML = `<div style="color:#dc2626;padding:18px;">${d.error || '불러오지 못했습니다.'}</div>`; return; }
+    const total = Number(d.totalLocations || 0);
+    let list = d.data || [];
+    if (mode === 'gift') list = list.filter(v => v.gift_issued);
+    if (!list.length) {
+      document.getElementById('vsv-summary').textContent =
+        mode === 'gift' ? `Gift 수령자 0명 · 전체 목적지 ${total}곳` : `방문자 0명 · 전체 목적지 ${total}곳`;
+      body.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:24px;">${mode === 'gift' ? 'Gift 수령자가 없습니다.' : '방문자가 없습니다.'}</div>`;
+      return;
+    }
+    const doneCnt = list.filter(v => v.completed).length;
+    const usedCnt = list.filter(v => v.gift_used).length;
+    document.getElementById('vsv-summary').textContent =
+      mode === 'gift'
+        ? `Gift 수령자 ${list.length}명 · 사용 ${usedCnt}명 · 전체 목적지 ${total}곳`
+        : `방문자 ${list.length}명 · 미션완료 ${doneCnt}명 · 전체 목적지 ${total}곳`;
+    const GIFT_TYPE_LABEL = { normal: '지급', grant: '증정' };
+    body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>휴대폰번호</th>
+          <th style="text-align:center;">방문</th>
+          <th style="text-align:center;">미션</th>
+          <th style="text-align:center;">Gift 발급</th>
+          <th style="text-align:center;">Gift 사용</th>
+          <th style="text-align:center;">유형</th>
+          <th style="white-space:nowrap;">사용일시</th>
+          <th style="white-space:nowrap;">최근방문</th>
+        </tr></thead>
+        <tbody>${list.map(v => `
+          <tr>
+            <td style="white-space:nowrap;">${fmtPhone(v.phone)}</td>
+            <td style="text-align:center;">${v.visited_count} / ${total}</td>
+            <td style="text-align:center;">${v.completed ? '<span style="color:#138a36;font-weight:700;">완료</span>' : '<span style="color:#94a3b8;">진행중</span>'}</td>
+            <td style="text-align:center;">${v.gift_issued ? '<span style="color:#1d4ed8;font-weight:700;">Y</span>' : '<span style="color:#94a3b8;">N</span>'}</td>
+            <td style="text-align:center;">${v.gift_used ? '<span style="color:#138a36;font-weight:700;">Y</span>' : '<span style="color:#94a3b8;">N</span>'}</td>
+            <td style="text-align:center;font-size:12px;">${v.gift_type ? (GIFT_TYPE_LABEL[v.gift_type] || v.gift_type) : '-'}</td>
+            <td style="font-size:12px;color:#64748b;white-space:nowrap;">${fmtDT(v.gift_used_at)}</td>
+            <td style="font-size:12px;color:#64748b;white-space:nowrap;">${fmtDT(v.last_visited_at)}</td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+  }
+  function closeVsVisitors() { document.getElementById('vs-visitors-modal').classList.remove('open'); }
 
   // ── 랜딩페이지 미리보기 (방문자가 보는 실제 랜딩 페이지) ──
   function openPreview(serial) {
@@ -1701,6 +2270,18 @@
   function closePreview() {
     document.getElementById('preview-modal').classList.remove('open');
     document.getElementById('preview-frame').src = 'about:blank';
+  }
+
+  const SV_REMEMBER_KEY = 'sv_remember_id';
+
+  function restoreRememberedId() {
+    try {
+      const saved = localStorage.getItem(SV_REMEMBER_KEY);
+      if (saved) {
+        document.getElementById('sv-username').value = saved;
+        document.getElementById('sv-remember').checked = true;
+      }
+    } catch (e) {}
   }
 
   async function doLogin() {
@@ -1716,6 +2297,14 @@
       msgEl.style.display = 'block';
       return;
     }
+    // 아이디 저장 처리
+    try {
+      if (document.getElementById('sv-remember').checked) {
+        localStorage.setItem(SV_REMEMBER_KEY, username);
+      } else {
+        localStorage.removeItem(SV_REMEMBER_KEY);
+      }
+    } catch (e) {}
     showDashboard(data.username);
     // URL에 tab=hosts 파라미터 있으면 해당 탭으로
     const tab = new URLSearchParams(location.search).get('tab');
@@ -2103,11 +2692,13 @@
         ? '<span class="badge bp-yes">확인</span>'
         : '<span class="badge bp-no">미확인</span>';
       const sk = p.status || 'draft';
+      const pnEsc = (p.project_name||'').replace(/'/g,"\\'");
       return `<tr>
         <td>${p.id}</td>
         <td>${p.organization_name ?? '-'}</td>
         <td>${p.project_name}</td>
         <td>${p.project_serial}</td>
+        <td>${created}</td>
         <td>${from}</td>
         <td>${to}</td>
         <td><span class="badge ${PROJ_STATUS_BADGE[sk] ?? ''}">${PROJ_STATUS_LABEL[sk] ?? sk}</span></td>
@@ -2115,12 +2706,12 @@
         <td>${quoteRead}</td>
         <td>${depositAt}</td>
         <td>${depositBadge}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="openProjectLocations(${p.id}, '${(p.project_name||'').replace(/'/g,"\\'")}')">${p.location_count ?? 0}개</button></td>
-        <td>${created}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProjectLocations(${p.id}, '${pnEsc}')">${p.location_count ?? 0}개</button></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProjectQuizzes(${p.id}, '${pnEsc}', '${p.project_serial}')">${p.quiz_count ?? 0}개</button></td>
         <td><button class="btn btn-outline btn-sm" onclick="openProjectModal(${p.id})">상세보기</button></td>
         <td><button class="btn btn-outline btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+    }).join('') || '<tr><td colspan="16" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
 
     renderPager('proj-pager', data.total, data.size, data.page, loadProjects);
   }
@@ -2294,6 +2885,7 @@
   (async () => {
     updateSortIcons();
     updateProjSortIcons();
+    restoreRememberedId();
     const r = await apiFetch('/api/supervisor/me');
     if (r && r.ok) {
       const data = await r.json();
