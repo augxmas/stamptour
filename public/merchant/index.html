@@ -81,7 +81,7 @@
     .b-end { background:#e2e8f0; color:#475569; }
     .tbl-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); }
     .ptbl { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
-    .ptbl th, .ptbl td { padding:11px 13px; border-bottom:1px solid #f1f5f9; text-align:left; }
+    .ptbl th, .ptbl td { padding:11px 13px; border-bottom:1px solid #f1f5f9; text-align:center; }
     .ptbl th { background:#f8fafc; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
     .ptbl th.sortable { cursor:pointer; user-select:none; }
     .ptbl th.sortable:hover { color:#2563eb; background:#eef2ff; }
@@ -201,6 +201,10 @@
         <input id="li-email" type="email" placeholder="merchant@example.com"></div>
       <div class="fg"><label>비밀번호</label>
         <input id="li-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="li-remember" style="width:16px;height:16px;cursor:pointer;">
+        <span>이메일 저장하기</span>
+      </label>
       <div class="login-gift">
         <label class="gift-switch" title="Gift 결제 모드로 로그인">
           <span class="gs-label">Gift 결제 모드</span>
@@ -470,6 +474,21 @@
 </footer>
 
 <!-- ── 공통 확인/알림 모달 ── -->
+<!-- 프로젝트 지원 모달 (지원 유형 선택) -->
+<div class="modal-ov" id="apply-modal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="mb-head" id="apply-title">프로젝트 지원</div>
+    <div class="mb-msg" id="apply-desc" style="padding-bottom:6px;"></div>
+    <div style="padding:0 20px 8px;font-size:13px;color:#1e293b;font-weight:700;">지원 유형 (최소 1개 이상 선택)</div>
+    <div id="apply-types" style="padding:6px 20px 16px;display:flex;flex-direction:column;gap:8px;"></div>
+    <div id="apply-err" style="display:none;color:#dc2626;font-size:12px;padding:0 20px 8px;"></div>
+    <div class="mb-btns">
+      <button class="btn btn-o" onclick="closeApplyModal()">취소</button>
+      <button class="btn btn-p" id="apply-submit" onclick="submitApply()">지원</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="ui-modal">
   <div class="modal-box">
     <div class="mb-head" id="ui-title">알림</div>
@@ -618,15 +637,37 @@
     return { ok: r.ok, status: r.status, d };
   }
 
+  // 저장된 이메일 자동 채우기
+  (function loadSavedEmail() {
+    try {
+      const saved = localStorage.getItem('merchant_saved_email');
+      if (saved) {
+        const el = document.getElementById('li-email');
+        const cb = document.getElementById('li-remember');
+        if (el) el.value = saved;
+        if (cb) cb.checked = true;
+        // 비밀번호로 포커스 이동
+        const pw = document.getElementById('li-pw');
+        if (pw) setTimeout(() => pw.focus(), 50);
+      }
+    } catch (_) {}
+  })();
+
   // ── 로그인 ──
   async function doLogin() {
     clr('li-msg');
     const email = document.getElementById('li-email').value.trim();
     const password = document.getElementById('li-pw').value;
+    const remember = document.getElementById('li-remember')?.checked;
     if (!EM_RE.test(email)) { setMsg('li-msg', 'e', '올바른 이메일을 입력해 주세요.'); return; }
     if (!password) { setMsg('li-msg', 'e', '비밀번호를 입력해 주세요.'); return; }
     const { ok, d } = await api('/api/merchant/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     if (!ok) { setMsg('li-msg', 'e', d.error || '로그인에 실패했습니다.'); return; }
+    // 이메일 저장/제거
+    try {
+      if (remember) localStorage.setItem('merchant_saved_email', email);
+      else localStorage.removeItem('merchant_saved_email');
+    } catch (_) {}
     document.getElementById('d-name').textContent = d.merchant?.name || '';
     if (d.resetRequired) { openPwChange(); return; }   // 임시 비밀번호 → 강제 변경
     enterApp(document.getElementById('login-gift-toggle').checked);
@@ -909,7 +950,10 @@
     { key: 'project_name',      label: '프로젝트명', cls: '' },
     { key: 'from_date',         label: '프로젝트 기간', cls: '' },
     { key: 'remaining_days',    label: '잔여일', cls: 'c', num: true },
-    { key: 'status',            label: '상태', cls: 'c' },
+    { key: 'project_status',    label: '프로젝트<br>상태', cls: 'c' },
+    { key: 'status_quest',      label: '🎯 목적지+Quiz<br>상태', cls: 'c' },
+    { key: 'status_reservation',label: '🟠 사전등록<br>상태', cls: 'c' },
+    { key: 'status_entry',      label: '🟢 현장등록<br>상태', cls: 'c' },
     { key: 'pin_code',          label: '인증코드', cls: 'c' },
     { key: 'application_status',label: '지원', cls: 'c' },
   ];
@@ -929,8 +973,17 @@
     if (key === 'gift_amount') return Number(p.gift_amount || 0);
     if (key === 'pin_code') return p.pin_code ? 0 : 1;  // 인증코드 있는 행을 위로
     if (key === 'from_date') return p.from_date ? new Date(p.from_date).getTime() : 0;
-    if (key === 'status') return STATUS_RANK[p.status] ?? 9;
+    if (key === 'status' || key === 'project_status') return STATUS_RANK[p.status] ?? 9;
     if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
+    if (key === 'status_quest' || key === 'status_reservation' || key === 'status_entry') {
+      const t = key.replace('status_', '');
+      const a = (p.applications || []).find(x => x.support_type === t);
+      const ORDER = { approved:0, pending:1, rejected:2 };
+      if (a) return ORDER[a.status] ?? 8;
+      if (t === 'reservation' && Number(p.reservation_use) !== 1) return 99;
+      if (t === 'entry' && Number(p.entry_use) !== 1) return 99;
+      return 9;
+    }
     return String(p[key] ?? '').toLowerCase();
   }
 
@@ -1023,13 +1076,34 @@
         <tbody>${list.map(p => {
           const from = p.from_date ? String(p.from_date).slice(0,10) : '-';
           const to = p.to_date ? String(p.to_date).slice(0,10) : '-';
-          const canApply = !p.application_status && (p.status === 'ready_to_start' || p.status === 'started');
+          const allApproved = !!p.all_approved;
+          const projectOpen = p.status === 'ready_to_start' || p.status === 'started';
+          const canApply = !allApproved && projectOpen;
+          const apps = Array.isArray(p.applications) ? p.applications : [];
+          const APP_LBL = { pending:'⏳ 대기', approved:'✓ 승인', rejected:'✗ 거절' };
+          const APP_CLS = { pending:'b-stat', approved:'b-on', rejected:'b-off' };
+          // 유형별 상태 셀 빌더
+          function typeStatusCell(type, useFlag) {
+            if (type !== 'quest' && Number(useFlag) !== 1) {
+              return '<span style="color:#cbd5e1;font-size:11px;">프로젝트 미사용</span>';
+            }
+            const a = apps.find(x => x.support_type === type);
+            if (!a) return '<span style="color:#94a3b8;font-size:11px;">미지원</span>';
+            const cls = APP_CLS[a.status] || 'b-stat';
+            const lbl = APP_LBL[a.status] || a.status;
+            return `<span class="badge ${cls}">${lbl}</span>`;
+          }
+          const cellQuest = typeStatusCell('quest', 1);
+          const cellRsv   = typeStatusCell('reservation', p.reservation_use);
+          const cellEnt   = typeStatusCell('entry', p.entry_use);
+          // 지원 버튼
           let action;
-          if (p.application_status) {
-            const b = APP_BADGE[p.application_status] || [p.application_status, 'b-stat'];
-            action = `<span class="badge ${b[1]}">${b[0]}</span>`;
+          if (!projectOpen && !p.has_any_application) {
+            action = '<span style="color:#cbd5e1;">-</span>';
           } else if (canApply) {
-            action = `<button class="btn btn-p btn-sm" onclick="applyProject(${p.id},'${esc(p.project_name).replace(/'/g,"\\'")}')">지원</button>`;
+            action = `<button class="btn btn-p btn-sm" onclick="applyProject(${p.id})">${apps.length > 0 ? '추가 지원' : '지원'}</button>`;
+          } else if (allApproved) {
+            action = '<span class="badge b-on">✓ 전체 승인</span>';
           } else {
             action = '<span style="color:#cbd5e1;">-</span>';
           }
@@ -1050,6 +1124,9 @@
             <td style="font-size:12px;color:#64748b;">${from} ~ ${to}</td>
             <td class="c" style="font-size:12px;">${remainLabel(p)}</td>
             <td class="c"><span class="badge ${STATUS_BADGE[p.status] || 'b-stat'}">${STATUS_LABEL[p.status] || p.status}</span></td>
+            <td class="c">${cellQuest}</td>
+            <td class="c">${cellRsv}</td>
+            <td class="c">${cellEnt}</td>
             <td class="c">${pinCell}</td>
             <td class="c">${action}</td>
           </tr>`;
@@ -1430,11 +1507,62 @@
     if (ok) show('sec-register');
   }
 
-  async function applyProject(id, name) {
-    const ok = await uiConfirm(`'${name}' 프로젝트에 참여를 신청하시겠습니까?`, { title: '프로젝트 지원', okText: '지원' });
-    if (!ok) return;
-    const { ok: rok, d } = await api(`/api/merchant/projects/${id}/apply`, { method: 'POST' });
-    if (!rok) { await uiAlert(d.error || '신청하지 못했습니다.'); return; }
+  let applyProjectId = null;
+  function applyProject(id) {
+    const p = (projData || []).find(x => Number(x.id) === Number(id));
+    if (!p) return;
+    applyProjectId = id;
+    const wonStr = n => (Number(n)||0).toLocaleString('ko-KR') + '원';
+    document.getElementById('apply-title').textContent = '프로젝트 지원';
+    document.getElementById('apply-desc').innerHTML =
+      `<b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span>`;
+    // 가능 유형 + 기존 신청 상태
+    const apps = Array.isArray(p.applications) ? p.applications : [];
+    const statusOf = t => (apps.find(a => a.support_type === t)?.status) || null;
+    const types = [];
+    types.push({ key:'quest', label:'🎯 목적지 방문 + Quiz', desc:`Gift 단가 ${wonStr(p.gift_amount||0)}` });
+    if (Number(p.reservation_use) === 1) types.push({ key:'reservation', label:'🟠 사전등록', desc:`혜택 ${wonStr(p.reservation_benefit_amount||0)}` });
+    if (Number(p.entry_use) === 1)       types.push({ key:'entry',       label:'🟢 현장등록', desc:`혜택 ${wonStr(p.entry_benefit_amount||0)}` });
+    document.getElementById('apply-types').innerHTML = types.map(t => {
+      const cur = statusOf(t.key);
+      const isApproved = cur === 'approved';
+      const isPending  = cur === 'pending';
+      const note = isApproved ? '<span style="color:#15803d;font-weight:700;">✓ 이미 승인됨</span>'
+                  : isPending ? '<span style="color:#854d0e;font-weight:700;">⏳ 승인 대기 중 (재신청 가능)</span>'
+                  : cur === 'rejected' ? '<span style="color:#dc2626;font-weight:700;">↻ 이전 거절 — 재신청 가능</span>'
+                  : '';
+      return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;cursor:${isApproved?'not-allowed':'pointer'};opacity:${isApproved?'.5':'1'};">
+        <input type="checkbox" value="${t.key}" data-apply-type style="width:18px;height:18px;margin-top:2px;flex-shrink:0;" ${isApproved?'disabled':''}>
+        <div>
+          <div style="font-weight:600;color:#1e293b;font-size:13px;">${t.label}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">${t.desc}</div>
+          ${note ? `<div style="font-size:11px;margin-top:4px;">${note}</div>` : ''}
+        </div>
+      </label>`;
+    }).join('');
+    document.getElementById('apply-err').style.display = 'none';
+    document.getElementById('apply-modal').classList.add('open');
+  }
+  function closeApplyModal() {
+    document.getElementById('apply-modal').classList.remove('open');
+    applyProjectId = null;
+  }
+  async function submitApply() {
+    if (!applyProjectId) return;
+    const picks = Array.from(document.querySelectorAll('input[data-apply-type]:checked')).map(c => c.value);
+    if (picks.length === 0) {
+      const err = document.getElementById('apply-err');
+      err.textContent = '최소 1개 이상 선택해 주세요.'; err.style.display = '';
+      return;
+    }
+    const id = applyProjectId;
+    closeApplyModal();
+    const { ok: rok, d } = await api(`/api/merchant/projects/${id}/apply`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ support_types: picks }),
+    });
+    if (!rok) { await uiAlert(d.message || d.error || '신청하지 못했습니다.'); return; }
     await uiAlert(d.message || '참여를 신청했습니다.');
     loadProjects();
   }
@@ -1505,14 +1633,21 @@
       box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">승인된 참여 프로젝트가 없습니다.</div>';
       return;
     }
-    box.innerHTML = giftProjData.map((p, i) => `
-      <button class="gpj" onclick="selectGiftProject(${i})">
+    const TYPE_LBL = { quest:'🎯 목적지+Quiz', reservation:'🟠 사전등록', entry:'🟢 현장등록' };
+    box.innerHTML = giftProjData.map((p, i) => {
+      const types = String(p.approved_types || '').split(',').filter(Boolean);
+      const typeBadges = types.map(t =>
+        `<span style="display:inline-block;background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-right:3px;">${TYPE_LBL[t]||t}</span>`
+      ).join('');
+      return `<button class="gpj" onclick="selectGiftProject(${i})">
         <span>
           <span class="gpj-name">${esc(p.project_name)}</span>
           <span class="gpj-meta">${esc(p.organization_name) || '-'} · ${esc(p.project_serial)} · ${STATUS_LABEL[p.status] || p.status}</span>
+          ${typeBadges ? `<span style="display:block;margin-top:4px;">${typeBadges}</span>` : ''}
         </span>
         <span class="gpj-amt">${won(p.gift_amount)}</span>
-      </button>`).join('');
+      </button>`;
+    }).join('');
   }
 
   function selectGiftProject(i) {
@@ -1599,19 +1734,28 @@
   // 스캔 결과에서 Gift 토큰 추출 (.../g/<token> 형태 또는 토큰 단독)
   function extractToken(text) {
     const s = String(text || '').trim();
-    const m = s.match(/\/g\/([^/?#\s]+)/);
-    if (m) return m[1];
-    if (/^[0-9a-f]{20,}$/i.test(s)) return s;
+    // 사전등록/현장등록 QR: /r/{serial}/{token}
+    const mr = s.match(/\/r\/[^/?#\s]+\/([^/?#\s]+)/);
+    if (mr) return { type:'reservation', token: mr[1] };
+    // Gift QR: /g/{token}
+    const mg = s.match(/\/g\/([^/?#\s]+)/);
+    if (mg) return { type:'gift', token: mg[1] };
+    if (/^[0-9a-f]{20,}$/i.test(s)) return { type:'gift', token: s };
     return null;
   }
 
   async function onScanned(text) {
     if (scanBusy) return;
-    const token = extractToken(text);
-    if (!token) return;            // Gift QR이 아니면 계속 스캔
+    const r = extractToken(text);
+    if (!r) return;            // 인식 안된 QR은 계속 스캔
     scanBusy = true;
     stopScanner();
-    await loadGiftForRedeem(token);
+    if (r.type === 'reservation') {
+      // 사전/현장등록 QR — 별도 페이지로 이동 (사용처리)
+      location.href = text.startsWith('http') ? text : `/r/${(text.match(/\/r\/([^/?#\s]+)/)||[])[1]||''}/${r.token}`;
+    } else {
+      await loadGiftForRedeem(r.token);
+    }
   }
 
   // 사진 촬영으로 스캔(실시간 카메라 미지원/실패 시 대체)

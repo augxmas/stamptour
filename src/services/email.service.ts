@@ -36,6 +36,7 @@ export async function sendEmail(params: {
   html: string;
   projectId?: number;
   hostId?: number;
+  triggerType?: "auto" | "manual";   // auto=시스템 자동(기본), manual=관리자가 직접 발송
   attachments?: nodemailer.SendMailOptions["attachments"];
 }): Promise<void> {
   let status: "sent" | "failed" = "sent";
@@ -54,10 +55,11 @@ export async function sendEmail(params: {
     error = err instanceof Error ? err.message : "unknown_error";
   }
 
+  const trig = params.triggerType === "manual" ? "manual" : "auto";
   await pool.execute(
-    `INSERT INTO email_logs (template_key, to_email, subject, project_id, host_id, status, error_msg)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [params.templateKey, params.to, params.subject, params.projectId ?? null, params.hostId ?? null, status, error || null],
+    `INSERT INTO email_logs (template_key, to_email, subject, project_id, host_id, status, trigger_type, error_msg)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [params.templateKey, params.to, params.subject, params.projectId ?? null, params.hostId ?? null, status, trig, error || null],
   );
 
   if (status === "failed") {

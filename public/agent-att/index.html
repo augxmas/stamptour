@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>현장요원 근태관리 · 모노라마 트래커</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; background:#f8fafc; color:#1e293b;
+         font-family:-apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+  .header { background:#fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
+            border-left: 4px solid #15803d; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .title { font-size: 18px; font-weight: 800; }
+  .sub { font-size: 12px; color:#64748b; margin-top: 4px; }
+  .card { background:#fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .row { margin-bottom: 14px; }
+  .row label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+  input[type=text], input[type=password] { width: 100%; padding: 12px; border: 1.5px solid #cbd5e1;
+    border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 4px; outline: none; }
+  input:focus { border-color: #15803d; }
+  .btn { width: 100%; padding: 14px; background: #15803d; color: #fff; border: none; border-radius: 10px;
+         font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-2 { background: #f59e0b; }
+  .btn-r { background: #f1f5f9; color: #475569; }
+  .err { color:#dc2626; font-size: 12px; margin-top: 4px; text-align: center; }
+  /* Scan area */
+  .scan-box { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 1; }
+  .scan-box video { width: 100%; height: 100%; object-fit: cover; }
+  .scan-overlay { position: absolute; inset: 16%; border: 3px solid #22c55e; border-radius: 12px;
+                  box-shadow: 0 0 0 9999px rgba(0,0,0,0.35); pointer-events: none; }
+  /* Result card */
+  .result { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding: 14px; margin-bottom: 12px; }
+  .result h4 { margin: 0 0 4px 0; color: #166534; }
+  .result .meta { font-size: 12px; color:#475569; }
+  .att-buttons { display: flex; gap: 8px; margin-top: 14px; }
+  .att-buttons button { flex: 1; padding: 14px 10px; border: none; border-radius: 10px; font-weight: 700;
+                        font-size: 14px; cursor: pointer; }
+  .b-on { background: #15803d; color: #fff; }
+  .b-late { background: #f59e0b; color: #fff; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .top-bar .who { font-size: 12px; color: #64748b; }
+  .top-bar .logout { background: none; border: none; color: #dc2626; font-size: 12px; font-weight: 600;
+                     cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="header" id="loading"><div class="title">불러오는 중…</div></div>
+</div>
+
+<script>
+const serial = location.pathname.split('/').filter(Boolean)[1];   // /agent-att/{serial}
+const scanFromQuery = new URLSearchParams(location.search).get('t');
+let me = null;        // { project_id, serial }
+let stream = null;
+let scanLoopActive = false;
+let currentScannedToken = '';   // QR 스캔으로 식별된 당사자 토큰 (당건 인증용)
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function init() {
+  // 세션 확인
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/att/me`);
+    const d = await r.json();
+    if (d.ok) { me = d; afterLogin(); return; }
+  } catch (e) {}
+  renderLogin();
+}
+
+function renderLogin() {
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      <div class="title">현장요원 근태관리</div>
+      <div class="sub">프로젝트 일련번호: ${esc(serial)}</div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <label>관리자 PIN (6자리)</label>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off">
+      </div>
+      <div class="err" id="login-err"></div>
+      <button class="btn" id="login-btn" onclick="doLogin()">로그인</button>
+      <p style="font-size:11px;color:#94a3b8;margin-top:10px;text-align:center;line-height:1.5;">
+        ※ 프로젝트 등록 시 발급된 6자리 비밀번호를 입력하세요.
+      </p>
+    </div>`;
+  document.getElementById('pin-input').focus();
+}
+
+async function doLogin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!/^\d{6}$/.test(pin)) { errEl.textContent = 'PIN은 숫자 6자리입니다.'; return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/att/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      errEl.textContent = '인증에 실패했습니다.';
+      btn.disabled = false; btn.textContent = '로그인';
+      return;
+    }
+    me = { project_id: d.project.id, serial: d.project.serial, name: d.project.name };
+    afterLogin();
+  } catch (e) {
+    errEl.textContent = '네트워크 오류로 로그인에 실패했습니다.';
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+}
+
+function afterLogin() {
+  if (scanFromQuery) {
+    // URL 파라미터로 토큰이 들어왔다면 바로 조회
+    history.replaceState({}, '', `/agent-att/${serial}`);
+    lookupAgent(scanFromQuery);
+  } else {
+    renderScan();
+  }
+}
+
+function renderScan() {
+  currentScannedToken = '';
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      <div class="title">현장요원 근태관리</div>
+      <div class="top-bar">
+        <div class="who">📌 ${esc(me.name || serial)}</div>
+        <button class="logout" onclick="doLogout()">로그아웃</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 12px;font-size:15px;">📷 현장요원 QR 스캔</h3>
+      <div class="scan-box" id="scan-box">
+        <video id="cam" playsinline autoplay muted></video>
+        <div class="scan-overlay"></div>
+      </div>
+      <div class="err" id="scan-err"></div>
+      <p style="font-size:12px;color:#64748b;margin-top:12px;text-align:center;line-height:1.5;">
+        요원의 QR 코드를 화면 가운데에 맞추세요.<br>
+        자동으로 인식됩니다.
+      </p>
+    </div>`;
+  startScanner();
+}
+
+async function startScanner() {
+  const video = document.getElementById('cam');
+  if (!video) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    scanLoopActive = true;
+    scanLoop(video);
+  } catch (e) {
+    document.getElementById('scan-err').textContent =
+      '카메라 접근 권한이 필요합니다. 브라우저 권한 설정을 확인해 주세요.';
+  }
+}
+
+function stopScanner() {
+  scanLoopActive = false;
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+function scanLoop(video) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  function tick() {
+    if (!scanLoopActive) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, imgData.width, imgData.height);
+      if (code && code.data) {
+        scanLoopActive = false;
+        stopScanner();
+        const token = extractToken(code.data);
+        if (token) lookupAgent(token);
+        else {
+          document.getElementById('scan-err').textContent = '인식된 QR이 현장요원 QR 형식이 아닙니다.';
+          scanLoopActive = true;
+          requestAnimationFrame(tick);
+        }
+        return;
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+function extractToken(url) {
+  try { return new URL(url).searchParams.get('t') || null; }
+  catch { return null; }
+}
+
+async function lookupAgent(token) {
+  const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/att/lookup?t=${encodeURIComponent(token)}`);
+  const d = await r.json();
+  if (!r.ok || !d.ok) {
+    alert('요원 정보를 찾을 수 없습니다.');
+    renderScan();
+    return;
+  }
+  currentScannedToken = token;   // 당건 식별 — 이 토큰만 출근 처리에 사용
+  renderAgentInfo(d.agent, d.today);
+}
+
+function renderAgentInfo(agent, today) {
+  const fmtDT = s => {
+    if (!s) return '';
+    const dt = new Date(s);
+    const z = n => String(n).padStart(2,'0');
+    return `${dt.getFullYear()}-${z(dt.getMonth()+1)}-${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}`;
+  };
+  const todayBlock = today
+    ? `<div class="result" style="background:#fefce8;border-color:#fde68a;">
+         <h4 style="color:#854d0e;">⚠ 오늘 이미 출근 처리됨</h4>
+         <div class="meta">${today.attendance_type === 'on_time' ? '✓ 정시출근' : '🕒 지각'} · ${fmtDT(today.checked_in_at)}</div>
+       </div>`
+    : '';
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      <div class="title">출근 처리</div>
+      <div class="top-bar">
+        <div class="who">📌 ${esc(me.name || serial)}</div>
+        <button class="logout" onclick="doLogout()">로그아웃</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="result">
+        <h4>👤 ${esc(agent.name)}</h4>
+        <div class="meta">📱 ${esc(agent.mobile)}</div>
+        <div class="meta">✉ ${esc(agent.email)}</div>
+      </div>
+      ${todayBlock}
+      ${today ? '' : `
+      <div class="att-buttons">
+        <button class="b-on" onclick="markAttendance('on_time')">✓ 정시출근</button>
+        <button class="b-late" onclick="markAttendance('late')">🕒 지각</button>
+      </div>`}
+      <button class="btn btn-r" style="margin-top: 14px;" onclick="renderScan()">📷 다른 요원 스캔</button>
+    </div>`;
+}
+
+async function markAttendance(type) {
+  if (!currentScannedToken) {
+    alert('QR 스캔으로 식별된 당사자가 없습니다.\n다시 스캔해 주세요.');
+    renderScan(); return;
+  }
+  if (!confirm(type === 'on_time' ? '정시출근으로 기록하시겠습니까?' : '지각으로 기록하시겠습니까?')) return;
+  const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/att/check-in`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ qr_token: currentScannedToken, attendance_type: type }),
+  });
+  const d = await r.json();
+  if (!r.ok || !d.ok) {
+    alert(d.message || '출근 처리에 실패했습니다.');
+    return;
+  }
+  alert(`✓ ${d.agent_name}님 ${type === 'on_time' ? '정시출근' : '지각'} 처리 완료\n${d.date}`);
+  currentScannedToken = '';   // 처리 후 토큰 클리어 — 다음 등록은 새 스캔 필요
+  renderScan();
+}
+
+async function doLogout() {
+  await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/att/logout`, { method:'POST' });
+  stopScanner();
+  me = null;
+  renderLogin();
+}
+
+init();
+</script>
+</body>
+</html>

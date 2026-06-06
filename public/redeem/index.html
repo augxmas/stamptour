@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>QR 사용 처리 · 모노라마 트래커</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; min-height:100vh; background:#f8fafc; color:#1e293b;
+         font-family:-apple-system, "Malgun Gothic", sans-serif;
+         display:flex; align-items:flex-start; justify-content:center; padding:24px 16px; }
+  .card { width:100%; max-width:420px; background:#fff; border-radius:14px;
+          box-shadow:0 8px 28px rgba(0,0,0,.08); overflow:hidden; }
+  .head { background:#15803d; color:#fff; padding:18px 20px; text-align:center; }
+  .head .t { font-size:13px; opacity:.85; }
+  .head .amt { font-size:30px; font-weight:800; margin-top:4px; }
+  .body { padding:22px 20px 26px; }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:11px 0;
+         border-bottom:1px solid #f1f5f9; font-size:14px; }
+  .row:last-of-type { border-bottom:none; }
+  .row .k { color:#64748b; } .row .v { font-weight:700; text-align:right; }
+  .btn { width:100%; padding:14px; font-size:15px; font-weight:800; border:none;
+         border-radius:10px; cursor:pointer; margin-top:12px; }
+  .btn-p { background:#15803d; color:#fff; }
+  .btn-p:disabled { background:#94a3b8; cursor:not-allowed; }
+  .btn-o { background:#f1f5f9; color:#1e293b; }
+  input[type=password] { width:100%; padding:14px; font-size:18px; letter-spacing:4px;
+         text-align:center; border:1.5px solid #cbd5e1; border-radius:10px; outline:none; }
+  input:focus { border-color:#15803d; }
+  .lab { font-size:13px; font-weight:600; color:#33415c; margin:4px 0 8px; }
+  .msg { font-size:13px; margin-top:10px; min-height:18px; text-align:center; }
+  .msg.err { color:#d62828; } .msg.ok { color:#138a36; }
+  .state { text-align:center; padding:14px 0 4px; }
+  .state .ico { font-size:54px; }
+  .state .ttl { font-size:20px; font-weight:800; margin-top:6px; }
+  .state .desc { font-size:13px; color:#64748b; margin-top:6px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px;
+           font-weight:700; }
+  .badge.r { background:#fed7aa; color:#9a3412; }
+  .badge.e { background:#dcfce7; color:#166534; }
+  .spin { display:inline-block; width:26px; height:26px; border:3px solid #d3deef;
+          border-top-color:#15803d; border-radius:50%; animation:r 1s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="card" id="wrap">
+  <div class="head"><div class="t">모노라마 트래커</div><div class="amt">불러오는 중…</div></div>
+  <div class="body center" style="text-align:center;padding:36px 0;"><div class="spin"></div></div>
+</div>
+
+<script>
+const pathParts = location.pathname.split('/').filter(Boolean);
+// /r/:serial/:token
+const serial = pathParts[1] || '';
+const token  = pathParts[2] || '';
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function won(n){ return (Number(n)||0).toLocaleString('ko-KR') + '원'; }
+
+async function init() {
+  // 1) 가맹점 세션 확인
+  let merchant = null;
+  try {
+    const r = await fetch('/api/merchant/me', { credentials: 'include' });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.ok && d.merchant) merchant = d.merchant;
+    }
+  } catch (e) {}
+
+  if (!merchant) {
+    // 가맹점 미로그인 → visitor PWA 로 자동 이동
+    location.replace(`/v/${encodeURIComponent(serial)}?resv=${encodeURIComponent(token)}`);
+    return;
+  }
+  // 가맹점 로그인 → 사용 처리 UI
+  await loadReservation();
+}
+
+async function loadReservation() {
+  let d;
+  try {
+    const r = await fetch(`/api/merchant/reservation/${encodeURIComponent(token)}`, { credentials: 'include' });
+    d = await r.json();
+    if (!r.ok || !d.ok) {
+      renderError(d.message || '유효하지 않은 QR 입니다.');
+      return;
+    }
+  } catch (e) {
+    renderError('네트워크 오류로 정보를 불러오지 못했습니다.');
+    return;
+  }
+  renderRedeem(d);
+}
+
+function renderError(msg) {
+  document.getElementById('wrap').innerHTML = `
+    <div class="head" style="background:#dc2626;"><div class="t">모노라마 트래커</div><div class="amt">사용 처리 불가</div></div>
+    <div class="body">
+      <div class="state">
+        <div class="ico">⚠</div>
+        <div class="ttl" style="color:#dc2626;">QR 코드를 승인해 줄 수 없습니다</div>
+        <div class="desc">${esc(msg)}</div>
+      </div>
+    </div>`;
+}
+
+function renderRedeem(d) {
+  const r = d.reservation;
+  const modeBadge = r.mode === 'reservation'
+    ? '<span class="badge r">🟠 사전등록</span>'
+    : '<span class="badge e">🟢 현장등록</span>';
+  const f = r.fields || {};
+  const statusBlock = r.status === 'used'
+    ? `<div class="state"><div class="ico used" style="color:#d62828;">⚠</div>
+         <div class="ttl used" style="color:#d62828;">이미 사용된 QR</div>
+         <div class="desc">사용 일시: ${esc(new Date(r.used_at).toLocaleString('ko-KR'))}</div></div>`
+    : '';
+  document.getElementById('wrap').innerHTML = `
+    <div class="head"><div class="t">모노라마 트래커 · ${modeBadge}</div><div class="amt">${won(r.amount)}</div></div>
+    <div class="body">
+      ${statusBlock}
+      <div class="row"><span class="k">프로젝트</span><span class="v">${esc(r.project_name)}</span></div>
+      <div class="row"><span class="k">방문방식</span><span class="v">${r.mode === 'reservation' ? '사전등록' : '현장등록'}</span></div>
+      <div class="row"><span class="k">이름</span><span class="v">${esc(f.name || '-')}</span></div>
+      <div class="row"><span class="k">이메일</span><span class="v" style="font-size:12px;">${esc(f.email || '-')}</span></div>
+      <div class="row"><span class="k">모바일</span><span class="v">${esc(f.mobile || '-')}</span></div>
+      <div class="row"><span class="k">신청일시</span><span class="v" style="font-size:12px;">${esc(new Date(r.applied_at).toLocaleString('ko-KR'))}</span></div>
+      ${r.status === 'used' ? '' : `
+        <div style="margin-top:14px;">
+          <div class="lab">프로젝트 비밀번호 (6자리)</div>
+          <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+          <div class="msg" id="msg"></div>
+          <button class="btn btn-p" id="use-btn" onclick="useReservation()">사용 처리</button>
+        </div>`}
+      <button class="btn btn-o" onclick="history.back()">닫기</button>
+    </div>`;
+  if (r.status !== 'used') document.getElementById('pin').focus();
+}
+
+async function useReservation() {
+  const pin = (document.getElementById('pin').value || '').trim();
+  const msgEl = document.getElementById('msg');
+  if (!/^\d{6}$/.test(pin)) { msgEl.className='msg err'; msgEl.textContent='비밀번호는 숫자 6자리입니다.'; return; }
+  const btn = document.getElementById('use-btn');
+  btn.disabled = true; btn.textContent='처리 중...';
+  try {
+    const r = await fetch(`/api/merchant/reservation/${encodeURIComponent(token)}/use`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      msgEl.className='msg err'; msgEl.textContent = d.message || '사용 처리에 실패했습니다.';
+      btn.disabled=false; btn.textContent='사용 처리';
+      return;
+    }
+    document.getElementById('wrap').innerHTML = `
+      <div class="head"><div class="t">사용 처리 완료</div><div class="amt">${won(d.amount)}</div></div>
+      <div class="body">
+        <div class="state">
+          <div class="ico" style="color:#15803d;">✓</div>
+          <div class="ttl">사용 처리되었습니다</div>
+          <div class="desc">방문자에게 알림이 전송됩니다.</div>
+        </div>
+        <button class="btn btn-o" onclick="history.back()">닫기</button>
+      </div>`;
+  } catch (e) {
+    msgEl.className='msg err'; msgEl.textContent='네트워크 오류로 사용 처리에 실패했습니다.';
+    btn.disabled=false; btn.textContent='사용 처리';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

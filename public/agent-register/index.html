@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>현장요원 등록 · 모노라마 트래커</title>
+<link rel="manifest" id="manifest-link">
+<meta name="theme-color" content="#15803d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="현장요원">
+<link rel="icon" href="/favicon-green.svg">
+<link rel="apple-touch-icon" href="/favicon-green.svg">
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; background:#f8fafc; color:#1e293b;
+         font-family:-apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
+  .header { background: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
+            border-left: 4px solid #15803d; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .title { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+  .sub   { font-size: 12px; color: #64748b; }
+  .card  { background:#fff; border-radius: 14px; padding: 18px; margin-bottom: 14px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .row   { margin-bottom: 14px; }
+  .row > label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+  .req   { color: #dc2626; margin-left: 2px; }
+  .row > label::before {
+    content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #15803d; vertical-align: middle; margin-right: 8px;
+  }
+  input[type=text], input[type=email], input[type=tel], textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;
+    font-size: 14px; outline: none; background: #fff; }
+  input:focus { border-color: #15803d; }
+  textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+  .file-row { display: flex; gap: 6px; align-items: center; }
+  .file-row input[type=file] { display: none; }
+  .file-btn { padding: 10px 16px; background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1;
+              border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .file-btn:hover { background: #e2e8f0; }
+  .file-name { font-size: 12px; color: #64748b; flex: 1; }
+  .file-preview { margin-top: 6px; }
+  .file-preview img { max-width: 100%; max-height: 160px; border-radius: 8px; border: 1px solid #e2e8f0; }
+  .addr-line { display: flex; gap: 6px; margin-bottom: 6px; }
+  .addr-line button { padding: 0 14px; font-size: 12px; font-weight: 700; border: none; border-radius: 8px;
+                      background: #15803d; color: #fff; cursor: pointer; white-space: nowrap; }
+  .consent { background:#f0fdf4; border:1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .consent label { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; cursor: pointer; font-size: 13px; }
+  .consent input[type=checkbox] { width: 18px; height: 18px; accent-color: #15803d; flex-shrink: 0; margin-top: 1px; }
+  .consent .terms-link { color:#15803d; text-decoration: underline; font-size: 11px; }
+  .submit { width: 100%; padding: 14px; background: #15803d; color: #fff; border: none; border-radius: 10px;
+            font-size: 16px; font-weight: 700; cursor: pointer; }
+  .submit:disabled { background: #94a3b8; cursor: not-allowed; }
+  .submit:not(:disabled):hover { background: #166534; }
+  .err { color: #dc2626; font-size: 12px; margin-top: 4px; }
+  /* 인증 영역 */
+  .row.verify { border: 1.5px solid #15803d; background:#f0fdf4; border-radius: 10px; padding: 12px; }
+  .row.verify > label { color: #166534; }
+  .verify-line { display: flex; gap: 6px; }
+  .verify-line input { flex: 1; }
+  .verify-line button { padding: 0 14px; font-size: 12px; font-weight: 700; border: none; border-radius: 8px;
+                        background: #15803d; color: #fff; cursor: pointer; white-space: nowrap; }
+  .verify-line button:disabled { background: #94a3b8; cursor: not-allowed; }
+  .verify-msg { font-size: 12px; color: #475569; margin-top: 6px; line-height: 1.45; }
+  .verify-msg.err { color: #dc2626; }
+  .verify-msg.ok  { color: #15803d; font-weight: 700; }
+  .code-input-wrap { position: relative; flex: 1; }
+  .code-input-wrap input { width: 100%; padding-right: 42px;
+    -webkit-text-security: disc; }
+  .code-input-wrap input.show-text { -webkit-text-security: none; }
+  .code-input-wrap input::-ms-reveal { display: none; }
+  .code-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+              background: none; border: none; cursor: pointer; padding: 6px;
+              color: #64748b; font-size: 16px; display: flex; align-items: center; }
+  .code-eye:disabled { color: #cbd5e1; cursor: not-allowed; }
+  /* 폼 잠금 */
+  .locked { opacity: 0.45; pointer-events: none; user-select: none; }
+  /* PWA 설치 안내 */
+  .install-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.6); z-index: 10000;
+                     display: none; align-items: center; justify-content: center; padding: 16px; }
+  .install-overlay.open { display: flex; }
+  .install-modal { background: #fff; max-width: 380px; width: 100%; border-radius: 16px; overflow: hidden;
+                   box-shadow: 0 16px 48px rgba(0,0,0,.3); }
+  .install-head { background: #15803d; color: #fff; padding: 18px 20px; text-align: center; }
+  .install-head .ico { font-size: 32px; margin-bottom: 6px; }
+  .install-head h3 { margin: 0; font-size: 16px; font-weight: 800; }
+  .install-body { padding: 18px 20px; }
+  .install-body p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.55; color: #334155; }
+  .install-body .ios-guide { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px;
+                              padding: 10px 12px; font-size: 12px; line-height: 1.5; color: #854d0e;
+                              margin: 12px 0; display: none; }
+  .install-foot { padding: 12px 16px 18px; display: flex; gap: 8px; }
+  .install-foot button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700;
+                         font-size: 14px; cursor: pointer; }
+  .install-foot .install-btn { background: #15803d; color: #fff; }
+  .install-foot .install-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .install-foot .later-btn { background: #f1f5f9; color: #475569; }
+  .done-card { background: #fff; border-radius: 14px; padding: 24px 20px; text-align: center;
+               box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+  .done-card h2 { color: #15803d; font-size: 20px; margin-bottom: 14px; }
+  .done-card .qr-card { background: #fff; border: 2px dashed #86efac; border-radius: 12px; padding: 18px;
+                        margin: 14px 0; }
+  .done-card .qr-card img { width: 240px; height: 240px; display: block; margin: 0 auto; }
+  .done-card .agent-info { background: #f0fdf4; border-radius: 8px; padding: 12px; margin-bottom: 14px;
+                           text-align: left; font-size: 13px; line-height: 1.6; color: #166534; }
+  .save-row { display: flex; gap: 8px; margin-top: 12px; }
+  .save-row button { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700;
+                     font-size: 13px; }
+  .save-row .b-img { background: #15803d; color: #fff; }
+  .save-row .b-link { background: #f1f5f9; color: #475569; }
+  /* 주소 오버레이 */
+  .pc-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 9999;
+                display: none; align-items: center; justify-content: center; padding: 10px; }
+  .pc-overlay.open { display: flex; }
+  .pc-modal { background:#fff; width:100%; max-width:560px; height:90vh; max-height:720px;
+              border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .pc-head { display:flex; align-items:center; justify-content:space-between; padding: 12px 16px;
+             border-bottom: 1px solid #e2e8f0; background:#f0fdf4; flex-shrink: 0; }
+  .pc-head h3 { font-size: 15px; font-weight: 800; color:#166534; margin: 0; }
+  .pc-close { background: none; border: none; font-size: 22px; color:#64748b; cursor: pointer; padding: 2px 8px; }
+  .pc-frame { flex:1 1 auto; min-height: 480px; overflow: hidden; }
+  .pc-frame > * { width:100% !important; height:100% !important; border: 0 !important; }
+  /* 약관 모달 */
+  .term-overlay { position: fixed; inset:0; background: rgba(15,23,42,.55); z-index: 9999;
+                  display: none; align-items: center; justify-content: center; padding: 10px; }
+  .term-overlay.open { display: flex; }
+  .term-modal { background:#fff; width:100%; max-width:520px; max-height:80vh; border-radius:14px;
+                overflow:hidden; display:flex; flex-direction: column; }
+  .term-head { display:flex; align-items:center; justify-content:space-between; padding: 12px 16px;
+               border-bottom: 1px solid #e2e8f0; background:#f0fdf4; }
+  .term-body { padding: 16px; font-size: 13px; line-height: 1.65; color: #334155; overflow-y: auto; }
+  .term-foot { padding: 10px 16px; border-top: 1px solid #e2e8f0; text-align: right; }
+  .term-foot button { padding: 8px 16px; background:#15803d; color:#fff; border:none; border-radius:8px;
+                      font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+  <div class="header" id="loading">불러오는 중…</div>
+</div>
+
+<!-- PWA 설치 안내 모달 -->
+<div class="install-overlay" id="install-overlay">
+  <div class="install-modal">
+    <div class="install-head">
+      <div class="ico">📲</div>
+      <h3>근태관리를 위해<br>앱을 설치해 주세요</h3>
+    </div>
+    <div class="install-body">
+      <p>현장요원 근태관리는 모바일 앱으로 사용하시면<br>가장 편리합니다.</p>
+      <p style="color:#15803d;font-weight:700;">홈 화면에 추가하시면 출퇴근 QR을<br>언제든 빠르게 꺼내 보실 수 있습니다.</p>
+      <div class="ios-guide" id="ios-guide">
+        💡 iPhone 사용자:<br>Safari 하단의 <b>공유 버튼(⤴)</b> → <b>"홈 화면에 추가"</b> 를 눌러 설치하세요.
+      </div>
+    </div>
+    <div class="install-foot">
+      <button class="later-btn" onclick="closeInstall()">나중에</button>
+      <button class="install-btn" id="install-btn" onclick="doInstall()">앱 설치</button>
+    </div>
+  </div>
+</div>
+
+<!-- 주소 오버레이 -->
+<div class="pc-overlay" id="pc-overlay" onclick="if(event.target===this)closePostcode()">
+  <div class="pc-modal">
+    <div class="pc-head"><h3>주소 검색</h3>
+      <button class="pc-close" onclick="closePostcode()">×</button></div>
+    <div class="pc-frame" id="pc-frame"></div>
+  </div>
+</div>
+
+<!-- 약관 모달 -->
+<div class="term-overlay" id="term-overlay" onclick="if(event.target===this)closeTerm()">
+  <div class="term-modal">
+    <div class="term-head"><h3 id="term-title">약관</h3>
+      <button class="pc-close" onclick="closeTerm()">×</button></div>
+    <div class="term-body" id="term-body"></div>
+    <div class="term-foot"><button onclick="closeTerm()">확인</button></div>
+  </div>
+</div>
+
+<script>
+const serial = location.pathname.split('/').filter(Boolean)[1];   // /agent-register/{serial}
+let projectInfo = null;
+let agentResult = null;
+let deferredInstallPrompt = null;
+
+// ── PWA 셋업 (manifest + SW + 설치 안내) ──
+document.getElementById('manifest-link').setAttribute('href', `/agent-register/${serial}/manifest.json`);
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register(`/agent-register/${serial}/sw.js`, { scope: `/agent-register/${serial}/` })
+    .catch(() => {/* SW 등록 실패시 무시 — 기능엔 영향 없음 */});
+}
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function showInstallPrompt() {
+  if (isStandalone()) return;   // 이미 설치된 경우 패스
+  const dismissed = sessionStorage.getItem('agent_install_dismissed');
+  if (dismissed === '1') return;
+  // iOS 는 beforeinstallprompt 없음 → 안내 가이드 표시
+  if (isIOS()) document.getElementById('ios-guide').style.display = 'block';
+  document.getElementById('install-overlay').classList.add('open');
+  // beforeinstallprompt 이벤트가 안 잡힌 환경(iOS, 일부 인앱브라우저)에서는 직접 호출 불가
+  if (!deferredInstallPrompt && !isIOS()) {
+    document.getElementById('install-btn').textContent = '확인';
+  }
+}
+function closeInstall() {
+  document.getElementById('install-overlay').classList.remove('open');
+  sessionStorage.setItem('agent_install_dismissed', '1');
+}
+async function doInstall() {
+  if (!deferredInstallPrompt) { closeInstall(); return; }
+  const btn = document.getElementById('install-btn');
+  btn.disabled = true;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  closeInstall();
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+window.addEventListener('appinstalled', () => closeInstall());
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const STORE_KEY = `agent_token_${serial}`;
+function savedToken() { try { return localStorage.getItem(STORE_KEY) || null; } catch { return null; } }
+function saveToken(t) { try { localStorage.setItem(STORE_KEY, t); } catch {} }
+function clearToken() { try { localStorage.removeItem(STORE_KEY); } catch {} }
+
+async function init() {
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      document.getElementById('loading').innerHTML =
+        `<div class="title" style="color:#dc2626;">⚠ 등록 불가</div>
+         <div class="sub">${esc(d.message || '이 프로젝트는 현장요원관리를 사용하지 않거나 존재하지 않습니다.')}</div>`;
+      return;
+    }
+    projectInfo = d.project;
+    // 저장된 QR 토큰이 있으면 My Page 직접 진입 (재방문/PWA 실행)
+    const tk = savedToken();
+    if (tk) {
+      const ok = await loadMyPage(tk);
+      if (ok) {
+        // 이미 등록된 사용자 — 설치 안내는 띄우지 않음
+        return;
+      }
+      // 토큰이 무효 (서버에서 삭제됨 등) → 클리어 후 폼 진입
+      clearToken();
+    }
+    renderForm();
+    setTimeout(showInstallPrompt, 600);
+  } catch (e) {
+    document.getElementById('loading').textContent = '네트워크 오류로 페이지를 열 수 없습니다.';
+  }
+}
+
+async function loadMyPage(token) {
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/me?t=${encodeURIComponent(token)}`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) return false;
+    renderMyPage(d);
+    return true;
+  } catch (e) { return false; }
+}
+
+function renderMyPage(d) {
+  const won = n => Number(n||0).toLocaleString('ko-KR');
+  // 근태 통계
+  const records = d.records || [];
+  const fromD = new Date(String(d.project.from_date).slice(0,10) + 'T00:00:00');
+  const toD   = new Date(String(d.project.to_date).slice(0,10) + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endRef = today < toD ? today : toD;
+  const recMap = new Map();
+  records.forEach(r => {
+    const dt = new Date(r.attended_date); dt.setHours(0,0,0,0);
+    recMap.set(ymdKey(dt), r);
+  });
+  let onT = 0, late = 0, total = 0;
+  for (let dx = new Date(fromD); dx <= endRef; dx.setDate(dx.getDate()+1)) {
+    total++;
+    const r = recMap.get(ymdKey(dx));
+    if (r?.attendance_type === 'on_time') onT++;
+    else if (r?.attendance_type === 'late') late++;
+  }
+  const absent = total - onT - late;
+  const otRate = total>0 ? Math.round((onT/total)*100)    : 0;
+  const ltRate = total>0 ? Math.round((late/total)*100)   : 0;
+  const abRate = total>0 ? Math.round((absent/total)*100) : 0;
+
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      <div class="title">${esc(d.agent.name)} 님의 출퇴근</div>
+      <div class="sub">${esc(d.project.name)} · ${esc(d.project.serial)}</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h3 style="margin:0 0 6px;color:#166534;font-size:15px;">📌 출퇴근 QR 코드</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;">관리자에게 이 QR을 보여주세요</p>
+      <div style="background:#fff;border:2px dashed #86efac;border-radius:12px;padding:16px;display:inline-block;">
+        <img id="qr-img" src="${d.agent.qr_image_url}" alt="QR" style="width:220px;height:220px;display:block;">
+      </div>
+      <canvas id="att-canvas" style="display:none;"></canvas>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="submit" style="flex:1;padding:12px;font-size:13px;" onclick="downloadComposed()">💾 출퇴근 이미지 저장</button>
+        <button class="submit" style="flex:1;padding:12px;font-size:13px;background:#f59e0b;" onclick="logoutAgent()">🚪 다른 사람으로</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 12px;font-size:15px;color:#166534;">📅 내 근태 현황</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;">
+        <span style="background:#dcfce7;color:#166534;padding:5px 10px;border-radius:6px;font-weight:700;">정시 ${onT}일 (${otRate}%)</span>
+        <span style="background:#fef3c7;color:#854d0e;padding:5px 10px;border-radius:6px;font-weight:700;">지각 ${late}일 (${ltRate}%)</span>
+        <span style="background:#fee2e2;color:#991b1b;padding:5px 10px;border-radius:6px;font-weight:700;">결근 ${absent}일 (${abRate}%)</span>
+        <span style="background:#e0e7ff;color:#3730a3;padding:5px 10px;border-radius:6px;font-weight:700;">전체 ${total}일</span>
+      </div>
+      <div id="agent-cal"></div>
+      <div style="display:flex;gap:12px;justify-content:center;font-size:11px;color:#64748b;margin-top:10px;">
+        <span><span style="display:inline-block;width:12px;height:12px;background:#15803d;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>정시</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>지각</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border:1px solid #fecaca;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>결근</span>
+      </div>
+    </div>`;
+  // canvas 합성 미리 준비
+  agentResult = {
+    agent: { name: d.agent.name, mobile: d.agent.mobile, email: d.agent.email },
+    project: { name: d.project.name, serial: d.project.serial },
+    qr_image_url: d.agent.qr_image_url,
+    attendance_url: d.agent.attendance_url,
+  };
+  prepareComposed(agentResult);
+  renderAgentCal(fromD, toD, endRef, recMap);
+}
+
+function ymdKey(d) {
+  const z = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+
+function renderAgentCal(fromD, toD, endRef, recMap) {
+  const months = new Map();
+  for (let dx = new Date(fromD); dx <= toD; dx.setDate(dx.getDate()+1)) {
+    const mk = `${dx.getFullYear()}-${String(dx.getMonth()+1).padStart(2,'0')}`;
+    if (!months.has(mk)) months.set(mk, []);
+    months.get(mk).push(new Date(dx));
+  }
+  let html = '';
+  for (const [mk, days] of months) {
+    const [yy, mm] = mk.split('-');
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-weight:700;color:#1e293b;margin-bottom:6px;font-size:13px;">${yy}년 ${parseInt(mm,10)}월</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;">
+        ${['일','월','화','수','목','금','토'].map(d=>`<div style="text-align:center;color:#94a3b8;padding:3px 0;font-weight:600;">${d}</div>`).join('')}`;
+    const first = days[0];
+    for (let i=0; i<first.getDay(); i++) html += '<div></div>';
+    for (const d of days) {
+      const k = ymdKey(d);
+      const rec = recMap.get(k);
+      const isFuture = d > endRef;
+      const isPast = d < fromD;
+      let bg='', col='#475569', title='';
+      if (isFuture || isPast) { bg='#f8fafc'; col='#cbd5e1'; }
+      else if (rec?.attendance_type === 'on_time') { bg='#15803d'; col='#fff'; title='정시출근'; }
+      else if (rec?.attendance_type === 'late')    { bg='#f59e0b'; col='#fff'; title='지각'; }
+      else { bg='#fee2e2'; col='#991b1b'; title='결근'; }
+      html += `<div title="${title}" style="background:${bg};color:${col};padding:7px 2px;text-align:center;border-radius:4px;border:1px solid #e2e8f0;font-size:11px;">
+        ${d.getDate()}<br><span style="font-size:9px;">${rec ? '●' : ''}</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  document.getElementById('agent-cal').innerHTML = html;
+}
+
+async function logoutAgent() {
+  if (!confirm('이 기기에서 로그아웃합니다.\n다른 사람으로 새로 등록할 수 있습니다.')) return;
+  clearToken();
+  location.reload();
+}
+
+function renderForm() {
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      <div class="title">현장요원 등록</div>
+      <div class="sub">${esc(projectInfo.name)} · ${esc(projectInfo.serial)}</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#991b1b;line-height:1.55;">
+      <b>📌 모든 입력 항목은 필수입니다.</b><br>
+      신원 확인 + 보수 지급에 필요한 자료이므로 누락 없이 작성해 주세요.
+    </div>
+    <div class="card">
+      <!-- 이메일 + 인증코드 (먼저 입력) -->
+      <div class="row verify">
+        <label>이메일 인증<span class="req">*</span></label>
+        <div class="verify-line">
+          <input id="f-email" type="email" placeholder="user@example.com">
+          <button type="button" id="btn-send-code" onclick="sendVerifyCode()">인증코드 발송</button>
+        </div>
+        <div class="verify-line" style="margin-top:8px;">
+          <div class="code-input-wrap">
+            <input type="text" id="f-code" inputmode="numeric" autocomplete="one-time-code"
+                   placeholder="6자리 인증코드 입력" maxlength="6">
+            <button type="button" class="code-eye" id="code-eye-btn" onclick="toggleCodeReveal()"
+                    title="코드 보기/숨기기" aria-label="코드 표시 전환">👁</button>
+          </div>
+          <button type="button" id="btn-verify" onclick="confirmVerifyCode()">확인</button>
+        </div>
+        <div class="verify-msg" id="verify-msg">이메일 인증을 완료해야 나머지 항목을 입력할 수 있습니다.</div>
+      </div>
+
+      <!-- 나머지 항목 — 인증 완료 후 활성화 -->
+      <div id="others-wrap" class="locked">
+        <div class="row">
+          <label>이름<span class="req">*</span></label>
+          <input id="f-name" type="text" maxlength="60" placeholder="실명 입력">
+        </div>
+        <div class="row">
+          <label>모바일폰<span class="req">*</span></label>
+          <input id="f-mobile" type="tel" inputmode="numeric" placeholder="010-1234-5678" maxlength="20">
+        </div>
+        <div class="row">
+          <label>주소<span class="req">*</span></label>
+          <div class="addr-line">
+            <input type="text" id="f-zip" placeholder="우편번호" readonly style="max-width:120px;">
+            <button type="button" onclick="openPostcode()">🔍 주소 검색</button>
+          </div>
+          <input type="text" id="f-addr1" placeholder="도로명주소" readonly style="margin-bottom:6px;">
+          <input type="text" id="f-addr2" placeholder="상세주소">
+        </div>
+        <div class="row">
+          <label>주민등록증 사본<span class="req">*</span></label>
+          <div class="file-row">
+            <input type="file" id="f-idcard" accept="image/*" onchange="onFile('idcard', this)">
+            <button type="button" class="file-btn" onclick="document.getElementById('f-idcard').click()">📷 이미지 선택</button>
+            <span class="file-name" id="f-idcard-name">선택된 파일 없음</span>
+          </div>
+          <div class="file-preview" id="f-idcard-preview"></div>
+        </div>
+        <div class="row">
+          <label>통장 사본<span class="req">*</span></label>
+          <div class="file-row">
+            <input type="file" id="f-bankbook" accept="image/*" onchange="onFile('bankbook', this)">
+            <button type="button" class="file-btn" onclick="document.getElementById('f-bankbook').click()">📷 이미지 선택</button>
+            <span class="file-name" id="f-bankbook-name">선택된 파일 없음</span>
+          </div>
+          <div class="file-preview" id="f-bankbook-preview"></div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:11px;color:#1e40af;line-height:1.55;">
+          📌 <b>주민등록증 사본</b>과 <b>통장 사본</b>은 활동 보수(임금) 지급에 필요한 자료입니다.
+          확인 외 다른 용도로 사용되지 않으며, 안전하게 보관됩니다.
+        </div>
+      </div>
+    </div>
+    <div class="consent">
+      <label><input type="checkbox" id="c-terms"><span><b style="color:#dc2626;">[필수]</b> 이용약관 동의 <a class="terms-link" onclick="showTerm('terms')">(보기)</a></span></label>
+      <label><input type="checkbox" id="c-privacy"><span><b style="color:#dc2626;">[필수]</b> 개인정보 활용 동의 <a class="terms-link" onclick="showTerm('privacy')">(보기)</a></span></label>
+      <label><input type="checkbox" id="c-email"><span><b style="color:#dc2626;">[필수]</b> 이메일 수신 동의 <span style="color:#94a3b8;font-size:11px;">(공지·근태 통보용)</span></span></label>
+      <label><input type="checkbox" id="c-push"><span><b style="color:#dc2626;">[필수]</b> Push 알림 수신 동의 <span style="color:#94a3b8;font-size:11px;">(출근 알림용)</span></span></label>
+    </div>
+    <div id="err-msg" class="err"></div>
+    <button class="submit" id="btn-submit" disabled onclick="onSubmit()">등록하기</button>`;
+}
+
+let emailVerified = false;
+let verifiedCode = '';
+let sendCooldownTimer = null;
+
+function startSendCooldown(seconds) {
+  const btn = document.getElementById('btn-send-code');
+  if (!btn) return;
+  if (sendCooldownTimer) { clearInterval(sendCooldownTimer); sendCooldownTimer = null; }
+  let left = Math.max(1, Math.floor(seconds));
+  btn.disabled = true; btn.textContent = `재발송 (${left}초)`;
+  sendCooldownTimer = setInterval(() => {
+    left -= 1;
+    if (left <= 0) { clearInterval(sendCooldownTimer); sendCooldownTimer = null;
+                     btn.disabled = false; btn.textContent = '재발송'; }
+    else btn.textContent = `재발송 (${left}초)`;
+  }, 1000);
+}
+
+function toggleCodeReveal() {
+  const inp = document.getElementById('f-code');
+  const btn = document.getElementById('code-eye-btn');
+  if (!inp || !btn) return;
+  const showing = inp.classList.toggle('show-text');
+  btn.textContent = showing ? '🙈' : '👁';
+}
+
+async function sendVerifyCode() {
+  const email = (document.getElementById('f-email').value || '').trim();
+  const msg = document.getElementById('verify-msg');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.textContent = '올바른 이메일을 입력해 주세요.'; msg.className = 'verify-msg err'; return;
+  }
+  const btn = document.getElementById('btn-send-code');
+  btn.disabled = true; btn.textContent = '발송 중…';
+  try {
+    const r = await fetch('/api/integration/email-verify/send', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, project_serial: serial }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      if (d.error === 'rate_limited') {
+        msg.textContent = '이전 발송 후 1분이 지나야 재발송할 수 있습니다.';
+        msg.className = 'verify-msg err';
+        startSendCooldown(60); return;
+      }
+      msg.textContent = d.message || '인증코드 발송에 실패했습니다.';
+      msg.className = 'verify-msg err';
+      btn.disabled = false; btn.textContent = '인증코드 발송'; return;
+    }
+    const devNote = d.devCode ? ` <span style="color:#94a3b8;">(개발용 코드: <b>${d.devCode}</b>)</span>` : '';
+    msg.innerHTML = `인증코드를 발송했습니다. 메일함(스팸함 포함)을 확인해 주세요. (유효시간 10분)${devNote}`;
+    msg.className = 'verify-msg';
+    startSendCooldown(60);
+  } catch (e) {
+    msg.textContent = '네트워크 오류로 발송에 실패했습니다.';
+    msg.className = 'verify-msg err';
+    btn.disabled = false; btn.textContent = '인증코드 발송';
+  }
+}
+
+async function confirmVerifyCode() {
+  const email = (document.getElementById('f-email').value || '').trim();
+  const code = (document.getElementById('f-code').value || '').trim();
+  const msg = document.getElementById('verify-msg');
+  if (!code) { msg.textContent = '인증코드를 입력해 주세요.'; msg.className = 'verify-msg err'; return; }
+  let lookup;
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/lookup`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, code }),
+    });
+    lookup = await r.json();
+    if (!r.ok || !lookup.ok) {
+      msg.innerHTML = '인증코드가 일치하지 않거나 <b>유효시간(10분)이 만료</b>되었습니다.<br>인증코드 발송을 다시 눌러 새 코드를 받으세요.';
+      msg.className = 'verify-msg err'; return;
+    }
+  } catch (e) {
+    msg.textContent = '네트워크 오류로 확인에 실패했습니다.';
+    msg.className = 'verify-msg err'; return;
+  }
+  // 이미 등록된 경우
+  if (lookup.found && lookup.agent) {
+    const proceed = window.confirm('이미 등록된 현장요원입니다.\n기존 정보(QR 포함)를 다시 받으시겠습니까?');
+    if (proceed) {
+      agentResult = {
+        agent_id: lookup.agent.id,
+        qr_token: lookup.agent.qr_token,
+        qr_image_url: lookup.agent.qr_image_url,
+        attendance_url: lookup.agent.attendance_url,
+        project: lookup.project,
+        agent: { name: lookup.agent.name, mobile: lookup.agent.mobile, email: lookup.agent.email },
+      };
+      if (lookup.agent.qr_token) saveToken(lookup.agent.qr_token);
+      // 바로 My Page 로 (근태 달력 포함)
+      await loadMyPage(lookup.agent.qr_token);
+    } else {
+      // 다른 이메일로 재시도 (리셋)
+      if (sendCooldownTimer) { clearInterval(sendCooldownTimer); sendCooldownTimer = null; }
+      document.getElementById('f-email').value = '';
+      document.getElementById('f-code').value = '';
+      document.getElementById('btn-send-code').disabled = false;
+      document.getElementById('btn-send-code').textContent = '인증코드 발송';
+      msg.textContent = '다른 이메일로 다시 시도해 주세요.';
+      msg.className = 'verify-msg';
+      document.getElementById('f-email').focus();
+    }
+    return;
+  }
+  // 신규 — 폼 잠금 해제
+  emailVerified = true;
+  verifiedCode = code;
+  msg.innerHTML = '✓ 이메일 인증 완료';
+  msg.className = 'verify-msg ok';
+  document.getElementById('f-email').disabled = true;
+  document.getElementById('f-code').disabled = true;
+  document.getElementById('btn-send-code').disabled = true;
+  document.getElementById('btn-verify').disabled = true;
+  const wrap = document.getElementById('others-wrap');
+  if (wrap) wrap.classList.remove('locked');
+  document.getElementById('btn-submit').disabled = false;
+}
+
+function onFile(key, input) {
+  const f = input.files[0];
+  document.getElementById(`f-${key}-name`).textContent = f ? f.name : '선택된 파일 없음';
+  const prev = document.getElementById(`f-${key}-preview`);
+  prev.innerHTML = '';
+  if (f && f.type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    prev.appendChild(img);
+  }
+}
+
+function openPostcode() {
+  const ov = document.getElementById('pc-overlay');
+  const fr = document.getElementById('pc-frame');
+  fr.innerHTML = '';
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => {
+    new daum.Postcode({
+      autoClose: false,
+      width: '100%', height: '100%',
+      oncomplete: (data) => {
+        document.getElementById('f-zip').value = data.zonecode || '';
+        document.getElementById('f-addr1').value = data.roadAddress || data.jibunAddress || '';
+        closePostcode();
+        document.getElementById('f-addr2').focus();
+      },
+    }).embed(fr);
+  });
+}
+function closePostcode() {
+  document.getElementById('pc-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  document.getElementById('pc-frame').innerHTML = '';
+}
+
+const TERMS = {
+  terms: { title: '이용약관', body: `
+    <p><b>제1조 (목적)</b> 본 약관은 모노라마 트래커가 제공하는 현장요원관리 서비스의 이용과 관련하여
+    회사와 이용자(현장요원) 간의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+    <p><b>제2조 (서비스의 내용)</b> 회사는 현장요원의 등록, 출퇴근 QR 발급, 근태 기록 관리,
+    근태 통계 제공 등의 서비스를 제공합니다.</p>
+    <p><b>제3조 (이용자의 의무)</b> 이용자는 본인의 정확한 정보를 등록해야 하며, QR 코드 및 계정 정보를
+    제3자에게 양도·공유할 수 없습니다.</p>
+    <p><b>제4조 (서비스 이용)</b> 등록된 현장요원은 발급된 QR 코드를 통해 출퇴근 시 근태를 기록할 수 있으며,
+    관리자는 이를 확인·관리합니다.</p>
+    <p><b>제5조 (책임의 한계)</b> 회사는 천재지변, 통신장애 등 회사의 귀책사유가 아닌 사유로 인한
+    서비스 중단에 대해 책임을 지지 않습니다.</p>
+  ` },
+  privacy: { title: '개인정보 활용 동의', body: `
+    <p><b>수집 항목</b><br>이름, 모바일폰, 이메일, 주소, 주민등록증 사본, 통장 사본, 근태 기록(출근 일시·구분).</p>
+    <p><b>이용 목적</b><br>현장요원 신원 확인, 출퇴근 및 근태 관리, 보수 지급을 위한 계좌 정보 확인.</p>
+    <p><b>보유 및 이용기간</b><br>프로젝트 종료 후 5년간 보관 후 파기. 단, 법령에 의해 보존 필요한 경우 해당 기간까지 보관.</p>
+    <p><b>제3자 제공</b><br>관계 법령에 의한 요구 외에는 제3자에게 제공되지 않습니다.</p>
+    <p><b>동의 거부 권리</b><br>위 개인정보 수집·이용 동의를 거부할 권리가 있으나, 동의 거부 시 현장요원 등록이 불가능합니다.</p>
+  ` },
+};
+function showTerm(k) {
+  const t = TERMS[k]; if (!t) return;
+  document.getElementById('term-title').textContent = t.title;
+  document.getElementById('term-body').innerHTML = t.body;
+  document.getElementById('term-overlay').classList.add('open');
+}
+function closeTerm() { document.getElementById('term-overlay').classList.remove('open'); }
+
+async function onSubmit() {
+  const err = document.getElementById('err-msg');
+  err.textContent = '';
+  if (!emailVerified || !verifiedCode) {
+    err.textContent = '먼저 이메일 인증을 완료해 주세요.'; return;
+  }
+  const name = document.getElementById('f-name').value.trim();
+  const mobile = document.getElementById('f-mobile').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const zip = document.getElementById('f-zip').value;
+  const a1 = document.getElementById('f-addr1').value;
+  const a2 = document.getElementById('f-addr2').value;
+  const address = [zip, a1, a2].filter(Boolean).join(' / ');
+  const idcard = document.getElementById('f-idcard').files[0];
+  const bank   = document.getElementById('f-bankbook').files[0];
+  const terms = document.getElementById('c-terms').checked;
+  const priv  = document.getElementById('c-privacy').checked;
+  const eOpt  = document.getElementById('c-email').checked;
+  const pOpt  = document.getElementById('c-push').checked;
+  if (!name)    { err.textContent = '이름을 입력해 주세요.'; return; }
+  if (!mobile)  { err.textContent = '모바일폰을 입력해 주세요.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = '올바른 이메일을 입력해 주세요.'; return; }
+  if (!a1)      { err.textContent = '주소를 검색해 주세요.'; return; }
+  if (!idcard)  { err.textContent = '주민등록증 사본을 첨부해 주세요.'; return; }
+  if (!bank)    { err.textContent = '통장 사본을 첨부해 주세요.'; return; }
+  if (!terms || !priv || !eOpt || !pOpt) {
+    err.textContent = '모든 동의 항목에 체크해 주세요. (이용약관·개인정보·이메일·Push)'; return;
+  }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = '등록 중...';
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('mobile', mobile);
+  fd.append('email', email);
+  fd.append('address', address);
+  fd.append('terms_accepted', terms ? '1' : '0');
+  fd.append('privacy_accepted', priv ? '1' : '0');
+  fd.append('email_optin', eOpt ? '1' : '0');
+  fd.append('push_optin',  pOpt ? '1' : '0');
+  fd.append('code', verifiedCode);
+  fd.append('id_card_image', idcard);
+  fd.append('bankbook_image', bank);
+  try {
+    const r = await fetch(`/api/field-agent/projects/${encodeURIComponent(serial)}/register`, {
+      method: 'POST', body: fd,
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      const map = { already_registered: '이 프로젝트에 이미 등록된 이메일입니다.',
+                    mobile_duplicate: '이 프로젝트에 이미 등록된 모바일 번호입니다.',
+                    invalid_email: '올바른 이메일을 입력해 주세요.',
+                    files_required: '주민등록증·통장 사본을 첨부해 주세요.',
+                    email_not_verified: '이메일 인증이 만료되었거나 유효하지 않습니다. 다시 인증해 주세요.' };
+      err.textContent = d.message || map[d.error] || '등록에 실패했습니다.';
+      btn.disabled = false; btn.textContent = '등록하기';
+      return;
+    }
+    agentResult = d;
+    if (d.qr_token) saveToken(d.qr_token);   // PWA 재진입 시 자동 My Page 진입
+    renderDone(d);
+  } catch (e) {
+    err.textContent = '네트워크 오류로 등록에 실패했습니다.';
+    btn.disabled = false; btn.textContent = '등록하기';
+  }
+}
+
+function renderDone(d) {
+  document.getElementById('wrap').innerHTML = `
+    <div class="done-card">
+      <h2>✓ 등록이 완료되었습니다</h2>
+      <p style="font-size:13px;color:#475569;line-height:1.55;">
+        아래 QR 코드를 휴대폰에 저장해 주세요.<br>
+        매일 출근 시 관리자에게 이 QR을 보여주시면 근태가 기록됩니다.
+      </p>
+      <div class="agent-info">
+        <div>📌 <b>${esc(d.project.name)}</b> (${esc(d.project.serial)})</div>
+        <div>👤 ${esc(d.agent.name)}</div>
+        <div>📱 ${esc(d.agent.mobile)}</div>
+        <div>✉ ${esc(d.agent.email)}</div>
+      </div>
+      <div class="qr-card" id="qr-card">
+        <canvas id="att-canvas" style="display:none;"></canvas>
+        <img id="qr-img" src="${d.qr_image_url}" alt="QR">
+      </div>
+      <div class="save-row">
+        <button class="b-img" onclick="downloadComposed()">💾 출퇴근 이미지 저장</button>
+        <button class="b-link" onclick="copyUrl()">📋 출근 URL 복사</button>
+      </div>
+      <p style="font-size:11px;color:#94a3b8;margin-top:14px;line-height:1.5;">
+        ※ '출퇴근 이미지 저장' 으로 휴대폰 갤러리에 저장한 후 매일 출근 시 관리자에게 보여주세요.
+      </p>
+    </div>`;
+  // 합성 이미지 미리 만들어 두기
+  prepareComposed(d);
+}
+
+async function prepareComposed(d) {
+  const canvas = document.getElementById('att-canvas');
+  if (!canvas) return;
+  const W = 600, H = 760;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  // 헤더 띠
+  ctx.fillStyle = '#15803d'; ctx.fillRect(0, 0, W, 70);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('현장요원 출퇴근 QR', W/2, 44);
+  // 프로젝트/요원
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillText(d.project.name, W/2, 110);
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText(d.project.serial, W/2, 132);
+  // QR 이미지
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const qrSize = 380;
+    const qx = (W - qrSize) / 2, qy = 160;
+    ctx.drawImage(img, qx, qy, qrSize, qrSize);
+    // 요원 정보
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('👤 ' + d.agent.name, W/2, 590);
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.fillText('📱 ' + d.agent.mobile, W/2, 620);
+    ctx.fillText('✉ ' + d.agent.email, W/2, 642);
+    // 안내
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('출근 시 관리자에게 이 QR을 보여주세요', W/2, 700);
+    ctx.fillText('모노라마 트래커 · ' + new Date().toLocaleDateString('ko-KR'), W/2, 720);
+  };
+  img.src = d.qr_image_url;
+}
+
+async function downloadComposed() {
+  const canvas = document.getElementById('att-canvas');
+  if (!canvas) return;
+  await new Promise(r => setTimeout(r, 200));   // 이미지 로드 대기
+  canvas.toBlob((blob) => {
+    if (!blob) { alert('이미지 생성 실패'); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agent_qr_${agentResult.agent.name}_${agentResult.project.serial}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(agentResult.attendance_url)
+    .then(() => alert('URL이 복사되었습니다.\n' + agentResult.attendance_url))
+    .catch(() => prompt('이 URL을 복사하세요', agentResult.attendance_url));
+}
+
+init();
+</script>
+</body>
+</html>

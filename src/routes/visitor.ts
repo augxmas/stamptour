@@ -44,6 +44,32 @@ async function getVisitorLocations(projectId: number, visitorId: number) {
   }));
 }
 
+// reservation token → 연결된 phone/name 조회 (visitor PWA 자동 등록용)
+router.get("/reservation-lookup", async (req, res) => {
+  const token = String(req.query.token || "");
+  if (!token) { res.status(400).json({ error: "token_required" }); return; }
+  const [rows] = await pool.execute(
+    `SELECT r.id, r.mode, r.status, r.fields_json, p.project_serial, p.project_name
+     FROM reservations r JOIN projects p ON p.id = r.project_id
+     WHERE r.token = ?`,
+    [token],
+  );
+  const row = (Array.isArray(rows) ? rows[0] : null) as any;
+  if (!row) { res.status(404).json({ error: "reservation_not_found" }); return; }
+  let fields: any = {};
+  try { fields = row.fields_json ? JSON.parse(row.fields_json) : {}; } catch {}
+  res.json({
+    ok: true,
+    project_serial: row.project_serial,
+    project_name: row.project_name,
+    mode: row.mode,
+    status: row.status,
+    phone: fields.mobile || "",
+    name: fields.name || "",
+    email: fields.email || "",
+  });
+});
+
 router.post("/identify", async (req, res) => {
   const { project_serial, phone, consented } = req.body as Record<string, any>;
   if (!project_serial || !phone) {
@@ -649,11 +675,10 @@ router.get("/manifest/:projectSerial", async (req, res) => {
         { src: iconUrl, sizes: "512x512", type: imageMime(iconUrl), purpose: "maskable" },
       ]
     : [
-        { src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-        { src: "/favicon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
+        { src: "/favicon-green.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+        { src: "/favicon-green.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
       ];
   res.type("application/manifest+json").send(JSON.stringify({
-    // PWA 식별자 — 프로젝트별로 다른 ID 로 별도 앱 설치
     id: `/v/${projectSerial}`,
     name: `${name} 스탬프투어`,
     short_name: name.slice(0, 12) || "스탬프투어",
@@ -661,8 +686,8 @@ router.get("/manifest/:projectSerial", async (req, res) => {
     scope: `/v/${projectSerial}/`,
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f6fbff",
-    theme_color: "#0d3b66",
+    background_color: "#f0fdf4",
+    theme_color: "#15803d",
     icons,
   }));
 });

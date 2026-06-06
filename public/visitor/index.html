@@ -8,10 +8,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>스탬프투어</title>
   <meta name="theme-color" content="#15803d">
+  <link rel="icon" href="/favicon-green.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" id="manifest-link" href="/visitor/manifest.json">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon-green.svg">
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: "Malgun Gothic", -apple-system, sans-serif; margin: 0;
@@ -347,6 +348,7 @@
     const parts = location.pathname.split('/').filter(Boolean); // ['v', serial, seq?]
     const projectSerial = parts[1] || '';
     const locationSeq = parts[2] || null; // null이면 홈(진행현황) 모드
+    const reservationToken = new URLSearchParams(location.search).get('resv') || null;
 
     // 우상단 × 닫기 버튼
     function closeApp() {
@@ -971,6 +973,27 @@
       }
     }
 
+    // 사전등록/현장등록 token 으로 자동 식별 (?resv=...)
+    async function tryReservationLogin() {
+      if (!reservationToken) return false;
+      try {
+        const r = await fetch(`/api/visitor/reservation-lookup?token=${encodeURIComponent(reservationToken)}`);
+        if (!r.ok) return false;
+        const d = await r.json();
+        if (!d.ok) return false;
+        // 같은 프로젝트인지 확인
+        if (d.project_serial !== projectSerial) return false;
+        const phone = normPhone(d.phone || '');
+        if (!validPhone(phone)) return false;
+        // 동의는 사전등록 폼에서 이미 받음 → consent + phone 자동 저장
+        lsSet(KC, '1');
+        lsSet(KP, phone);
+        lsSet(`tracker_resv_${projectSerial}`, reservationToken);  // 향후 참조
+        const { ok } = await identify(phone);
+        return ok;
+      } catch (e) { return false; }
+    }
+
     async function initFlow() {
       show('screen-loading');
       if (!projectSerial) { showError('잘못된 접근', '유효하지 않은 QR 코드입니다.'); return; }
@@ -979,6 +1002,9 @@
         const info = await fetch(`/api/visitor/project/${projectSerial}`).then(r => r.json());
         if (info && info.ok) applyBranding(info);
       } catch (e) {}
+
+      // 사전등록/현장등록 token 자동 식별 우선 시도
+      if (await tryReservationLogin()) { proceedAfterIdentify(); return; }
 
       if (!hasConsent()) { show('screen-consent'); return; }
       const p = getPhone();

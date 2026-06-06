@@ -155,7 +155,8 @@ router.get("/hosts", requireSupervisor, async (req, res) => {
             h.address_zip, h.address1, h.address2,
             h.project_pin_fail_count, h.project_locked,
             h.created_at, h.updated_at,
-            (SELECT COUNT(*) FROM projects p WHERE p.host_id = h.id) AS project_count
+            (SELECT COUNT(*) FROM projects p WHERE p.host_id = h.id) AS project_count,
+            (SELECT COUNT(*) FROM projects p WHERE p.host_id = h.id AND p.status = 'started') AS started_project_count
      FROM hosts h ${where}
      ORDER BY ${orderCol} ${orderDir}
      LIMIT ${pageSize} OFFSET ${offset}`,
@@ -590,6 +591,7 @@ const PROJ_SORT_COLS: Record<string, string> = {
   from_date: "p.from_date",
   to_date: "p.to_date",
   status: "p.status",
+  quote_amount: "p.quote_amount",
   quote_sent_at: "p.quote_sent_at",
   quote_read: "p.quote_read",
   deposit_confirmed_at: "p.deposit_confirmed_at",
@@ -695,7 +697,7 @@ router.get("/visit-status", requireSupervisor, async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.gift_qty, p.budget_amount,
-            h.organization_name,
+            h.id AS host_id, h.organization_name,
             (SELECT COUNT(*) FROM project_locations pl WHERE pl.project_id = p.id AND pl.disabled = 0) AS active_locations,
             (SELECT COUNT(DISTINCT vv.visitor_id) FROM visitor_visits vv JOIN project_locations plv ON plv.id = vv.location_id AND plv.disabled = 0 WHERE vv.project_id = p.id) AS visitor_count,
             (SELECT COUNT(*) FROM gifts gf WHERE gf.project_id = p.id) AS issued_gifts,
@@ -717,6 +719,7 @@ router.get("/visit-status", requireSupervisor, async (req, res) => {
     const recipients = Number(r.issued_gifts) || 0;
     return {
       id: r.id,
+      host_id: r.host_id,
       organization_name: r.organization_name,
       project_name: r.project_name,
       project_serial: r.project_serial,
@@ -1110,7 +1113,7 @@ router.get("/settlement", requireSupervisor, async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount, p.budget_amount,
-            h.organization_name,
+            h.id AS host_id, h.organization_name,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
@@ -1242,7 +1245,7 @@ router.get("/settlement/export", requireSupervisor, async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount, p.budget_amount,
-            h.organization_name,
+            h.id AS host_id, h.organization_name,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,

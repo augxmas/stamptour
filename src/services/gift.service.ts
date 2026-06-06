@@ -290,6 +290,18 @@ export async function useGift(token: string, pin: string, merchantId?: number | 
   const pinOk = await verifyPin(pin, String(g.pin_hash));
   if (!pinOk) return { ok: false, error: "invalid_pin" };
 
+  // 가맹점 지원 유형 검증 — Gift QR (목적지+Quiz) 는 'quest' 유형 approved 가맹점만 승인 가능
+  if (merchantId) {
+    const [appRows] = await pool.execute(
+      `SELECT id FROM project_applications
+       WHERE project_id = ? AND merchant_id = ? AND support_type='quest' AND status='approved'`,
+      [g.project_id, merchantId],
+    );
+    if (!Array.isArray(appRows) || appRows.length === 0) {
+      return { ok: false, error: "support_type_mismatch" };
+    }
+  }
+
   // 동시 사용 방지: issued 상태일 때만 used로 전환
   const [upd] = await pool.execute(
     "UPDATE gifts SET status = 'used', used_at = NOW() WHERE id = ? AND status = 'issued'",

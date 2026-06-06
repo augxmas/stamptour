@@ -348,16 +348,23 @@ router.post("/reset-password", requireMerchant, async (req, res) => {
 // ── Gift 결제 모드: 승인된 참여(진행중/시작대기) 프로젝트 목록 ──
 router.get("/gift-projects", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
+  // 한 가맹점이 한 프로젝트에 여러 유형 승인되어도 한 번만 표시 (QR 스캔으로 유형 구분)
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount,
             h.organization_name,
-            DATEDIFF(p.to_date, CURDATE()) AS remaining_days
+            DATEDIFF(p.to_date, CURDATE()) AS remaining_days,
+            (SELECT GROUP_CONCAT(pa.support_type ORDER BY pa.support_type SEPARATOR ',')
+             FROM project_applications pa
+             WHERE pa.project_id = p.id AND pa.merchant_id = ? AND pa.status='approved') AS approved_types
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
-     JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
-     WHERE pa.status = 'approved' AND p.status IN ('ready_to_start','started')
+     WHERE EXISTS (
+       SELECT 1 FROM project_applications pa2
+       WHERE pa2.project_id = p.id AND pa2.merchant_id = ? AND pa2.status='approved'
+     )
+     AND p.status IN ('ready_to_start','started')
      ORDER BY FIELD(p.status, 'started', 'ready_to_start'), p.from_date DESC, p.id DESC`,
-    [merchantId],
+    [merchantId, merchantId],
   );
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
 });
@@ -505,30 +512,71 @@ router.get("/projects", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
   const { project_name = "", organization = "", status = "", applied = "" } = req.query as Record<string, string>;
 
-  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND pa.id IS NOT NULL))";
+  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND EXISTS (SELECT 1 FROM project_applications pa WHERE pa.project_id = p.id AND pa.merchant_id = ?)))";
   const params: Array<string | number> = [merchantId];
 
   if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
   if (organization.trim()) { where += " AND h.organization_name LIKE ?"; params.push(`%${organization.trim()}%`); }
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
-  if (applied === "y") where += " AND pa.id IS NOT NULL";
-  else if (applied === "n") where += " AND pa.id IS NULL";
+  if (applied === "y") where += " AND EXISTS (SELECT 1 FROM project_applications pa2 WHERE pa2.project_id = p.id AND pa2.merchant_id = ?)";
+  else if (applied === "n") where += " AND NOT EXISTS (SELECT 1 FROM project_applications pa3 WHERE pa3.project_id = p.id AND pa3.merchant_id = ?)";
+  if (applied === "y" || applied === "n") params.push(merchantId);
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.from_date, p.to_date,
             p.gift_amount, p.gift_qty, h.organization_name,
-            DATEDIFF(p.to_date, CURDATE()) AS remaining_days,
-            pa.status AS application_status, pa.applied_at, pa.decided_at,
-            CASE WHEN pa.status = 'approved' THEN fn_decrypt(p.pin_enc, ?) ELSE NULL END AS pin_code
+            p.reservation_use, p.reservation_benefit_amount,
+            p.entry_use, p.entry_benefit_amount,
+            DATEDIFF(p.to_date, CURDATE()) AS remaining_days
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
-     LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    [encKey(), ...params],
+    params,
   );
 
-  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+  // 각 프로젝트별 가맹점의 유형별 신청 상태 + PIN 매핑
+  const projects = Array.isArray(rows) ? (rows as any[]) : [];
+  if (projects.length > 0) {
+    const ids = projects.map(p => p.id);
+    const placeholders = ids.map(() => "?").join(",");
+    const [appRows] = await pool.execute(
+      `SELECT pa.project_id, pa.support_type, pa.status, pa.applied_at, pa.decided_at,
+              fn_decrypt(p.pin_enc, ?) AS pin_code
+       FROM project_applications pa
+       JOIN projects p ON p.id = pa.project_id
+       WHERE pa.merchant_id = ? AND pa.project_id IN (${placeholders})`,
+      [encKey(), merchantId, ...ids],
+    );
+    const byProj = new Map<number, any[]>();
+    for (const r of (Array.isArray(appRows) ? appRows : []) as any[]) {
+      if (!byProj.has(r.project_id)) byProj.set(r.project_id, []);
+      byProj.get(r.project_id)!.push(r);
+    }
+    for (const p of projects) {
+      const apps = byProj.get(p.id) || [];
+      p.applications = apps.map(a => ({
+        support_type: a.support_type, status: a.status,
+        applied_at: a.applied_at, decided_at: a.decided_at,
+      }));
+      // 승인된 유형이 1개라도 있으면 PIN 노출
+      const approved = apps.find(a => a.status === "approved");
+      p.pin_code = approved ? approved.pin_code : null;
+      // 모든 가능 유형이 approved 인지 — 지원 버튼 활성 여부 결정
+      const possible: string[] = ["quest"];
+      if (Number(p.reservation_use) === 1) possible.push("reservation");
+      if (Number(p.entry_use) === 1) possible.push("entry");
+      const approvedTypes = new Set(apps.filter(a => a.status === "approved").map(a => a.support_type));
+      p.all_approved = possible.every(t => approvedTypes.has(t));
+      p.has_any_application = apps.length > 0;
+      // 마지막 신청 상태 (호환성용)
+      p.application_status = apps.length > 0
+        ? (apps.find(a => a.status === "pending")?.status || apps[0].status)
+        : null;
+    }
+  }
+
+  res.json({ ok: true, data: projects });
 });
 
 // ── 프로젝트: 조회조건 전체 엑셀 다운로드 (파일명: 소속기관_프로젝트일련번호) ──
@@ -604,13 +652,112 @@ router.get("/projects/export", requireMerchant, async (req, res) => {
   res.end();
 });
 
+// ── 사전등록/현장등록 QR 스캔 — 가맹점 조회 ──
+router.get("/reservation/:token", requireMerchant, async (req, res) => {
+  const token = String(req.params.token || "").trim();
+  if (!token) { res.status(400).json({ ok:false, error:"missing_token" }); return; }
+  const [rows] = await pool.execute(
+    `SELECT r.id, r.project_id, r.mode, r.status, r.amount, r.email_lower, r.fields_json,
+            r.activated_at, r.used_at, r.created_at,
+            p.project_name, p.project_serial
+     FROM reservations r
+     JOIN projects p ON p.id = r.project_id
+     WHERE r.token = ?`, [token],
+  );
+  const r = (Array.isArray(rows) ? rows[0] : null) as any;
+  if (!r) { res.status(404).json({ ok:false, error:"reservation_not_found", message:"유효하지 않은 QR 입니다." }); return; }
+  let fields: any = {};
+  try { fields = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+  res.json({
+    ok: true,
+    reservation: {
+      id: r.id, project_id: r.project_id,
+      project_name: r.project_name, project_serial: r.project_serial,
+      mode: r.mode, status: r.status, amount: Number(r.amount || 0),
+      fields,
+      activated_at: r.activated_at,
+      used_at: r.used_at,
+      applied_at: r.created_at,
+    },
+  });
+});
+
+// ── 사전등록/현장등록 QR 사용 처리 — PIN + 지원 유형 검증 ──
+router.post("/reservation/:token/use", requireMerchant, async (req, res) => {
+  const merchant = req.session.merchant!;
+  const token = String(req.params.token || "").trim();
+  const pin = String((req.body || {}).pin || "").trim();
+  if (!token) { res.status(400).json({ ok:false, error:"missing_token" }); return; }
+  if (!/^\d{6}$/.test(pin)) { res.status(400).json({ ok:false, error:"invalid_pin", message:"비밀번호는 숫자 6자리입니다." }); return; }
+  // reservation + project 조회
+  const [rrs] = await pool.execute(
+    `SELECT r.id, r.project_id, r.mode, r.status, r.amount, r.fields_json,
+            p.pin_hash, p.project_name
+     FROM reservations r JOIN projects p ON p.id = r.project_id
+     WHERE r.token = ?`, [token],
+  );
+  const rec = (Array.isArray(rrs) ? rrs[0] : null) as any;
+  if (!rec) { res.status(404).json({ ok:false, error:"reservation_not_found", message:"유효하지 않은 QR 입니다." }); return; }
+  if (rec.status === "used") { res.status(409).json({ ok:false, error:"already_used", message:"이미 사용된 QR 입니다." }); return; }
+  // PIN 검증 (프로젝트 비밀번호)
+  const pinOk = await bcrypt.compare(pin, String(rec.pin_hash || ""));
+  if (!pinOk) { res.status(400).json({ ok:false, error:"invalid_pin", message:"비밀번호가 일치하지 않습니다." }); return; }
+  // 가맹점 지원 유형 검증 — 해당 mode 가 approved 인지
+  const requiredType = rec.mode === "reservation" ? "reservation" : "entry";
+  const [appRows] = await pool.execute(
+    `SELECT id FROM project_applications
+     WHERE project_id = ? AND merchant_id = ? AND support_type = ? AND status='approved'`,
+    [rec.project_id, merchant.id, requiredType],
+  );
+  if (!Array.isArray(appRows) || appRows.length === 0) {
+    const label = requiredType === "reservation" ? "사전등록" : "현장등록";
+    res.status(403).json({ ok:false, error:"support_type_mismatch",
+      message:`지원하지 않는 혜택 유형의 QR 코드입니다. (귀 가맹점은 '${label}' 유형 승인을 받지 않았습니다.) QR 코드를 승인해 줄 수 없습니다.` });
+    return;
+  }
+  // 동시 사용 방지: pending|activated 상태일 때만 used 로 전환
+  const [upd] = await pool.execute(
+    `UPDATE reservations SET status = 'used', used_at = NOW(), used_by_merchant_id = ?
+     WHERE id = ? AND status IN ('pending','activated')`,
+    [merchant.id, rec.id],
+  );
+  if ((upd as any).affectedRows === 0) {
+    res.status(409).json({ ok:false, error:"already_used", message:"이미 사용된 QR 입니다." });
+    return;
+  }
+  // gift_redemptions 에 'normal' 사용내역 기록 (정산 집계용) — visitor 매핑은 fields_json.mobile 로 phone 매칭
+  try {
+    let mobile = "";
+    try {
+      const f = rec.fields_json ? JSON.parse(rec.fields_json) : {};
+      mobile = String(f.mobile || "").replace(/\D/g, "");
+    } catch {}
+    let visitorId: number | null = null;
+    if (mobile) {
+      const [vRows] = await pool.execute(
+        `SELECT id FROM visitors WHERE project_id = ? AND REPLACE(REPLACE(phone,'-',''),' ','') = ? LIMIT 1`,
+        [rec.project_id, mobile],
+      );
+      if (Array.isArray(vRows) && vRows.length > 0) visitorId = Number((vRows as any)[0].id);
+    }
+    if (visitorId) {
+      await pool.execute(
+        `INSERT INTO gift_redemptions (project_id, visitor_id, merchant_id, redemption_type, amount, eligible, redeemed_at)
+         VALUES (?, ?, ?, 'normal', ?, 1, NOW())`,
+        [rec.project_id, visitorId, merchant.id, Number(rec.amount || 0)],
+      );
+    }
+  } catch (_) { /* 매핑 실패 시 redemption 기록 생략 — 사용처리 자체는 reservation row 에 기록됨 */ }
+  res.json({ ok:true, amount: Number(rec.amount || 0), message: "사용 처리되었습니다." });
+});
+
 // ── 프로젝트 지원(참여 신청) ──
 router.post("/projects/:id/apply", requireMerchant, async (req, res) => {
   const merchant = req.session.merchant!;
   const projectId = Number(req.params.id);
 
   const [projRows] = await pool.execute(
-    "SELECT id, host_id, project_name, project_serial, status FROM projects WHERE id = ?",
+    "SELECT id, host_id, project_name, project_serial, status, reservation_use, entry_use FROM projects WHERE id = ?",
     [projectId],
   );
   const project = (Array.isArray(projRows) ? projRows[0] : null) as any;
@@ -623,19 +770,65 @@ router.post("/projects/:id/apply", requireMerchant, async (req, res) => {
     return;
   }
 
-  const [existRows] = await pool.execute(
-    "SELECT id, status FROM project_applications WHERE project_id = ? AND merchant_id = ?",
-    [projectId, merchant.id],
-  );
-  if (Array.isArray(existRows) && existRows.length > 0) {
-    res.status(400).json({ error: "이미 지원한 프로젝트입니다." });
+  // 지원 유형(support_types) 검증 — 최소 1개 이상 선택 필수
+  const incoming = (req.body as any)?.support_types;
+  const supportTypes = Array.isArray(incoming)
+    ? incoming.map(String).filter(s => ["quest","reservation","entry"].includes(s))
+    : [];
+  if (supportTypes.length === 0) {
+    res.status(400).json({ error: "support_types_required",
+      message: "지원 유형(목적지+Quiz / 사전등록 / 현장등록 중 최소 1개)을 선택해 주세요." });
+    return;
+  }
+  // 프로젝트가 실제로 해당 유형을 사용하지 않으면 차단
+  if (supportTypes.includes("reservation") && Number((project as any).reservation_use) !== 1) {
+    res.status(400).json({ error: "type_not_available", message: "해당 프로젝트는 사전등록을 사용하지 않습니다." });
+    return;
+  }
+  if (supportTypes.includes("entry") && Number((project as any).entry_use) !== 1) {
+    res.status(400).json({ error: "type_not_available", message: "해당 프로젝트는 현장등록을 사용하지 않습니다." });
     return;
   }
 
-  await pool.execute(
-    "INSERT INTO project_applications (project_id, merchant_id, status) VALUES (?, ?, 'pending')",
+  // 기존 신청 (유형별) — approved 인 유형은 다시 지원 불가, 그 외는 가능
+  const [existRows] = await pool.execute(
+    "SELECT support_type, status FROM project_applications WHERE project_id = ? AND merchant_id = ?",
     [projectId, merchant.id],
   );
+  const existMap = new Map<string, string>();
+  for (const r of (Array.isArray(existRows) ? existRows : []) as any[]) {
+    existMap.set(String(r.support_type), String(r.status));
+  }
+
+  // 유효 유형 필터: 이미 approved 인 유형은 제외, 그 외는 row 갱신/신규 insert
+  const insertable: string[] = [];
+  const reapply: string[] = [];   // pending/rejected → pending 으로 재신청
+  const alreadyApproved: string[] = [];
+  for (const t of supportTypes) {
+    const cur = existMap.get(t);
+    if (cur === "approved") alreadyApproved.push(t);
+    else if (cur) reapply.push(t);
+    else insertable.push(t);
+  }
+  if (insertable.length === 0 && reapply.length === 0) {
+    res.status(400).json({ error: "all_already_approved",
+      message: "선택하신 유형은 이미 모두 승인된 상태입니다." });
+    return;
+  }
+  // INSERT 신규
+  for (const t of insertable) {
+    await pool.execute(
+      "INSERT INTO project_applications (project_id, merchant_id, status, support_type) VALUES (?, ?, 'pending', ?)",
+      [projectId, merchant.id, t],
+    );
+  }
+  // UPDATE 재신청 (rejected/pending → pending)
+  for (const t of reapply) {
+    await pool.execute(
+      "UPDATE project_applications SET status='pending', decided_at=NULL, decided_reason=NULL, applied_at=NOW() WHERE project_id = ? AND merchant_id = ? AND support_type = ?",
+      [projectId, merchant.id, t],
+    );
+  }
 
   // host에게 지원 알림 (실패해도 신청은 성공)
   try {

@@ -26,6 +26,18 @@ const iconUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+// 입장관리 혜택 이미지 업로드 (사전등록/현장등록)
+const benefitImageDir = path.join(process.cwd(), "uploads", "benefit-images");
+fs.mkdirSync(benefitImageDir, { recursive: true });
+const benefitImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, benefitImageDir),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`),
+  }),
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 // 퀴즈 이미지 업로드 (질문/답항/정답·오답 결과 이미지)
 const quizImageDir = path.join(process.cwd(), "uploads", "quiz-images");
 fs.mkdirSync(quizImageDir, { recursive: true });
@@ -69,6 +81,9 @@ router.get("/quote-config", requireHost, (_req, res) => {
     mobileUnitFee: Number(process.env.MOBILE_DESIGN_UNIT_FEE ?? 100000),
     faviconFee: Number(process.env.FAVICON_FEE ?? 30000),
     initialSetupFee: Number(process.env.INITIAL_SETUP_FEE ?? 500000),
+    reservationDailyFee: Number(process.env.RESERVATION_DAILY_FEE ?? 10000),
+    entryDailyFee:       Number(process.env.ENTRY_DAILY_FEE       ?? 10000),
+    fieldAgentFee:       Number(process.env.FIELD_AGENT_FEE       ?? 50000),
   });
 });
 
@@ -76,6 +91,62 @@ router.get("/kakao/js-key", requireHost, (_req, res) => {
   const key = process.env.KAKAO_JS_KEY ?? "";
   if (!key) { res.status(500).json({ error: "KAKAO_JS_KEY not configured" }); return; }
   res.json({ key });
+});
+
+// ── 발송이력 (이메일 로그) — 현재 host_id 기준 ──
+router.get("/email-logs", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(10, Number(req.query.pageSize) || 20));
+  const offset = (page - 1) * pageSize;
+  const status = String(req.query.status || "");
+  const trig   = String(req.query.trigger || "");
+  const q      = String(req.query.q || "").trim();
+  const where: string[] = ["l.host_id = ?"];
+  const params: any[] = [host.id];
+  if (status === "sent" || status === "failed") {
+    where.push("l.status = ?"); params.push(status);
+  }
+  if (trig === "auto" || trig === "manual") {
+    where.push("l.trigger_type = ?"); params.push(trig);
+  }
+  if (q) {
+    where.push("(l.to_email LIKE ? OR l.subject LIKE ?)");
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const [countRows] = await pool.execute(
+    `SELECT COUNT(*) AS total FROM email_logs l ${whereSql}`, params,
+  );
+  const total = Number((countRows as any)[0]?.total || 0);
+  const [rows] = await pool.execute(
+    `SELECT l.id, l.template_key, l.to_email, l.subject, l.project_id,
+            p.project_name, p.project_serial,
+            l.status, l.trigger_type, l.error_msg, l.created_at
+     FROM email_logs l
+     LEFT JOIN projects p ON p.id = l.project_id
+     ${whereSql}
+     ORDER BY l.id DESC
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    params,
+  );
+  res.json({
+    ok: true,
+    page, pageSize, total,
+    data: (Array.isArray(rows) ? rows : []).map((r: any) => ({
+      id: r.id,
+      template_key: r.template_key,
+      to_email: r.to_email,
+      subject: r.subject,
+      project_id: r.project_id,
+      project_name: r.project_name,
+      project_serial: r.project_serial,
+      status: r.status,
+      trigger_type: r.trigger_type,
+      error_msg: r.error_msg,
+      created_at: r.created_at,
+    })),
+  });
 });
 
 router.post("/project-pin/send", requireHost, async (req, res) => {
@@ -203,15 +274,43 @@ router.post("/projects", requireHost, async (req, res) => {
 
     const serial = await nextProjectSerial(connection, new Date());
     const pinHash = await bcrypt.hash(pin_input, 10);
-    const quote = calculateQuote(from_date, to_date);
+
+    // 사전등록/현장등록/현장요원관리 옵션 (견적 + 저장 양쪽에 반영)
+    const reservationUse = (req.body as any).reservation_use ? 1 : 0;
+    const entryUse       = (req.body as any).entry_use ? 1 : 0;
+    const fieldAgentUse  = (req.body as any).field_agent_use ? 1 : 0;
+    let reservationStartAt: string | null = null;
+    const rsvStartRaw = String((req.body as any).reservation_start_at || "").trim();
+    if (reservationUse) {
+      if (rsvStartRaw) {
+        const sa = new Date(rsvStartRaw.replace(" ", "T"));
+        if (!isNaN(sa.getTime())) reservationStartAt = rsvStartRaw.replace("T", " ").slice(0, 19);
+      } else {
+        // 기본: 시작일 -10일 09:00
+        const fd = new Date(`${from_date}T09:00:00`);
+        fd.setDate(fd.getDate() - 10);
+        const z = (n: number) => String(n).padStart(2, "0");
+        reservationStartAt = `${fd.getFullYear()}-${z(fd.getMonth()+1)}-${z(fd.getDate())} ${z(fd.getHours())}:${z(fd.getMinutes())}:00`;
+      }
+    }
+
+    const quote = calculateQuote(from_date, to_date, {
+      reservation_use: !!reservationUse,
+      reservation_start_at: reservationStartAt,
+      entry_use: !!entryUse,
+      field_agent_use: !!fieldAgentUse,
+    });
     const giftAmountNum = Number(gift_amount);
     const budgetAmount = giftAmountNum * giftQtyNum;
 
     const [insertResult] = await connection.execute(
       `INSERT INTO projects
-       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, stop_on_budget_exceed, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW())`,
-      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, stopOverbudget, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total],
+       (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, stop_on_budget_exceed, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at,
+        reservation_enabled, reservation_use, reservation_start_at, entry_benefit_enabled, entry_use, field_agent_use)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW(),
+               ?, ?, ?, ?, ?, ?)`,
+      [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, stopOverbudget, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total,
+       reservationUse, reservationUse, reservationStartAt, entryUse, entryUse, fieldAgentUse],
     );
 
     const projectId = Number((insertResult as any).insertId);
@@ -309,6 +408,7 @@ router.get("/projects", requireHost, async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT p.*,
+            fn_decrypt(p.pin_enc, ?) AS pin,
             (SELECT COUNT(*) FROM project_gift_tiers t WHERE t.project_id = p.id AND t.threshold_pct < 100) AS extra_tier_count,
             (SELECT COUNT(*) FROM project_locations pl WHERE pl.project_id = p.id AND pl.disabled = 0) AS active_locations,
             (SELECT COUNT(DISTINCT vv.visitor_id)
@@ -323,11 +423,14 @@ router.get("/projects", requireHost, async (req, res) => {
             (SELECT COALESCE(SUM(gr.amount), 0) FROM gift_redemptions gr WHERE gr.project_id = p.id) AS gift_spent,
             (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id) AS applied_count,
             (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id AND pa.status = 'approved') AS approved_count,
-            (SELECT COUNT(*) FROM project_quizzes pq WHERE pq.project_id = p.id AND pq.disabled = 0) AS quiz_count
+            (SELECT COUNT(*) FROM project_quizzes pq WHERE pq.project_id = p.id AND pq.disabled = 0) AS quiz_count,
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation') AS rsv_applied_count,
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation' AND rv.activated_at IS NOT NULL) AS rsv_visited_count,
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'entry') AS entry_count
      FROM projects p ${where}
      ORDER BY p.created_at DESC
      LIMIT ${pageSize} OFFSET ${offset}`,
-    [...params],
+    [encKey(), ...params],
   );
 
   const data = Array.isArray(rows) ? rows.map((item: any) => ({
@@ -463,6 +566,10 @@ router.get("/projects/:id", requireHost, async (req, res) => {
             stop_on_budget_exceed,
             budget_amount, status, quote_amount, quote_days,
             quote_sent_at, quote_read_at, deposit_confirmed_at, approved_at, started_at,
+            reservation_use, reservation_enabled,
+            reservation_benefit_amount, reservation_benefit_max_count, reservation_start_at,
+            entry_use, entry_benefit_enabled,
+            entry_benefit_amount, entry_benefit_max_count,
             created_at, updated_at
        FROM projects WHERE id = ?`,
     [projectId],
@@ -519,6 +626,12 @@ router.put("/projects/:id", requireHost, async (req, res) => {
     prize_qty = "0",
     quiz_bonus_per_correct = "0",
     stop_on_budget_exceed = "0",
+    reservation_use,
+    reservation_benefit_amount,
+    reservation_benefit_max_count,
+    entry_use,
+    entry_benefit_amount,
+    entry_benefit_max_count,
   } = req.body as Record<string, string>;
   if (!project_name || !description || !from_date || !to_date || !gift_amount || !gift_qty) {
     res.status(400).json({ error: "필수값을 입력해 주세요." });
@@ -540,18 +653,34 @@ router.put("/projects/:id", requireHost, async (req, res) => {
   const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
   const stopOverbudget2 = String(stop_on_budget_exceed) === "1" ? 1 : 0;
   const budgetAmount = giftAmountNum * giftQtyNum;
-  const newQuote = calculateQuote(from_date, to_date);
+  // 사전등록 / 현장등록 옵션
+  const rUse = String(reservation_use) === "1" ? 1 : 0;
+  const eUse = String(entry_use) === "1" ? 1 : 0;
+  const rAmt = Math.max(0, Math.floor(Number(reservation_benefit_amount) || 0));
+  const rMax = Math.max(0, Math.floor(Number(reservation_benefit_max_count) || 0));
+  const eAmt = Math.max(0, Math.floor(Number(entry_benefit_amount) || 0));
+  const eMax = Math.max(0, Math.floor(Number(entry_benefit_max_count) || 0));
+
+  const newQuote = calculateQuote(from_date, to_date, {
+    reservation_use: !!rUse, entry_use: !!eUse,
+  });
 
   await pool.execute(
     `UPDATE projects SET
         project_name = ?, description = ?, from_date = ?, to_date = ?,
         gift_amount = ?, gift_qty = ?, prize_amount = ?, prize_qty = ?,
-        quiz_bonus_per_correct = ?, stop_on_budget_exceed = ?, budget_amount = ?, updated_at = NOW()
+        quiz_bonus_per_correct = ?, stop_on_budget_exceed = ?, budget_amount = ?,
+        reservation_use = ?, reservation_enabled = ?, reservation_benefit_amount = ?, reservation_benefit_max_count = ?,
+        entry_use = ?, entry_benefit_enabled = ?, entry_benefit_amount = ?, entry_benefit_max_count = ?,
+        updated_at = NOW()
       WHERE id = ?`,
     [
       project_name, description, from_date, to_date,
       giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum,
-      quizBonusNum, stopOverbudget2, budgetAmount, projectId,
+      quizBonusNum, stopOverbudget2, budgetAmount,
+      rUse, rUse, rAmt, rMax,
+      eUse, eUse, eAmt, eMax,
+      projectId,
     ],
   );
 
@@ -772,15 +901,74 @@ router.get("/projects/:id/visit-stats", requireHost, async (req, res) => {
   );
   const dailyCompletions = (Array.isArray(completionRows) ? completionRows : []) as any[];
 
+  // ── 정산 (Gift/Quiz 분리) — 가맹점별 합계 + 일자별 합계
+  const k = encKey();
+  // 프로젝트 단가 (집계 쿼리에서 빼서 only_full_group_by 우회)
+  const [projAmtRows] = await pool.execute(
+    `SELECT gift_amount FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const giftUnit = Number(((Array.isArray(projAmtRows) ? projAmtRows[0] : null) as any)?.gift_amount || 0);
+
+  // (1) 가맹점별 합계
+  const [merchTotalRows] = await pool.execute(
+    `SELECT gr.merchant_id,
+            COALESCE(ANY_VALUE(fn_decrypt(m.merchant_name, ?)), '(미기록)') AS merchant_name,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END)        AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant'  THEN gr.amount ELSE 0 END) AS grant_amount
+       FROM gift_redemptions gr
+       LEFT JOIN merchants m ON m.id = gr.merchant_id
+      WHERE gr.project_id = ?
+      GROUP BY gr.merchant_id
+      ORDER BY merchant_name ASC`,
+    [k, projectId],
+  );
+  const merchantSettlement = (Array.isArray(merchTotalRows) ? merchTotalRows : []).map((r: any) => {
+    const usedCnt   = Number(r.used_count || 0);
+    const usedTotal = Number(r.used_amount || 0);
+    const grantTot  = Number(r.grant_amount || 0);
+    const giftUsed  = giftUnit * usedCnt;
+    const quizUsed  = Math.max(0, usedTotal - giftUsed);
+    const giftTotal = giftUsed + grantTot;
+    return {
+      merchant_id: r.merchant_id ?? null,
+      merchant_name: String(r.merchant_name || "(미기록)"),
+      gift: giftTotal, quiz: quizUsed, total: giftTotal + quizUsed,
+    };
+  });
+
+  // (2) 일자별 합계
+  const [dailySettleRows] = await pool.execute(
+    `SELECT DATE(gr.redeemed_at) AS d,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN 1 ELSE 0 END)        AS used_count,
+            SUM(CASE WHEN gr.redemption_type='normal' THEN gr.amount ELSE 0 END) AS used_amount,
+            SUM(CASE WHEN gr.redemption_type='grant'  THEN gr.amount ELSE 0 END) AS grant_amount
+       FROM gift_redemptions gr
+      WHERE gr.project_id = ?
+      GROUP BY d
+      ORDER BY d ASC`,
+    [projectId],
+  );
+  const dailySettlement = (Array.isArray(dailySettleRows) ? dailySettleRows : []).map((r: any) => {
+    const usedCnt   = Number(r.used_count || 0);
+    const usedTotal = Number(r.used_amount || 0);
+    const grantTot  = Number(r.grant_amount || 0);
+    const giftUsed  = giftUnit * usedCnt;
+    const quizUsed  = Math.max(0, usedTotal - giftUsed);
+    const giftTotal = giftUsed + grantTot;
+    return { date: fmtYmdLocal(r.d), gift: giftTotal, quiz: quizUsed, total: giftTotal + quizUsed };
+  });
+
   // 두 일자 시리즈를 union → 모든 날짜에 0 채우기
   const dateSet = new Set<string>();
-  for (const r of dailyVisitors) dateSet.add(String(r.d).slice(0, 10));
-  for (const r of dailyCompletions) dateSet.add(String(r.d).slice(0, 10));
+  for (const r of dailyVisitors) dateSet.add(fmtYmdLocal(r.d));
+  for (const r of dailyCompletions) dateSet.add(fmtYmdLocal(r.d));
   const allDates = Array.from(dateSet).sort();
   const visMap = new Map<string, number>();
-  for (const r of dailyVisitors) visMap.set(String(r.d).slice(0, 10), Number(r.visitors));
+  for (const r of dailyVisitors) visMap.set(fmtYmdLocal(r.d), Number(r.visitors));
   const compMap = new Map<string, number>();
-  for (const r of dailyCompletions) compMap.set(String(r.d).slice(0, 10), Number(r.completed));
+  for (const r of dailyCompletions) compMap.set(fmtYmdLocal(r.d), Number(r.completed));
 
   res.json({
     ok: true,
@@ -803,8 +991,23 @@ router.get("/projects/:id/visit-stats", requireHost, async (req, res) => {
       visitors: visMap.get(d) || 0,
       completed: compMap.get(d) || 0,
     })),
+    merchant_settlement: merchantSettlement,
+    daily_settlement: dailySettlement,
   });
 });
+
+// DATE/Date → 'YYYY-MM-DD' (로컬 타임존 보존). mysql2가 Date 객체로 주는 경우
+// 'Fri Jun 05' 같은 문자열로 망가지는 문제를 방지.
+function fmtYmdLocal(v: any): string {
+  if (!v) return "";
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, "0");
+    const d = String(v.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return String(v).slice(0, 10);
+}
 
 router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), async (req, res) => {
   const host = req.session.host!;
@@ -1087,6 +1290,766 @@ async function ensureHostOwnsProject(projectId: number, hostId: number): Promise
   );
   return Array.isArray(rows) && rows.length > 0;
 }
+
+// ============================================================
+//  입장관리(사전등록) — Phase 1: 항목/혜택 설정 + 예약 목록 조회
+// ============================================================
+
+// 입장현황 — 호스트 소유 모든 프로젝트의 사전등록/현장등록 설정 일괄
+// 방문객현황 — 프로젝트별 사전·현장 등록 신청자 + 방문 여부 + 입력 form 정보
+router.get("/projects/:id/visitors", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  const [proj] = await pool.execute(
+    `SELECT id, project_name, project_serial FROM projects WHERE id = ?`, [projectId],
+  );
+  const p = (Array.isArray(proj) ? proj[0] : null) as any;
+  if (!p) { res.status(404).json({ ok: false }); return; }
+  const [rows] = await pool.execute(
+    `SELECT id, mode, status, email_lower, fields_json, amount,
+            created_at, activated_at, used_at
+     FROM reservations
+     WHERE project_id = ?
+     ORDER BY id DESC`, [projectId],
+  );
+  const data = (Array.isArray(rows) ? rows : []).map((r: any) => {
+    let fields: any = {};
+    try { fields = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+    return {
+      id: r.id,
+      mode: r.mode,
+      status: r.status,
+      email: fields.email || r.email_lower,
+      name: fields.name || "",
+      mobile: fields.mobile || "",
+      fields,
+      amount: Number(r.amount || 0),
+      applied_at: r.created_at,
+      visited_at: r.activated_at,   // 현장 방문 처리 시각
+      used_at: r.used_at,
+      visited: !!r.activated_at,
+    };
+  });
+  const totals = {
+    total: data.length,
+    visited: data.filter(d => d.visited).length,
+    not_visited: data.filter(d => !d.visited).length,
+    used: data.filter(d => d.used_at).length,
+    reservation: data.filter(d => d.mode === "reservation").length,
+    entry: data.filter(d => d.mode === "entry").length,
+  };
+  res.json({ ok: true, project: { id: p.id, name: p.project_name, serial: p.project_serial }, totals, data });
+});
+
+router.get("/entry-status", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const [rows] = await pool.execute(
+    `SELECT id, project_name, project_serial, status, created_at,
+            reservation_enabled, reservation_benefit_amount, reservation_benefit_label,
+            reservation_benefit_max_count, reservation_stop_on_limit, reservation_benefit_image_path,
+            entry_benefit_enabled, entry_benefit_amount, entry_benefit_label,
+            entry_benefit_max_count, entry_stop_on_limit, entry_benefit_image_path
+     FROM projects
+     WHERE host_id = ? AND status != 'cancelled'
+     ORDER BY created_at DESC, id DESC`,
+    [hostId],
+  );
+  const data = (Array.isArray(rows) ? rows : []).map((p: any) => ({
+    id: p.id,
+    project_name: p.project_name,
+    project_serial: p.project_serial,
+    status: p.status,
+    created_at: p.created_at,
+    reservation: {
+      enabled: Number(p.reservation_enabled) === 1,
+      amount: Number(p.reservation_benefit_amount || 0),
+      label: p.reservation_benefit_label || "",
+      max_count: Number(p.reservation_benefit_max_count || 0),
+      stop_on_limit: Number(p.reservation_stop_on_limit) === 1,
+      image_url: toUploadUrl(p.reservation_benefit_image_path),
+    },
+    entry: {
+      enabled: Number(p.entry_benefit_enabled) === 1,
+      amount: Number(p.entry_benefit_amount || 0),
+      label: p.entry_benefit_label || "",
+      max_count: Number(p.entry_benefit_max_count || 0),
+      stop_on_limit: Number(p.entry_stop_on_limit) === 1,
+      image_url: toUploadUrl(p.entry_benefit_image_path),
+    },
+  }));
+  res.json({ ok: true, data });
+});
+
+// 입장권관리 엑셀 다운로드 (조회조건: project_name + status)
+router.get("/entry-status/export", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const { project_name = "", status = "" } = req.query as Record<string, string>;
+
+  let where = "WHERE host_id = ? AND status != 'cancelled'";
+  const params: Array<string | number> = [hostId];
+  if (project_name.trim()) { where += " AND project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
+  if (["quoted","deposit_wait","deposit_confirmed","ready_to_start","started","completed"].includes(status)) {
+    where += " AND status = ?"; params.push(status);
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT id, project_name, project_serial, status, created_at,
+            reservation_enabled, reservation_benefit_amount, reservation_benefit_label,
+            reservation_benefit_max_count, reservation_stop_on_limit,
+            entry_benefit_enabled, entry_benefit_amount, entry_benefit_label,
+            entry_benefit_max_count, entry_stop_on_limit
+     FROM projects ${where}
+     ORDER BY created_at DESC, id DESC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const STATUS_KO: Record<string, string> = {
+    quoted: "견적", deposit_wait: "입금대기", deposit_confirmed: "입금확인",
+    ready_to_start: "시작대기", started: "진행중", completed: "완료",
+  };
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("입장권관리");
+  ws.columns = [
+    { header: "프로젝트명", key: "name", width: 26 },
+    { header: "일련번호", key: "serial", width: 16 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "등록일", key: "created_at", width: 12 },
+    { header: "[사전등록] 혜택여부", key: "r_enabled", width: 14 },
+    { header: "[사전등록] 혜택금액", key: "r_amount", width: 14 },
+    { header: "[사전등록] 발급한도", key: "r_max", width: 12 },
+    { header: "[사전등록] 한도초과허용", key: "r_over", width: 14 },
+    { header: "[사전등록] 설명", key: "r_label", width: 22 },
+    { header: "[현장등록] 혜택여부", key: "e_enabled", width: 14 },
+    { header: "[현장등록] 혜택금액", key: "e_amount", width: 14 },
+    { header: "[현장등록] 발급한도", key: "e_max", width: 12 },
+    { header: "[현장등록] 한도초과허용", key: "e_over", width: 14 },
+    { header: "[현장등록] 설명", key: "e_label", width: 22 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  for (const p of list) {
+    const rOn = Number(p.reservation_enabled) === 1;
+    const eOn = Number(p.entry_benefit_enabled) === 1;
+    ws.addRow({
+      name: p.project_name,
+      serial: p.project_serial,
+      status: STATUS_KO[p.status as string] ?? p.status,
+      created_at: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
+      r_enabled: rOn ? "활성" : "비활성",
+      r_amount: rOn ? Number(p.reservation_benefit_amount || 0) : "",
+      r_max: rOn ? (Number(p.reservation_benefit_max_count) > 0 ? Number(p.reservation_benefit_max_count) : "무제한") : "",
+      r_over: rOn ? (Number(p.reservation_stop_on_limit) === 1 ? "차단" : "허용") : "",
+      r_label: rOn ? (p.reservation_benefit_label || "") : "",
+      e_enabled: eOn ? "활성" : "비활성",
+      e_amount: eOn ? Number(p.entry_benefit_amount || 0) : "",
+      e_max: eOn ? (Number(p.entry_benefit_max_count) > 0 ? Number(p.entry_benefit_max_count) : "무제한") : "",
+      e_over: eOn ? (Number(p.entry_stop_on_limit) === 1 ? "차단" : "허용") : "",
+      e_label: eOn ? (p.entry_benefit_label || "") : "",
+    });
+  }
+  ["r_amount","e_amount"].forEach((key) => {
+    const col = ws.getColumn(key); col.numFmt = "#,##0"; col.alignment = { horizontal: "right" };
+  });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent("입장권관리")}.xlsx`);
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+// 사용 가능한 항목 카탈로그 (시스템 공통)
+router.get("/field-definitions", requireHost, async (_req, res) => {
+  const [rows] = await pool.execute(
+    `SELECT id, field_key, label_ko, input_type, choice_type, choice_type_locked,
+            options_json, placeholder, sort_order, is_system
+     FROM field_definitions WHERE disabled = 0
+     ORDER BY sort_order ASC, id ASC`,
+  );
+  const data = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+    ...r,
+    choice_type_locked: Number(r.choice_type_locked) === 1,
+    options: r.options_json ? (() => { try { return JSON.parse(r.options_json); } catch { return null; } })() : null,
+  }));
+  res.json({ ok: true, data });
+});
+
+// 프로젝트별 사전등록 설정 조회
+router.get("/projects/:id/reservation-config", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+
+  const [projRows] = await pool.execute(
+    `SELECT id, project_name, project_serial, status, from_date, to_date,
+            reservation_enabled, reservation_use,
+            reservation_benefit_amount, reservation_benefit_label,
+            reservation_benefit_message,
+            reservation_benefit_max_count, reservation_stop_on_limit, reservation_benefit_image_path,
+            reservation_start_at,
+            entry_benefit_enabled, entry_use,
+            entry_benefit_amount, entry_benefit_label,
+            entry_benefit_message,
+            entry_benefit_max_count, entry_stop_on_limit, entry_benefit_image_path
+     FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const proj = (Array.isArray(projRows) ? projRows[0] : null) as any;
+  if (!proj) { res.status(404).json({ error: "project_not_found" }); return; }
+
+  const [fieldRows] = await pool.execute(
+    `SELECT prf.field_id, prf.is_required, prf.sort_order, prf.choice_type_override,
+            fd.field_key, fd.label_ko, fd.input_type, fd.options_json, fd.placeholder,
+            fd.choice_type, fd.choice_type_locked
+     FROM project_reservation_fields prf
+     JOIN field_definitions fd ON fd.id = prf.field_id
+     WHERE prf.project_id = ?
+     ORDER BY prf.sort_order ASC, prf.field_id ASC`,
+    [projectId],
+  );
+
+  // 예약 카운트(요약)
+  const [cntRows] = await pool.execute(
+    `SELECT
+        SUM(CASE WHEN status='pending'   THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status='activated' THEN 1 ELSE 0 END) AS activated,
+        SUM(CASE WHEN status='used'      THEN 1 ELSE 0 END) AS used,
+        COUNT(*) AS total
+     FROM reservations WHERE project_id = ?`,
+    [projectId],
+  );
+
+  res.json({
+    ok: true,
+    project: {
+      id: proj.id, project_name: proj.project_name, project_serial: proj.project_serial,
+      status: proj.status, from_date: proj.from_date, to_date: proj.to_date,
+      reservation: {
+        enabled: Number(proj.reservation_enabled) === 1,
+        use_allowed: Number(proj.reservation_use) === 1,
+        amount: Number(proj.reservation_benefit_amount || 0),
+        label: proj.reservation_benefit_label || "",
+        message: proj.reservation_benefit_message || "",
+        max_count: Number(proj.reservation_benefit_max_count || 0),
+        stop_on_limit: Number(proj.reservation_stop_on_limit) === 1,
+        image_url: toUploadUrl(proj.reservation_benefit_image_path),
+        start_at: proj.reservation_start_at,
+      },
+      entry: {
+        enabled: Number(proj.entry_benefit_enabled) === 1,
+        use_allowed: Number(proj.entry_use) === 1,
+        amount: Number(proj.entry_benefit_amount || 0),
+        label: proj.entry_benefit_label || "",
+        message: proj.entry_benefit_message || "",
+        max_count: Number(proj.entry_benefit_max_count || 0),
+        stop_on_limit: Number(proj.entry_stop_on_limit) === 1,
+        image_url: toUploadUrl(proj.entry_benefit_image_path),
+      },
+    },
+    fields: (Array.isArray(fieldRows) ? fieldRows : []).map((r: any) => ({
+      field_id: r.field_id, field_key: r.field_key, label_ko: r.label_ko,
+      input_type: r.input_type, placeholder: r.placeholder,
+      options: r.options_json ? (() => { try { return JSON.parse(r.options_json); } catch { return null; } })() : null,
+      is_required: Number(r.is_required) === 1,
+      sort_order: Number(r.sort_order),
+      choice_type_default: r.choice_type,                       // 'single' | 'multi' | null
+      choice_type_locked: Number(r.choice_type_locked) === 1,
+      choice_type_override: r.choice_type_override,             // 'single' | 'multi' | null
+      choice_type: r.choice_type_override || r.choice_type,    // effective
+    })),
+    counts: {
+      pending:   Number((cntRows as any)[0]?.pending   || 0),
+      activated: Number((cntRows as any)[0]?.activated || 0),
+      used:      Number((cntRows as any)[0]?.used      || 0),
+      total:     Number((cntRows as any)[0]?.total     || 0),
+    },
+  });
+});
+
+// 프로젝트별 사전등록/현장등록 설정 저장 (덮어쓰기)
+//  body: {
+//    reservation: { enabled, benefit_amount, benefit_label, benefit_max_count, stop_on_limit },
+//    entry:       { enabled, benefit_amount, benefit_label, benefit_max_count, stop_on_limit },
+//    fields: [{ field_id|field_key, is_required }]
+//  }
+router.put("/projects/:id/reservation-config", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const body = (req.body || {}) as any;
+  const r = body.reservation || {};
+  const e = body.entry || {};
+  // use_allowed=0 인 옵션은 항상 enabled=0 로 강제
+  let rEnabled  = r.enabled ? 1 : 0;
+  const rAmount   = Math.max(0, Math.floor(Number(r.benefit_amount || 0)));
+  const rLabel    = String(r.benefit_label || "").slice(0, 120) || null;
+  const rMessage  = String(r.benefit_message || "").slice(0, 120) || null;
+  const rMaxCount = Math.max(0, Math.floor(Number(r.benefit_max_count || 0)));
+  const rStop     = r.stop_on_limit ? 1 : 0;
+  const rStartAtRaw = r.start_at ? String(r.start_at).trim() : "";
+  let eEnabled  = e.enabled ? 1 : 0;
+  const eAmount   = Math.max(0, Math.floor(Number(e.benefit_amount || 0)));
+  const eLabel    = String(e.benefit_label || "").slice(0, 120) || null;
+  const eMessage  = String(e.benefit_message || "").slice(0, 120) || null;
+  const eMaxCount = Math.max(0, Math.floor(Number(e.benefit_max_count || 0)));
+  const eStop     = e.stop_on_limit ? 1 : 0;
+  const incoming  = Array.isArray(body.fields) ? body.fields : [];
+
+  // 프로젝트 상태 + from_date 조회 (검증용)
+  const [pr] = await pool.execute(
+    `SELECT status, from_date, reservation_use, entry_use, reservation_benefit_message, entry_benefit_message,
+            reservation_enabled, reservation_benefit_amount, reservation_benefit_label,
+            reservation_benefit_max_count, reservation_stop_on_limit, reservation_start_at
+     FROM projects WHERE id = ?`,
+    [projectId],
+  );
+  const prRow = (Array.isArray(pr) ? (pr as any)[0] : null) as any;
+  const projStatusNow = prRow?.status as string;
+  const projStarted = projStatusNow === "started" || projStatusNow === "completed" || projStatusNow === "cancelled";
+  // use_allowed=0 인 경우 enabled=1 로 설정 시도 차단 (프로젝트 등록 시 옵션 미선택)
+  const reservationUseAllowed = Number(prRow?.reservation_use) === 1;
+  const entryUseAllowed       = Number(prRow?.entry_use) === 1;
+  // 프로젝트 등록 시 옵션 미선택이면 강제로 0 (입장관리에서 켤 수 없음)
+
+  // 사전등록 시작일시 검증: 프로젝트 from_date 이전이어야 함
+  let rStartAt: string | null = null;
+  if (rStartAtRaw) {
+    const start = new Date(rStartAtRaw);
+    if (isNaN(start.getTime())) { res.status(400).json({ error: "invalid_reservation_start_at" }); return; }
+    if (prRow?.from_date) {
+      const projStart = new Date(prRow.from_date);
+      if (start.getTime() >= projStart.getTime()) {
+        res.status(400).json({ error: "reservation_start_at_must_be_before_project_start",
+          message: "사전등록 시작일시는 프로젝트 시작일 이전이어야 합니다." });
+        return;
+      }
+    }
+    rStartAt = rStartAtRaw.replace("T", " ").slice(0, 19);
+  }
+
+  // 프로젝트가 이미 시작/종료된 경우 사전등록 영역은 기존값 강제 유지
+  // use_allowed=0 시 모든 옵션 강제 off
+  if (!reservationUseAllowed) rEnabled = 0;
+  if (!entryUseAllowed)       eEnabled = 0;
+
+  let rEnabledFinal = rEnabled, rAmountFinal = rAmount, rLabelFinal = rLabel,
+      rMessageFinal = rMessage,
+      rMaxCountFinal = rMaxCount, rStopFinal = rStop, rStartAtFinal = rStartAt;
+  if (projStarted && prRow) {
+    rEnabledFinal  = Number(prRow.reservation_enabled);
+    rAmountFinal   = Number(prRow.reservation_benefit_amount || 0);
+    rLabelFinal    = prRow.reservation_benefit_label;
+    rMessageFinal  = prRow.reservation_benefit_message;
+    rMaxCountFinal = Number(prRow.reservation_benefit_max_count || 0);
+    rStopFinal     = Number(prRow.reservation_stop_on_limit);
+    rStartAtFinal  = prRow.reservation_start_at
+      ? new Date(prRow.reservation_start_at).toISOString().slice(0,19).replace("T"," ")
+      : null;
+  }
+
+  // field 정의 + choice_type 잠금 정보 함께 조회 (정규화/검증용)
+  const [allDefs] = await pool.execute(
+    `SELECT id, field_key, input_type, choice_type, choice_type_locked
+     FROM field_definitions WHERE disabled = 0`,
+  );
+  const defMap = new Map<string, number>();
+  const defInfo = new Map<number, { input_type: string; choice_type: string | null; locked: boolean }>();
+  const idSet = new Set<number>();
+  for (const r of (Array.isArray(allDefs) ? allDefs : []) as any[]) {
+    defMap.set(String(r.field_key), Number(r.id));
+    defInfo.set(Number(r.id), {
+      input_type: String(r.input_type),
+      choice_type: r.choice_type ? String(r.choice_type) : null,
+      locked: Number(r.choice_type_locked) === 1,
+    });
+    idSet.add(Number(r.id));
+  }
+
+  type FieldRow = { field_id: number; is_required: number; sort_order: number; choice_type_override: string | null };
+  const normalized: FieldRow[] = [];
+  let order = 0;
+  for (const f of incoming) {
+    let fid = Number(f?.field_id);
+    if (!fid && f?.field_key) fid = defMap.get(String(f.field_key)) ?? 0;
+    if (!fid || !idSet.has(fid)) continue;
+    // choice_type_override 검증: select 타입 + 미잠금 일 때만 허용
+    let cto: string | null = null;
+    if (f?.choice_type_override && ["single","multi"].includes(String(f.choice_type_override))) {
+      const info = defInfo.get(fid);
+      if (info && info.input_type === "select" && !info.locked) {
+        cto = String(f.choice_type_override);
+      }
+    }
+    normalized.push({
+      field_id: fid,
+      is_required: f?.is_required ? 1 : 0,
+      sort_order: Number.isFinite(Number(f?.sort_order)) ? Number(f?.sort_order) : (order * 10),
+      choice_type_override: cto,
+    });
+    order++;
+  }
+
+  // 트랜잭션으로 덮어쓰기
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute(
+      `UPDATE projects SET
+         reservation_enabled = ?, reservation_benefit_amount = ?,
+         reservation_benefit_label = ?, reservation_benefit_message = ?,
+         reservation_benefit_max_count = ?, reservation_stop_on_limit = ?,
+         reservation_start_at = ?,
+         entry_benefit_enabled = ?, entry_benefit_amount = ?,
+         entry_benefit_label = ?, entry_benefit_message = ?,
+         entry_benefit_max_count = ?, entry_stop_on_limit = ?,
+         updated_at = NOW()
+       WHERE id = ?`,
+      [rEnabledFinal, rAmountFinal, rLabelFinal, rMessageFinal, rMaxCountFinal, rStopFinal, rStartAtFinal,
+       eEnabled, eAmount, eLabel, eMessage, eMaxCount, eStop, projectId],
+    );
+    await conn.execute(`DELETE FROM project_reservation_fields WHERE project_id = ?`, [projectId]);
+    if (normalized.length) {
+      const values = normalized.map(() => "(?, ?, ?, ?, ?)").join(", ");
+      const params: Array<number | string | null> = [];
+      normalized.forEach((n) => { params.push(projectId, n.field_id, n.is_required, n.sort_order, n.choice_type_override); });
+      await conn.execute(
+        `INSERT INTO project_reservation_fields (project_id, field_id, is_required, sort_order, choice_type_override) VALUES ${values}`,
+        params,
+      );
+    }
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+
+  res.json({ ok: true, saved_fields: normalized.length });
+});
+
+// 혜택 이미지 업로드 — kind: 'reservation' | 'entry'
+router.post(
+  "/projects/:id/benefit-image/:kind",
+  requireHost,
+  benefitImageUpload.single("image"),
+  async (req, res) => {
+    const host = req.session.host!;
+    const projectId = Number(req.params.id);
+    const kind = String(req.params.kind);
+    if (!["reservation", "entry"].includes(kind)) {
+      res.status(400).json({ error: "invalid_kind" }); return;
+    }
+    if (!(await ensureHostOwnsProject(projectId, host.id))) {
+      res.status(404).json({ error: "project_not_found" }); return;
+    }
+    if (!req.file) { res.status(400).json({ error: "no_file" }); return; }
+    const col = kind === "reservation" ? "reservation_benefit_image_path" : "entry_benefit_image_path";
+
+    // 기존 파일 정리
+    const [rows] = await pool.execute(`SELECT ${col} AS p FROM projects WHERE id = ?`, [projectId]);
+    const prev = (Array.isArray(rows) ? (rows as any)[0]?.p : null) as string | null;
+    if (prev) { try { fs.unlinkSync(prev); } catch (_) {} }
+
+    await pool.execute(
+      `UPDATE projects SET ${col} = ?, updated_at = NOW() WHERE id = ?`,
+      [req.file.path, projectId],
+    );
+    res.json({ ok: true, image_url: toUploadUrl(req.file.path) });
+  },
+);
+
+// 혜택 이미지 삭제
+router.delete("/projects/:id/benefit-image/:kind", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const kind = String(req.params.kind);
+  if (!["reservation", "entry"].includes(kind)) {
+    res.status(400).json({ error: "invalid_kind" }); return;
+  }
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const col = kind === "reservation" ? "reservation_benefit_image_path" : "entry_benefit_image_path";
+  const [rows] = await pool.execute(`SELECT ${col} AS p FROM projects WHERE id = ?`, [projectId]);
+  const prev = (Array.isArray(rows) ? (rows as any)[0]?.p : null) as string | null;
+  if (prev) { try { fs.unlinkSync(prev); } catch (_) {} }
+  await pool.execute(`UPDATE projects SET ${col} = NULL, updated_at = NOW() WHERE id = ?`, [projectId]);
+  res.json({ ok: true });
+});
+
+// 입장현황 신청자 목록 — 호스트의 모든 프로젝트 across (조회조건: project_name, mode, status)
+router.get("/reservations", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const projectName = String(req.query.project_name || "").trim();
+  const mode   = String(req.query.mode || "");
+  const status = String(req.query.status || "");
+  let where = "WHERE p.host_id = ? AND p.status != 'cancelled'";
+  const params: Array<string | number> = [hostId];
+  if (projectName) { where += " AND (p.project_name LIKE ? OR p.project_serial LIKE ?)";
+    params.push(`%${projectName}%`, `%${projectName}%`); }
+  if (["reservation","entry"].includes(mode)) { where += " AND r.mode = ?"; params.push(mode); }
+  if (["pending","activated","used","cancelled","expired"].includes(status)) { where += " AND r.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT r.id, r.project_id, p.project_name, p.project_serial,
+            r.mode, r.token, r.status, r.amount, r.fields_json,
+            r.qr_image_path, r.activated_at, r.used_at, r.created_at
+     FROM reservations r
+     JOIN projects p ON p.id = r.project_id
+     ${where}
+     ORDER BY r.created_at DESC, r.id DESC
+     LIMIT 2000`,
+    params,
+  );
+  const list = (Array.isArray(rows) ? rows : []).map((r: any) => {
+    let fields: any = {};
+    try { fields = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+    return {
+      id: r.id, project_id: r.project_id,
+      project_name: r.project_name, project_serial: r.project_serial,
+      mode: r.mode, token: r.token, status: r.status,
+      amount: Number(r.amount || 0), fields,
+      visited: !!r.activated_at, gift_used: !!r.used_at,
+      qr_image_url: toUploadUrl(r.qr_image_path),
+      activated_at: r.activated_at, used_at: r.used_at, created_at: r.created_at,
+    };
+  });
+  const count = (mode: string) => list.filter((x) => x.mode === mode);
+  const r_all = count("reservation"), e_all = count("entry");
+  res.json({
+    ok: true, data: list,
+    summary: {
+      reservation: { total: r_all.length, visited: r_all.filter(x=>x.visited).length, gift_used: r_all.filter(x=>x.gift_used).length },
+      entry:       { total: e_all.length, visited: e_all.filter(x=>x.visited).length, gift_used: e_all.filter(x=>x.gift_used).length },
+    },
+  });
+});
+
+router.get("/reservations/export", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const projectName = String(req.query.project_name || "").trim();
+  const mode   = String(req.query.mode || "");
+  const status = String(req.query.status || "");
+  let where = "WHERE p.host_id = ? AND p.status != 'cancelled'";
+  const params: Array<string | number> = [hostId];
+  if (projectName) { where += " AND (p.project_name LIKE ? OR p.project_serial LIKE ?)";
+    params.push(`%${projectName}%`, `%${projectName}%`); }
+  if (["reservation","entry"].includes(mode)) { where += " AND r.mode = ?"; params.push(mode); }
+  if (["pending","activated","used","cancelled","expired"].includes(status)) { where += " AND r.status = ?"; params.push(status); }
+
+  const [rows] = await pool.execute(
+    `SELECT r.id, p.project_name, p.project_serial,
+            r.mode, r.status, r.amount, r.fields_json,
+            r.activated_at, r.used_at, r.created_at
+     FROM reservations r
+     JOIN projects p ON p.id = r.project_id
+     ${where}
+     ORDER BY r.created_at DESC, r.id DESC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const MODE_KO: Record<string, string> = { reservation: "사전등록", entry: "현장등록" };
+  const STATUS_KO: Record<string, string> = {
+    pending: "신청완료", activated: "현장방문", used: "Gift사용",
+    cancelled: "취소", expired: "만료",
+  };
+  const fmtDT = (v: any) => {
+    if (!v) return "";
+    const d = v instanceof Date ? v : new Date(v);
+    if (isNaN(d.getTime())) return "";
+    const z = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  };
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("입장현황");
+  ws.columns = [
+    { header: "#", key: "no", width: 6 },
+    { header: "프로젝트명", key: "project_name", width: 24 },
+    { header: "일련번호", key: "project_serial", width: 16 },
+    { header: "모드", key: "mode", width: 10 },
+    { header: "이름", key: "name", width: 14 },
+    { header: "이메일", key: "email", width: 24 },
+    { header: "모바일폰", key: "mobile", width: 16 },
+    { header: "신청일시", key: "created_at", width: 18 },
+    { header: "혜택금액", key: "amount", width: 12 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "현장방문일시", key: "visited_at", width: 18 },
+    { header: "Gift사용일시", key: "used_at", width: 18 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  list.forEach((r: any, i: number) => {
+    let f: any = {};
+    try { f = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+    ws.addRow({
+      no: i + 1,
+      project_name: r.project_name,
+      project_serial: r.project_serial,
+      mode: MODE_KO[r.mode] || r.mode,
+      name: f.name || "",
+      email: f.email || "",
+      mobile: f.mobile || "",
+      created_at: fmtDT(r.created_at),
+      amount: Number(r.amount || 0),
+      status: STATUS_KO[r.status] || r.status,
+      visited_at: fmtDT(r.activated_at),
+      used_at: fmtDT(r.used_at),
+    });
+  });
+  ws.getColumn("amount").numFmt = "#,##0";
+  ws.getColumn("amount").alignment = { horizontal: "right" };
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent("입장현황")}.xlsx`);
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+// 입장현황 신청자 목록 엑셀 다운로드
+router.get("/projects/:id/reservations/export", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const mode   = String(req.query.mode || "");
+  const status = String(req.query.status || "");
+  let where = "WHERE project_id = ?";
+  const params: Array<string | number> = [projectId];
+  if (["reservation","entry"].includes(mode)) { where += " AND mode = ?"; params.push(mode); }
+  if (["pending","activated","used","cancelled","expired"].includes(status)) { where += " AND status = ?"; params.push(status); }
+
+  const [projRows] = await pool.execute(
+    `SELECT project_name, project_serial FROM projects WHERE id = ?`, [projectId],
+  );
+  const proj = (Array.isArray(projRows) ? projRows[0] : null) as any;
+  const projSerial = proj?.project_serial || String(projectId);
+
+  const [rows] = await pool.execute(
+    `SELECT id, mode, status, amount, fields_json, activated_at, used_at, created_at
+     FROM reservations ${where}
+     ORDER BY created_at DESC, id DESC`,
+    params,
+  );
+  const list = Array.isArray(rows) ? (rows as any[]) : [];
+
+  const MODE_KO: Record<string, string> = { reservation: "사전등록", entry: "현장등록" };
+  const STATUS_KO: Record<string, string> = {
+    pending: "신청완료", activated: "현장방문", used: "Gift사용",
+    cancelled: "취소", expired: "만료",
+  };
+  const fmtDT = (v: any) => {
+    if (!v) return "";
+    const d = v instanceof Date ? v : new Date(v);
+    if (isNaN(d.getTime())) return "";
+    const z = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  };
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("입장현황");
+  ws.columns = [
+    { header: "#", key: "no", width: 6 },
+    { header: "모드", key: "mode", width: 10 },
+    { header: "이름", key: "name", width: 14 },
+    { header: "이메일", key: "email", width: 24 },
+    { header: "모바일폰", key: "mobile", width: 16 },
+    { header: "신청일시", key: "created_at", width: 18 },
+    { header: "혜택금액", key: "amount", width: 12 },
+    { header: "상태", key: "status", width: 10 },
+    { header: "현장방문일시", key: "visited_at", width: 18 },
+    { header: "Gift사용일시", key: "used_at", width: 18 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  list.forEach((r: any, i: number) => {
+    let f: any = {};
+    try { f = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+    ws.addRow({
+      no: i + 1,
+      mode: MODE_KO[r.mode] || r.mode,
+      name: f.name || "",
+      email: f.email || "",
+      mobile: f.mobile || "",
+      created_at: fmtDT(r.created_at),
+      amount: Number(r.amount || 0),
+      status: STATUS_KO[r.status] || r.status,
+      visited_at: fmtDT(r.activated_at),
+      used_at: fmtDT(r.used_at),
+    });
+  });
+  ws.getColumn("amount").numFmt = "#,##0";
+  ws.getColumn("amount").alignment = { horizontal: "right" };
+
+  const fname = `입장현황_${projSerial}`;
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(fname)}.xlsx`);
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+// 사전등록/현장등록 신청자 목록 — 입장현황 sub 탭에서 사용
+router.get("/projects/:id/reservations", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const [rows] = await pool.execute(
+    `SELECT id, mode, token, status, amount, fields_json,
+            activated_at, used_at, created_at
+     FROM reservations WHERE project_id = ?
+     ORDER BY created_at DESC, id DESC
+     LIMIT 1000`,
+    [projectId],
+  );
+  const list = (Array.isArray(rows) ? rows : []).map((r: any) => {
+    let fields: any = {};
+    try { fields = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch { fields = {}; }
+    return {
+      id: r.id,
+      mode: r.mode,                                    // 'reservation' | 'entry'
+      token: r.token,
+      status: r.status,                                // pending | activated | used | cancelled | expired
+      amount: Number(r.amount || 0),
+      fields,
+      visited: !!r.activated_at,                       // 현장 방문 여부
+      gift_used: !!r.used_at,                          // Gift 사용 여부
+      activated_at: r.activated_at,
+      used_at: r.used_at,
+      created_at: r.created_at,
+    };
+  });
+  // 요약 카운트
+  const count = (mode: string) => list.filter((x) => x.mode === mode);
+  const r_all = count("reservation"), e_all = count("entry");
+  res.json({
+    ok: true,
+    data: list,
+    summary: {
+      reservation: {
+        total: r_all.length,
+        visited: r_all.filter((x) => x.visited).length,
+        gift_used: r_all.filter((x) => x.gift_used).length,
+      },
+      entry: {
+        total: e_all.length,
+        visited: e_all.filter((x) => x.visited).length,
+        gift_used: e_all.filter((x) => x.gift_used).length,
+      },
+    },
+  });
+});
 
 router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
   const host = req.session.host!;
@@ -1753,7 +2716,7 @@ router.get("/projects/:id/applications", requireHost, async (req, res) => {
 
   const k = encKey();
   const [rows] = await pool.execute(
-    `SELECT pa.id, pa.status, pa.applied_at, pa.decided_at, pa.decided_reason,
+    `SELECT pa.id, pa.status, pa.applied_at, pa.decided_at, pa.decided_reason, pa.support_type,
             m.id AS merchant_id, m.biz_no, m.status AS merchant_status,
             ${dec("m.merchant_name", "merchant_name")},
             ${dec("m.contact_name", "contact_name")},
@@ -1763,7 +2726,7 @@ router.get("/projects/:id/applications", requireHost, async (req, res) => {
      FROM project_applications pa
      JOIN merchants m ON m.id = pa.merchant_id
      WHERE pa.project_id = ?
-     ORDER BY (pa.status = 'pending') DESC, pa.applied_at DESC`,
+     ORDER BY (pa.status = 'pending') DESC, pa.applied_at DESC, pa.support_type ASC`,
     [k, k, k, k, k, projectId],
   );
 
@@ -1842,13 +2805,20 @@ router.get("/settlement", requireHost, async (req, res) => {
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
 
   const [rows] = await pool.execute(
-    `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, p.prize_amount, p.budget_amount,
+    `SELECT p.id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            p.reservation_use, p.reservation_benefit_amount,
+            p.entry_use, p.entry_benefit_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_amount,
             (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_users,
-            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_users
+            (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_users,
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode='reservation' AND rv.status='used') AS rsv_used_count,
+            (SELECT COALESCE(SUM(rv.amount),0) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode='reservation' AND rv.status='used') AS rsv_used_amount,
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode='entry' AND rv.status='used') AS ent_used_count,
+            (SELECT COALESCE(SUM(rv.amount),0) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode='entry' AND rv.status='used') AS ent_used_amount
      FROM projects p
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
@@ -1906,6 +2876,8 @@ router.get("/settlement/by-day", requireHost, async (req, res) => {
   const [rows] = await pool.execute(
     `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
             p.gift_amount, p.prize_amount, p.budget_amount,
+            p.reservation_use, p.reservation_benefit_amount,
+            p.entry_use, p.entry_benefit_amount,
             DATE(gr.redeemed_at) AS day,
             gr.merchant_id,
             COALESCE(fn_decrypt(m.merchant_name, ?), '(미기록)') AS merchant_name,
@@ -1924,7 +2896,65 @@ router.get("/settlement/by-day", requireHost, async (req, res) => {
     params,
   );
 
-  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+  // ── 사전등록 / 현장등록 (입장 보상) 일별 집계: (project_id, day, mode) 키 ──
+  const params2 = params.slice(1); // encKey 제거
+  const [rsvRows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            p.reservation_use, p.reservation_benefit_amount,
+            p.entry_use, p.entry_benefit_amount,
+            DATE(rv.used_at) AS day,
+            rv.mode,
+            COUNT(*) AS used_count,
+            COALESCE(SUM(rv.amount), 0) AS used_amount
+     FROM projects p
+     JOIN reservations rv ON rv.project_id = p.id
+     ${where}
+     AND rv.status='used' AND rv.used_at IS NOT NULL
+     GROUP BY p.id, day, rv.mode`,
+    params2,
+  );
+
+  // gift 행 그대로 유지 (입장 컬럼은 0)
+  const giftData = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+    ...r,
+    rsv_cnt: 0, rsv_amt: 0, ent_cnt: 0, ent_amt: 0,
+    row_type: "gift",
+  }));
+
+  // 사전등록/현장등록 — 모드별 별도 행 (가맹점명 자리에 모드 라벨)
+  const rsvData = (Array.isArray(rsvRows) ? rsvRows : []).map((r: any) => {
+    const isRsv = r.mode === "reservation";
+    return {
+      project_id: r.project_id, project_name: r.project_name, project_serial: r.project_serial,
+      status: r.status,
+      gift_amount: Number(r.gift_amount || 0),
+      prize_amount: Number(r.prize_amount || 0),
+      budget_amount: Number(r.budget_amount || 0),
+      reservation_use: r.reservation_use, reservation_benefit_amount: r.reservation_benefit_amount,
+      entry_use: r.entry_use, entry_benefit_amount: r.entry_benefit_amount,
+      day: r.day,
+      merchant_id: null,
+      merchant_name: isRsv ? "🔵 사전등록 정산" : "🟢 현장등록 정산",
+      used_count: 0, used_amount: 0, grant_count: 0, grant_amount: 0,
+      used_users: 0, grant_users: 0,
+      rsv_cnt: isRsv ? Number(r.used_count || 0) : 0,
+      rsv_amt: isRsv ? Number(r.used_amount || 0) : 0,
+      ent_cnt: !isRsv ? Number(r.used_count || 0) : 0,
+      ent_amt: !isRsv ? Number(r.used_amount || 0) : 0,
+      row_type: r.mode,
+    };
+  });
+
+  const merged = [...giftData, ...rsvData].sort((a, b) => {
+    const da = String(a.day||""), db = String(b.day||"");
+    if (da !== db) return da < db ? 1 : -1;
+    const pa = String(a.project_name||""), pb = String(b.project_name||"");
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    return String(a.merchant_name||"").localeCompare(String(b.merchant_name||""));
+  });
+
+  res.json({ ok: true, data: merged });
 });
 
 // ───── 정산 엑셀 다운로드 (3개: 프로젝트별 / 가맹점별 / 일별) ─────

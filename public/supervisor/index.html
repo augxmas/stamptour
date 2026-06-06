@@ -70,8 +70,8 @@
     /* 테이블 */
     .tbl-wrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(20,30,60,.07); }
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
-    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 12px 14px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-    tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 12px 14px; text-align: center; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: #f8fafc; }
     .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -376,6 +376,7 @@
               <th class="sortable" onclick="sortProjects('from_date')">시작일<span class="sort-icon" id="psi-from_date"></span></th>
               <th class="sortable" onclick="sortProjects('to_date')">종료일<span class="sort-icon" id="psi-to_date"></span></th>
               <th class="sortable" onclick="sortProjects('status')">상태<span class="sort-icon" id="psi-status"></span></th>
+              <th class="sortable" onclick="sortProjects('quote_amount')">견적금액<span class="sort-icon" id="psi-quote_amount"></span></th>
               <th class="sortable" onclick="sortProjects('quote_sent_at')">견적발송일<span class="sort-icon" id="psi-quote_sent_at"></span></th>
               <th class="sortable" onclick="sortProjects('quote_read')">견적확인<span class="sort-icon" id="psi-quote_read"></span></th>
               <th class="sortable" onclick="sortProjects('deposit_confirmed_at')">입금확인일<span class="sort-icon" id="psi-deposit_confirmed_at"></span></th>
@@ -783,6 +784,8 @@
             <div class="pd-row"><div class="lbl">발급수량</div><div class="val" id="pd-gift-qty">-</div></div>
             <div class="pd-row"><div class="lbl">예산금액</div><div class="val" id="pd-budget">-</div></div>
             <div class="pd-row"><div class="lbl">견적금액</div><div class="val" id="pd-quote-amount">-</div></div>
+            <div class="pd-row"><div class="lbl">사전등록</div><div class="val" id="pd-reservation">-</div></div>
+            <div class="pd-row"><div class="lbl">현장등록</div><div class="val" id="pd-entry">-</div></div>
             <div class="pd-row"><div class="lbl">목적지정보</div><div class="val" id="pd-locations">-</div></div>
             <div class="pd-row"><div class="lbl">방문자수</div><div class="val" id="pd-visitors">-</div></div>
             <div class="pd-row"><div class="lbl">견적발송일</div><div class="val" id="pd-quote-sent">-</div></div>
@@ -1250,7 +1253,7 @@
         ? `<span style="${rewardCellStyle}">${fmtN(m.totalReward)}/${fmtN(m.budget)}원(${m.pct}%)</span>`
         : `<span style="${rewardCellStyle}">${stWon(m.totalReward)}</span>`;
       return `<tr>
-        <td>${esc(p.organization_name) || '-'}</td>
+        <td>${orgLink(p)}</td>
         <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
         <td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
         <td style="text-align:right;">${stWon(m.giftAmt)}</td>
@@ -1341,7 +1344,7 @@
   function renderSettleSubRow(p, opts) {
     const m = settleRowMetrics(p);
     const projCell  = `<td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>`;
-    const orgCell   = `<td>${esc(p.organization_name || '-')}</td>`;
+    const orgCell   = `<td>${orgLink(p)}</td>`;
     const stateCell = `<td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>`;
     const usedUsers = Number(p.used_users || 0);
     const grantUsers = Number(p.grant_users || 0);
@@ -1806,7 +1809,7 @@
         <thead><tr><th>소속기관</th><th>프로젝트</th><th>상태</th><th>기간</th><th style="text-align:center;">지원</th></tr></thead>
         <tbody>${list.map(p => `
           <tr>
-            <td>${esc(p.organization_name || '-')}</td>
+            <td>${orgLink(p)}</td>
             <td><b>${esc(p.project_name)}</b></td>
             <td><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
             <td style="font-size:12px;color:#64748b;white-space:nowrap;">${dt(p.from_date)} ~ ${dt(p.to_date)}</td>
@@ -2017,6 +2020,7 @@
       }
       if (c.cen) return `<td style="text-align:center;">${v ?? 0}</td>`;
       if (c.key === 'status') return `<td><span class="badge ${PROJ_STATUS_BADGE[p.status] ?? ''}">${PROJ_STATUS_LABEL[p.status] ?? p.status}</span></td>`;
+      if (c.key === 'organization_name') return `<td>${orgLink(p)}</td>`;
       return `<td>${esc(v ?? '-')}</td>`;
     };
     document.getElementById('vs-tbody').innerHTML = rows.length
@@ -2095,6 +2099,15 @@
   // ── 프로젝트 목적지 목록 팝업 ──
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+  // 모든 그리드의 소속기관 셀: 클릭 시 host 상세 모달 오픈
+  function orgLink(row) {
+    const name = row.organization_name || '-';
+    const hid = row.host_id;
+    if (!hid) return esc(name);
+    return `<a href="#" onclick="openHostModal(${hid}); return false;"
+            title="${esc(row.organization_name || '')}"
+            style="color:#2563eb;font-weight:700;text-decoration:none;border-bottom:1px dashed #93c5fd;cursor:pointer;">${esc(name)}</a>`;
   }
   async function openProjectLocations(id, name) {
     document.getElementById('loc-list-proj').textContent = name || '';
@@ -2378,7 +2391,7 @@
         : '-';
       return `<tr>
         <td>${h.id}</td>
-        <td><b>${h.organization_name ?? '-'}</b></td>
+        <td>${orgLink({ host_id: h.id, organization_name: h.organization_name })}</td>
         <td>${h.host_name}</td>
         <td>${bizNo}</td>
         <td>${emailCell}</td>
@@ -2579,6 +2592,11 @@
     const statusOpts = ['pending','approved','cancelled','terminated','locked']
       .map(s => `<option value="${s}"${s === host.status ? ' selected' : ''}>${HOST_STATUS_LABEL[s]}</option>`)
       .join('');
+    // 진행중 프로젝트가 1건 이상이면 상태 변경 금지
+    const startedCount = Number(host.started_project_count || 0);
+    const statusLockedNote = startedCount > 0
+      ? `<div style="font-size:11px;color:#dc2626;margin-top:4px;">⚠ 진행 중인 프로젝트 ${startedCount}건이 있어 상태를 변경할 수 없습니다.</div>`
+      : '';
 
     document.getElementById('host-detail').innerHTML = `
       <div class="detail-row"><span class="detail-label">담당자명</span><span class="detail-val">${host.host_name}</span></div>
@@ -2591,10 +2609,11 @@
       <div class="detail-row">
         <span class="detail-label">상태</span>
         <span class="detail-val">
-          <select id="hd-status-select" onchange="onHostStatusChange()"
-            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
+          <select id="hd-status-select" onchange="onHostStatusChange()" ${startedCount > 0 ? 'disabled' : ''}
+            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:${startedCount > 0 ? '#f1f5f9' : '#fff'};${startedCount > 0 ? 'cursor:not-allowed;color:#94a3b8;' : ''}">
             ${statusOpts}
           </select>
+          ${statusLockedNote}
         </span>
       </div>
       <div class="detail-row"><span class="detail-label">사업자등록증</span><span class="detail-val">${certButtons}</span></div>
@@ -2695,20 +2714,21 @@
       const pnEsc = (p.project_name||'').replace(/'/g,"\\'");
       return `<tr>
         <td>${p.id}</td>
-        <td>${p.organization_name ?? '-'}</td>
+        <td>${orgLink(p)}</td>
         <td>${p.project_name}</td>
         <td>${p.project_serial}</td>
         <td>${created}</td>
         <td>${from}</td>
         <td>${to}</td>
         <td><span class="badge ${PROJ_STATUS_BADGE[sk] ?? ''}">${PROJ_STATUS_LABEL[sk] ?? sk}</span></td>
+        <td style="text-align:right;">${p.quote_amount ? Number(p.quote_amount).toLocaleString('ko-KR') + '원' : '-'}</td>
         <td>${quoteSent}</td>
         <td>${quoteRead}</td>
         <td>${depositAt}</td>
         <td>${depositBadge}</td>
         <td><button class="btn btn-outline btn-sm" onclick="openProjectLocations(${p.id}, '${pnEsc}')">${p.location_count ?? 0}개</button></td>
         <td><button class="btn btn-outline btn-sm" onclick="openProjectQuizzes(${p.id}, '${pnEsc}', '${p.project_serial}')">${p.quiz_count ?? 0}개</button></td>
-        <td><button class="btn btn-outline btn-sm" onclick="openProjectModal(${p.id})">상세보기</button></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProjectModal(${p.id})">관리</button></td>
         <td><button class="btn btn-outline btn-sm" onclick="openPreview('${p.project_serial}')">미리보기</button></td>
       </tr>`;
     }).join('') || '<tr><td colspan="16" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
@@ -2766,6 +2786,15 @@
     document.getElementById('pd-gift-qty').textContent = p.gift_qty ?? '-';
     document.getElementById('pd-budget').textContent = p.budget_amount ? Number(p.budget_amount).toLocaleString() + '원' : '-';
     document.getElementById('pd-quote-amount').textContent = p.quote_amount ? Number(p.quote_amount).toLocaleString() + '원' : '-';
+    // 사전등록 / 현장등록 표시
+    const fmtRsvEnt = (use, amt, max) => {
+      if (Number(use) !== 1) return '미사용';
+      const amtStr = '단가 ' + (Number(amt||0)).toLocaleString('ko-KR') + '원';
+      const maxStr = '수량 ' + (Number(max||0) > 0 ? Number(max).toLocaleString('ko-KR')+'개' : '무제한');
+      return `사용 (${amtStr} / ${maxStr})`;
+    };
+    document.getElementById('pd-reservation').textContent = fmtRsvEnt(p.reservation_use, p.reservation_benefit_amount, p.reservation_benefit_max_count);
+    document.getElementById('pd-entry').textContent = fmtRsvEnt(p.entry_use, p.entry_benefit_amount, p.entry_benefit_max_count);
     document.getElementById('pd-locations').textContent = (p.location_count ?? 0) + '개';
     document.getElementById('pd-visitors').textContent = (p.visitor_count ?? 0) + '명';
     document.getElementById('pd-quote-sent').textContent = p.quote_sent_at ? new Date(p.quote_sent_at).toLocaleString('ko-KR') : '-';
@@ -2789,6 +2818,21 @@
     };
 
     document.getElementById('pd-status').value = p.status;
+    // 진행중(started) 프로젝트는 상태 변경 불가
+    const pdStatus = document.getElementById('pd-status');
+    if (p.status === 'started') {
+      pdStatus.disabled = true;
+      pdStatus.style.background = '#f1f5f9';
+      pdStatus.style.cursor = 'not-allowed';
+      pdStatus.style.color = '#94a3b8';
+      pdStatus.title = '진행 중인 프로젝트의 상태는 변경할 수 없습니다.';
+    } else {
+      pdStatus.disabled = false;
+      pdStatus.style.background = '';
+      pdStatus.style.cursor = '';
+      pdStatus.style.color = '';
+      pdStatus.title = '';
+    }
     document.getElementById('proj-detail-modal').classList.add('open');
   }
 
@@ -2850,7 +2894,17 @@
       return;
     }
 
-    showSaveConfirm('변경 내용을 저장하시겠습니까?', async () => {
+    // 진행중(started) 프로젝트의 상태를 변경하려는 경우 추가 확인
+    const isStatusChangingFromStarted = ('status' in payload) && origProjData.status === 'started';
+    const proceed = () => showSaveConfirm('변경 내용을 저장하시겠습니까?', performSave);
+
+    if (isStatusChangingFromStarted) {
+      showSaveConfirm('프로젝트가 진행 중인데 상태를 변경하시겠습니까?', proceed);
+    } else {
+      proceed();
+    }
+
+    async function performSave() {
       const r = await fetch(`/api/supervisor/projects/${currentProjId}/fields`, {
         method: 'PUT',
         headers: {'Content-Type':'application/json'},
@@ -2866,7 +2920,7 @@
       await openProjectModal(currentProjId);
       document.getElementById('pd-msg').textContent = '저장되었습니다.';
       document.getElementById('pd-msg').style.color = '#16a34a';
-    });
+    }
   }
 
   function renderPager(containerId, total, size, current, loadFn) {

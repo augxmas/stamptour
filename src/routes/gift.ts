@@ -43,8 +43,14 @@ router.post("/:token/use", async (req, res) => {
       gift_not_found: "유효하지 않은 Gift입니다.",
       already_used: "이미 사용된 Gift입니다.",
       invalid_pin: "비밀번호가 일치하지 않습니다.",
+      not_approved_application: "이 프로젝트에 승인된 가맹점이 아닙니다. QR 코드를 승인해 줄 수 없습니다.",
+      support_type_mismatch: "지원하지 않는 혜택 유형의 QR 코드입니다. (귀 가맹점은 '목적지+Quiz' 유형을 지원하지 않습니다.) QR 코드를 승인해 줄 수 없습니다.",
     };
-    const status = result.error === "already_used" ? 409 : result.error === "invalid_pin" ? 400 : 404;
+    const status = result.error === "already_used" ? 409
+      : result.error === "invalid_pin" ? 400
+      : result.error === "support_type_mismatch" ? 403
+      : result.error === "not_approved_application" ? 403
+      : 404;
     res.status(status).json({ error: result.error, message: messages[result.error ?? ""] ?? "사용 처리에 실패했습니다." });
     return;
   }

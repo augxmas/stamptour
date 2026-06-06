@@ -12,6 +12,8 @@ import supervisorRouter from "./routes/supervisor";
 import visitorRouter from "./routes/visitor";
 import giftRouter from "./routes/gift";
 import merchantRouter from "./routes/merchant";
+import integrationRouter from "./routes/integration";
+import fieldAgentRouter from "./routes/field-agent";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
@@ -72,6 +74,8 @@ app.use("/api/supervisor", supervisorRouter);
 app.use("/api/visitor", visitorRouter);
 app.use("/api/gift", giftRouter);
 app.use("/api/merchant", merchantRouter);
+app.use("/api/integration", integrationRouter);
+app.use("/api/field-agent", fieldAgentRouter);   // 공개 등록 + 근태 PWA + admin (sess.host 검사 내부)
 
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -104,9 +108,71 @@ app.get("/v/:projectSerial/:locationSeq", (_req, res) => {
 app.get("/v/:projectSerial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "visitor", "index.html"));
 });
+// 사전등록 / 현장등록 랜딩 페이지 (입장 희망객 view)
+app.get("/reserve/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "reserve", "index.html"));
+});
+app.get("/entry/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "reserve", "index.html"));
+});
+// 현장요원 PWA — 서비스워커 (스코프 /agent-register/{serial}/)
+app.get("/agent-register/sw.js", (_req, res) => {
+  res.setHeader("Service-Worker-Allowed", "/agent-register/");
+  res.type("application/javascript");
+  res.sendFile(path.join(process.cwd(), "public", "agent-register", "service-worker.js"));
+});
+app.get("/agent-register/:serial/sw.js", (_req, res) => {
+  res.setHeader("Service-Worker-Allowed", "/agent-register/");
+  res.type("application/javascript");
+  res.sendFile(path.join(process.cwd(), "public", "agent-register", "service-worker.js"));
+});
+// 동적 manifest — 프로젝트 이름이 들어감
+app.get("/agent-register/:serial/manifest.json", async (req, res) => {
+  const serial = String(req.params.serial || "");
+  let projectName = "현장요원 근태관리";
+  try {
+    const [rows] = await pool.execute(
+      `SELECT project_name FROM projects WHERE project_serial = ?`, [serial],
+    );
+    const p = (Array.isArray(rows) ? rows[0] : null) as any;
+    if (p?.project_name) projectName = `${p.project_name} 근태`;
+  } catch {/* fallback */}
+  res.type("application/manifest+json").json({
+    name: `${projectName} · 현장요원`,
+    short_name: "현장요원",
+    start_url: `/agent-register/${serial}`,
+    scope: `/agent-register/${serial}/`,
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#f0fdf4",
+    theme_color: "#15803d",
+    icons: [
+      { src: "/favicon-green.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/favicon-green.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
+    ],
+  });
+});
+// 현장요원 등록 폼
+app.get("/agent-register/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "agent-register", "index.html"));
+});
+// 현장요원 근태관리 PWA
+app.get("/agent-att/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "agent-att", "index.html"));
+});
 // 가맹점이 Gift QR을 스캔하면 열리는 사용처리 페이지
 app.get("/g/:token", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "gift", "index.html"));
+});
+
+// 도입 제안서 PPTX 다운로드 (영업자료 — 인증 없음)
+app.get("/proposal/download", (_req, res) => {
+  const filePath = path.join(process.cwd(), "docs", "모노라마_트래커_도입제안서.pptx");
+  res.download(filePath, "모노라마_트래커_도입제안서.pptx");
+});
+// 사전등록/현장등록 QR — 스마트 디스패처 (가맹점이면 사용처리, 아니면 visitor PWA 로 리디렉트)
+app.get("/r/:serial/:token", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "redeem", "index.html"));
 });
 
 app.get("/", (_req, res) => {

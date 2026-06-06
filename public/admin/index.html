@@ -100,6 +100,23 @@
     .vs-daily-cell .vs-bar-track { height:18px; }
     .vs-daily-cell-val { width:36px; text-align:right; font-weight:700; color:#16243a; }
     .vs-empty { color:#94a3b8; font-size:13px; text-align:center; padding:18px; }
+    /* 가맹점별 일자별 세로형(stacked) 차트 — Gift + Quiz 분리 */
+    .mds-block { margin-bottom:18px; }
+    .mds-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+    .mds-title .mds-total { color:#1d4ed8; font-weight:800; font-size:13px; }
+    .mds-chart { display:flex; gap:10px; align-items:flex-end; padding:6px 4px 0;
+                 min-height:180px; border-bottom:1px solid #e5e7eb; overflow-x:auto; }
+    .mds-col { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:42px; }
+    .mds-amt { font-size:10px; color:#475569; font-weight:700; white-space:nowrap; }
+    .mds-bar { width:28px; display:flex; flex-direction:column; justify-content:flex-end;
+               background:#f1f5f9; border-radius:4px 4px 0 0; overflow:hidden; height:140px; position:relative; }
+    .mds-seg-quiz { background:linear-gradient(180deg,#fbbf24,#b45309); }
+    .mds-seg-gift { background:linear-gradient(180deg,#3b82f6,#1d4ed8); }
+    .mds-date { font-size:10px; color:#64748b; white-space:nowrap; }
+    .mds-legend { display:flex; gap:14px; font-size:11px; color:#475569; margin-bottom:8px; align-items:center; }
+    .mds-legend .sw { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; margin-right:4px; }
+    .mds-sw-gift { background:#1d4ed8; }
+    .mds-sw-quiz { background:#b45309; }
     .qf-loc-select { position: relative; }
     .qf-loc-trigger { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; background:#fff; user-select:none; display:flex; align-items:center; min-height:46px; }
     .qf-loc-trigger img { width:32px; height:32px; border-radius:4px; object-fit:cover; border:1px solid #e5e7eb; }
@@ -110,6 +127,144 @@
     .qf-loc-option.act { background:#dbeafe; font-weight:600; }
     .qf-loc-option img { width:48px; height:48px; border-radius:6px; object-fit:cover; border:1px solid #e5e7eb; flex-shrink:0; }
     .qf-loc-noimg { width:48px; height:48px; border-radius:6px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:18px; flex-shrink:0; }
+    /* 입장관리 — 혜택 금액/발급 한도: 포커스 시 placeholder 숨김 (사전등록/현장등록 양쪽) */
+    #ef-r-amount:focus::placeholder, #ef-r-max:focus::placeholder,
+    #ef-e-amount:focus::placeholder, #ef-e-max:focus::placeholder { color: transparent; }
+    /* 입장관리 — 두 혜택 카드 grid */
+    .ef-benefit-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+    @media (max-width:900px) { .ef-benefit-grid { grid-template-columns:1fr; } }
+    .ef-benefit-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; }
+    .ef-benefit-card.r-card { background:#eff6ff; border-color:#bfdbfe; }
+    .ef-benefit-card.e-card { background:#f0fdf4; border-color:#bbf7d0; }
+    .ef-benefit-card h5 { font-size:14px; color:#1e293b; margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+    .ef-benefit-card h5 .badge-mode { font-size:11px; padding:2px 8px; border-radius:999px; font-weight:700; }
+    .ef-benefit-card.r-card h5 .badge-mode { background:#bfdbfe; color:#1e40af; }
+    .ef-benefit-card.e-card h5 .badge-mode { background:#bbf7d0; color:#166534; }
+    .ef-benefit-card .ef-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .ef-benefit-card .ef-grid2 .fg { grid-column:auto; }
+    .ef-benefit-card .ef-grid2 .full { grid-column:1/-1; }
+    .ef-benefit-card label.tg { display:flex; align-items:center; gap:8px; font-size:12px; color:#475569; cursor:pointer; user-select:none; margin-top:8px; }
+    .ef-benefit-card label.tg input { width:16px; height:16px; cursor:pointer; }
+    /* 비활성 시: 카드 안의 모든 입력/토글을 흐리게 + 클릭 차단 */
+    .ef-benefit-card.off .ef-grid2 input,
+    .ef-benefit-card.off .ef-grid2 button,
+    .ef-benefit-card.off label.tg { opacity:.5; pointer-events:none; }
+    .ef-benefit-card.off .ef-grid2 label { opacity:.5; }
+    /* 혜택 이미지 박스 */
+    .ef-img-wrap { width:100%; max-width:240px; height:140px; border:1.5px dashed #cbd5e1; border-radius:8px;
+                   background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:6px; }
+    .ef-img-preview { width:100%; height:100%; object-fit:cover; }
+    .ef-img-empty { color:#94a3b8; font-size:12px; font-weight:600; }
+    .ef-img-actions { display:flex; gap:6px; }
+    /* 랜딩 페이지 미리보기 (visitor view 모방) */
+    .lp-frame { background:#f0f4f9; border:1px solid #e2e8f0; border-radius:12px; padding:20px;
+                max-width:480px; margin:0 auto; }
+    .lp-header { text-align:center; margin-bottom:18px; }
+    .lp-header .lp-title { font-size:18px; font-weight:800; color:#1e293b; }
+    .lp-header .lp-mode  { font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;
+                           display:inline-block; margin-top:6px; }
+    .lp-header .lp-mode.r { background:#bfdbfe; color:#1e40af; }
+    .lp-header .lp-mode.e { background:#bbf7d0; color:#166534; }
+    .lp-benefit { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px;
+                  box-shadow:0 1px 4px rgba(20,30,60,.06); }
+    .lp-benefit img { width:100%; max-height:200px; object-fit:cover; border-radius:6px; margin-bottom:10px; display:block; }
+    .lp-benefit .lp-amt { font-size:22px; font-weight:800; color:#1d4ed8; }
+    .lp-benefit .lp-lbl { font-size:13px; color:#475569; margin-top:4px; }
+    .lp-form { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px; }
+    .lp-form .lp-row { margin-bottom:12px; }
+    .lp-form .lp-row label { display:block; font-size:13px; color:#1e293b; font-weight:700; margin-bottom:4px; }
+    .lp-form .lp-row .req { color:#dc2626; margin-left:2px; }
+    .lp-form .lp-row input[type=text], .lp-form .lp-row input[type=email], .lp-form .lp-row input[type=date],
+    .lp-form .lp-row input[type=tel],  .lp-form .lp-row input[type=time], .lp-form .lp-row input[type=number] {
+      width:100%; padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none;
+      background:#f8fafc;
+    }
+    .lp-form .lp-opts { display:flex; flex-direction:column; gap:6px; padding:4px 0; }
+    .lp-form .lp-opt  { display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px;
+                        font-size:13px; color:#475569; background:#f8fafc; }
+    .lp-form .lp-submit { width:100%; margin-top:8px; padding:11px; background:#2563eb; color:#fff; border:none;
+                          border-radius:8px; font-size:14px; font-weight:700; cursor:default; }
+    .lp-note { font-size:11px; color:#94a3b8; text-align:center; margin-top:10px; }
+    /* 입장현황 그리드용 */
+    #entry-status-table img.es-thumb { width:48px; height:32px; object-fit:cover; border-radius:4px; border:1px solid #e5e7eb; cursor:zoom-in; }
+    #entry-status-table .es-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+    #entry-status-table .es-badge.on  { background:#dcfce7; color:#166534; }
+    #entry-status-table .es-badge.off { background:#fee2e2; color:#991b1b; }
+    #entry-status-table td { vertical-align:middle; }
+    #entry-status-table td.r { text-align:right; }
+    #entry-status-table td.c { text-align:center; }
+    #entry-status-table .es-desc { max-width:160px; font-size:12px; color:#475569;
+                                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* 이메일 인증 row */
+    .lp-row.lp-verify { border:1.5px solid #2563eb; background:#eff6ff; border-radius:10px; padding:12px;
+                        margin-bottom:14px; }
+    .lp-row.lp-verify label { color:#1e40af; }
+    .lp-verify-line { display:flex; gap:6px; align-items:stretch; }
+    .lp-verify-line input { flex:1; }
+    .lp-verify-line button { padding:0 12px; font-size:12px; font-weight:700; border:none; border-radius:8px;
+                              background:#2563eb; color:#fff; cursor:default; white-space:nowrap; }
+    .lp-verify-line button.code-btn { background:#94a3b8; }
+    .lp-verify-msg { font-size:11px; color:#64748b; margin-top:6px; }
+    .lp-verify-msg .ok { color:#15803d; font-weight:700; }
+    /* 잠긴 폼 영역 */
+    .lp-locked { position:relative; }
+    .lp-locked::after {
+      content:'🔒 이메일 인증 후 입력 가능합니다';
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      background:rgba(248,250,252,0.85); color:#64748b; font-size:13px; font-weight:700;
+      border-radius:8px; backdrop-filter:blur(1px);
+    }
+    /* '항목보기' 버튼 + 미리보기 모달.
+       빈 wrap 도 버튼이 있는 카드와 동일한 높이를 유지하기 위해 min-height 부여 */
+    .ef-preview-wrap { flex-basis:100%; padding-left:24px; margin-top:2px; min-height:24px; }
+    .ef-preview-btn { font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #93c5fd;
+                      background:#eff6ff; color:#1e40af; cursor:pointer; font-weight:600; white-space:nowrap; }
+    .ef-preview-btn:hover { background:#dbeafe; border-color:#60a5fa; }
+    .ef-preview-btn:disabled { opacity:.45; cursor:not-allowed; background:#f1f5f9; border-color:#cbd5e1; color:#94a3b8; }
+    .ef-preview-btn:disabled:hover { background:#f1f5f9; border-color:#cbd5e1; }
+    .fp-list { display:flex; flex-direction:column; gap:8px; }
+    .fp-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1.5px solid #e2e8f0;
+              border-radius:8px; background:#fff; cursor:pointer; user-select:none; transition: border-color .15s, background .15s; }
+    .fp-row:hover { border-color:#93c5fd; background:#eff6ff; }
+    .fp-row input[type=checkbox] { width:18px; height:18px; cursor:pointer; flex-shrink:0; accent-color:#2563eb; margin:0; }
+    .fp-row .fp-text { font-size:14px; color:#1e293b; flex:1; }
+    .fp-row.checked { border-color:#2563eb; background:#dbeafe; }
+    .fp-row.checked .fp-text { font-weight:700; color:#1e40af; }
+    .fp-note { font-size:12px; color:#64748b; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px 12px; margin-bottom:14px; }
+    /* 입장관리 — 항목 선택 그리드 */
+    .ef-fields-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px; }
+    .ef-field { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; }
+    .ef-field input[type=checkbox] { width:16px; height:16px; cursor:pointer; flex-shrink:0; margin:0; }
+    .ef-field.checked { background:#f3e8ff; border-color:#c084fc; }
+    .ef-field.checked .ef-label { color:#6b21a8; font-weight:700; }
+    .ef-field .ef-label { font-size:13px; color:#1e293b; flex:1; cursor:pointer; user-select:none; }
+    .ef-field .ef-type  { font-size:10px; color:#94a3b8; flex-shrink:0; }
+    .ef-field .ef-req   { font-size:11px; color:#64748b; display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    .ef-field .ef-req input[type=checkbox] { width:14px; height:14px; }
+    .ef-field.disabled-required .ef-req { opacity:0.4; pointer-events:none; }
+    /* 단일/다중 선택 표시·토글 (on/off switch) */
+    .ef-choice-locked { font-size:10px; font-weight:700; color:#64748b; padding:2px 8px;
+                        background:#f1f5f9; border-radius:6px; white-space:nowrap; }
+    .ef-choice-switch { display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:700;
+                        color:#64748b; user-select:none; }
+    .ef-choice-switch .sw {
+      position:relative; width:34px; height:18px; background:#cbd5e1; border-radius:999px;
+      transition:background .2s; cursor:pointer; flex-shrink:0;
+    }
+    .ef-choice-switch .sw::after {
+      content:''; position:absolute; top:2px; left:2px; width:14px; height:14px;
+      background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .2s;
+    }
+    .ef-choice-switch.on .sw { background:#2563eb; }
+    .ef-choice-switch.on .sw::after { transform:translateX(16px); }
+    .ef-choice-switch.on { color:#1d4ed8; }
+    .ef-choice-switch.disabled { opacity:.4; pointer-events:none; }
+    /* curl 가이드 모달 */
+    .api-doc pre { background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px; font-size:12px;
+                   font-family:ui-monospace, Consolas, monospace; overflow-x:auto; line-height:1.55; white-space:pre; }
+    .api-doc h4 { font-size:13px; color:#1e293b; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #e2e8f0; }
+    .api-doc .api-note { background:#fef3c7; color:#92400e; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; font-size:12px; margin:6px 0 14px; }
+
     /* Gift 단계별 보상 — 단계 수 N + 각 단계 금액 */
     .gift-tiers-grid { display:flex; flex-direction:column; gap:6px; }
     .gift-tier-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; }
@@ -182,10 +337,31 @@
     .topbar .user .name { font-weight: 700; color: #1e293b; white-space: nowrap; }
     .topbar .user .name span { color: #2563eb; }
     .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
+    /* 일별 sub-tab 칩 (현장요원관리 > 일별) */
+    .day-chip { flex-shrink: 0; padding: 7px 12px; font-size: 12px; font-weight: 600;
+                background: #f8fafc; color: #475569; border: 1.5px solid #e2e8f0; border-radius: 8px;
+                cursor: pointer; min-width: 76px; text-align: center; line-height: 1.3; transition: all .15s; }
+    .day-chip:hover { background: #f0fdf4; border-color: #86efac; color: #166534; }
+    .day-chip.active { background: #15803d; border-color: #15803d; color: #fff; }
+    .day-chip .dow { font-size: 10px; opacity: 0.8; display: block; }
+    .day-chip .badge { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 9px;
+                       margin-top: 2px; }
+    .day-chip.active .badge { background: rgba(255,255,255,.2); color: #fff; }
+    /* 승인비밀번호 셀 (마스킹/평문 + 눈 토글) */
+    .pj-pin-wrap { display:inline-flex; align-items:center; gap:6px; }
+    .pj-pin-code { font-family: ui-monospace, Consolas, Menlo, monospace; font-size:12px; font-weight:600;
+                   letter-spacing:2px; background:#f1f5f9; color:#0f172a; padding:3px 8px; border-radius:4px;
+                   border:1px solid #e2e8f0; min-width:60px; text-align:center; display:inline-block; }
+    .pj-pin-eye { background:none; border:none; cursor:pointer; color:#64748b; padding:2px;
+                  display:inline-flex; align-items:center; }
+    .pj-pin-eye:hover { color:#0f172a; }
     .tab-btn { padding: 9px 18px; border: none; background: none; font-size: 14px; font-weight: 600;
                color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
     .tab-btn.act { color: #2563eb; border-bottom-color: #2563eb; }
     /* 정산 sub 탭 */
+    /* 정산 그리드 — 색상 없이 구분선으로만 영역 분리 */
+    .settle-grid .grp-end { border-right: 1px solid #cbd5e1 !important; }
+    .settle-grid thead th { background: #f8fafc; color: #1e293b; }
     .stl-sub { padding:7px 14px; border:none; background:none; font-size:13px; font-weight:600;
                color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
     .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
@@ -201,10 +377,10 @@
     .tbl-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); }
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
     thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 11px 13px;
-               text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+               text-align: center; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
     thead th.sortable { cursor: pointer; user-select: none; }
     thead th.sortable:hover { color: #2563eb; background: #eff6ff; }
-    tbody td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tbody td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: #fafbfd; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -616,8 +792,11 @@
 <section id="sec-dashboard">
   <div class="tabs">
     <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">내 프로젝트</button>
-    <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
+    <button class="tab-btn" id="tb-entry" onclick="switchTab('entry')">입장관리</button>
+    <button class="tab-btn" id="tb-agent" onclick="switchTab('agent')">현장요원관리</button>
     <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">정산</button>
+    <button class="tab-btn" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">발송이력</button>
+    <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
   </div>
 
   <!-- ─ 내 프로젝트 탭 ─ -->
@@ -846,9 +1025,9 @@
 
     <!-- Gift 승인 비밀번호 -->
     <div class="panel-card" style="margin-top:16px;">
-      <h3>Gift 승인 비밀번호 발송</h3>
+      <h3>프로젝트 비밀번호 발송</h3>
       <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
-        Gift 결제 승인 시 입력할 비밀번호입니다. 별도로 메모하여 기억하도록 하십시오.
+        Gift 결제 승인 시, 현장요원근태 관리 시 입력할 비밀번호입니다. 별도로 메모하여 기억하도록 하십시오.
       </p>
       <button class="btn btn-o btn-sm" id="btn-send-pin" onclick="sendPin()">비밀번호 발송</button>
       <div id="pin-verify-wrap" style="display:none;margin-top:14px;">
@@ -906,6 +1085,39 @@
             Reward(Gift+Quiz) 발급액이 예산을 초과하면 프로젝트를 중지시킴
           </label>
         </div>
+
+        <!-- 사전등록/현장등록 옵션 (견적 포함) -->
+        <div class="fg" style="grid-column:1/-1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">입장관리 옵션 <span style="font-weight:500;color:#15803d;font-size:11px;">(견적에 포함)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <input type="checkbox" id="pj-reservation-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">사전등록 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(프로젝트 시작 전까지 visitor 가 사전 신청)</span>
+          </label>
+          <div id="pj-reservation-detail" style="padding-left:26px;margin-bottom:10px;display:none;">
+            <label style="font-size:12px;color:#475569;font-weight:600;">사전등록 시작일시</label>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
+              <input id="pj-reservation-start-at" type="datetime-local" disabled onchange="onProjectOptionChange()" style="font-size:13px;">
+              <button type="button" class="btn btn-o btn-sm" onclick="setReservationStartDefault()" disabled id="pj-reservation-default-btn" style="padding:4px 10px;font-size:11px;">기본값 (시작 10일 전)</button>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px;">※ 종료일: 프로젝트 시작일</div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pj-entry-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">현장등록 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(프로젝트 시작일~종료일 동안 현장 신청)</span>
+          </label>
+        </div>
+
+        <!-- 현장요원관리 옵션 (입장관리와 분리된 별도 박스) -->
+        <div class="fg" style="grid-column:1/-1;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#854d0e;margin-bottom:8px;">현장요원관리 옵션 <span style="font-weight:500;color:#a16207;font-size:11px;">(견적에 포함 · 프로젝트당 정액)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pj-field-agent-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">현장요원관리 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(현장 운영 인원 등록 + 출퇴근 QR 발급 + 근태 관리)</span>
+          </label>
+        </div>
         <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span style="font-size:11px;color:#94a3b8;font-weight:400;">(Gift 단가 × Gift 발급 수량 자동 계산)</span></label>
           <input id="pj-budget" type="text" inputmode="numeric" placeholder="자동 계산" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
@@ -914,7 +1126,445 @@
     </div>
   </div>
 
+  <!-- ─ 입장관리 탭 ─ -->
+  <div class="tab-panel" id="tab-entry">
+    <div class="panel-card">
+      <!-- sub 탭 -->
+      <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:18px;">
+        <button type="button" class="stl-sub active" data-entry-sub="status" onclick="switchEntrySub('status')">입장권관리</button>
+        <button type="button" class="stl-sub" data-entry-sub="people" onclick="switchEntrySub('people')">입장현황</button>
+        <button type="button" class="stl-sub" data-entry-sub="visitor" onclick="switchEntrySub('visitor')">방문객현황</button>
+        <button type="button" class="stl-sub" data-entry-sub="register" onclick="switchEntrySub('register')" style="margin-left:auto;">입장등록</button>
+      </div>
+
+      <!-- 입장권관리 sub -->
+      <div id="entry-sub-status" class="entry-sub-pane">
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <input id="esf-name" type="text" placeholder="프로젝트명 검색"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
+            oninput="onEntryStatusFilterChange()">
+          <select id="esf-status" onchange="onEntryStatusFilterChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 상태</option>
+            <option value="quoted">견적</option>
+            <option value="deposit_wait">입금대기</option>
+            <option value="deposit_confirmed">입금확인</option>
+            <option value="ready_to_start">시작대기</option>
+            <option value="started">진행중</option>
+            <option value="completed">완료</option>
+          </select>
+          <button class="btn btn-outline btn-sm" id="esf-reset" onclick="resetEntryStatusFilter()" disabled>조회조건 초기화</button>
+          <button class="btn btn-o btn-sm" id="esf-excel" onclick="downloadEntryStatusExcel()" disabled style="margin-left:auto;">⬇ 엑셀 다운로드</button>
+        </div>
+        <div class="tbl-wrap" style="overflow-x:auto;">
+          <table id="entry-status-table" style="min-width:1480px;">
+            <thead>
+              <tr>
+                <th rowspan="2">프로젝트명<br><span style="font-weight:500;color:#94a3b8;font-size:11px;">(일련번호)</span></th>
+                <th rowspan="2">등록일</th>
+                <th colspan="8" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">🔵 사전등록</th>
+                <th colspan="8" style="text-align:center;background:#f0fdf4;color:#166534;border-bottom:1px solid #bbf7d0;">🟢 현장등록</th>
+              </tr>
+              <tr>
+                <th style="text-align:center;white-space:nowrap;">혜택여부</th>
+                <th style="text-align:right;">혜택금액</th>
+                <th style="text-align:right;">발급한도</th>
+                <th style="text-align:center;white-space:nowrap;">한도초과허용</th>
+                <th style="text-align:center;">이미지</th>
+                <th style="text-align:center;">미리보기</th>
+                <th style="text-align:center;">주소</th>
+                <th style="text-align:center;">바로가기</th>
+                <th style="text-align:center;white-space:nowrap;">혜택여부</th>
+                <th style="text-align:right;">혜택금액</th>
+                <th style="text-align:right;">발급한도</th>
+                <th style="text-align:center;white-space:nowrap;">한도초과허용</th>
+                <th style="text-align:center;">이미지</th>
+                <th style="text-align:center;">미리보기</th>
+                <th style="text-align:center;">주소</th>
+                <th style="text-align:center;">바로가기</th>
+              </tr>
+            </thead>
+            <tbody id="entry-status-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 입장현황 sub (사전등록/현장등록 신청자 목록) -->
+      <div id="entry-sub-people" class="entry-sub-pane" style="display:none;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <input id="ep-name" type="text" placeholder="프로젝트명 또는 일련번호로 검색 (예: 국중박, 20260604_0001)"
+            onkeydown="if(event.key==='Enter')loadEntryPeople()"
+            oninput="onEntryPeopleFilterChange()"
+            onfocus="if(this.value){this.value='';onEntryPeopleFilterChange();}"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:320px;">
+          <select id="ep-mode" onchange="onEntryPeopleFilterChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 방문방식</option>
+            <option value="reservation">사전등록</option>
+            <option value="entry">현장등록</option>
+          </select>
+          <select id="ep-status" onchange="onEntryPeopleFilterChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 상태</option>
+            <option value="pending">신청완료</option>
+            <option value="activated">현장방문</option>
+            <option value="used">Gift사용</option>
+            <option value="cancelled">취소</option>
+            <option value="expired">만료</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadEntryPeople()">검색</button>
+          <button class="btn btn-outline btn-sm" id="ep-reset" onclick="resetEntryPeopleFilter()" disabled>조회조건 초기화</button>
+          <button class="btn btn-o btn-sm" id="ep-excel" onclick="downloadEntryPeopleExcel()" disabled style="margin-left:auto;">⬇ 엑셀 다운로드</button>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div id="ep-summary" style="display:none;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div class="ef-benefit-card r-card" style="background:#eff6ff;border-color:#bfdbfe;">
+            <h5 style="margin:0 0 8px;">🔵 사전등록 <span class="badge-mode" style="background:#bfdbfe;color:#1e40af;">RESERVATION</span></h5>
+            <div style="display:flex;gap:18px;font-size:13px;color:#1e293b;flex-wrap:wrap;">
+              <span>신청 <b id="ep-r-total">0</b>명</span>
+              <span>현장방문 <b id="ep-r-visited" style="color:#15803d;">0</b>명</span>
+              <span>Gift사용 <b id="ep-r-used" style="color:#1d4ed8;">0</b>명</span>
+            </div>
+          </div>
+          <div class="ef-benefit-card e-card" style="background:#f0fdf4;border-color:#bbf7d0;">
+            <h5 style="margin:0 0 8px;">🟢 현장등록 <span class="badge-mode" style="background:#bbf7d0;color:#166534;">ENTRY</span></h5>
+            <div style="display:flex;gap:18px;font-size:13px;color:#1e293b;flex-wrap:wrap;">
+              <span>신청 <b id="ep-e-total">0</b>명</span>
+              <span>현장방문 <b id="ep-e-visited" style="color:#15803d;">0</b>명</span>
+              <span>Gift사용 <b id="ep-e-used" style="color:#1d4ed8;">0</b>명</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="ep-empty" style="text-align:center;color:#94a3b8;padding:32px;border:1px dashed #e2e8f0;border-radius:10px;">
+          조회조건을 입력하고 검색 버튼을 누르면 사전등록/현장등록 신청자 목록이 표시됩니다. (검색어 없이도 전체 조회 가능)
+        </div>
+
+        <div id="ep-table-wrap" class="tbl-wrap" style="display:none;overflow-x:auto;">
+          <table style="min-width:1300px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>프로젝트명</th>
+                <th style="white-space:nowrap;">방문방식</th>
+                <th>이름</th>
+                <th>이메일</th>
+                <th>모바일폰</th>
+                <th style="white-space:nowrap;">신청일시</th>
+                <th style="text-align:right;">혜택금액</th>
+                <th style="white-space:nowrap;">현장 방문</th>
+                <th style="white-space:nowrap;">Gift 사용</th>
+                <th style="white-space:nowrap;">Gift 사용일시</th>
+              </tr>
+            </thead>
+            <tbody id="ep-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 방문객현황 sub -->
+      <div id="entry-sub-visitor" class="entry-sub-pane" style="display:none;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <input id="vs-pname" type="text" placeholder="프로젝트명 또는 일련번호로 검색 (예: 국중박, 20260604_0001)"
+            onkeydown="if(event.key==='Enter')loadVisitorList()"
+            oninput="onVisitorFilterChange()"
+            onfocus="if(this.value){this.value='';onVisitorFilterChange();}"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:320px;">
+          <select id="vs-mode" onchange="onVisitorFilterChange()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 방문방식</option>
+            <option value="reservation">사전등록</option>
+            <option value="entry">현장등록</option>
+          </select>
+          <select id="vs-visited" onchange="onVisitorFilterChange()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 방문여부</option>
+            <option value="yes">✓ 방문함</option>
+            <option value="no">✗ 미방문</option>
+          </select>
+          <input id="vs-search" type="text" placeholder="이름/이메일/모바일" oninput="renderVisitorStatus()"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:180px;">
+          <button class="btn btn-primary btn-sm" onclick="loadVisitorList()">검색</button>
+          <button class="btn btn-outline btn-sm" id="vs-reset" onclick="resetVisitorFilter()" disabled>조회조건 초기화</button>
+          <button class="btn btn-o btn-sm" id="vs-excel" onclick="downloadVisitorExcel()" disabled style="margin-left:auto;">⬇ 엑셀 다운로드</button>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div id="vs-summary-card" style="display:none;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;">
+            <h5 style="margin:0 0 8px;font-size:13px;color:#166534;">🟢 사전등록</h5>
+            <div style="display:flex;gap:18px;font-size:13px;color:#1e293b;flex-wrap:wrap;">
+              <span>신청 <b id="vs-r-total">0</b>명</span>
+              <span>방문 <b id="vs-r-visited" style="color:#15803d;">0</b>명</span>
+              <span>미방문 <b id="vs-r-unvisited" style="color:#dc2626;">0</b>명</span>
+              <span>Gift사용 <b id="vs-r-used" style="color:#1d4ed8;">0</b>명</span>
+            </div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;">
+            <h5 style="margin:0 0 8px;font-size:13px;color:#166534;">🟢 현장등록</h5>
+            <div style="display:flex;gap:18px;font-size:13px;color:#1e293b;flex-wrap:wrap;">
+              <span>신청 <b id="vs-e-total">0</b>명</span>
+              <span>방문 <b id="vs-e-visited" style="color:#15803d;">0</b>명</span>
+              <span>미방문 <b id="vs-e-unvisited" style="color:#dc2626;">0</b>명</span>
+              <span>Gift사용 <b id="vs-e-used" style="color:#1d4ed8;">0</b>명</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="vs-empty" style="text-align:center;color:#94a3b8;padding:32px;border:1px dashed #e2e8f0;border-radius:10px;">
+          조회조건을 입력하고 검색 버튼을 누르면 방문객 목록이 표시됩니다. (검색어 없이도 전체 조회 가능)
+        </div>
+
+        <div id="vs-content" style="display:none;overflow-x:auto;">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>프로젝트</th>
+                <th>이름</th><th>모바일</th><th>이메일</th>
+                <th>방문방식</th>
+                <th>신청일시</th><th>방문일시</th><th>Gift 사용일시</th>
+                <th style="white-space:nowrap;">방문여부</th>
+                <th style="white-space:nowrap;">입력정보</th>
+              </tr>
+            </thead>
+            <tbody id="vs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 입장등록 sub (기존 설정 화면) -->
+      <div id="entry-sub-register" class="entry-sub-pane" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h3 style="margin:0;">입장 등록 · 사전등록/현장등록 설정</h3>
+          <p style="font-size:12px;color:#64748b;margin:4px 0 0;">프로젝트별로 폼에 노출할 항목을 선택하고, 예약자/입장객에게 부여할 혜택을 설정합니다. (visitor 사전등록은 프로젝트 시작 전까지만 가능)</p>
+        </div>
+        <button class="btn btn-o btn-sm" onclick="openEntryApiGuide()">⚙ 외부 연동 API 가이드</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <label style="font-size:13px;color:#475569;font-weight:600;">프로젝트 선택</label>
+        <select id="ef-project" onchange="onEntryProjectChange()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;min-width:260px;">
+          <option value="">— 프로젝트를 선택해 주세요 —</option>
+        </select>
+        <span id="ef-proj-info" style="font-size:12px;color:#64748b;"></span>
+      </div>
+
+      <div id="ef-empty" style="text-align:center;color:#94a3b8;padding:32px;border:1px dashed #e2e8f0;border-radius:10px;">
+        프로젝트를 선택하면 사전등록 설정을 편집할 수 있습니다.
+      </div>
+
+      <div id="ef-config" style="display:none;">
+        <!-- 두 개의 혜택 카드: 사전등록 / 현장등록 -->
+        <div class="ef-benefit-grid">
+          <!-- 사전등록 -->
+          <div class="ef-benefit-card r-card" id="ef-r-card">
+            <h5>
+              <input type="checkbox" id="ef-r-enabled" style="width:18px;height:18px;cursor:pointer;" onchange="applyBenefitEnabled('r')">
+              <label for="ef-r-enabled" style="cursor:pointer;">사전등록</label>
+              <span class="badge-mode">RESERVATION</span>
+              <span style="margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="ef-preview-btn" onclick="openLandingPreview('r')">👁 미리보기</button>
+                <button type="button" class="ef-preview-btn ef-copy-btn" id="ef-r-copy" onclick="copyReservationUrl('r')" disabled title="저장 후 활성화">📋 주소복사</button>
+                <button type="button" class="ef-preview-btn ef-copy-btn" id="ef-r-qr" onclick="openEntryQrModal('r')" disabled title="저장 후 활성화">📱 QR</button>
+              </span>
+            </h5>
+            <div class="ef-grid2">
+              <div class="fg"><label>혜택 금액 <span class="hint">(가맹점 사용 시 지급)</span></label>
+                <input id="ef-r-amount" type="text" inputmode="numeric" oninput="onAmountInput(this,'ef-r-amount');checkEntryConfigDirty()" placeholder="5,000"></div>
+              <div class="fg"><label>발급 한도 <span class="hint">(0 = 무제한)</span></label>
+                <input id="ef-r-max" type="text" inputmode="numeric" oninput="onAmountInput(this,'ef-r-max');checkEntryConfigDirty()" placeholder="0"></div>
+              <div class="fg full"><label>혜택 설명</label>
+                <input id="ef-r-label" type="text" maxlength="120" placeholder="입장 시 음료 1잔" oninput="checkEntryConfigDirty()"></div>
+              <div class="fg full"><label>보상 메세지 <span class="hint">(완료 페이지에 표시될 행동 안내)</span></label>
+                <input id="ef-r-message" type="text" maxlength="120" placeholder="QR찍고 상품교환" oninput="checkEntryConfigDirty()"></div>
+              <div class="fg full"><label>사전등록 시작일시 <span class="hint">(프로젝트 시작일 이전이어야 함 · 이후엔 사전등록 종료)</span></label>
+                <input id="ef-r-start-at" type="datetime-local" onchange="checkEntryConfigDirty()"></div>
+              <div class="fg full"><label>혜택 이미지 <span class="hint">(권장 720×540, 최대 5MB · jpg/png)</span></label>
+                <div class="ef-img-wrap" id="ef-r-img-wrap">
+                  <img id="ef-r-img-preview" class="ef-img-preview" style="display:none;">
+                  <div class="ef-img-empty" id="ef-r-img-empty">이미지 없음</div>
+                </div>
+                <div class="ef-img-actions">
+                  <input type="file" id="ef-r-img-file" accept="image/*" style="display:none;" onchange="uploadBenefitImage('r', this)">
+                  <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('ef-r-img-file').click()">📷 업로드</button>
+                  <button type="button" class="btn btn-o btn-sm" id="ef-r-img-del" onclick="deleteBenefitImage('r')" style="display:none;">🗑 삭제</button>
+                </div>
+              </div>
+            </div>
+            <label class="tg"><input type="checkbox" id="ef-r-stop" onchange="checkEntryConfigDirty()"><span>발급 한도 초과 시 혜택 발급 중지</span></label>
+          </div>
+
+          <!-- 현장등록 -->
+          <div class="ef-benefit-card e-card" id="ef-e-card">
+            <h5>
+              <input type="checkbox" id="ef-e-enabled" style="width:18px;height:18px;cursor:pointer;" onchange="applyBenefitEnabled('e')">
+              <label for="ef-e-enabled" style="cursor:pointer;">현장등록</label>
+              <span class="badge-mode">ENTRY</span>
+              <span style="margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="ef-preview-btn" onclick="openLandingPreview('e')">👁 미리보기</button>
+                <button type="button" class="ef-preview-btn ef-copy-btn" id="ef-e-copy" onclick="copyReservationUrl('e')" disabled title="저장 후 활성화">📋 주소복사</button>
+                <button type="button" class="ef-preview-btn ef-copy-btn" id="ef-e-qr" onclick="openEntryQrModal('e')" disabled title="저장 후 활성화">📱 QR</button>
+              </span>
+            </h5>
+            <div class="ef-grid2">
+              <div class="fg"><label>혜택 금액 <span class="hint">(현장 등록 시 지급)</span></label>
+                <input id="ef-e-amount" type="text" inputmode="numeric" oninput="onAmountInput(this,'ef-e-amount');checkEntryConfigDirty()" placeholder="2,000"></div>
+              <div class="fg"><label>발급 한도 <span class="hint">(0 = 무제한)</span></label>
+                <input id="ef-e-max" type="text" inputmode="numeric" oninput="onAmountInput(this,'ef-e-max');checkEntryConfigDirty()" placeholder="0"></div>
+              <div class="fg full"><label>혜택 설명</label>
+                <input id="ef-e-label" type="text" maxlength="120" placeholder="기념품 증정" oninput="checkEntryConfigDirty()"></div>
+              <div class="fg full"><label>보상 메세지 <span class="hint">(완료 페이지에 표시될 행동 안내)</span></label>
+                <input id="ef-e-message" type="text" maxlength="120" placeholder="QR찍고 상품교환" oninput="checkEntryConfigDirty()"></div>
+              <div class="fg full"><label>혜택 이미지 <span class="hint">(권장 720×540, 최대 5MB · jpg/png)</span></label>
+                <div class="ef-img-wrap" id="ef-e-img-wrap">
+                  <img id="ef-e-img-preview" class="ef-img-preview" style="display:none;">
+                  <div class="ef-img-empty" id="ef-e-img-empty">이미지 없음</div>
+                </div>
+                <div class="ef-img-actions">
+                  <input type="file" id="ef-e-img-file" accept="image/*" style="display:none;" onchange="uploadBenefitImage('e', this)">
+                  <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('ef-e-img-file').click()">📷 업로드</button>
+                  <button type="button" class="btn btn-o btn-sm" id="ef-e-img-del" onclick="deleteBenefitImage('e')" style="display:none;">🗑 삭제</button>
+                </div>
+              </div>
+            </div>
+            <label class="tg"><input type="checkbox" id="ef-e-stop" onchange="checkEntryConfigDirty()"><span>발급 한도 초과 시 혜택 발급 중지</span></label>
+          </div>
+        </div>
+
+        <!-- 항목 선택 -->
+        <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+          <h4 style="font-size:14px;color:#1e293b;margin:0;">사전등록 폼 항목 선택</h4>
+          <span style="font-size:12px;color:#64748b;" id="ef-field-summary"></span>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#1e40af;line-height:1.55;">
+          <b>📌 필수 수집 항목 (잠금):</b> <b>이름</b>, <b>모바일 전화</b>, <b>이메일</b> 은 방문자를 식별하기 위해 반드시 수집되어야 하는 필드입니다. 폼 항목에서 제거할 수 없으며 필수 입력으로 고정됩니다.
+        </div>
+        <div id="ef-fields" class="ef-fields-grid"></div>
+
+        <div style="margin-top:18px;">
+          <div id="ef-msg" class="msg" style="text-align:center;margin-bottom:10px;"></div>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-o btn-sm" style="min-width:120px;" onclick="loadEntryConfig()">취소</button>
+            <button class="btn btn-p btn-sm" id="ef-save-btn" style="min-width:120px;" onclick="saveEntryConfig()" disabled>💾 저장</button>
+          </div>
+        </div>
+
+        <!-- 예약 현황 요약 -->
+        <div style="margin-top:24px;padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+          <h4 style="font-size:13px;color:#1e40af;margin:0 0 8px;">사전등록 현황</h4>
+          <div id="ef-counts" style="font-size:13px;color:#1e293b;display:flex;gap:18px;flex-wrap:wrap;">
+            <span>pending: <b>0</b></span><span>activated: <b>0</b></span><span>used: <b>0</b></span><span>total: <b>0</b></span>
+          </div>
+        </div>
+      </div>
+      </div><!-- /entry-sub-register -->
+    </div>
+  </div>
+
+  <!-- ─ 현장요원관리 탭 ─ -->
+  <div class="tab-panel" id="tab-agent">
+    <div class="panel-card">
+      <h3>현장요원관리 <span style="font-size:12px;font-weight:500;color:#94a3b8;margin-left:10px;">(이 옵션을 사용 중인 프로젝트만 표시)</span></h3>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <select id="agent-project" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;min-width:280px;" onchange="onAgentProjectChange()">
+          <option value="">— 프로젝트 선택 —</option>
+        </select>
+        <button class="btn btn-o btn-sm" id="agent-copy-url-btn" onclick="copyAgentRegUrl()" disabled>📋 현장요원등록 URL</button>
+        <button class="btn btn-o btn-sm" id="agent-qr-btn" onclick="openAgentRegQrModal()" disabled>📱 등록 QR</button>
+        <button class="btn btn-o btn-sm" id="agent-att-copy-btn" onclick="copyAgentAttUrl()" disabled>📋 근태관리 URL</button>
+        <button class="btn btn-o btn-sm" id="agent-att-qr-btn" onclick="openAgentAttUrlQrModal()" disabled>📱 근태 QR</button>
+      </div>
+      <div id="agent-empty" style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">
+        프로젝트를 선택해 주세요.<br>
+        <span style="font-size:11px;color:#cbd5e1;">※ 현장요원관리는 프로젝트 등록 시 옵션을 선택한 경우에만 사용할 수 있습니다.</span>
+      </div>
+      <div id="agent-content" style="display:none;">
+        <!-- sub 탭 -->
+        <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:14px;">
+          <button type="button" class="stl-sub active" data-agent-sub="by-agent" onclick="switchAgentSub('by-agent')">현장요원별</button>
+          <button type="button" class="stl-sub" data-agent-sub="by-day" onclick="switchAgentSub('by-day')">일별</button>
+        </div>
+
+        <!-- 현장요원별 sub -->
+        <div id="agent-sub-by-agent" class="agent-sub-pane">
+          <div style="overflow-x:auto;">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>이름</th><th>모바일</th><th>이메일</th><th>주소</th>
+                <th>주민등록증</th><th>통장사본</th><th>QR</th>
+                <th>근태<br><span style="font-size:11px;font-weight:500;color:#94a3b8;">(정시/지각/근무일수)</span></th>
+                <th>등록일시</th>
+              </tr>
+            </thead>
+            <tbody id="agent-tbody">
+              <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:18px;">등록된 현장요원이 없습니다.</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- 일별 sub -->
+        <div id="agent-sub-by-day" class="agent-sub-pane" style="display:none;">
+          <div id="agent-day-empty" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px;">불러오는 중…</div>
+          <div id="agent-day-wrap" style="display:none;">
+            <!-- 일자별 sub-sub 탭 (가로 스크롤) -->
+            <div id="agent-day-tabs" style="display:flex;gap:4px;overflow-x:auto;padding:6px 4px 10px;border-bottom:2px solid #e2e8f0;margin-bottom:12px;white-space:nowrap;"></div>
+            <!-- 선택된 날짜 요약 카드 -->
+            <div id="agent-day-summary"></div>
+            <!-- 선택된 날짜 요원 목록 -->
+            <div id="agent-day-detail" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ─ 정산 탭 ─ -->
+  <!-- ─ 발송이력 탭 ─ -->
+  <div class="tab-panel" id="tab-mail">
+    <div class="panel-card">
+      <h3>발송이력 <span style="font-size:12px;font-weight:500;color:#94a3b8;margin-left:10px;">(본 주관기관에서 발송된 모든 메일)</span></h3>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <input id="mail-q" type="text" placeholder="받는사람 / 제목 검색" style="width:240px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;" onkeydown="if(event.key==='Enter')loadMailLogs(1)">
+        <select id="mail-status" onchange="loadMailLogs(1)" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+          <option value="">전체 상태</option>
+          <option value="sent">발송 성공</option>
+          <option value="failed">발송 실패</option>
+        </select>
+        <select id="mail-trigger" onchange="loadMailLogs(1)" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+          <option value="">전체 구분</option>
+          <option value="auto">시스템 자동</option>
+          <option value="manual">수동 발송</option>
+        </select>
+        <button class="btn btn-p btn-sm" onclick="loadMailLogs(1)">검색</button>
+        <button class="btn btn-o btn-sm" onclick="resetMailFilters()">초기화</button>
+        <span id="mail-summary" style="margin-left:auto;font-size:12px;color:#64748b;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>프로젝트</th>
+            <th>발송 구분<br><span style="font-size:11px;font-weight:500;color:#94a3b8;">(자동/수동)</span></th>
+            <th>발송 사유</th>
+            <th>발송일시</th>
+            <th>제목</th>
+            <th>받는사람</th>
+            <th>상태</th>
+            <th>오류 메시지</th>
+          </tr>
+        </thead>
+        <tbody id="mail-tbody">
+          <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중…</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div id="mail-pager" style="display:flex;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tab-settle">
     <div class="panel-card">
       <!-- sub 탭 -->
@@ -944,27 +1594,33 @@
       <!-- 프로젝트별 -->
       <div id="sub-byproj" class="stl-sub-pane">
         <div class="tbl-wrap">
-          <table>
+          <table class="settle-grid">
             <thead>
               <tr>
                 <th rowspan="2">프로젝트명</th>
-                <th rowspan="2">상태</th>
-                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
-                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
-                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ C)</th>
-                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
-                <th rowspan="2" style="text-align:center;">상세보기</th>
+                <th rowspan="2" class="grp-end">상태</th>
+                <th colspan="6" style="text-align:center;" class="grp-end">🎁 Gift</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">❓ Quiz</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">사전등록</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">현장등록</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ)</th>
               </tr>
               <tr>
                 <th style="text-align:right;">단가(X)</th>
                 <th style="text-align:center;">사용개수(Y)</th>
                 <th style="text-align:center;">증정개수(Z)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
-                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
-                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:right;">사용금액<br>(a=X×Y)</th>
+                <th style="text-align:right;">증정금액<br>(b=X×Z)</th>
+                <th style="text-align:right;" class="grp-end">합계<br>(c=a+b)</th>
                 <th style="text-align:right;">단가(a)</th>
                 <th style="text-align:center;">지급개수(b)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+                <th style="text-align:right;" class="grp-end">사용금액<br>(c=a×b)</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
               </tr>
             </thead>
             <tbody id="settle-tbody"></tbody>
@@ -975,27 +1631,34 @@
       <!-- 가맹점별 -->
       <div id="sub-bymerch" class="stl-sub-pane" style="display:none;">
         <div class="tbl-wrap">
-          <table>
+          <table class="settle-grid">
             <thead>
               <tr>
                 <th rowspan="2">가맹점명</th>
                 <th rowspan="2">프로젝트명</th>
-                <th rowspan="2">상태</th>
-                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
-                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
-                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
-                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+                <th rowspan="2" class="grp-end">상태</th>
+                <th colspan="6" style="text-align:center;" class="grp-end">🎁 Gift</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">❓ Quiz</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">사전등록</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">현장등록</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ)</th>
               </tr>
               <tr>
                 <th style="text-align:right;">단가(X)</th>
-                <th style="text-align:center;">사용(Y)</th>
-                <th style="text-align:center;">증정(Z)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
-                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
-                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:center;">사용개수(Y)</th>
+                <th style="text-align:center;">증정개수(Z)</th>
+                <th style="text-align:right;">사용금액<br>(a=X×Y)</th>
+                <th style="text-align:right;">증정금액<br>(b=X×Z)</th>
+                <th style="text-align:right;" class="grp-end">합계<br>(c=a+b)</th>
                 <th style="text-align:right;">단가(a)</th>
-                <th style="text-align:center;">지급(b)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+                <th style="text-align:center;">지급개수(b)</th>
+                <th style="text-align:right;" class="grp-end">사용금액<br>(c=a×b)</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
               </tr>
             </thead>
             <tbody id="settle-bymerch-tbody"></tbody>
@@ -1006,28 +1669,35 @@
       <!-- 일별 -->
       <div id="sub-byday" class="stl-sub-pane" style="display:none;">
         <div class="tbl-wrap">
-          <table>
+          <table class="settle-grid">
             <thead>
               <tr>
                 <th rowspan="2">일자</th>
                 <th rowspan="2">프로젝트명</th>
                 <th rowspan="2">가맹점명</th>
-                <th rowspan="2">상태</th>
-                <th colspan="6" style="text-align:center;background:#eff6ff;color:#1d4ed8;border-bottom:1px solid #c7d2fe;">Gift</th>
-                <th colspan="3" style="text-align:center;background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a;">Quiz</th>
-                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액</th>
-                <th rowspan="2" style="text-align:center;">사용자현황<br>(사용/증정)</th>
+                <th rowspan="2" class="grp-end">상태</th>
+                <th colspan="6" style="text-align:center;" class="grp-end">🎁 Gift</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">❓ Quiz</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">사전등록</th>
+                <th colspan="3" style="text-align:center;" class="grp-end">현장등록</th>
+                <th rowspan="2" style="text-align:right;white-space:nowrap;">총 Reward 금액(Σ)</th>
               </tr>
               <tr>
                 <th style="text-align:right;">단가(X)</th>
-                <th style="text-align:center;">사용(Y)</th>
-                <th style="text-align:center;">증정(Z)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(a=X×Y)</th>
-                <th style="text-align:right;white-space:nowrap;">증정금액(b=X×Z)</th>
-                <th style="text-align:right;white-space:nowrap;">합계(c=a+b)</th>
+                <th style="text-align:center;">사용개수(Y)</th>
+                <th style="text-align:center;">증정개수(Z)</th>
+                <th style="text-align:right;">사용금액<br>(a=X×Y)</th>
+                <th style="text-align:right;">증정금액<br>(b=X×Z)</th>
+                <th style="text-align:right;" class="grp-end">합계<br>(c=a+b)</th>
                 <th style="text-align:right;">단가(a)</th>
-                <th style="text-align:center;">지급(b)</th>
-                <th style="text-align:right;white-space:nowrap;">사용금액(c=a×b)</th>
+                <th style="text-align:center;">지급개수(b)</th>
+                <th style="text-align:right;" class="grp-end">사용금액<br>(c=a×b)</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
+                <th style="text-align:right;">단가</th>
+                <th style="text-align:center;">사용수</th>
+                <th style="text-align:right;" class="grp-end">사용금액</th>
               </tr>
             </thead>
             <tbody id="settle-byday-tbody"></tbody>
@@ -1208,7 +1878,7 @@
 
 <!-- ── 가맹점 지원현황 모달 ── -->
 <div class="modal-ov" id="modal-apps">
-  <div class="modal" style="width:96vw;max-width:1000px;">
+  <div class="modal" style="width:98vw;max-width:1400px;">
     <div class="card-header"><h2>가맹점 지원현황</h2>
       <button class="modal-close" onclick="closeApplications()" aria-label="닫기">×</button></div>
     <div class="card-body">
@@ -1217,6 +1887,138 @@
       <div id="apps-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
       <button class="btn btn-o btn-sm btn-full" style="margin-top:14px;" onclick="closeApplications()">닫기</button>
     </div>
+  </div>
+</div>
+
+<!-- ── 랜딩 페이지 미리보기 모달 (입장 희망객 첫 페이지) ── -->
+<div class="modal-ov" id="modal-landing-preview">
+  <div class="modal" style="width:90vw;max-width:560px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="lp-title">랜딩 페이지 미리보기</h2>
+      <button class="modal-close" onclick="closeLandingPreview()">×</button></div>
+    <div class="card-body" id="lp-body" style="overflow:auto;background:#f0f4f9;"></div>
+  </div>
+</div>
+
+<!-- ── 입장등록 QR 보기 모달 (사전등록/현장등록 URL 따로) ── -->
+<div class="modal-ov" id="modal-entry-qr">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h2 id="eqr-title">QR 코드</h2>
+      <button class="modal-close" onclick="closeEntryQrModal()">×</button></div>
+    <div class="card-body" style="text-align:center;">
+      <div id="eqr-mode-badge" style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:12px;"></div>
+      <img id="eqr-img" alt="QR" style="width:280px;height:280px;border:2px dashed #cbd5e1;border-radius:12px;background:#fff;padding:8px;">
+      <div style="font-size:12px;color:#475569;margin:14px 0 6px;font-weight:600;">접속 URL</div>
+      <div id="eqr-url" style="font-size:12px;color:#1d4ed8;word-break:break-all;background:#f1f5f9;border-radius:6px;padding:8px 10px;font-family:monospace;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="downloadEntryQr()">💾 QR 저장</button>
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="copyEntryQrUrl()">📋 URL 복사</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 방문객 상세 정보 모달 ── -->
+<div class="modal-ov" id="modal-visitor-detail">
+  <div class="modal" style="max-width:480px;">
+    <div class="card-header"><h2 id="vd-title">방문객 정보</h2>
+      <button class="modal-close" onclick="closeVisitorDetail()">×</button></div>
+    <div class="card-body" id="vd-body"></div>
+  </div>
+</div>
+
+<!-- ── 현장요원등록 URL QR 모달 ── -->
+<div class="modal-ov" id="modal-agent-reg-qr">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h2>현장요원등록 QR 코드</h2>
+      <button class="modal-close" onclick="closeAgentRegQrModal()">×</button></div>
+    <div class="card-body" style="text-align:center;">
+      <div style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:12px;background:#fef3c7;color:#854d0e;">현장요원 등록 URL</div>
+      <img id="agr-img" alt="QR" style="width:280px;height:280px;border:2px dashed #cbd5e1;border-radius:12px;background:#fff;padding:8px;">
+      <div style="font-size:12px;color:#475569;margin:14px 0 6px;font-weight:600;">접속 URL</div>
+      <div id="agr-url" style="font-size:12px;color:#1d4ed8;word-break:break-all;background:#f1f5f9;border-radius:6px;padding:8px 10px;font-family:monospace;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="downloadAgentRegQr()">💾 QR 저장</button>
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="copyAgentRegUrl()">📋 URL 복사</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 근태관리 PWA URL QR 모달 ── -->
+<div class="modal-ov" id="modal-agent-att-qr">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h2>근태관리 PWA QR</h2>
+      <button class="modal-close" onclick="closeAgentAttUrlQrModal()">×</button></div>
+    <div class="card-body" style="text-align:center;">
+      <div style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:12px;background:#dbeafe;color:#1e40af;">관리자 근태관리 URL</div>
+      <img id="aatu-img" alt="QR" style="width:280px;height:280px;border:2px dashed #cbd5e1;border-radius:12px;background:#fff;padding:8px;">
+      <div style="font-size:12px;color:#475569;margin:14px 0 6px;font-weight:600;">접속 URL</div>
+      <div id="aatu-url" style="font-size:12px;color:#1d4ed8;word-break:break-all;background:#f1f5f9;border-radius:6px;padding:8px 10px;font-family:monospace;"></div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5;">
+        ※ 이 URL/QR 은 현장 관리자에게만 공유하세요.<br>접속 시 프로젝트 6자리 PIN 으로 로그인합니다.
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="downloadAgentAttUrlQr()">💾 QR 저장</button>
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="copyAgentAttUrl()">📋 URL 복사</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 현장요원 개인 QR 보기 모달 ── -->
+<div class="modal-ov" id="modal-agent-qr">
+  <div class="modal" style="max-width:380px;">
+    <div class="card-header"><h2 id="aqr-title">출퇴근 QR</h2>
+      <button class="modal-close" onclick="closeAgentQrModal()">×</button></div>
+    <div class="card-body" style="text-align:center;">
+      <div id="aqr-meta" style="font-size:12px;color:#475569;margin-bottom:10px;line-height:1.5;"></div>
+      <img id="aqr-img" alt="QR" style="width:280px;height:280px;border:2px dashed #86efac;border-radius:12px;background:#fff;padding:8px;">
+      <div style="font-size:11px;color:#94a3b8;margin-top:12px;line-height:1.5;">
+        ※ 이 QR 코드는 출퇴근 등록 시 관리자가 스캔하는 용도입니다.<br>요원 본인이 이미 등록 시 다운로드받았습니다.
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-o btn-sm" style="flex:1;" onclick="downloadAgentQr()">💾 QR 저장</button>
+        <button class="btn btn-p btn-sm" style="flex:1;" id="aqr-mail-btn" onclick="sendAgentQrEmail()">✉ 메일 전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 현장요원 근태 달력 모달 ── -->
+<div class="modal-ov" id="modal-agent-att">
+  <div class="modal" style="max-width:560px;">
+    <div class="card-header"><h2 id="aat-title">근태 달력</h2>
+      <button class="modal-close" onclick="closeAgentAtt()">×</button></div>
+    <div class="card-body">
+      <div id="aat-summary" style="display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:14px;"></div>
+      <div id="aat-cal"></div>
+      <div style="display:flex;gap:14px;justify-content:center;font-size:11px;color:#64748b;margin-top:12px;">
+        <span><span style="display:inline-block;width:12px;height:12px;background:#15803d;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>정시출근</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>지각</span>
+        <span><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border:1px solid #fecaca;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>결근</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 입장관리 항목 미리보기 모달 (입장 희망객 view) ── -->
+<div class="modal-ov" id="modal-field-preview">
+  <div class="modal" style="max-width:480px;">
+    <div class="card-header"><h2 id="fp-title">항목 미리보기</h2>
+      <button class="modal-close" onclick="closeFieldPreview()">×</button></div>
+    <div class="card-body">
+      <div class="fp-note">입장 희망객에게 다음과 같은 형태로 표시됩니다. <span style="color:#94a3b8;">(체크는 미리보기용이며 저장되지 않습니다)</span></div>
+      <div id="fp-list" class="fp-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 외부 연동 API 가이드 모달 ── -->
+<div class="modal-ov" id="modal-entry-api">
+  <div class="modal" style="width:80vw;max-width:900px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2>입장관리 · 외부 연동 API 가이드</h2>
+      <button class="modal-close" onclick="closeEntryApiGuide()">×</button></div>
+    <div class="card-body api-doc" id="entry-api-body" style="overflow:auto;"></div>
   </div>
 </div>
 
@@ -1384,6 +2186,16 @@
             <summary class="vs-h">완주자 대비 Gift 소진</summary>
             <div id="vs-gift-bar"></div>
           </details>
+
+          <details class="vs-section" open>
+            <summary class="vs-h">가맹점별 정산 내역 (Gift + Quiz)</summary>
+            <div id="vs-merch-settle"></div>
+          </details>
+
+          <details class="vs-section" open>
+            <summary class="vs-h">일자별 정산 내역 (Gift + Quiz)</summary>
+            <div id="vs-day-settle"></div>
+          </details>
         </div>
       </div>
     </div>
@@ -1428,6 +2240,32 @@
             Reward(Gift+Quiz) 발급액이 예산을 초과하면 프로젝트를 중지시킴
           </label>
         </div>
+
+        <!-- 사전등록 / 현장등록 옵션 -->
+        <div class="fg" style="grid-column:1/-1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px;">입장관리 옵션</div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <input type="checkbox" id="pe-reservation-use" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">사전등록 사용</span>
+          </label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-left:26px;margin-bottom:12px;">
+            <div class="fg" style="margin:0;"><label style="font-size:12px;">사전등록 단가</label>
+              <input id="pe-reservation-amount" type="text" inputmode="numeric" placeholder="0" oninput="onAmountInput(this,'pe-reservation-amount')"></div>
+            <div class="fg" style="margin:0;"><label style="font-size:12px;">사전등록 수량 <span class="hint">(0=무제한)</span></label>
+              <input id="pe-reservation-max" type="text" inputmode="numeric" placeholder="0" oninput="onAmountInput(this,'pe-reservation-max')"></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <input type="checkbox" id="pe-entry-use" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">현장등록 사용</span>
+          </label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-left:26px;">
+            <div class="fg" style="margin:0;"><label style="font-size:12px;">현장등록 단가</label>
+              <input id="pe-entry-amount" type="text" inputmode="numeric" placeholder="0" oninput="onAmountInput(this,'pe-entry-amount')"></div>
+            <div class="fg" style="margin:0;"><label style="font-size:12px;">현장등록 수량 <span class="hint">(0=무제한)</span></label>
+              <input id="pe-entry-max" type="text" inputmode="numeric" placeholder="0" oninput="onAmountInput(this,'pe-entry-max')"></div>
+          </div>
+        </div>
+
         <div class="fg" style="grid-column:1/-1;"><label>예산 금액 <span class="hint">(자동 계산)</span></label>
           <input id="pe-budget" type="text" readonly tabindex="-1" style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>
       </div>
@@ -1455,12 +2293,26 @@ function show(id) {
   if (topbar) topbar.classList.toggle('show', id === 'sec-dashboard');
 }
 function switchTab(name) {
-  ['proj','new','settle'].forEach(t => {
+  // 비활성 탭(옵션 미사용) 클릭 차단
+  const btn = document.getElementById('tb-'+name);
+  if (btn?.disabled) {
+    if (btn.title) uiAlert(btn.title);
+    return;
+  }
+  ['proj','new','entry','agent','settle','mail'].forEach(t => {
     document.getElementById('tb-'+t).classList.toggle('act', t===name);
     document.getElementById('tab-'+t).classList.toggle('act', t===name);
   });
   if (name === 'new') loadQuoteConfig();
   if (name === 'settle') loadSettlement();
+  if (name === 'agent') loadAgentProjects();
+  if (name === 'mail') loadMailLogs(1);
+  if (name === 'entry') {
+    if (entrySub === 'register') loadEntryProjects();
+    else if (entrySub === 'status') loadEntryStatus();
+    else if (entrySub === 'people')  loadEntryPeopleProjects();
+    else if (entrySub === 'visitor') loadVisitorProjects();
+  }
 }
 
 // ── 메시지 ──
@@ -1842,6 +2694,9 @@ const PROJ_COLS = [
   { key:'project_name',   label:'프로젝트명' },
   { key:'from_date',      label:'기간' },
   { key:'status',         label:'상태' },
+  { key:'pin',            label:'승인<br>비밀번호', cls:'col-center' },
+  { key:'rsv_applied_count', label:'사전등록<br><span style="font-size:11px;font-weight:500;color:#94a3b8;">(방문자/신청자)</span>', cls:'col-center' },
+  { key:'entry_count',    label:'현장<br>등록', cls:'col-center' },
   { key:'has_tiers',      label:'단계별<br>보상', cls:'col-center' },
   { key:'stop_on_overbudget', label:'중도지급<br>중지', cls:'col-center' },
   { key:'active_locations', label:'방문<br>현황', cls:'col-center' },
@@ -1850,6 +2705,11 @@ const PROJ_COLS = [
 const PROJ_NUM_KEYS = new Set(PROJ_COLS.filter(c => c.num).map(c => c.key));
 let projData = [];
 let projSort = { key: 'created_at', dir: 'desc' }; // 기본: 최신 등록순
+const pjPinShown = new Set();   // 승인비밀번호 노출 행 id 집합
+function togglePjPin(id) {
+  if (pjPinShown.has(id)) pjPinShown.delete(id); else pjPinShown.add(id);
+  renderProjectsTable();
+}
 let projPage = 1;                                   // 현재 페이지(클라이언트 페이징)
 
 async function loadProjects(page) {
@@ -1863,6 +2723,28 @@ async function loadProjects(page) {
   projData = d.data || [];
   projPage = 1;                 // 새 조회 → 첫 페이지
   renderProjectsTable();
+  applyHostFeatureFlags();      // 옵션 사용 프로젝트 유무에 따라 입장관리/현장요원관리 탭 활성 토글
+}
+
+// ── 옵션 사용 프로젝트 유무에 따라 main 탭 활성/비활성 ──
+function applyHostFeatureFlags() {
+  const all = projData || [];
+  const hasEntry = all.some(p => Number(p.reservation_use) === 1 || Number(p.entry_use) === 1);
+  const hasAgent = all.some(p => Number(p.field_agent_use) === 1);
+  const tbEntry = document.getElementById('tb-entry');
+  const tbAgent = document.getElementById('tb-agent');
+  if (tbEntry) {
+    tbEntry.disabled = !hasEntry;
+    tbEntry.style.opacity = hasEntry ? '' : '0.4';
+    tbEntry.style.cursor  = hasEntry ? '' : 'not-allowed';
+    tbEntry.title = hasEntry ? '' : '사전등록/현장등록 옵션을 사용 중인 프로젝트가 없습니다.';
+  }
+  if (tbAgent) {
+    tbAgent.disabled = !hasAgent;
+    tbAgent.style.opacity = hasAgent ? '' : '0.4';
+    tbAgent.style.cursor  = hasAgent ? '' : 'not-allowed';
+    tbAgent.title = hasAgent ? '' : '현장요원관리 옵션을 사용 중인 프로젝트가 없습니다.';
+  }
 }
 
 // 조회조건에 해당하는 모든 프로젝트를 엑셀로 다운로드(서버에서 동일 필터 적용, 페이지 무관 전체)
@@ -1968,10 +2850,35 @@ function renderProjectsTable() {
     const cls  = STATUS_CLS[p.status] || '';
     const fullName = p.project_name || '';
     const dispName = fullName.length > 10 ? fullName.slice(0, 10) + '…' : fullName;
+    // 승인비밀번호 (PIN) 마스킹 셀
+    const pinVal = String(p.pin || '');
+    const shown = pjPinShown.has(p.id);
+    const pinTxt = pinVal ? (shown ? esc(pinVal) : pinVal.replace(/./g, '•')) : '-';
+    const eyeIcon = shown
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const pinCell = pinVal
+      ? `<span class="pj-pin-wrap"><span class="pj-pin-code">${pinTxt}</span><button type="button" class="pj-pin-eye" onclick="togglePjPin(${p.id})" title="${shown ? '숨기기' : '보기'}">${eyeIcon}</button></span>`
+      : '<span style="color:#cbd5e1;">-</span>';
+    const rsvApplied = Number(p.rsv_applied_count || 0);
+    const rsvVisited = Number(p.rsv_visited_count || 0);
+    const rsvPct = rsvApplied > 0 ? Math.round((rsvVisited / rsvApplied) * 100) : 0;
+    const entryCnt = Number(p.entry_count || 0);
+    const rsvOn   = Number(p.reservation_enabled) === 1;
+    const entryOn = Number(p.entry_benefit_enabled) === 1;
+    const rsvBtn = rsvOn
+      ? `<button class="btn btn-o btn-sm" onclick="openEntryPeopleFor(${p.id},'reservation')" title="방문자 / 신청자 (방문률)">${rsvVisited}/${rsvApplied} (${rsvPct}%)</button>`
+      : `<button class="btn btn-o btn-sm" disabled title="사전등록 비활성" style="opacity:.45;cursor:not-allowed;">미사용</button>`;
+    const entryBtn = entryOn
+      ? `<button class="btn btn-o btn-sm" onclick="openEntryPeopleFor(${p.id},'entry')" title="현장등록 인원">${entryCnt}명</button>`
+      : `<button class="btn btn-o btn-sm" disabled title="현장등록 비활성" style="opacity:.45;cursor:not-allowed;">미사용</button>`;
     return `<tr>
-      <td><a href="#" onclick="openProjectEdit(${p.id}); return false;" title="${esc(fullName)}" style="color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px dashed #93c5fd;">${esc(dispName)}<span style="color:#64748b;font-weight:400;font-size:11px;margin-left:4px;">(${p.project_serial})</span></a></td>
+      <td><a href="#" onclick="openProjectEdit(${p.id}); return false;" title="${esc(fullName)}" style="color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px dashed #93c5fd;">${esc(dispName)}<br><span style="color:#94a3b8;font-weight:400;font-size:11px;">${esc(p.project_serial)}</span></a></td>
       <td style="font-size:12px;white-space:nowrap;">${from} ~ ${to}</td>
       <td><span class="badge ${cls}">${STATUS_LABEL[p.status]||p.status}</span></td>
+      <td style="text-align:center;">${pinCell}</td>
+      <td style="text-align:center;">${rsvBtn}</td>
+      <td style="text-align:center;">${entryBtn}</td>
       <td style="text-align:center;font-weight:700;color:${Number(p.extra_tier_count)>0?'#15803d':'#94a3b8'};">${Number(p.extra_tier_count)>0?'Y':'N'}</td>
       <td style="text-align:center;font-weight:700;color:${Number(p.stop_on_budget_exceed)===1?'#dc2626':'#94a3b8'};">${Number(p.stop_on_budget_exceed)===1?'Y':'N'}</td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVisitStats(${p.id},'${p.project_name.replace(/'/g,"\\'")}')">보기</button></td>
@@ -1981,7 +2888,7 @@ function renderProjectsTable() {
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openQuiz(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">${p.quiz_count ?? 0}</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">보기</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
   renderProjPager(totalPages, list.length);
 }
 
@@ -2663,7 +3570,7 @@ let settleData = [];
 function stWon(v) { return v ? Number(v).toLocaleString('ko-KR') + '원' : '-'; }
 async function loadSettlement() {
   const tbody = document.getElementById('settle-tbody');
-  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
   const qs = new URLSearchParams({
     project_name: document.getElementById('sf-name').value.trim(),
     status: document.getElementById('sf-status').value,
@@ -2674,7 +3581,7 @@ async function loadSettlement() {
     if (!r.ok) throw 0;
     d = await r.json();
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
     return;
   }
   settleData = d.data || [];
@@ -2684,7 +3591,7 @@ async function loadSettlement() {
 function renderSettlement() {
   const tbody = document.getElementById('settle-tbody');
   if (!settleData.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#94a3b8;padding:20px;">정산할 프로젝트가 없습니다.</td></tr>';
     return;
   }
   tbody.innerHTML = settleData.map(p => {
@@ -2694,14 +3601,23 @@ function renderSettlement() {
     const budget    = Number(p.budget_amount || 0);
     const usedCnt   = Number(p.used_count || 0);
     const grantCnt  = Number(p.grant_count || 0);
-    const usedTotal = Number(p.used_amount || 0);   // 사용된 Gift들의 amount 합 (base + prize)
-    const grantTot  = Number(p.grant_amount || 0);  // 증정된 Gift들의 amount 합
+    const usedTotal = Number(p.used_amount || 0);
+    const grantTot  = Number(p.grant_amount || 0);
     const giftUsed  = giftAmt * usedCnt;
     const prizeUsed = Math.max(0, usedTotal - giftUsed);
     const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
     const giftSum   = giftUsed + grantTot;
-    const totalReward = giftUsed + prizeUsed;
-    // 소진율 = 실사용 / 예산
+    // ── 입장 보상 (사전·현장) ──
+    const rsvUse    = Number(p.reservation_use) === 1;
+    const rsvUnit   = Number(p.reservation_benefit_amount || 0);
+    const rsvCnt    = Number(p.rsv_used_count || 0);
+    const rsvAmt    = Number(p.rsv_used_amount || 0);
+    const entUse    = Number(p.entry_use) === 1;
+    const entUnit   = Number(p.entry_benefit_amount || 0);
+    const entCnt    = Number(p.ent_used_count || 0);
+    const entAmt    = Number(p.ent_used_amount || 0);
+    // 총 Reward = 기존(Gift+Quiz) + 입장 보상
+    const totalReward = giftUsed + prizeUsed + rsvAmt + entAmt;
     const pct = budget > 0 ? Math.round((totalReward / budget) * 1000) / 10 : 0;
     const over = budget > 0 && totalReward > budget;
     const fmtN = n => Number(n||0).toLocaleString('ko-KR');
@@ -2711,21 +3627,33 @@ function renderSettlement() {
     const rewardCell = budget > 0
       ? `<span style="${rewardCellStyle}">${fmtN(totalReward)}/${fmtN(budget)}원(${pct}%)</span>`
       : `<span style="${rewardCellStyle}">${stWon(totalReward)}</span>`;
+    // 입장 보상 셀 — 미사용 옵션은 회색 처리
+    const naCell = '<span style="color:#cbd5e1;">미사용</span>';
+    const rsvUnitCell = rsvUse ? stWon(rsvUnit) : naCell;
+    const rsvCntCell  = rsvUse ? `${rsvCnt}명` : naCell;
+    const rsvAmtCell  = rsvUse ? `<b>${stWon(rsvAmt)}</b>` : naCell;
+    const entUnitCell = entUse ? stWon(entUnit) : naCell;
+    const entCntCell  = entUse ? `${entCnt}명` : naCell;
+    const entAmtCell  = entUse ? `<b>${stWon(entAmt)}</b>` : naCell;
     return `<tr>
       <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
-      <td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>
+      <td class="grp-end"><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>
       <td style="text-align:right;">${stWon(giftAmt)}</td>
       <td style="text-align:center;">${usedCnt}개</td>
       <td style="text-align:center;">${grantCnt}개</td>
       <td style="text-align:right;">${stWon(giftUsed)}</td>
       <td style="text-align:right;">${stWon(grantTot)}</td>
-      <td style="text-align:right;"><b>${stWon(giftSum)}</b></td>
+      <td style="text-align:right;" class="grp-end"><b>${stWon(giftSum)}</b></td>
       <td style="text-align:right;">${stWon(prizeAmt)}</td>
       <td style="text-align:center;">${prizeCnt}개</td>
-      <td style="text-align:right;">${stWon(prizeUsed)}</td>
+      <td style="text-align:right;" class="grp-end">${stWon(prizeUsed)}</td>
+      <td style="text-align:right;">${rsvUnitCell}</td>
+      <td style="text-align:center;">${rsvCntCell}</td>
+      <td style="text-align:right;white-space:nowrap;" class="grp-end">${rsvAmtCell}</td>
+      <td style="text-align:right;">${entUnitCell}</td>
+      <td style="text-align:center;">${entCntCell}</td>
+      <td style="text-align:right;white-space:nowrap;" class="grp-end">${entAmtCell}</td>
       <td style="text-align:right;white-space:nowrap;">${rewardCell}</td>
-      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openUsage(${p.id})">${Number(p.used_users || 0)} / ${Number(p.grant_users || 0)}</button></td>
-      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openDailySettle(${p.id})">보기</button></td>
     </tr>`;
   }).join('');
 }
@@ -2734,7 +3662,7 @@ function renderSettlement() {
 let settleMerchData = [];
 async function loadSettleByMerchant() {
   const tbody = document.getElementById('settle-bymerch-tbody');
-  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
   const qs = new URLSearchParams({
     project_name: document.getElementById('sf-name').value.trim(),
     status: document.getElementById('sf-status').value,
@@ -2745,7 +3673,7 @@ async function loadSettleByMerchant() {
     if (!r.ok) throw 0;
     d = await r.json();
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
     return;
   }
   settleMerchData = d.data || [];
@@ -2755,7 +3683,7 @@ async function loadSettleByMerchant() {
 function renderSettleByMerchant() {
   const tbody = document.getElementById('settle-bymerch-tbody');
   if (!settleMerchData.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
     return;
   }
   tbody.innerHTML = settleMerchData.map(r => renderSettleSubRow(r, { extraColHead: 'merchant' })).join('');
@@ -2765,7 +3693,7 @@ function renderSettleByMerchant() {
 let settleDayData = [];
 async function loadSettleByDay() {
   const tbody = document.getElementById('settle-byday-tbody');
-  tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
   const qs = new URLSearchParams({
     project_name: document.getElementById('sf-name').value.trim(),
     status: document.getElementById('sf-status').value,
@@ -2776,7 +3704,7 @@ async function loadSettleByDay() {
     if (!r.ok) throw 0;
     d = await r.json();
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
     return;
   }
   settleDayData = d.data || [];
@@ -2786,50 +3714,100 @@ async function loadSettleByDay() {
 function renderSettleByDay() {
   const tbody = document.getElementById('settle-byday-tbody');
   if (!settleDayData.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:20px;">정산할 사용내역이 없습니다.</td></tr>';
     return;
   }
   tbody.innerHTML = settleDayData.map(r => renderSettleSubRow(r, { extraColHead: 'day' })).join('');
 }
 
-// 가맹점별/일별 공통 행 렌더링
+// 가맹점별/일별 공통 행 렌더링 (프로젝트별 탭과 동일한 컬럼 구조)
 function renderSettleSubRow(p, opts) {
   const cls = STATUS_CLS[p.status] || 'bq';
-  const giftAmt   = Number(p.gift_amount || 0);
-  const prizeAmt  = Number(p.prize_amount || 0);
-  const usedCnt   = Number(p.used_count || 0);
-  const grantCnt  = Number(p.grant_count || 0);
-  const usedTotal = Number(p.used_amount || 0);
-  const grantTot  = Number(p.grant_amount || 0);
-  const giftUsed  = giftAmt * usedCnt;
-  const prizeUsed = Math.max(0, usedTotal - giftUsed);
-  const prizeCnt  = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
-  const giftSum   = giftUsed + grantTot;
-  const totalReward = giftUsed + prizeUsed;
-  const usedUsers = Number(p.used_users || 0);
-  const grantUsers = Number(p.grant_users || 0);
+  const dash = '<span style="color:#cbd5e1;">-</span>';
   const projCell = `<td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>`;
-  const stateCell = `<td><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>`;
+  const stateCell = `<td class="grp-end"><span class="badge ${cls}">${STATUS_LABEL[p.status] || p.status}</span></td>`;
+  const dayStr = p.day ? String(p.day).slice(0, 10) : '-';
+
+  const isRsv = p.row_type === 'reservation';
+  const isEnt = p.row_type === 'entry';
+  const isGift = !isRsv && !isEnt;
+
+  // 선행 컬럼 (일자/가맹점)
   let leadingCells = '';
   if (opts.extraColHead === 'merchant') {
     leadingCells = `<td>${esc(p.merchant_name || '(미기록)')}</td>` + projCell + stateCell;
   } else if (opts.extraColHead === 'day') {
-    const dayStr = p.day ? String(p.day).slice(0, 10) : '-';
-    leadingCells = `<td style="white-space:nowrap;">${dayStr}</td>` + projCell + `<td>${esc(p.merchant_name || '(미기록)')}</td>` + stateCell;
+    leadingCells = `<td style="white-space:nowrap;">${dayStr}</td>` + projCell +
+      `<td>${esc(p.merchant_name || '(미기록)')}</td>` + stateCell;
   }
+
+  // Gift / Quiz — gift 행에서만 값
+  let giftCells, quizCells;
+  let giftUsed = 0, prizeUsed = 0;
+  if (isGift) {
+    const giftAmt   = Number(p.gift_amount || 0);
+    const prizeAmt  = Number(p.prize_amount || 0);
+    const usedCnt   = Number(p.used_count || 0);
+    const grantCnt  = Number(p.grant_count || 0);
+    const usedTotal = Number(p.used_amount || 0);
+    const grantTot  = Number(p.grant_amount || 0);
+    giftUsed   = giftAmt * usedCnt;
+    prizeUsed  = Math.max(0, usedTotal - giftUsed);
+    const prizeCnt = prizeAmt > 0 ? Math.round(prizeUsed / prizeAmt) : 0;
+    const giftSum  = giftUsed + grantTot;
+    giftCells = `
+      <td style="text-align:right;">${stWon(giftAmt)}</td>
+      <td style="text-align:center;">${usedCnt}개</td>
+      <td style="text-align:center;">${grantCnt}개</td>
+      <td style="text-align:right;">${stWon(giftUsed)}</td>
+      <td style="text-align:right;">${stWon(grantTot)}</td>
+      <td style="text-align:right;" class="grp-end"><b>${stWon(giftSum)}</b></td>`;
+    quizCells = `
+      <td style="text-align:right;">${stWon(prizeAmt)}</td>
+      <td style="text-align:center;">${prizeCnt}개</td>
+      <td style="text-align:right;" class="grp-end">${stWon(prizeUsed)}</td>`;
+  } else {
+    giftCells = `<td colspan="6" class="grp-end" style="text-align:center;">${dash}</td>`;
+    quizCells = `<td colspan="3" class="grp-end" style="text-align:center;">${dash}</td>`;
+  }
+
+  // 사전등록 / 현장등록 — 해당 모드 행에서만 값
+  let rsvCells, entCells;
+  let rsvAmtTot = 0, entAmtTot = 0;
+  if (isRsv) {
+    const unit = Number(p.reservation_benefit_amount || 0);
+    const cnt  = Number(p.rsv_cnt || 0);
+    const amt  = Number(p.rsv_amt || 0);
+    rsvAmtTot = amt;
+    rsvCells = `
+      <td style="text-align:right;">${stWon(unit)}</td>
+      <td style="text-align:center;">${cnt}명</td>
+      <td style="text-align:right;" class="grp-end"><b>${stWon(amt)}</b></td>`;
+    entCells = `<td colspan="3" class="grp-end" style="text-align:center;">${dash}</td>`;
+  } else if (isEnt) {
+    const unit = Number(p.entry_benefit_amount || 0);
+    const cnt  = Number(p.ent_cnt || 0);
+    const amt  = Number(p.ent_amt || 0);
+    entAmtTot = amt;
+    rsvCells = `<td colspan="3" class="grp-end" style="text-align:center;">${dash}</td>`;
+    entCells = `
+      <td style="text-align:right;">${stWon(unit)}</td>
+      <td style="text-align:center;">${cnt}명</td>
+      <td style="text-align:right;" class="grp-end"><b>${stWon(amt)}</b></td>`;
+  } else {
+    rsvCells = `<td colspan="3" class="grp-end" style="text-align:center;">${dash}</td>`;
+    entCells = `<td colspan="3" class="grp-end" style="text-align:center;">${dash}</td>`;
+  }
+
+  const totalReward = giftUsed + prizeUsed + rsvAmtTot + entAmtTot;
+
   return `<tr>
     ${leadingCells}
-    <td style="text-align:right;">${stWon(giftAmt)}</td>
-    <td style="text-align:center;">${usedCnt}개</td>
-    <td style="text-align:center;">${grantCnt}개</td>
-    <td style="text-align:right;">${stWon(giftUsed)}</td>
-    <td style="text-align:right;">${stWon(grantTot)}</td>
-    <td style="text-align:right;"><b>${stWon(giftSum)}</b></td>
-    <td style="text-align:right;">${stWon(prizeAmt)}</td>
-    <td style="text-align:center;">${prizeCnt}개</td>
-    <td style="text-align:right;">${stWon(prizeUsed)}</td>
-    <td style="text-align:right;white-space:nowrap;"><span style="color:#1d4ed8;font-weight:700;">${stWon(totalReward)}</span></td>
-    <td style="text-align:center;">${usedUsers} / ${grantUsers}</td>
+    ${giftCells}
+    ${quizCells}
+    ${rsvCells}
+    ${entCells}
+    <td style="text-align:right;white-space:nowrap;"><span style="font-weight:700;">${stWon(totalReward)}</span></td>
   </tr>`;
 }
 
@@ -3160,19 +4138,23 @@ function renderApplications() {
     <table class="vis-table">
       <thead><tr>
         <th>가맹점명</th><th>사업자등록번호</th><th>담당자</th>
-        <th>연락처</th><th>이메일</th><th>지원일시</th>
+        <th>연락처</th><th>이메일</th>
+        <th style="text-align:center;">지원 유형</th>
+        <th>지원일시</th>
         <th style="text-align:center;">상태</th><th style="text-align:center;">승인</th>
       </tr></thead>
       <tbody>${appsData.map(a => {
         const st = APP_STATUS[a.status] || [a.status, 'bc'];
         const contact = [a.contact_mobile, a.contact_phone].filter(Boolean).map(fmtPhone).join(' / ') || '-';
         const mn = String(a.merchant_name || '').replace(/'/g, "\\'");
+        const typesHtml = renderSupportTypes(a.support_type ? [a.support_type] : (a.support_types || []));
         return `<tr>
           <td><b>${esc(a.merchant_name)}</b></td>
           <td><code style="font-size:12px;">${fmtBizNo(a.biz_no)}</code></td>
           <td>${esc(a.contact_name) || '-'}</td>
           <td style="font-size:12px;">${esc(contact)}</td>
           <td style="font-size:12px;">${esc(a.email)}</td>
+          <td style="text-align:center;">${typesHtml}</td>
           <td style="font-size:12px;color:#64748b;">${fmtDT(a.applied_at)}</td>
           <td style="text-align:center;"><span class="badge ${st[1]}">${st[0]}</span></td>
           <td style="text-align:center;white-space:nowrap;">
@@ -3184,12 +4166,38 @@ function renderApplications() {
     </table>`;
 }
 
+// 지원 유형을 색상 배지로 렌더
+const SUPPORT_TYPE_LABELS = {
+  quest:       { label: '🎯 목적지+Quiz', bg: '#dbeafe', color: '#1e40af' },
+  reservation: { label: '🟠 사전등록',     bg: '#fed7aa', color: '#9a3412' },
+  entry:       { label: '🟢 현장등록',     bg: '#dcfce7', color: '#166534' },
+};
+function renderSupportTypes(raw) {
+  let arr = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (typeof raw === 'string') { try { arr = JSON.parse(raw); } catch { arr = []; } }
+  if (!Array.isArray(arr) || arr.length === 0) return '<span style="color:#cbd5e1;">-</span>';
+  return arr.map(t => {
+    const meta = SUPPORT_TYPE_LABELS[t] || { label: t, bg:'#f1f5f9', color:'#475569' };
+    return `<span style="display:inline-block;background:${meta.bg};color:${meta.color};padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;margin:1px;">${meta.label}</span>`;
+  }).join(' ');
+}
+function supportTypesText(raw) {
+  let arr = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (typeof raw === 'string') { try { arr = JSON.parse(raw); } catch { arr = []; } }
+  return (arr || []).map(t => (SUPPORT_TYPE_LABELS[t]?.label || t)).join(', ') || '없음';
+}
+
 async function decideApplication(appId, decision, mname) {
   const approve = decision === 'approved';
+  // 지원 유형 텍스트 함께 표시 — 승인 결정에 참고
+  const a = appsData.find(x => Number(x.id) === Number(appId));
+  const typesTxt = a ? supportTypesText(a.support_type ? [a.support_type] : (a.support_types || [])) : '없음';
   const ok = await uiConfirm(
     approve
-      ? `'${mname}' 가맹점의 참여를 승인하시겠습니까?\n승인 시 가맹점 담당자에게 Gift 승인 비밀번호가 메일로 전송됩니다.`
-      : `'${mname}' 가맹점의 참여를 거절하시겠습니까?\n결정 사항이 가맹점 담당자에게 메일로 전송됩니다.`,
+      ? `'${mname}' 가맹점의 참여를 승인하시겠습니까?\n\n지원 유형: ${typesTxt}\n\n승인 시 가맹점 담당자에게 Gift 승인 비밀번호가 메일로 전송됩니다.`
+      : `'${mname}' 가맹점의 참여를 거절하시겠습니까?\n\n지원 유형: ${typesTxt}\n\n결정 사항이 가맹점 담당자에게 메일로 전송됩니다.`,
     { title: approve ? '참여 승인' : '참여 거절', okText: approve ? '승인' : '거절', danger: !approve },
   );
   if (!ok) return;
@@ -3875,13 +4883,20 @@ function onFromDateChange() {
   from.setUTCDate(from.getUTCDate() + 4);
   const minTo = from.toISOString().slice(0, 10);
   toEl.min = minTo;
+  // 사전등록 max 도 시작일로 고정 (시작일 이전 시각)
+  const saEl = document.getElementById('pj-reservation-start-at');
+  if (saEl) saEl.max = `${fromVal}T00:00`;
   validateToDate();
+  // 사전등록 활성 + 기본값 비어있을 때만 시작일 -10일 09:00 자동 채움
+  if (document.getElementById('pj-reservation-use')?.checked && !saEl?.value) setReservationStartDefault();
+  updateProjectQuoteSummary();
 }
 
 function validateToDate() {
   const toEl = document.getElementById('pj-to');
   const fromVal = document.getElementById('pj-from').value;
   const btn = document.getElementById('btn-create-proj');
+  if (toEl.value) updateProjectQuoteSummary();
   if (!toEl.value) { clrFm('pj-to-fm'); toEl.style.border=''; if(btn)btn.disabled=!verifiedPin; return; }
   if (fromVal) {
     const fromD = new Date(fromVal + 'T00:00:00Z');
@@ -3922,6 +4937,72 @@ function calcBudget() {
   // Gift 단가 변경 시 마지막 단계 동기화 + 모든 tier 재검증
   syncLastTierAmount('pj');
   revalidateAllGiftTiers('pj');
+  updateProjectQuoteSummary();
+}
+
+// 사전등록/현장등록 옵션 토글
+function onProjectOptionChange() {
+  const rUse = document.getElementById('pj-reservation-use').checked;
+  const eUse = document.getElementById('pj-entry-use').checked;
+  document.getElementById('pj-reservation-detail').style.display = rUse ? '' : 'none';
+  // 사전등록 활성 시 디폴트 자동 채움
+  if (rUse && !document.getElementById('pj-reservation-start-at').value) setReservationStartDefault();
+  updateProjectQuoteSummary();
+}
+function setReservationStartDefault() {
+  const fromVal = document.getElementById('pj-from').value;
+  if (!fromVal) return;
+  const fd = new Date(fromVal + 'T09:00:00');
+  fd.setDate(fd.getDate() - 10);
+  const z = n => String(n).padStart(2,'0');
+  document.getElementById('pj-reservation-start-at').value =
+    `${fd.getFullYear()}-${z(fd.getMonth()+1)}-${z(fd.getDate())}T${z(fd.getHours())}:${z(fd.getMinutes())}`;
+  updateProjectQuoteSummary();
+}
+// 견적 요약 (사전등록·현장등록 일수/비용)
+function updateProjectQuoteSummary() {
+  const el = document.getElementById('pj-quote-summary');
+  if (!el || !quoteConfigCache) return;
+  const fromVal = document.getElementById('pj-from').value;
+  const toVal   = document.getElementById('pj-to').value;
+  if (!fromVal || !toVal) { el.innerHTML = ''; return; }
+  const from = new Date(fromVal + 'T00:00:00');
+  const to   = new Date(toVal + 'T00:00:00');
+  if (isNaN(from) || isNaN(to)) { el.innerHTML = ''; return; }
+  const days = Math.floor((to - from) / 86400000) + 1;
+  const c = quoteConfigCache;
+  const fmt = n => Number(n||0).toLocaleString('ko-KR') + '원';
+
+  const rUse = document.getElementById('pj-reservation-use').checked;
+  const eUse = document.getElementById('pj-entry-use').checked;
+  const faUse = document.getElementById('pj-field-agent-use').checked;
+  let rDays = 0;
+  if (rUse) {
+    const sa = document.getElementById('pj-reservation-start-at').value;
+    if (sa) {
+      const saD = new Date(sa);
+      if (!isNaN(saD)) rDays = Math.max(1, Math.ceil((from - saD) / 86400000));
+    } else { rDays = 10; }
+  }
+  const eDays = eUse ? days : 0;
+  const rFee = rDays * Number(c.reservationDailyFee || 10000);
+  const eFee = eDays * Number(c.entryDailyFee || 10000);
+  const faFee = faUse ? Number(c.fieldAgentFee || 50000) : 0;
+  const usageFee = days * Number(c.dailyFee || 0);
+  const fixed = (c.mobileUnitFee * c.mobileCount) + c.faviconFee + c.initialSetupFee;
+  const total = usageFee + fixed + rFee + eFee + faFee;
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:#475569;line-height:1.7;">
+      <div>• 이용료 ${fmt(c.dailyFee)} × ${days}일 = <b>${fmt(usageFee)}</b></div>
+      ${rUse ? `<div>• 사전등록 ${fmt(c.reservationDailyFee)} × ${rDays}일 = <b style="color:#15803d;">${fmt(rFee)}</b></div>` : ''}
+      ${eUse ? `<div>• 현장등록 ${fmt(c.entryDailyFee)}   × ${eDays}일 = <b style="color:#15803d;">${fmt(eFee)}</b></div>` : ''}
+      ${faUse ? `<div>• 현장요원관리 정액 = <b style="color:#15803d;">${fmt(faFee)}</b></div>` : ''}
+      <div>• 디자인/세팅 고정비 = ${fmt(fixed)}</div>
+      <div style="margin-top:4px;padding-top:6px;border-top:1px dashed #cbd5e1;font-weight:700;color:#1d4ed8;">
+        총 견적 약 <span style="font-size:14px;">${fmt(total)}</span>
+      </div>
+    </div>`;
 }
 
 // 단계 수 N + 각 단계 금액. 마지막 단계는 Gift 단가로 자동 채워지고 disabled.
@@ -4073,7 +5154,8 @@ function collectGiftTiers(containerId) {
 }
 
 function enableProjectForm(on) {
-  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-stop-overbudget','pj-tiers-enable','btn-create-proj']
+  ['pj-name','pj-desc','pj-from','pj-to','pj-gift','pj-qty','pj-prize','pj-prize-qty','pj-stop-overbudget','pj-tiers-enable','btn-create-proj',
+   'pj-reservation-use','pj-entry-use','pj-reservation-start-at','pj-reservation-default-btn','pj-field-agent-use']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; });
   if (on) {
     const fromEl = document.getElementById('pj-from');
@@ -4097,32 +5179,756 @@ function resetPinState() {
   enableProjectForm(false);
 }
 
+// ── 현장요원관리 탭 ──
+let agentProjects = [];
+let currentAgentProject = null;
+let currentAgentList = [];
+let agentSub = 'by-agent';
+
+function switchAgentSub(name) {
+  agentSub = name;
+  document.querySelectorAll('[data-agent-sub]').forEach(b => {
+    b.classList.toggle('active', b.dataset.agentSub === name);
+  });
+  document.querySelectorAll('.agent-sub-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('agent-sub-' + name).style.display = '';
+  if (name === 'by-day' && currentAgentProject) loadAgentByDay(currentAgentProject.id);
+}
+
+async function loadAgentProjects() {
+  const r = await fetch('/api/host/projects?page=1&pageSize=200');
+  if (!r.ok) return;
+  const d = await r.json();
+  const all = Array.isArray(d.data) ? d.data : [];
+  agentProjects = all.filter(p => Number(p.field_agent_use) === 1);
+  const sel = document.getElementById('agent-project');
+  sel.innerHTML = '<option value="">— 프로젝트 선택 —</option>' +
+    agentProjects.map(p => `<option value="${p.id}">${esc(p.project_name)} (${esc(p.project_serial)})</option>`).join('');
+  if (agentProjects.length === 0) {
+    document.getElementById('agent-empty').innerHTML =
+      '<b style="color:#dc2626;">⚠ 현장요원관리 옵션을 사용 중인 프로젝트가 없습니다.</b><br>' +
+      '<span style="font-size:11px;color:#94a3b8;">프로젝트 등록 시 \'현장요원관리 사용\' 을 체크해 주세요.</span>';
+  }
+}
+
+async function onAgentProjectChange() {
+  const id = document.getElementById('agent-project').value;
+  const has = !!id;
+  document.getElementById('agent-copy-url-btn').disabled = !has;
+  document.getElementById('agent-qr-btn').disabled = !has;
+  document.getElementById('agent-att-copy-btn').disabled = !has;
+  document.getElementById('agent-att-qr-btn').disabled = !has;
+  document.getElementById('agent-empty').style.display = has ? 'none' : '';
+  document.getElementById('agent-content').style.display = has ? '' : 'none';
+  if (!has) { currentAgentProject = null; return; }
+  currentAgentProject = agentProjects.find(p => Number(p.id) === Number(id));
+  // sub 탭 reset to by-agent
+  switchAgentSub('by-agent');
+  await loadAgents(id);
+}
+
+async function loadAgents(projectId) {
+  const r = await fetch(`/api/field-agent/host/projects/${projectId}/agents`);
+  const d = await r.json();
+  const tbody = document.getElementById('agent-tbody');
+  if (!r.ok || !d.ok) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#dc2626;padding:18px;">목록을 불러올 수 없습니다.</td></tr>`;
+    return;
+  }
+  currentAgentList = d.agents;
+  if (d.agents.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:18px;">등록된 현장요원이 없습니다.<br><span style="font-size:11px;color:#cbd5e1;">위 등록 URL을 현장요원에게 공유하세요.</span></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = d.agents.map(a => {
+    const sum = a.attendance_summary || {};
+    const total = Number(sum.total||0), onT = Number(sum.on_time||0), late = Number(sum.late||0);
+    const absent = Math.max(0, total - onT - late);
+    const otRate = total>0 ? Math.round((onT/total)*100)    : 0;
+    const ltRate = total>0 ? Math.round((late/total)*100)   : 0;
+    const abRate = total>0 ? Math.round((absent/total)*100) : 0;
+    const dt = a.created_at ? new Date(a.created_at) : null;
+    const z = n => String(n).padStart(2,'0');
+    const dts = dt ? `${dt.getFullYear()}-${z(dt.getMonth()+1)}-${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}` : '-';
+    return `<tr>
+      <td>${esc(a.name)}</td>
+      <td>${esc(a.mobile)}</td>
+      <td>${esc(a.email)}</td>
+      <td style="font-size:11px;max-width:160px;">${esc(a.address)}</td>
+      <td><a href="${a.id_card_image_url}" target="_blank" rel="noopener">보기</a></td>
+      <td><a href="${a.bankbook_image_url}" target="_blank" rel="noopener">보기</a></td>
+      <td><button class="btn btn-o btn-sm" onclick="openAgentQrModal(${a.id})">보기</button></td>
+      <td><button class="btn btn-o btn-sm" onclick="openAgentAtt(${a.id}, '${esc(a.name)}')" style="line-height:1.4;">${onT}/${late}/${total}<br><span style="font-size:11px;font-weight:600;"><span style="color:#15803d;">${otRate}</span>/<span style="color:#854d0e;">${ltRate}</span>/<span style="color:#991b1b;">${abRate}</span>%</span></button></td>
+      <td style="font-size:11px;">${dts}</td>
+    </tr>`;
+  }).join('');
+}
+
+function copyAgentRegUrl() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-register/${currentAgentProject.project_serial}`;
+  navigator.clipboard.writeText(url)
+    .then(() => uiAlert(`등록 URL이 복사되었습니다:\n${url}`))
+    .catch(() => uiAlert(url));
+}
+function openAgentRegQrModal() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-register/${currentAgentProject.project_serial}`;
+  document.getElementById('agr-img').src =
+    `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=2&data=${encodeURIComponent(url)}`;
+  document.getElementById('agr-url').textContent = url;
+  document.getElementById('modal-agent-reg-qr').classList.add('open');
+}
+function closeAgentRegQrModal() { document.getElementById('modal-agent-reg-qr').classList.remove('open'); }
+// 근태관리 PWA URL — 복사 + QR
+function copyAgentAttUrl() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-att/${currentAgentProject.project_serial}`;
+  navigator.clipboard.writeText(url)
+    .then(() => uiAlert(`근태관리 URL이 복사되었습니다:\n${url}`))
+    .catch(() => uiAlert(url));
+}
+function openAgentAttUrlQrModal() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-att/${currentAgentProject.project_serial}`;
+  document.getElementById('aatu-img').src =
+    `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=2&data=${encodeURIComponent(url)}`;
+  document.getElementById('aatu-url').textContent = url;
+  document.getElementById('modal-agent-att-qr').classList.add('open');
+}
+function closeAgentAttUrlQrModal() { document.getElementById('modal-agent-att-qr').classList.remove('open'); }
+async function downloadAgentAttUrlQr() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-att/${currentAgentProject.project_serial}`;
+  const apiSrc = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&margin=2&data=${encodeURIComponent(url)}&format=png`;
+  try {
+    const r = await fetch(apiSrc);
+    const blob = await r.blob();
+    const burl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = burl; a.download = `qr_agent_att_${currentAgentProject.project_serial}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(burl);
+  } catch (e) { window.open(apiSrc, '_blank'); }
+}
+
+async function downloadAgentRegQr() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-register/${currentAgentProject.project_serial}`;
+  const apiSrc = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&margin=2&data=${encodeURIComponent(url)}&format=png`;
+  try {
+    const r = await fetch(apiSrc);
+    const blob = await r.blob();
+    const burl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = burl; a.download = `qr_agent_register_${currentAgentProject.project_serial}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(burl);
+  } catch (e) { window.open(apiSrc, '_blank'); }
+}
+function openAgentAttPwa() {
+  if (!currentAgentProject) return;
+  window.open(`/agent-att/${currentAgentProject.project_serial}`, '_blank');
+}
+async function openAgentAdd() {
+  if (!currentAgentProject) return;
+  const url = `${location.origin}/agent-register/${currentAgentProject.project_serial}`;
+  await uiAlert(`현장요원 본인이 등록하도록 아래 URL을 공유하세요:\n${url}`);
+}
+
+// ── 현장요원 개인 QR 모달 ──
+let agentQrCurrent = null;
+function openAgentQrModal(agentId) {
+  const a = currentAgentList.find(x => Number(x.id) === Number(agentId));
+  if (!a) return;
+  agentQrCurrent = a;
+  document.getElementById('aqr-title').textContent = `${a.name} 님 출퇴근 QR`;
+  document.getElementById('aqr-meta').innerHTML =
+    `👤 ${esc(a.name)} · 📱 ${esc(a.mobile)}<br>✉ ${esc(a.email)}`;
+  document.getElementById('aqr-img').src = a.qr_image_url;
+  document.getElementById('modal-agent-qr').classList.add('open');
+}
+function closeAgentQrModal() { document.getElementById('modal-agent-qr').classList.remove('open'); }
+async function downloadAgentQr() {
+  if (!agentQrCurrent) return;
+  try {
+    const r = await fetch(agentQrCurrent.qr_image_url);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `agent_qr_${agentQrCurrent.name}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { window.open(agentQrCurrent.qr_image_url, '_blank'); }
+}
+async function sendAgentQrEmail() {
+  if (!agentQrCurrent || !currentAgentProject) return;
+  const ok = await uiConfirm(`현장요원에게 QR 코드를 전달하시겠습니까?\n\n수신자: ${agentQrCurrent.name} <${agentQrCurrent.email}>`,
+    { title: '메일 전송 확인', okText: '전송' });
+  if (!ok) return;
+  const btn = document.getElementById('aqr-mail-btn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '전송 중...';
+  try {
+    const r = await fetch(`/api/field-agent/host/projects/${currentAgentProject.id}/agents/${agentQrCurrent.id}/send-qr-email`,
+      { method:'POST' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      await uiAlert(d.message || '메일 전송에 실패했습니다.');
+    } else {
+      await uiAlert(`✓ 메일이 전송되었습니다.\n수신자: ${d.sent_to}`);
+    }
+  } catch (e) {
+    await uiAlert('네트워크 오류로 메일 전송에 실패했습니다.');
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// ── 현장요원관리 - 일별 ──
+let agentDayData = null;     // by-day 응답 캐시
+let agentDaySelectedKey = null;  // 'YYYY-MM-DD'
+
+async function loadAgentByDay(projectId) {
+  const empty = document.getElementById('agent-day-empty');
+  const wrap = document.getElementById('agent-day-wrap');
+  empty.style.display = ''; wrap.style.display = 'none';
+  empty.textContent = '불러오는 중…';
+  const r = await fetch(`/api/field-agent/host/projects/${projectId}/agents/by-day`);
+  const d = await r.json();
+  if (!r.ok || !d.ok) {
+    empty.textContent = '일별 근태를 불러올 수 없습니다.'; return;
+  }
+  if (!d.days || d.days.length === 0) {
+    empty.textContent = '프로젝트 기간이 설정되지 않았습니다.'; return;
+  }
+  empty.style.display = 'none'; wrap.style.display = '';
+  agentDayData = d;
+  // 기본 선택: 오늘 (없으면 첫 번째 미래/마지막 진행 일자)
+  const z = n => String(n).padStart(2,'0');
+  const dt = new Date(); const todayKey = `${dt.getFullYear()}-${z(dt.getMonth()+1)}-${z(dt.getDate())}`;
+  const found = d.days.find(x => x.date === todayKey);
+  if (found) {
+    agentDaySelectedKey = todayKey;
+  } else {
+    // 오늘이 범위 밖 → 시작 전이면 첫 일자, 종료 후면 마지막 일자
+    const todayD = new Date(todayKey + 'T00:00:00');
+    const firstD = new Date(d.days[0].date + 'T00:00:00');
+    agentDaySelectedKey = todayD < firstD ? d.days[0].date : d.days[d.days.length - 1].date;
+  }
+  renderAgentDayTabs();
+  renderAgentDayDetail();
+  // 선택된 칩이 보이도록 스크롤
+  setTimeout(() => {
+    const wrapEl = document.getElementById('agent-day-tabs');
+    const active = wrapEl?.querySelector('.day-chip.active');
+    if (active && wrapEl) wrapEl.scrollLeft = active.offsetLeft - wrapEl.clientWidth / 2 + active.clientWidth / 2;
+  }, 50);
+}
+
+function renderAgentDayTabs() {
+  if (!agentDayData) return;
+  const dows = ['일','월','화','수','목','금','토'];
+  const tabsEl = document.getElementById('agent-day-tabs');
+  tabsEl.innerHTML = agentDayData.days.map(day => {
+    const [y, m, dd] = day.date.split('-');
+    const dowColor = day.day_of_week === 0 ? '#dc2626' : (day.day_of_week === 6 ? '#1d4ed8' : '');
+    const active = day.date === agentDaySelectedKey ? 'active' : '';
+    let badgeHTML = '';
+    if (day.is_future) {
+      badgeHTML = `<span class="badge" style="background:#e0e7ff;color:#3730a3;">예정</span>`;
+    } else {
+      const otR = day.total>0 ? Math.round((day.on_time/day.total)*100) : 0;
+      const ltR = day.total>0 ? Math.round((day.late/day.total)*100)    : 0;
+      const abR = day.total>0 ? Math.round((day.absent/day.total)*100)  : 0;
+      // 칩은 컴팩트 — 정시%/지각%/결근% 3개를 작은 색상 줄로
+      badgeHTML = `<span class="badge" style="background:#f8fafc;color:#475569;font-weight:600;padding:1px 4px;">
+        <span style="color:#15803d;">${otR}</span>/<span style="color:#854d0e;">${ltR}</span>/<span style="color:#991b1b;">${abR}</span>%</span>`;
+    }
+    return `<button type="button" class="day-chip ${active}" onclick="selectAgentDay('${day.date}')" ${day.is_future?'style="opacity:.7;"':''}>
+      ${parseInt(m,10)}.${parseInt(dd,10)}
+      <span class="dow" style="${dowColor && !active ? `color:${dowColor};` : ''}">${dows[day.day_of_week]}</span>
+      ${badgeHTML}
+    </button>`;
+  }).join('');
+}
+
+function selectAgentDay(dateKey) {
+  agentDaySelectedKey = dateKey;
+  renderAgentDayTabs();
+  renderAgentDayDetail();
+}
+
+function renderAgentDayDetail() {
+  if (!agentDayData) return;
+  const day = agentDayData.days.find(x => x.date === agentDaySelectedKey);
+  if (!day) return;
+  const dows = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  const dowColor = day.day_of_week === 0 ? '#dc2626' : (day.day_of_week === 6 ? '#1d4ed8' : '#1e293b');
+  // 요약 — 미래 일자는 다른 톤
+  if (day.is_future) {
+    document.getElementById('agent-day-summary').innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+        <div style="font-weight:800;font-size:16px;color:#1e293b;">${day.date}</div>
+        <div style="font-weight:700;color:${dowColor};">${dows[day.day_of_week]}</div>
+        <span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">예정일 (아직 출근 기록 없음)</span>
+        <span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">전체 인원 ${day.total}명</span>
+      </div>`;
+    document.getElementById('agent-day-detail').innerHTML = `
+      <div style="text-align:center;color:#94a3b8;padding:40px 20px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">
+        📅 아직 진행되지 않은 날짜입니다.<br>
+        <span style="font-size:11px;color:#cbd5e1;">출근 기록은 해당 일자에 관리자가 QR 스캔으로 등록합니다.</span>
+      </div>`;
+    return;
+  }
+  const otR = day.total>0 ? Math.round((day.on_time/day.total)*100) : 0;
+  const ltR = day.total>0 ? Math.round((day.late/day.total)*100)    : 0;
+  const abR = day.total>0 ? Math.round((day.absent/day.total)*100)  : 0;
+  document.getElementById('agent-day-summary').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+      <div style="font-weight:800;font-size:16px;color:#1e293b;">${day.date}</div>
+      <div style="font-weight:700;color:${dowColor};">${dows[day.day_of_week]}</div>
+      <span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">정시 ${day.on_time} (${otR}%)</span>
+      <span style="background:#fef3c7;color:#854d0e;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">지각 ${day.late} (${ltR}%)</span>
+      <span style="background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">결근 ${day.absent} (${abR}%)</span>
+      <span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;font-weight:700;font-size:12px;">전체 ${day.total}</span>
+    </div>`;
+  // 체크인 일시 포맷터: '2026.06.06 15:13'
+  const fmtCheckIn = s => {
+    if (!s) return '';
+    const dt = new Date(s); if (isNaN(dt)) return '';
+    const z = n => String(n).padStart(2,'0');
+    return `${dt.getFullYear()}.${z(dt.getMonth()+1)}.${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}`;
+  };
+  // 상세 — 정시 / 지각 / 결근 3개 카드
+  const card = (title, color, bg, list, icon, showTime) => `
+    <div style="background:${bg};border:1px solid ${color}33;border-radius:10px;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-weight:800;color:${color};font-size:14px;">${icon} ${title}</div>
+        <div style="background:${color};color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px;">${list.length}명</div>
+      </div>
+      ${list.length === 0
+        ? `<div style="color:#94a3b8;font-size:12px;padding:14px 0;text-align:center;">해당 인원이 없습니다.</div>`
+        : `<div style="display:flex;flex-direction:column;gap:6px;">${list.map(a => {
+            const time = showTime ? fmtCheckIn(a.checked_in_at) : '';
+            return `<button type="button" onclick="openAgentAtt(${a.id}, '${esc(a.name)}')"
+                     style="background:#fff;border:1px solid ${color}33;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;font-size:13px;color:#1e293b;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span>👤 ${esc(a.name)}${time ? ` <span style="color:#64748b;font-weight:500;font-size:11px;">${time}</span>` : ''}</span>
+              <span style="font-size:11px;color:#94a3b8;font-weight:500;white-space:nowrap;">달력 →</span>
+            </button>`;
+          }).join('')}</div>`}
+    </div>`;
+  document.getElementById('agent-day-detail').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+      ${card('정시 출근', '#15803d', '#f0fdf4', day.on_time_agents, '✓', true)}
+      ${card('지각',     '#f59e0b', '#fefce8', day.late_agents,    '🕒', true)}
+      ${card('결근',     '#dc2626', '#fef2f2', day.absent_agents,  '⚠', false)}
+    </div>`;
+}
+
+// ── 근태 달력 모달 ──
+let aatCurrent = null;
+async function openAgentAtt(agentId, agentName) {
+  if (!currentAgentProject) return;
+  aatCurrent = { agentId, agentName };
+  document.getElementById('aat-title').textContent = `근태 달력 - ${agentName}`;
+  const r = await fetch(`/api/field-agent/host/projects/${currentAgentProject.id}/agents/${agentId}/attendance`);
+  const d = await r.json();
+  if (!r.ok || !d.ok) { await uiAlert('근태 기록을 불러올 수 없습니다.'); return; }
+  renderAgentAttCal(d.from_date, d.to_date, d.records);
+  document.getElementById('modal-agent-att').classList.add('open');
+}
+function closeAgentAtt() {
+  document.getElementById('modal-agent-att').classList.remove('open');
+}
+function renderAgentAttCal(fromDate, toDate, records) {
+  const fromD = new Date(String(fromDate).slice(0,10) + 'T00:00:00');
+  const toD   = new Date(String(toDate).slice(0,10) + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endRef = today < toD ? today : toD;
+  // records → map
+  const recMap = new Map();
+  (records||[]).forEach(r => {
+    const dt = new Date(r.attended_date); dt.setHours(0,0,0,0);
+    const k = ymdKey(dt);
+    recMap.set(k, r);
+  });
+  // 통계
+  let onT = 0, late = 0, total = 0;
+  for (let d = new Date(fromD); d <= endRef; d.setDate(d.getDate()+1)) {
+    total++;
+    const r = recMap.get(ymdKey(d));
+    if (r?.attendance_type === 'on_time') onT++;
+    else if (r?.attendance_type === 'late') late++;
+  }
+  const absent = total - onT - late;
+  const otRate = total>0 ? Math.round((onT/total)*100)    : 0;
+  const ltRate = total>0 ? Math.round((late/total)*100)   : 0;
+  const abRate = total>0 ? Math.round((absent/total)*100) : 0;
+  document.getElementById('aat-summary').innerHTML = `
+    <span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:6px;font-weight:700;">정시 ${onT}일 (${otRate}%)</span>
+    <span style="background:#fef3c7;color:#854d0e;padding:4px 10px;border-radius:6px;font-weight:700;">지각 ${late}일 (${ltRate}%)</span>
+    <span style="background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-weight:700;">결근 ${absent}일 (${abRate}%)</span>
+    <span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;font-weight:700;">전체 ${total}일</span>`;
+
+  // 월별로 그룹화
+  const months = new Map();
+  for (let d = new Date(fromD); d <= toD; d.setDate(d.getDate()+1)) {
+    const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if (!months.has(mk)) months.set(mk, []);
+    months.get(mk).push(new Date(d));
+  }
+  let html = '';
+  for (const [mk, days] of months) {
+    const [yy, mm] = mk.split('-');
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-weight:700;color:#1e293b;margin-bottom:6px;">${yy}년 ${parseInt(mm,10)}월</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;">
+        ${['일','월','화','수','목','금','토'].map(d=>`<div style="text-align:center;color:#94a3b8;padding:4px 0;font-weight:600;">${d}</div>`).join('')}`;
+    // 첫 주 공백
+    const first = days[0];
+    for (let i=0; i<first.getDay(); i++) html += '<div></div>';
+    for (const d of days) {
+      const k = ymdKey(d);
+      const rec = recMap.get(k);
+      const isFuture = d > endRef;
+      const isPast = d < fromD;
+      let bg='', col='#475569', title='';
+      if (isFuture || isPast) { bg='#f8fafc'; col='#cbd5e1'; }
+      else if (rec?.attendance_type === 'on_time') { bg='#15803d'; col='#fff'; title='정시출근'; }
+      else if (rec?.attendance_type === 'late')    { bg='#f59e0b'; col='#fff'; title='지각'; }
+      else { bg='#fee2e2'; col='#991b1b'; title='결근'; }
+      const dot = rec ? '●' : '';
+      html += `<div title="${title}" style="background:${bg};color:${col};padding:8px 2px;text-align:center;border-radius:4px;border:1px solid #e2e8f0;font-size:11px;">
+        ${d.getDate()}<br><span style="font-size:9px;">${dot}</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  document.getElementById('aat-cal').innerHTML = html;
+}
+function ymdKey(d) {
+  const z = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+
+// ── 방문객현황 sub-tab ──
+let visitorData = [];     // 서버 응답 캐시 (필터 전 원본)
+
+const VS_FIELD_LABELS = {
+  name:'이름', email:'이메일', mobile:'모바일폰', birth_date:'생년월일', address:'주소',
+  gender:'성별', age_group:'연령대', nationality:'국적', emergency_contact:'비상연락처',
+  party_size:'동반 인원', visit_purpose:'방문 목적', car_number:'차량번호',
+  preferred_time:'방문 희망 시간', company:'소속/회사', referral_source:'알게된 경로',
+  newsletter_optin:'소식지 수신 동의',
+};
+
+function visitorFilter() {
+  return {
+    name:    (document.getElementById('vs-pname')?.value || '').trim(),
+    mode:    document.getElementById('vs-mode')?.value || '',
+    visited: document.getElementById('vs-visited')?.value || '',
+    q:       (document.getElementById('vs-search')?.value || '').trim().toLowerCase(),
+  };
+}
+function visitorHasFilter() {
+  const f = visitorFilter();
+  return !!(f.name || f.mode || f.visited || f.q);
+}
+function onVisitorFilterChange() {
+  document.getElementById('vs-reset').disabled = !visitorHasFilter();
+}
+function resetVisitorFilter() {
+  document.getElementById('vs-pname').value = '';
+  document.getElementById('vs-mode').value = '';
+  document.getElementById('vs-visited').value = '';
+  document.getElementById('vs-search').value = '';
+  onVisitorFilterChange();
+  loadVisitorList();
+}
+
+// 진입 시 안내 보이기 (loadVisitorProjects 자리)
+function loadVisitorProjects() {
+  document.getElementById('vs-empty').style.display = '';
+  document.getElementById('vs-content').style.display = 'none';
+  document.getElementById('vs-summary-card').style.display = 'none';
+  visitorData = [];
+}
+
+async function loadVisitorList() {
+  document.getElementById('vs-empty').style.display = 'none';
+  document.getElementById('vs-content').style.display = '';
+  document.getElementById('vs-summary-card').style.display = 'grid';
+  const tbody = document.getElementById('vs-tbody');
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중…</td></tr>';
+  const f = visitorFilter();
+  // 기존 /reservations 엔드포인트 재활용 (project_name 검색 지원)
+  const qs = new URLSearchParams({ project_name: f.name, mode: f.mode }).toString();
+  let d;
+  try {
+    const r = await fetch('/api/host/reservations?' + qs);
+    d = await r.json();
+    if (!r.ok) throw 0;
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  visitorData = (d.data || []).map(r => ({
+    id: r.id, project_id: r.project_id,
+    project_name: r.project_name, project_serial: r.project_serial,
+    mode: r.mode, status: r.status,
+    name: (r.fields && r.fields.name) || '',
+    mobile: (r.fields && r.fields.mobile) || '',
+    email: (r.fields && r.fields.email) || '',
+    fields: r.fields || {},
+    amount: r.amount,
+    applied_at: r.created_at,
+    visited_at: r.activated_at,
+    used_at: r.used_at,
+    visited: !!r.activated_at,
+  }));
+  // 요약
+  const r_all = visitorData.filter(x => x.mode === 'reservation');
+  const e_all = visitorData.filter(x => x.mode === 'entry');
+  const fill = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  fill('vs-r-total',     r_all.length);
+  fill('vs-r-visited',   r_all.filter(x => x.visited).length);
+  fill('vs-r-unvisited', r_all.filter(x => !x.visited).length);
+  fill('vs-r-used',      r_all.filter(x => x.used_at).length);
+  fill('vs-e-total',     e_all.length);
+  fill('vs-e-visited',   e_all.filter(x => x.visited).length);
+  fill('vs-e-unvisited', e_all.filter(x => !x.visited).length);
+  fill('vs-e-used',      e_all.filter(x => x.used_at).length);
+  document.getElementById('vs-reset').disabled = !visitorHasFilter();
+  renderVisitorStatus();
+}
+
+function renderVisitorStatus() {
+  const f = visitorFilter();
+  let list = visitorData.slice();
+  if (f.visited === 'yes') list = list.filter(v => v.visited);
+  if (f.visited === 'no')  list = list.filter(v => !v.visited);
+  if (f.q) list = list.filter(v =>
+    (v.name||'').toLowerCase().includes(f.q) ||
+    (v.email||'').toLowerCase().includes(f.q) ||
+    (v.mobile||'').toLowerCase().includes(f.q));
+  const tbody = document.getElementById('vs-tbody');
+  document.getElementById('vs-excel').disabled = list.length === 0;
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">조회 결과가 없습니다.</td></tr>';
+    return;
+  }
+  const fmtDT = s => {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  };
+  tbody.innerHTML = list.map(v => {
+    const projCell = `${esc(v.project_name||'')}<br><span style="font-size:11px;color:#94a3b8;">${esc(v.project_serial||'')}</span>`;
+    const modeBadge = v.mode === 'reservation'
+      ? '<span style="background:#bfdbfe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">사전등록</span>'
+      : '<span style="background:#bbf7d0;color:#166534;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">현장등록</span>';
+    const visitedBadge = v.visited
+      ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">✓ 방문</span>'
+      : '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;">✗ 미방문</span>';
+    return `<tr>
+      <td style="font-size:12px;text-align:left;">${projCell}</td>
+      <td>${esc(v.name||'-')}</td>
+      <td style="font-size:12px;">${esc(v.mobile||'-')}</td>
+      <td style="font-size:12px;">${v.email ? `<a href="mailto:${esc(v.email)}" title="메일 발송" style="color:#2563eb;text-decoration:underline;">${esc(v.email)}</a>` : '-'}</td>
+      <td>${modeBadge}</td>
+      <td style="font-size:11px;white-space:nowrap;">${fmtDT(v.applied_at)}</td>
+      <td style="font-size:11px;white-space:nowrap;">${fmtDT(v.visited_at)}</td>
+      <td style="font-size:11px;white-space:nowrap;">${fmtDT(v.used_at)}</td>
+      <td>${visitedBadge}</td>
+      <td><button class="btn btn-o btn-sm" onclick="openVisitorDetail(${v.id})">보기</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function downloadVisitorExcel() {
+  // 입장현황 엑셀 다운로드와 동일한 엔드포인트 재사용 (project_name + mode 만 전달)
+  const f = visitorFilter();
+  const qs = new URLSearchParams({ project_name: f.name, mode: f.mode }).toString();
+  window.open('/api/host/reservations/export?' + qs, '_blank');
+}
+
+function openVisitorDetail(id) {
+  const v = visitorData.find(x => Number(x.id) === Number(id));
+  if (!v) return;
+  const fmtDT = s => {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  };
+  const fieldRows = Object.entries(v.fields||{})
+    .filter(([k,val]) => val != null && val !== '')
+    .map(([k,val]) => {
+      const lbl = VS_FIELD_LABELS[k] || k;
+      const display = Array.isArray(val) ? val.join(', ') : String(val);
+      return `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+        <div style="width:110px;color:#64748b;flex-shrink:0;font-weight:600;">${esc(lbl)}</div>
+        <div style="color:#1e293b;flex:1;word-break:break-all;">${esc(display)}</div>
+      </div>`;
+    }).join('');
+  const modeBadge = v.mode === 'reservation'
+    ? '<span style="background:#bfdbfe;color:#1e40af;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">사전등록</span>'
+    : '<span style="background:#bbf7d0;color:#166534;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">현장등록</span>';
+  document.getElementById('vd-title').textContent = `${v.name||'-'} 님 방문 정보`;
+  document.getElementById('vd-body').innerHTML = `
+    <div style="margin-bottom:14px;">${modeBadge}
+      ${v.visited ? '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-left:6px;">✓ 방문 완료</span>' : '<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-left:6px;">✗ 미방문</span>'}
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">
+      <h4 style="font-size:13px;margin:0 0 8px;color:#475569;">입력 정보</h4>
+      ${fieldRows || '<div style="color:#94a3b8;font-size:12px;">입력 정보 없음</div>'}
+    </div>
+    <div style="margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;">
+      <div style="display:flex;gap:10px;padding:5px 0;">
+        <div style="width:110px;color:#1e40af;font-weight:600;">신청일시</div>
+        <div style="color:#1e293b;">${fmtDT(v.applied_at)}</div>
+      </div>
+      <div style="display:flex;gap:10px;padding:5px 0;border-top:1px dashed #bfdbfe;">
+        <div style="width:110px;color:#1e40af;font-weight:600;">방문일시</div>
+        <div style="color:#1e293b;">${fmtDT(v.visited_at)}</div>
+      </div>
+      <div style="display:flex;gap:10px;padding:5px 0;border-top:1px dashed #bfdbfe;">
+        <div style="width:110px;color:#1e40af;font-weight:600;">Gift 사용일시</div>
+        <div style="color:#1e293b;">${fmtDT(v.used_at)}</div>
+      </div>
+      ${v.amount > 0 ? `<div style="display:flex;gap:10px;padding:5px 0;border-top:1px dashed #bfdbfe;">
+        <div style="width:110px;color:#1e40af;font-weight:600;">혜택 금액</div>
+        <div style="color:#15803d;font-weight:700;">${Number(v.amount).toLocaleString('ko-KR')}원</div>
+      </div>` : ''}
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:18px;">
+      <button class="btn btn-o btn-sm" style="min-width:120px;" onclick="closeVisitorDetail()">닫기</button>
+    </div>`;
+  document.getElementById('modal-visitor-detail').classList.add('open');
+}
+function closeVisitorDetail() { document.getElementById('modal-visitor-detail').classList.remove('open'); }
+
+// ── 발송이력 ──
+let mailPage = 1;
+const MAIL_TPL = {
+  email_verify: '이메일 인증 (회원가입 / 사전등록 / 현장등록)',
+  project_pin: 'Gift 승인 PIN 발급',
+  agent_qr: '현장요원 출퇴근 QR 전달',
+  quote: '견적서 발송',
+  reservation_qr: '사전등록 완료 QR',
+  entry_qr: '현장등록 완료 QR',
+  visitor_alert: '방문자 알림',
+  project_ending: '프로젝트 종료 알림',
+  default: '기타',
+};
+function tplLabel(k) { return MAIL_TPL[k] || k || '-'; }
+async function loadMailLogs(page) {
+  mailPage = page || 1;
+  const q = (document.getElementById('mail-q')?.value || '').trim();
+  const status = document.getElementById('mail-status')?.value || '';
+  const trig = document.getElementById('mail-trigger')?.value || '';
+  const params = new URLSearchParams({ page: String(mailPage), pageSize: '20' });
+  if (q) params.set('q', q);
+  if (status) params.set('status', status);
+  if (trig) params.set('trigger', trig);
+  const tbody = document.getElementById('mail-tbody');
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중…</td></tr>`;
+  const r = await fetch('/api/host/email-logs?' + params.toString());
+  if (!r.ok) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">불러올 수 없습니다.</td></tr>`;
+    return;
+  }
+  const d = await r.json();
+  const arr = d.data || [];
+  document.getElementById('mail-summary').textContent = `총 ${Number(d.total||0).toLocaleString('ko-KR')}건`;
+  if (arr.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">발송 이력이 없습니다.</td></tr>`;
+  } else {
+    tbody.innerHTML = arr.map(m => {
+      const dt = m.created_at ? new Date(m.created_at) : null;
+      const z = n => String(n).padStart(2,'0');
+      const ts = dt ? `${dt.getFullYear()}-${z(dt.getMonth()+1)}-${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}` : '-';
+      const proj = m.project_name
+        ? `${esc(m.project_name)}<br><span style="font-size:11px;color:#94a3b8;">${esc(m.project_serial||'')}</span>`
+        : '<span style="color:#cbd5e1;">-</span>';
+      const trigBadge = m.trigger_type === 'manual'
+        ? '<span style="background:#fef3c7;color:#854d0e;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;">✋ 수동</span>'
+        : '<span style="background:#dbeafe;color:#1e40af;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;">⚙ 자동</span>';
+      const statusBadge = m.status === 'sent'
+        ? '<span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;">✓ 발송</span>'
+        : '<span style="background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;">✗ 실패</span>';
+      const errCell = m.error_msg
+        ? `<span style="font-size:11px;color:#991b1b;cursor:help;" title="${esc(m.error_msg)}">${esc(String(m.error_msg).slice(0, 10))}${m.error_msg.length>10?'…':''}</span>`
+        : '<span style="color:#cbd5e1;">-</span>';
+      return `<tr>
+        <td style="font-size:12px;text-align:left;">${proj}</td>
+        <td>${trigBadge}</td>
+        <td style="font-size:12px;text-align:left;padding:6px 10px;">${esc(tplLabel(m.template_key))}</td>
+        <td style="font-size:12px;white-space:nowrap;">${ts}</td>
+        <td style="font-size:12px;text-align:left;padding:6px 10px;">${esc(m.subject||'')}</td>
+        <td style="font-size:12px;">${esc(m.to_email||'')}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align:center;">${errCell}</td>
+      </tr>`;
+    }).join('');
+  }
+  renderMailPager(d.page, d.pageSize, d.total);
+}
+function renderMailPager(page, pageSize, total) {
+  const pager = document.getElementById('mail-pager');
+  const pages = Math.max(1, Math.ceil(Number(total||0) / Number(pageSize||20)));
+  if (pages <= 1) { pager.innerHTML = ''; return; }
+  const cur = Number(page||1);
+  const btn = (n, label, dis) => `<button class="btn btn-${n===cur?'p':'o'} btn-sm" ${dis?'disabled':''} onclick="loadMailLogs(${n})" style="min-width:36px;">${label||n}</button>`;
+  let html = btn(Math.max(1, cur-1), '‹', cur===1);
+  const win = 2;
+  const from = Math.max(1, cur-win), to = Math.min(pages, cur+win);
+  if (from > 1) html += btn(1, '1') + (from>2?'<span style="padding:0 4px;color:#94a3b8;">…</span>':'');
+  for (let i=from; i<=to; i++) html += btn(i);
+  if (to < pages) html += (to<pages-1?'<span style="padding:0 4px;color:#94a3b8;">…</span>':'') + btn(pages, String(pages));
+  html += btn(Math.min(pages, cur+1), '›', cur===pages);
+  pager.innerHTML = html;
+}
+function resetMailFilters() {
+  document.getElementById('mail-q').value = '';
+  document.getElementById('mail-status').value = '';
+  document.getElementById('mail-trigger').value = '';
+  loadMailLogs(1);
+}
+
 // ── 견적 계산 안내 로드 ──
 let quoteConfigLoaded = false;
+let quoteConfigCache = null;
 async function loadQuoteConfig() {
   if (quoteConfigLoaded) return;
   const r = await fetch('/api/host/quote-config');
   if (!r.ok) return;
   const c = await r.json();
+  quoteConfigCache = c;
   const fmt = n => Number(n).toLocaleString('ko-KR') + '원';
   document.getElementById('quote-info-body').innerHTML = `
-    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:8px;">
-      <tr style="background:#f8fafc;"><td style="font-weight:600;width:50%;">항목</td><td style="font-weight:600;">금액</td></tr>
-      <tr><td>이용료(일 사용료 × 일수 )</td><td>${fmt(c.dailyFee)} × 이용일수</td></tr>
-      <tr><td>랜딩페이지 디자인 ${c.mobileCount}안<br><span style="font-size:11px;color:#94a3b8;">랜딩페이지 디자인 제공 시 불요</span></td><td>${fmt(c.mobileUnitFee)} × ${c.mobileCount} = ${fmt(c.mobileUnitFee * c.mobileCount)}</td></tr>
-      <tr><td>모바일앱 아이콘<br><span style="font-size:11px;color:#94a3b8;">디자인 제공 시 불요</span></td><td>${fmt(c.faviconFee)}</td></tr>
-      <tr><td>초기 세팅</td><td>${fmt(c.initialSetupFee)}</td></tr>
-      <tr style="background:#f0f9ff;"><td style="font-weight:600;">총액</td><td style="font-weight:600;">이용료 + ${fmt(c.mobileUnitFee * c.mobileCount + c.faviconFee + c.initialSetupFee)}</td></tr>
+    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:8px;text-align:left;">
+      <tr style="background:#f8fafc;"><td style="font-weight:600;width:50%;text-align:center;">항목</td><td style="font-weight:600;text-align:center;">금액</td></tr>
+      <tr><td style="text-align:left;">Stamp Tour(목적지, Quiz) 이용료(일 사용료 × 일수 )</td><td style="text-align:left;">${fmt(c.dailyFee)} × 이용일수</td></tr>
+      <tr><td style="text-align:left;">방문객 사전등록 <span style="font-size:11px;color:#94a3b8;">(선택 · 시작 전 사용일)</span></td><td style="text-align:left;">${fmt(c.reservationDailyFee)} × 사용일수</td></tr>
+      <tr><td style="text-align:left;">방문객 현장등록 <span style="font-size:11px;color:#94a3b8;">(선택 · 프로젝트 기간)</span></td><td style="text-align:left;">${fmt(c.entryDailyFee)} × 프로젝트 일수</td></tr>
+      <tr><td style="text-align:left;">현장요원관리 <span style="font-size:11px;color:#94a3b8;">(선택 · 프로젝트당 정액)</span></td><td style="text-align:left;">${fmt(c.fieldAgentFee)} (정액)</td></tr>
+      <tr><td style="text-align:left;">랜딩페이지 디자인 ${c.mobileCount}안<br><span style="font-size:11px;color:#94a3b8;">랜딩페이지 디자인 제공 시 불요</span></td><td style="text-align:left;">${fmt(c.mobileUnitFee)} × ${c.mobileCount} = ${fmt(c.mobileUnitFee * c.mobileCount)}</td></tr>
+      <tr><td style="text-align:left;">모바일앱 아이콘<br><span style="font-size:11px;color:#94a3b8;">디자인 제공 시 불요</span></td><td style="text-align:left;">${fmt(c.faviconFee)}</td></tr>
+      <tr><td style="text-align:left;">초기 세팅</td><td style="text-align:left;">${fmt(c.initialSetupFee)}</td></tr>
+      <tr style="background:#f0f9ff;"><td style="font-weight:600;text-align:left;">총액</td><td style="font-weight:600;text-align:left;">이용항목(한개 이상 선택 필수) + 초기 세팅 비용</td></tr>
     </table>
-    <p style="font-size:12px;color:#64748b;">※ 이용료 = 1일 ${fmt(c.dailyFee)} × 프로젝트 기간(일수). 추가 디자인 시안은 별도 견적입니다.</p>
-    <p style="font-size:12px;color:#64748b;margin-top:4px;">※ 이용일은 최소 5일 이상입니다.</p>`;
+    <div id="pj-quote-summary" style="margin-top:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;"></div>`;
   quoteConfigLoaded = true;
+  updateProjectQuoteSummary();
 }
 
 // ── 프로젝트 등록 ──
 async function createProject() {
   clrMsg('pj-msg');
-  if (!verifiedPin) { setMsg('pj-msg','e','Gift 승인 비밀번호를 먼저 확인해 주세요.'); return; }
+  if (!verifiedPin) { setMsg('pj-msg','e','프로젝트 비밀번호를 먼저 확인해 주세요.'); return; }
   const name = document.getElementById('pj-name').value.trim();
   const desc = document.getElementById('pj-desc').value.trim();
   const from = document.getElementById('pj-from').value;
@@ -4181,6 +5987,10 @@ async function confirmCreateProject() {
     prize_qty:    String(parseNum(document.getElementById('pj-prize-qty').value)),
     stop_on_budget_exceed: document.getElementById('pj-stop-overbudget').checked ? '1' : '0',
     gift_tiers:   collectGiftTiers('pj-gift-tiers'),
+    reservation_use: document.getElementById('pj-reservation-use').checked,
+    reservation_start_at: document.getElementById('pj-reservation-start-at').value || null,
+    entry_use:      document.getElementById('pj-entry-use').checked,
+    field_agent_use: document.getElementById('pj-field-agent-use').checked,
     pin_input:    verifiedPin,
   };
   const r = await fetch('/api/host/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -4343,7 +6153,1076 @@ function renderVisitStats(d) {
       </div>
       <div class="vs-bar-val">${fmtN(used)}건</div>
     </div>`;
+
+  // 5) 가맹점별 정산 내역 (1 bar per merchant, stacked Gift+Quiz)
+  const ms = d.merchant_settlement || [];
+  const msEl = document.getElementById('vs-merch-settle');
+  msEl.innerHTML = renderStackedSettleChart(ms, x => esc(x.merchant_name || '(미기록)'));
+
+  // 6) 일자별 정산 내역 (1 bar per day, stacked Gift+Quiz)
+  const ds = d.daily_settlement || [];
+  const dsEl = document.getElementById('vs-day-settle');
+  dsEl.innerHTML = renderStackedSettleChart(ds, x => fmtYmd(x.date));
 }
+
+// 공통: stacked vertical bar chart (Gift + Quiz, 총 Reward 금액)
+function renderStackedSettleChart(rows, labelFn) {
+  const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+  if (!rows.length) return '<div class="vs-empty">정산 내역이 없습니다.</div>';
+  const allMax = Math.max(1, ...rows.map(x => Number(x.total || 0)));
+  const sumGift  = rows.reduce((a,x) => a + Number(x.gift||0), 0);
+  const sumQuiz  = rows.reduce((a,x) => a + Number(x.quiz||0), 0);
+  const sumTotal = sumGift + sumQuiz;
+  const legend = `<div class="mds-legend">
+    <span><span class="sw mds-sw-gift"></span>Gift 금액</span>
+    <span><span class="sw mds-sw-quiz"></span>Quiz 금액</span>
+    <span style="color:#94a3b8;">막대 높이 = 총 Reward 금액</span>
+    <span style="margin-left:auto;color:#1d4ed8;font-weight:800;">총 ${won(sumTotal)} (Gift ${won(sumGift)} + Quiz ${won(sumQuiz)})</span>
+  </div>`;
+  const cols = rows.map(x => {
+    const total = Number(x.total || 0);
+    const gift  = Number(x.gift || 0);
+    const quiz  = Number(x.quiz || 0);
+    const heightPct = Math.round((total / allMax) * 100);
+    const giftH = total > 0 ? Math.round((gift / total) * heightPct) : 0;
+    const quizH = Math.max(0, heightPct - giftH);
+    return `<div class="mds-col">
+      <div class="mds-amt">${won(total)}</div>
+      <div class="mds-bar">
+        <div class="mds-seg-quiz" style="height:${quizH}%;" title="Quiz ${won(quiz)}"></div>
+        <div class="mds-seg-gift" style="height:${giftH}%;" title="Gift ${won(gift)}"></div>
+      </div>
+      <div class="mds-date">${labelFn(x)}</div>
+    </div>`;
+  }).join('');
+  return legend + `<div class="mds-chart">${cols}</div>`;
+}
+
+// ── 입장관리 sub 탭 ──
+let entrySub = 'status';
+function switchEntrySub(name) {
+  entrySub = name;
+  document.querySelectorAll('.stl-sub[data-entry-sub]').forEach(b => b.classList.toggle('active', b.dataset.entrySub === name));
+  document.querySelectorAll('.entry-sub-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('entry-sub-' + name).style.display = '';
+  if (name === 'register') loadEntryProjects();
+  if (name === 'status')   loadEntryStatus();
+  if (name === 'people')   loadEntryPeopleProjects();
+  if (name === 'visitor')  loadVisitorProjects();
+}
+
+// ── 입장현황(신청자 목록) sub 탭 ──
+let entryPeopleData = [];
+
+function entryPeopleFilter() {
+  return {
+    name:   (document.getElementById('ep-name')||{}).value || '',
+    mode:   (document.getElementById('ep-mode')||{}).value || '',
+    status: (document.getElementById('ep-status')||{}).value || '',
+  };
+}
+function entryPeopleHasFilter() {
+  const f = entryPeopleFilter();
+  return !!(f.name.trim() || f.mode || f.status);
+}
+function onEntryPeopleFilterChange() {
+  document.getElementById('ep-reset').disabled = !entryPeopleHasFilter();
+  renderEntryPeople();
+}
+function resetEntryPeopleFilter() {
+  document.getElementById('ep-name').value = '';
+  document.getElementById('ep-mode').value = '';
+  document.getElementById('ep-status').value = '';
+  onEntryPeopleFilterChange();
+  loadEntryPeople();
+}
+async function loadEntryPeopleProjects() {
+  // sub 탭 진입 시 초기 로드 (필터 미적용 → 전체)
+  loadEntryPeople();
+}
+async function loadEntryPeople() {
+  document.getElementById('ep-empty').style.display = 'none';
+  document.getElementById('ep-table-wrap').style.display = '';
+  document.getElementById('ep-summary').style.display = 'grid';
+  const tbody = document.getElementById('ep-tbody');
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  const { name, mode, status } = entryPeopleFilter();
+  const qs = new URLSearchParams({ project_name: name.trim(), mode, status }).toString();
+  let d;
+  try {
+    const r = await fetch('/api/host/reservations?' + qs);
+    d = await r.json();
+    if (!r.ok) throw 0;
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  entryPeopleData = d.data || [];
+  const s = d.summary || { reservation:{}, entry:{} };
+  document.getElementById('ep-r-total').textContent   = s.reservation.total || 0;
+  document.getElementById('ep-r-visited').textContent = s.reservation.visited || 0;
+  document.getElementById('ep-r-used').textContent    = s.reservation.gift_used || 0;
+  document.getElementById('ep-e-total').textContent   = s.entry.total || 0;
+  document.getElementById('ep-e-visited').textContent = s.entry.visited || 0;
+  document.getElementById('ep-e-used').textContent    = s.entry.gift_used || 0;
+  document.getElementById('ep-reset').disabled = !entryPeopleHasFilter();
+  renderEntryPeople();
+}
+function renderEntryPeople() {
+  const tbody = document.getElementById('ep-tbody');
+  const list = entryPeopleData;
+  document.getElementById('ep-excel').disabled = !list.length;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:20px;">조회 결과가 없습니다.</td></tr>';
+    return;
+  }
+  const fmtDT = s => {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  };
+  const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
+  tbody.innerHTML = list.map((p, i) => {
+    const modeBadge = p.mode === 'reservation'
+      ? '<span class="badge-mode" style="background:#bfdbfe;color:#1e40af;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">사전등록</span>'
+      : '<span class="badge-mode" style="background:#bbf7d0;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">현장등록</span>';
+    const f = p.fields || {};
+    const visited = p.visited
+      ? `<span style="color:#15803d;font-weight:700;">✓ ${fmtDT(p.activated_at).slice(5)}</span>`
+      : '<span style="color:#94a3b8;">-</span>';
+    // Gift 사용: 발급된 QR 이미지 (사용된 경우 파일이 PAID 스탬프 처리됨)
+    const used = p.qr_image_url
+      ? `<img src="${p.qr_image_url}" alt="${p.gift_used ? 'PAID' : 'QR'}"
+             title="${p.gift_used ? 'Gift 사용 완료 (PAID)' : '발급된 QR (미사용)'}"
+             style="width:42px;height:42px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;cursor:zoom-in;background:#fff;"
+             onclick="showImageUrl ? showImageUrl('${p.qr_image_url}','${p.gift_used ? 'Gift 사용 (PAID)' : '발급된 QR'}') : window.open('${p.qr_image_url}','_blank')">`
+      : '<span style="color:#94a3b8;">-</span>';
+    const usedAt = p.gift_used
+      ? `<span style="font-size:12px;color:#64748b;">${fmtDT(p.used_at)}</span>`
+      : '<span style="color:#94a3b8;">-</span>';
+    const projCell = `
+      <a href="#" onclick="openProjectEdit(${p.project_id}); return false;"
+         title="${esc(p.project_name)}"
+         style="color:#2563eb;font-weight:700;text-decoration:none;border-bottom:1px dashed #93c5fd;cursor:pointer;">${esc(p.project_name)}</a>
+      <br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span>`;
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${projCell}</td>
+      <td>${modeBadge}</td>
+      <td>${esc(f.name || '-')}</td>
+      <td style="font-size:12px;">${f.email ? `<a href="mailto:${esc(f.email)}" title="메일 발송" style="color:#2563eb;text-decoration:underline;">${esc(f.email)}</a>` : '-'}</td>
+      <td style="font-size:12px;white-space:nowrap;">${esc(f.mobile || '-')}</td>
+      <td style="font-size:12px;color:#64748b;white-space:nowrap;">${fmtDT(p.created_at)}</td>
+      <td style="text-align:right;">${won(p.amount)}</td>
+      <td>${visited}</td>
+      <td>${used}</td>
+      <td style="white-space:nowrap;">${usedAt}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 입장권관리 그리드 ──
+let entryStatusData = [];
+function entryStatusFilter() {
+  return {
+    name:   (document.getElementById('esf-name')||{}).value || '',
+    status: (document.getElementById('esf-status')||{}).value || '',
+  };
+}
+function entryStatusHasFilter() {
+  const f = entryStatusFilter();
+  return !!(f.name.trim() || f.status);
+}
+function onEntryStatusFilterChange() {
+  document.getElementById('esf-reset').disabled = !entryStatusHasFilter();
+  renderEntryStatus();
+}
+function resetEntryStatusFilter() {
+  document.getElementById('esf-name').value = '';
+  document.getElementById('esf-status').value = '';
+  onEntryStatusFilterChange();
+}
+async function loadEntryStatus() {
+  const tbody = document.getElementById('entry-status-tbody');
+  tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  try {
+    const r = await fetch('/api/host/entry-status');
+    const d = await r.json();
+    if (!r.ok) throw 0;
+    entryStatusData = d.data || [];
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+    return;
+  }
+  renderEntryStatus();
+}
+function filteredEntryStatus() {
+  const { name, status } = entryStatusFilter();
+  const q = name.trim().toLowerCase();
+  return entryStatusData.filter(p => {
+    if (status && p.status !== status) return false;
+    if (q) {
+      const hay = (String(p.project_name||'') + ' ' + String(p.project_serial||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function renderEntryStatus() {
+  const tbody = document.getElementById('entry-status-tbody');
+  const list = filteredEntryStatus();
+  // 엑셀 활성화: 조회조건이 있고 결과가 있을 때
+  document.getElementById('esf-excel').disabled = !(entryStatusHasFilter() && list.length);
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="18" style="text-align:center;color:#94a3b8;padding:20px;">${entryStatusHasFilter() ? '조회 결과가 없습니다.' : '등록된 프로젝트가 없습니다.'}</td></tr>`;
+    return;
+  }
+  const fmtDate = s => {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
+  const cnt = n => Number(n||0).toLocaleString('ko-KR') + '건';
+  const groupCells = (p, kind, modeKey) => {
+    const m = p[modeKey] || {};
+    const enabled = !!m.enabled;
+    const enBadge = enabled ? '<span class="es-badge on">활성</span>' : '<span class="es-badge off">비활성</span>';
+    const img = m.image_url
+      ? `<img class="es-thumb" src="${m.image_url}" onclick="showImageUrl ? showImageUrl('${m.image_url}','혜택 이미지') : window.open('${m.image_url}','_blank')">`
+      : '<span style="color:#cbd5e1;">-</span>';
+    const previewBtn = `<button class="btn btn-o btn-sm" style="padding:3px 10px;font-size:11px;" onclick="openLandingPreviewFor(${p.id}, '${kind}')">👁</button>`;
+    const copyBtn = enabled
+      ? `<button class="btn btn-o btn-sm" style="padding:3px 10px;font-size:11px;" onclick="copyEntryUrl('${p.project_serial}','${kind}')">📋</button>`
+      : `<button class="btn btn-o btn-sm" style="padding:3px 10px;font-size:11px;" disabled title="혜택 비활성">📋</button>`;
+    // 발급한도 초과 허용
+    const overBadge = enabled
+      ? (m.stop_on_limit
+          ? '<span class="es-badge off">차단</span>'
+          : '<span class="es-badge on">허용</span>')
+      : '-';
+    // 바로가기 QR (혜택 활성된 경우만) — 외부 QR API 사용 (즉시 생성)
+    const path = kind === 'r' ? 'reserve' : 'entry';
+    const targetUrl = `${location.origin}/${path}/${p.project_serial}`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=96x96&margin=2&data=${encodeURIComponent(targetUrl)}`;
+    const qrCell = enabled
+      ? `<img src="${qrSrc}" alt="QR"
+             title="QR 스캔 시 ${kind === 'r' ? '사전등록' : '현장등록'} 페이지로 이동 / 클릭 시 새 탭 열기"
+             style="width:48px;height:48px;cursor:pointer;border:1px solid #e5e7eb;border-radius:4px;background:#fff;"
+             onclick="window.open('${esc(targetUrl)}','_blank')">`
+      : '<span style="color:#cbd5e1;">-</span>';
+    return `
+      <td class="c">${enBadge}</td>
+      <td class="r">${enabled ? won(m.amount) : '-'}</td>
+      <td class="r">${enabled ? (Number(m.max_count) > 0 ? cnt(m.max_count) : '<span style="color:#94a3b8;font-size:11px;">무제한</span>') : '-'}</td>
+      <td class="c">${overBadge}</td>
+      <td class="c">${img}</td>
+      <td class="c">${previewBtn}</td>
+      <td class="c">${copyBtn}</td>
+      <td class="c">${qrCell}</td>`;
+  };
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td>
+        <a href="#" onclick="openProjectEdit(${p.id}); return false;"
+           title="${esc(p.project_name)}"
+           style="color:#2563eb;font-weight:700;text-decoration:none;border-bottom:1px dashed #93c5fd;cursor:pointer;">${esc(p.project_name)}</a>
+        <br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span>
+      </td>
+      <td style="font-size:12px;color:#64748b;white-space:nowrap;">${fmtDate(p.created_at)}</td>
+      ${groupCells(p, 'r', 'reservation')}
+      ${groupCells(p, 'e', 'entry')}
+    </tr>
+  `).join('');
+}
+
+// 내 프로젝트 → 입장현황 빠른 이동 (프로젝트명+모드 자동 적용)
+function openEntryPeopleFor(projectId, mode) {
+  const p = (projData || []).find(x => Number(x.id) === Number(projectId));
+  const serial = p?.project_serial || '';
+  switchTab('entry');
+  switchEntrySub('people');
+  document.getElementById('ep-name').value = serial;          // 정확 일치를 위해 일련번호로 검색
+  document.getElementById('ep-mode').value = mode || '';
+  document.getElementById('ep-status').value = '';
+  onEntryPeopleFilterChange();
+  loadEntryPeople();
+}
+
+// 입장현황 엑셀 다운로드 (조회조건 적용)
+async function downloadEntryPeopleExcel() {
+  const btn = document.getElementById('ep-excel');
+  if (!btn || btn.disabled) return;
+  const { name, mode, status } = entryPeopleFilter();
+  const qs = new URLSearchParams({ project_name: name.trim(), mode, status }).toString();
+  try {
+    const r = await fetch('/api/host/reservations/export?' + qs);
+    if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+    const blob = await r.blob();
+    let fname = '입장현황.xlsx';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+}
+
+// 입장권관리 엑셀 다운로드 (조회조건 필터 적용)
+async function downloadEntryStatusExcel() {
+  const btn = document.getElementById('esf-excel');
+  if (!btn || btn.disabled) return;
+  const f = entryStatusFilter();
+  const qs = new URLSearchParams({ project_name: f.name.trim(), status: f.status }).toString();
+  try {
+    const r = await fetch('/api/host/entry-status/export?' + qs);
+    if (!r.ok) { await uiAlert('엑셀 다운로드에 실패했습니다.'); return; }
+    const blob = await r.blob();
+    let fname = '입장권관리.xlsx';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (m) { try { fname = decodeURIComponent(m[1]); } catch (e) { fname = m[1]; } }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { await uiAlert('엑셀 다운로드에 실패했습니다.'); }
+}
+
+// 입장현황 행에서 미리보기/주소복사 호출 (현재 프로젝트 컨텍스트를 임시 설정 후 기존 함수 재사용)
+async function openLandingPreviewFor(projectId, kind) {
+  // 해당 프로젝트의 설정을 로드해서 폼 상태에 임시 반영 후 미리보기 호출
+  const prev = entryCurrentProjectId;
+  entryCurrentProjectId = projectId;
+  if (!entryFieldDefs.length) {
+    try { const r = await fetch('/api/host/field-definitions'); const d = await r.json(); if (r.ok) entryFieldDefs = d.data || []; } catch (e) {}
+  }
+  let d;
+  try {
+    const r = await fetch(`/api/host/projects/${projectId}/reservation-config`);
+    d = await r.json();
+    if (!r.ok) throw 0;
+  } catch (e) { entryCurrentProjectId = prev; await uiAlert('미리보기 데이터를 불러오지 못했습니다.'); return; }
+  // projects 리스트에도 잠시 보장
+  if (!entryProjects.find(p => Number(p.id) === Number(projectId))) {
+    entryProjects.push({ id: projectId, project_name: d.project.project_name, project_serial: d.project.project_serial });
+  }
+  // 임시로 입력 상태 세팅 (DOM 위에 있는 입장등록 카드 활용)
+  const r = d.project.reservation || {};
+  const e = d.project.entry || {};
+  ['r','e'].forEach(k => {
+    const src = k === 'r' ? r : e;
+    document.getElementById(`ef-${k}-enabled`).checked = !!src.enabled;
+    document.getElementById(`ef-${k}-amount`).value = (Number(src.amount || 0)).toLocaleString('ko-KR');
+    document.getElementById(`ef-${k}-max`).value    = (Number(src.max_count || 0)).toLocaleString('ko-KR');
+    document.getElementById(`ef-${k}-label`).value  = src.label || '';
+    document.getElementById(`ef-${k}-stop`).checked = !!src.stop_on_limit;
+    loadBenefitImage(k, src.image_url || null);
+  });
+  // 필드 상태 세팅 (이름/이메일 강제 포함)
+  entryFieldState = new Map();
+  const selectedMap = new Map((d.fields || []).map(f => [f.field_id, { selected:true, required: !!f.is_required }]));
+  entryFieldDefs.forEach((def, idx) => {
+    const s = selectedMap.get(def.id);
+    let sel = !!s, req = !!(s && s.required);
+    if (def.field_key === 'name' || def.field_key === 'email') { sel = true; req = true; }
+    entryFieldState.set(def.id, { selected: sel, required: req, sort: idx * 10 });
+  });
+  openLandingPreview(kind);
+}
+
+async function copyEntryUrl(serial, kind) {
+  const path = kind === 'r' ? 'reserve' : 'entry';
+  const url = `${location.origin}/${path}/${serial}`;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    await uiAlert(`URL이 복사되었습니다:\n${url}`);
+  } catch (e) { await uiAlert(`복사 실패. 직접 복사해 주세요:\n${url}`); }
+}
+
+// ── 입장관리(사전등록/현장등록) ──
+let entryProjects = [];
+let entryFieldDefs = [];
+let entryCurrentProjectId = null;
+let entryFieldState = new Map();  // field_id → { selected, required }
+let entryConfigSnapshot = null;   // 저장 시점 스냅샷 (dirty 체크용)
+
+// 현재 폼 상태 → 비교용 직렬화 객체
+function entryConfigCurrentState() {
+  const numVal = id => Number((document.getElementById(id)||{}).value?.replace(/[^0-9]/g, '')) || 0;
+  const fs = [];
+  entryFieldDefs.slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).forEach(d => {
+    const s = entryFieldState.get(d.id);
+    if (s?.selected) fs.push({ id: d.id, req: !!s.required, ct: s.choice_type || null });
+  });
+  return JSON.stringify({
+    r: {
+      en: !!document.getElementById('ef-r-enabled')?.checked,
+      amt: numVal('ef-r-amount'),
+      lbl: (document.getElementById('ef-r-label')?.value || '').trim(),
+      msg: (document.getElementById('ef-r-message')?.value || '').trim(),
+      max: numVal('ef-r-max'),
+      stop: !!document.getElementById('ef-r-stop')?.checked,
+      sa: (document.getElementById('ef-r-start-at')?.value || ''),
+    },
+    e: {
+      en: !!document.getElementById('ef-e-enabled')?.checked,
+      amt: numVal('ef-e-amount'),
+      lbl: (document.getElementById('ef-e-label')?.value || '').trim(),
+      msg: (document.getElementById('ef-e-message')?.value || '').trim(),
+      max: numVal('ef-e-max'),
+      stop: !!document.getElementById('ef-e-stop')?.checked,
+    },
+    fields: fs,
+  });
+}
+function checkEntryConfigDirty() {
+  const btn = document.getElementById('ef-save-btn');
+  if (!btn || entryConfigSnapshot == null) return;
+  btn.disabled = (entryConfigCurrentState() === entryConfigSnapshot);
+}
+function resetEntryConfigSnapshot() {
+  entryConfigSnapshot = entryConfigCurrentState();
+  const btn = document.getElementById('ef-save-btn');
+  if (btn) btn.disabled = true;
+}
+
+async function loadEntryProjects() {
+  // 한 번만 field-definitions 로드
+  if (!entryFieldDefs.length) {
+    try {
+      const r = await fetch('/api/host/field-definitions');
+      const d = await r.json();
+      if (r.ok) entryFieldDefs = d.data || [];
+    } catch (e) {}
+  }
+  // 프로젝트 목록 로드 (간단히 /api/host/projects 응답 재사용)
+  try {
+    const r = await fetch('/api/host/projects?status=&page_size=200');
+    const d = await r.json();
+    entryProjects = (d.data || d.projects || [])
+      .filter(p => p.status !== 'cancelled' && p.status !== 'draft')
+      .filter(p => Number(p.reservation_use) === 1 || Number(p.entry_use) === 1);
+  } catch (e) { entryProjects = []; }
+  const sel = document.getElementById('ef-project');
+  const cur = sel.value;
+  if (entryProjects.length === 0) {
+    sel.innerHTML = '<option value="">— 사전등록·현장등록 옵션을 사용 중인 프로젝트가 없습니다 —</option>';
+  } else {
+    sel.innerHTML = '<option value="">— 프로젝트를 선택해 주세요 —</option>' +
+      entryProjects.map(p => `<option value="${p.id}">[${esc(p.project_serial)}] ${esc(p.project_name)} (${esc(STATUS_LABEL[p.status]||p.status)})</option>`).join('');
+  }
+  if (cur) sel.value = cur;
+}
+
+function onEntryProjectChange() {
+  const sel = document.getElementById('ef-project');
+  entryCurrentProjectId = sel.value ? Number(sel.value) : null;
+  if (!entryCurrentProjectId) {
+    document.getElementById('ef-empty').style.display = '';
+    document.getElementById('ef-config').style.display = 'none';
+    return;
+  }
+  loadEntryConfig();
+}
+
+async function loadEntryConfig() {
+  if (!entryCurrentProjectId) return;
+  const empty = document.getElementById('ef-empty');
+  const conf  = document.getElementById('ef-config');
+  empty.style.display = 'none';
+  conf.style.display  = '';
+  clrMsg('ef-msg');
+  let d;
+  try {
+    const r = await fetch(`/api/host/projects/${entryCurrentProjectId}/reservation-config`);
+    d = await r.json();
+    if (!r.ok) throw 0;
+  } catch (e) {
+    setMsg('ef-msg', 'e', '설정을 불러오지 못했습니다.'); return;
+  }
+  const proj = d.project || {};
+  const fields = d.fields || [];
+  const counts = d.counts || {};
+  document.getElementById('ef-proj-info').textContent =
+    `상태: ${STATUS_LABEL[proj.status] || proj.status} · 시작일: ${proj.from_date ? String(proj.from_date).slice(0,10) : '-'}`;
+  // 사전등록
+  const r = proj.reservation || {};
+  document.getElementById('ef-r-enabled').checked = !!r.enabled;
+  document.getElementById('ef-r-amount').value = (Number(r.amount || 0)).toLocaleString('ko-KR');
+  document.getElementById('ef-r-max').value    = (Number(r.max_count || 0)).toLocaleString('ko-KR');
+  document.getElementById('ef-r-label').value  = r.label || '';
+  document.getElementById('ef-r-message').value = r.message || '';
+  document.getElementById('ef-r-stop').checked = !!r.stop_on_limit;
+  // start_at: 'YYYY-MM-DD HH:MM:SS' → datetime-local 형식
+  // 미설정 시 기본값: 프로젝트 시작일 -10일 오전 09:00
+  const z = n => String(n).padStart(2,'0');
+  const toLocal = d => `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+  let defaultSA = null;
+  if (proj.from_date) {
+    const projStart = new Date(proj.from_date);
+    if (!isNaN(projStart.getTime())) {
+      defaultSA = new Date(projStart.getTime() - 10 * 24 * 60 * 60 * 1000);
+      defaultSA.setHours(9, 0, 0, 0);   // 오전 09:00
+    }
+  }
+  const sa = r.start_at ? new Date(r.start_at) : null;
+  if (sa && !isNaN(sa.getTime())) {
+    document.getElementById('ef-r-start-at').value = toLocal(sa);
+  } else if (defaultSA) {
+    document.getElementById('ef-r-start-at').value = toLocal(defaultSA);
+  } else {
+    document.getElementById('ef-r-start-at').value = '';
+  }
+  // 프로젝트 from_date 를 max attribute 로 (검증 보조)
+  if (proj.from_date) {
+    const fd = String(proj.from_date).slice(0,10);
+    document.getElementById('ef-r-start-at').max = `${fd}T00:00`;
+  }
+  // 현장등록
+  const e = proj.entry || {};
+  document.getElementById('ef-e-enabled').checked = !!e.enabled;
+  document.getElementById('ef-e-amount').value = (Number(e.amount || 0)).toLocaleString('ko-KR');
+  document.getElementById('ef-e-max').value    = (Number(e.max_count || 0)).toLocaleString('ko-KR');
+  document.getElementById('ef-e-label').value  = e.label || '';
+  document.getElementById('ef-e-message').value = e.message || '';
+  document.getElementById('ef-e-stop').checked = !!e.stop_on_limit;
+  applyBenefitEnabled('r');
+  applyBenefitEnabled('e');
+  // 프로젝트가 시작된(또는 완료/취소) 경우 사전등록 카드 자체를 잠금
+  applyReservationLock(proj.status);
+  // 프로젝트 등록 시 옵션 미선택 → 해당 카드 자체를 잠금 (활성 토글 불가)
+  applyUseAllowedLock('r', !!r.use_allowed);
+  applyUseAllowedLock('e', !!e.use_allowed);
+  // 스냅샷 저장 → 저장 버튼 disabled 시작
+  resetEntryConfigSnapshot();
+  // 주소복사/QR 버튼: 저장된 상태가 활성이면 처음부터 활성화
+  const rSaved = !!r.enabled;
+  const eSaved = !!e.enabled;
+  ['ef-r-copy','ef-r-qr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = !rSaved; el.title = rSaved ? '클릭하여 사전등록 URL 복사/QR 보기' : '사전등록을 활성화 후 저장하세요'; }
+  });
+  ['ef-e-copy','ef-e-qr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = !eSaved; el.title = eSaved ? '클릭하여 현장등록 URL 복사/QR 보기' : '현장등록을 활성화 후 저장하세요'; }
+  });
+
+  // 항목 state 초기화
+  entryFieldState = new Map();
+  const selectedMap = new Map(fields.map(f => [f.field_id, {
+    selected:true, required: !!f.is_required, sort: f.sort_order,
+    choice_type: f.choice_type_override || f.choice_type || null,
+  }]));
+  entryFieldDefs.forEach((def, idx) => {
+    const s = selectedMap.get(def.id);
+    let selected = !!s, required = !!(s && s.required);
+    if (def.field_key === 'name' || def.field_key === 'email' || def.field_key === 'mobile') { selected = true; required = true; }
+    // choice_type: 저장된 override 우선, 없으면 field_def default
+    const choice_type = (s && s.choice_type) || def.choice_type || null;
+    entryFieldState.set(def.id, { selected, required, choice_type, sort: s?.sort ?? (idx * 10) });
+  });
+  // 이미지 표시
+  loadBenefitImage('r', r.image_url || null);
+  loadBenefitImage('e', e.image_url || null);
+  renderEntryFields();
+  // 카운트
+  document.getElementById('ef-counts').innerHTML =
+    `<span>pending: <b>${counts.pending||0}</b></span>` +
+    `<span>activated: <b>${counts.activated||0}</b></span>` +
+    `<span>used: <b>${counts.used||0}</b></span>` +
+    `<span>total: <b>${counts.total||0}</b></span>`;
+}
+
+function renderEntryFields() {
+  const wrap = document.getElementById('ef-fields');
+  const arr = entryFieldDefs.slice().sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  wrap.innerHTML = arr.map(def => {
+    const st = entryFieldState.get(def.id) || { selected:false, required:false };
+    const opts = Array.isArray(def.options) ? def.options : null;
+    const locked = (def.field_key === 'name' || def.field_key === 'email' || def.field_key === 'mobile');
+    const previewBtn = opts
+      ? `<div class="ef-preview-wrap"><button type="button" class="ef-preview-btn" onclick="openFieldPreview(${def.id})">📋 항목보기</button></div>`
+      : `<div class="ef-preview-wrap" aria-hidden="true"></div>`;
+    const lockNote = locked ? ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(필수 항목)</span>' : '';
+    // 단일/다중 선택 토글 (select 타입 + 미잠금 + 선택된 경우만)
+    let choiceUI = '';
+    if (def.input_type === 'select' && opts) {
+      const eff = st.choice_type || def.choice_type || 'single';
+      if (def.choice_type_locked) {
+        choiceUI = `<span class="ef-choice-locked" title="이 항목은 ${eff==='single'?'단일':'다중'} 선택 고정입니다.">${eff==='single'?'⦿ 단일선택':'☑ 다중선택'}</span>`;
+      } else {
+        // off = 단일, on = 다중
+        const on = eff === 'multi';
+        choiceUI = `<span class="ef-choice-switch ${on?'on':''} ${st.selected?'':'disabled'}"
+                          title="${on?'다중선택':'단일선택'} — 클릭하여 전환"
+                          onclick="setEntryChoiceType(${def.id}, '${on?'single':'multi'}')">
+          <span>${on?'☑ 다중':'⦿ 단일'}</span>
+          <span class="sw"></span>
+        </span>`;
+      }
+    }
+    return `<div class="ef-field${st.selected?' checked':''}${st.selected?'':' disabled-required'}">
+      <input type="checkbox" id="ef-fd-${def.id}" ${st.selected?'checked':''} ${locked?'disabled':''} onchange="toggleEntryField(${def.id}, this.checked)">
+      <label for="ef-fd-${def.id}" class="ef-label">${esc(def.label_ko)}${lockNote}</label>
+      <span class="ef-type">${esc(def.input_type)}</span>
+      <span class="ef-req"><input type="checkbox" id="ef-req-${def.id}" ${st.required?'checked':''} ${(st.selected && !locked)?'':'disabled'} onchange="toggleEntryReq(${def.id}, this.checked)"><label for="ef-req-${def.id}">필수</label></span>
+      ${choiceUI}
+      ${previewBtn}
+    </div>`;
+  }).join('');
+  const totalChecked = Array.from(entryFieldState.values()).filter(s => s.selected).length;
+  const totalReq = Array.from(entryFieldState.values()).filter(s => s.selected && s.required).length;
+  document.getElementById('ef-field-summary').textContent = `선택 ${totalChecked}개 · 필수 ${totalReq}개`;
+}
+
+// 프로젝트 시작/완료/취소 시 사전등록 카드 자체를 잠금 (변경 불가)
+function applyReservationLock(projStatus) {
+  const locked = projStatus === 'started' || projStatus === 'completed' || projStatus === 'cancelled';
+  const card = document.getElementById('ef-r-card');
+  if (!card) return;
+  // 카드 헤더에 안내 banner (한 번만 추가)
+  let banner = card.querySelector('.ef-r-lock-note');
+  if (locked && !banner) {
+    banner = document.createElement('div');
+    banner.className = 'ef-r-lock-note';
+    banner.style.cssText = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:10px;';
+    banner.textContent = '⚠ 프로젝트가 이미 시작/종료되어 사전등록 설정을 변경할 수 없습니다.';
+    card.querySelector('h5').insertAdjacentElement('afterend', banner);
+  } else if (!locked && banner) {
+    banner.remove();
+  }
+  // 입력 잠금 (활성 체크박스 + 모든 자식 input)
+  document.getElementById('ef-r-enabled').disabled = locked;
+  ['amount','max','label','stop','start-at'].forEach(k => {
+    const el = document.getElementById(`ef-r-${k}`);
+    if (el) el.disabled = locked || el.disabled;
+  });
+  // 이미지 업로드 / 삭제 버튼
+  card.querySelectorAll('.ef-img-actions button, .ef-img-actions input').forEach(b => { b.disabled = locked || b.disabled; });
+  card.classList.toggle('locked-by-status', locked);
+}
+
+// 사전등록/현장등록 카드의 활성 여부에 따라 내부 인풋 enable/disable
+// 프로젝트 등록 시 사전등록·현장등록 옵션을 선택하지 않은 경우 — 카드 전체 잠금
+function applyUseAllowedLock(kind, allowed) {
+  const card = document.getElementById(`ef-${kind}-card`);
+  if (!card) return;
+  const enabledCb = document.getElementById(`ef-${kind}-enabled`);
+  // 안내 박스 (한 번만 생성)
+  let notice = card.querySelector('.ef-use-locked-notice');
+  if (!allowed) {
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.className = 'ef-use-locked-notice';
+      notice.style.cssText = 'background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#991b1b;line-height:1.55;';
+      notice.innerHTML = `<b>⚠ 프로젝트 등록 시 ${kind==='r'?'사전등록':'현장등록'} 옵션을 선택하지 않은 프로젝트입니다.</b><br>본 항목의 상세 등록은 사용할 수 없습니다.`;
+      card.insertBefore(notice, card.firstChild.nextSibling);
+    }
+    // 활성 체크박스 강제 off + disable
+    if (enabledCb) { enabledCb.checked = false; enabledCb.disabled = true; }
+    card.classList.add('off');
+    // 모든 컨트롤 disable
+    card.querySelectorAll('input, button, select, textarea').forEach(el => {
+      if (el.classList.contains('modal-close')) return;
+      el.disabled = true;
+    });
+  } else {
+    if (notice) notice.remove();
+    if (enabledCb) enabledCb.disabled = false;
+  }
+}
+
+function applyBenefitEnabled(kind) {
+  const card = document.getElementById(`ef-${kind}-card`);
+  const on   = document.getElementById(`ef-${kind}-enabled`).checked;
+  card.classList.toggle('off', !on);
+  const lockedByStatus = kind === 'r' && card.classList.contains('locked-by-status');
+  const fields = ['amount','max','label','message','stop'];
+  if (kind === 'r') fields.push('start-at');
+  fields.forEach(k => {
+    const el = document.getElementById(`ef-${kind}-${k}`);
+    if (el) el.disabled = lockedByStatus || !on;
+  });
+  checkEntryConfigDirty();
+}
+
+function isLockedField(fid) {
+  const def = entryFieldDefs.find(d => Number(d.id) === Number(fid));
+  return !!def && (def.field_key === 'name' || def.field_key === 'email' || def.field_key === 'mobile');
+}
+function toggleEntryField(fid, checked) {
+  if (isLockedField(fid)) { renderEntryFields(); return; }  // 강제 잠금
+  const s = entryFieldState.get(fid) || { selected:false, required:false, sort: 0 };
+  s.selected = !!checked;
+  if (!checked) s.required = false;
+  entryFieldState.set(fid, s);
+  renderEntryFields();
+  checkEntryConfigDirty();
+}
+function toggleEntryReq(fid, checked) {
+  if (isLockedField(fid)) { renderEntryFields(); return; }
+  const s = entryFieldState.get(fid);
+  if (!s || !s.selected) return;
+  s.required = !!checked;
+  entryFieldState.set(fid, s);
+  renderEntryFields();
+  checkEntryConfigDirty();
+}
+function setEntryChoiceType(fid, type) {
+  const def = entryFieldDefs.find(d => Number(d.id) === Number(fid));
+  if (!def || def.choice_type_locked) return;          // 잠긴 항목은 변경 불가
+  if (!['single','multi'].includes(type)) return;
+  const s = entryFieldState.get(fid);
+  if (!s || !s.selected) return;
+  s.choice_type = type;
+  entryFieldState.set(fid, s);
+  renderEntryFields();
+  checkEntryConfigDirty();
+}
+
+async function saveEntryConfig() {
+  if (!entryCurrentProjectId) return;
+  const okToSave = await uiConfirm('입장 등록 설정을 저장하시겠습니까?', { title: '저장 확인', okText: '저장' });
+  if (!okToSave) return;
+  clrMsg('ef-msg');
+  const arr = entryFieldDefs.slice().sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  let order = 0;
+  const fields = arr.filter(d => entryFieldState.get(d.id)?.selected).map(d => {
+    const s = entryFieldState.get(d.id);
+    // choice_type override 는 default 와 다를 때만 보냄
+    const def = entryFieldDefs.find(x => Number(x.id) === Number(d.id));
+    const cto = (s.choice_type && def && !def.choice_type_locked && s.choice_type !== def.choice_type) ? s.choice_type : null;
+    return { field_id: d.id, is_required: !!s.required, sort_order: order++ * 10, choice_type_override: cto };
+  });
+  const numVal = id => Number(document.getElementById(id).value.replace(/[^0-9]/g, '')) || 0;
+  // 사전등록 시작일시 검증 (활성화 + 시작일시 입력된 경우)
+  const rEnabled = document.getElementById('ef-r-enabled').checked;
+  const rStartAt = document.getElementById('ef-r-start-at').value;
+  const fromDateMax = document.getElementById('ef-r-start-at').max;
+  if (rEnabled && rStartAt && fromDateMax) {
+    if (new Date(rStartAt).getTime() >= new Date(fromDateMax).getTime()) {
+      setMsg('ef-msg', 'e', '사전등록 시작일시는 프로젝트 시작일 이전이어야 합니다.');
+      return;
+    }
+  }
+  const body = {
+    reservation: {
+      enabled: rEnabled,
+      benefit_amount: numVal('ef-r-amount'),
+      benefit_label: document.getElementById('ef-r-label').value.trim(),
+      benefit_message: document.getElementById('ef-r-message').value.trim(),
+      benefit_max_count: numVal('ef-r-max'),
+      stop_on_limit: document.getElementById('ef-r-stop').checked,
+      start_at: rStartAt || null,
+    },
+    entry: {
+      enabled: document.getElementById('ef-e-enabled').checked,
+      benefit_amount: numVal('ef-e-amount'),
+      benefit_label: document.getElementById('ef-e-label').value.trim(),
+      benefit_message: document.getElementById('ef-e-message').value.trim(),
+      benefit_max_count: numVal('ef-e-max'),
+      stop_on_limit: document.getElementById('ef-e-stop').checked,
+    },
+    fields,
+  };
+  try {
+    const r = await fetch(`/api/host/projects/${entryCurrentProjectId}/reservation-config`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { setMsg('ef-msg', 'e', d.error || '저장에 실패했습니다.'); return; }
+    setMsg('ef-msg', 'g', `저장되었습니다. (항목 ${d.saved_fields}개)`);
+    // 저장 직후 스냅샷 갱신 → 저장 버튼 다시 disabled
+    resetEntryConfigSnapshot();
+    // 사전등록/현장등록 활성화 상태에 따라 주소복사/QR 버튼 활성화
+    const rOn = document.getElementById('ef-r-enabled').checked;
+    const eOn = document.getElementById('ef-e-enabled').checked;
+    ['ef-r-copy','ef-r-qr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = !rOn; el.title = rOn ? '클릭하여 사전등록 URL 복사/QR 보기' : '사전등록을 활성화 후 저장하세요'; }
+    });
+    ['ef-e-copy','ef-e-qr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = !eOn; el.title = eOn ? '클릭하여 현장등록 URL 복사/QR 보기' : '현장등록을 활성화 후 저장하세요'; }
+    });
+  } catch (e) { setMsg('ef-msg', 'e', '저장 중 오류가 발생했습니다.'); }
+}
+
+// ── 입장등록 QR 모달 ──
+let entryQrCurrentUrl = '';
+let entryQrCurrentMode = '';
+function openEntryQrModal(kind) {
+  const proj = entryProjects.find(p => Number(p.id) === entryCurrentProjectId);
+  if (!proj) return;
+  const path = kind === 'r' ? 'reserve' : 'entry';
+  const url = `${location.origin}/${path}/${proj.project_serial}`;
+  entryQrCurrentUrl = url;
+  entryQrCurrentMode = kind === 'r' ? '사전등록' : '현장등록';
+  document.getElementById('eqr-title').textContent = `${entryQrCurrentMode} QR 코드`;
+  const badge = document.getElementById('eqr-mode-badge');
+  badge.textContent = entryQrCurrentMode;
+  if (kind === 'r') { badge.style.background = '#bfdbfe'; badge.style.color = '#1e40af'; }
+  else              { badge.style.background = '#bbf7d0'; badge.style.color = '#166534'; }
+  document.getElementById('eqr-img').src =
+    `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=2&data=${encodeURIComponent(url)}`;
+  document.getElementById('eqr-url').textContent = url;
+  document.getElementById('modal-entry-qr').classList.add('open');
+}
+function closeEntryQrModal() { document.getElementById('modal-entry-qr').classList.remove('open'); }
+async function downloadEntryQr() {
+  if (!entryQrCurrentUrl) return;
+  const apiSrc = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&margin=2&data=${encodeURIComponent(entryQrCurrentUrl)}&format=png`;
+  try {
+    const r = await fetch(apiSrc);
+    const blob = await r.blob();
+    const burl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = entryQrCurrentMode === '사전등록' ? 'reserve' : 'entry';
+    a.href = burl; a.download = `qr_${slug}_${(new URL(entryQrCurrentUrl)).pathname.split('/').pop()}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(burl);
+  } catch (e) { window.open(apiSrc, '_blank'); }
+}
+async function copyEntryQrUrl() {
+  if (!entryQrCurrentUrl) return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(entryQrCurrentUrl);
+    await uiAlert(`URL이 복사되었습니다:\n${entryQrCurrentUrl}`);
+  } catch (e) { await uiAlert(entryQrCurrentUrl); }
+}
+
+// 사전등록(reserve)/현장등록(entry) 입력 폼 URL 생성 + 복사
+async function copyReservationUrl(kind) {
+  const proj = entryProjects.find(p => Number(p.id) === Number(entryCurrentProjectId));
+  if (!proj) return;
+  const path = kind === 'r' ? 'reserve' : 'entry';
+  const url = `${location.origin}/${path}/${proj.project_serial}`;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    setMsg('ef-msg', 'g', `URL이 복사되었습니다: ${url}`);
+  } catch (e) {
+    setMsg('ef-msg', 'e', '복사 실패. 직접 복사해 주세요: ' + url);
+  }
+}
+
+// 외부 연동 API 가이드 모달
+function openEntryApiGuide() {
+  const sel = entryProjects.find(p => Number(p.id) === entryCurrentProjectId);
+  const serial = sel?.project_serial || '<PROJECT_SERIAL>';
+  const host = location.origin;
+  document.getElementById('entry-api-body').innerHTML = `
+    <div class="api-note">⚠ 인증: 프로젝트의 4자리 PIN(가맹점 승인 메일에 동봉된 비밀번호)을 <code>X-Project-PIN</code> 헤더로 전달합니다.</div>
+
+    <h4>1) 사전등록 폼 구성 조회</h4>
+    <p style="font-size:12px;color:#475569;margin:4px 0 8px;">외부 시스템이 사전등록 폼을 렌더링할 때 사용. (선택된 항목 + 필수여부 + 혜택 정보)</p>
+    <pre>curl -X POST "${host}/api/integration/projects/${esc(serial)}/reservation-config" \\
+     -H "Content-Type: application/json" \\
+     -H "X-Project-PIN: 1234"</pre>
+    <p style="font-size:12px;color:#64748b;margin:6px 0 0;">응답 예시:</p>
+    <pre>{
+  "ok": true,
+  "project": {"serial":"${esc(serial)}","name":"...","status":"ready_to_start"},
+  "reservation": {"enabled":true,"amount":5000,"label":"음료 1잔","max_count":100,"stop_on_limit":true},
+  "entry":       {"enabled":true,"amount":2000,"label":"기념품","max_count":0,"stop_on_limit":false},
+  "fields": [
+    {"field_key":"name","label":"이름","input_type":"text","required":true,"sort_order":0},
+    {"field_key":"mobile","label":"모바일 전화","input_type":"phone","required":true,"sort_order":10}
+  ]
+}</pre>
+
+    <h4>2) 폼 구성 저장 (덮어쓰기)</h4>
+    <p style="font-size:12px;color:#475569;margin:4px 0 8px;">외부 관리 도구가 항목/필수여부/혜택을 한 번에 갱신할 때 사용. <code>fields</code> 배열에 포함된 것만 활성화됩니다.</p>
+    <pre>curl -X POST "${host}/api/integration/projects/${esc(serial)}/reservation-config/set" \\
+     -H "Content-Type: application/json" \\
+     -H "X-Project-PIN: 1234" \\
+     -d '{
+           "reservation": {"enabled":true,"benefit_amount":5000,"benefit_label":"음료","benefit_max_count":100,"stop_on_limit":true},
+           "entry":       {"enabled":true,"benefit_amount":2000,"benefit_label":"기념품","benefit_max_count":0,"stop_on_limit":false},
+           "fields": [
+             {"field_key":"name",            "is_required":true},
+             {"field_key":"mobile",          "is_required":true},
+             {"field_key":"referral_source", "is_required":false}
+           ]
+         }'</pre>
+    <p style="font-size:12px;color:#64748b;margin:6px 0 0;">응답: <code>{ "ok": true, "saved_fields": 3 }</code></p>
+
+    <h4>3) 사용 가능한 항목 카탈로그 조회 (인증 불필요)</h4>
+    <pre>curl "${host}/api/integration/field-definitions"</pre>
+    <p style="font-size:12px;color:#64748b;margin:6px 0 14px;">시스템에 미리 등록된 항목 키 목록 (name / birth_date / mobile / email / address / gender / age_group / nationality / emergency_contact / party_size / visit_purpose / car_number / preferred_time / company / newsletter_optin).</p>
+
+    <h4>오류 코드</h4>
+    <ul style="font-size:12px;color:#475569;line-height:1.7;margin:0;padding-left:18px;">
+      <li><code>invalid_serial_or_pin</code> (401) — 프로젝트 일련번호 또는 PIN 불일치</li>
+      <li><code>internal_error</code> (500) — 서버 오류</li>
+    </ul>
+  `;
+  document.getElementById('modal-entry-api').classList.add('open');
+}
+function closeEntryApiGuide() { document.getElementById('modal-entry-api').classList.remove('open'); }
+
+// 혜택 이미지 — load / upload / delete
+function loadBenefitImage(kind, url) {
+  const img = document.getElementById(`ef-${kind}-img-preview`);
+  const empty = document.getElementById(`ef-${kind}-img-empty`);
+  const del = document.getElementById(`ef-${kind}-img-del`);
+  if (url) {
+    img.src = url; img.style.display = ''; empty.style.display = 'none'; del.style.display = '';
+  } else {
+    img.src = ''; img.style.display = 'none'; empty.style.display = ''; del.style.display = 'none';
+  }
+}
+async function uploadBenefitImage(kind, input) {
+  if (!entryCurrentProjectId) return;
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const fd = new FormData();
+  fd.append('image', f);
+  try {
+    const r = await fetch(`/api/host/projects/${entryCurrentProjectId}/benefit-image/${kind === 'r' ? 'reservation' : 'entry'}`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) { setMsg('ef-msg','e', d.error || '이미지 업로드에 실패했습니다.'); return; }
+    loadBenefitImage(kind, d.image_url);
+    setMsg('ef-msg','g','혜택 이미지가 업로드되었습니다.');
+  } catch (e) { setMsg('ef-msg','e','이미지 업로드 오류'); }
+  input.value = '';
+}
+async function deleteBenefitImage(kind) {
+  if (!entryCurrentProjectId) return;
+  const ok = await uiConfirm('업로드된 혜택 이미지를 삭제하시겠습니까?', { title:'삭제 확인', okText:'삭제' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/host/projects/${entryCurrentProjectId}/benefit-image/${kind === 'r' ? 'reservation' : 'entry'}`, { method:'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { setMsg('ef-msg','e', d.error || '삭제 실패'); return; }
+    loadBenefitImage(kind, null);
+    setMsg('ef-msg','g','혜택 이미지가 삭제되었습니다.');
+  } catch (e) { setMsg('ef-msg','e','삭제 오류'); }
+}
+
+// 랜딩 페이지 미리보기 — 입장 희망객이 처음 보는 페이지
+function openLandingPreview(kind) {
+  if (!entryCurrentProjectId) { uiAlert('프로젝트를 먼저 선택해 주세요.'); return; }
+  const proj = entryProjects.find(p => Number(p.id) === Number(entryCurrentProjectId));
+  const modeLabel = kind === 'r' ? '사전등록' : '현장등록';
+  document.getElementById('lp-title').textContent = `랜딩 미리보기 — ${modeLabel}`;
+
+  const won = n => Number(n||0).toLocaleString('ko-KR') + '원';
+  const amount = Number(document.getElementById(`ef-${kind}-amount`).value.replace(/[^0-9]/g, '')) || 0;
+  const label  = document.getElementById(`ef-${kind}-label`).value.trim();
+  const img    = document.getElementById(`ef-${kind}-img-preview`);
+  const imgUrl = img && img.style.display !== 'none' && img.src ? img.src : '';
+
+  // 선택된 항목 → 입력 form 렌더 (이메일은 최상단, 인증 후 나머지 입력 가능)
+  const arr = entryFieldDefs.slice().sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  const selectedAll  = arr.filter(def => entryFieldState.get(def.id)?.selected);
+  const emailDef     = selectedAll.find(d => d.field_key === 'email');
+  const otherFields  = selectedAll.filter(d => d.field_key !== 'email');
+  const fieldRow = (def) => {
+    const st = entryFieldState.get(def.id);
+    const req = st.required ? '<span class="req">*</span>' : '';
+    const ph = def.placeholder ? `placeholder="${esc(def.placeholder)}"` : '';
+    let body = '';
+    switch (def.input_type) {
+      case 'date':     body = `<input type="date" disabled>`; break;
+      case 'time':     body = `<input type="time" disabled>`; break;
+      case 'number':   body = `<input type="number" disabled ${ph}>`; break;
+      case 'email':    body = `<input type="email" disabled ${ph}>`; break;
+      case 'phone':    body = `<input type="tel"   disabled ${ph}>`; break;
+      case 'address':  body = `<input type="text"  disabled placeholder="우편번호 / 도로명주소 / 상세주소">`; break;
+      case 'checkbox': body = `<div class="lp-opts"><div class="lp-opt"><input type="checkbox" disabled> 동의합니다</div></div>`; break;
+      case 'select': {
+        const opts = Array.isArray(def.options) ? def.options : [];
+        body = `<div class="lp-opts">${opts.map(o => `<div class="lp-opt"><input type="checkbox" disabled> ${esc(String(o))}</div>`).join('')}</div>`;
+        break;
+      }
+      default: body = `<input type="text" disabled ${ph}>`;
+    }
+    return `<div class="lp-row"><label>${esc(def.label_ko)}${req}</label>${body}</div>`;
+  };
+
+  // 이메일 인증 row (이메일이 선택된 경우만)
+  const emailVerifyHtml = emailDef ? `
+    <div class="lp-row lp-verify">
+      <label>${esc(emailDef.label_ko)}<span class="req">*</span></label>
+      <div class="lp-verify-line">
+        <input type="email" placeholder="${esc(emailDef.placeholder || 'you@example.com')}" disabled>
+        <button type="button">인증코드 발송</button>
+      </div>
+      <div class="lp-verify-line" style="margin-top:6px;">
+        <input type="text" placeholder="이메일로 받은 6자리 인증코드" disabled>
+        <button type="button" class="code-btn">확인</button>
+      </div>
+      <div class="lp-verify-msg">※ 이메일 인증을 완료해야 아래 항목을 입력할 수 있습니다.</div>
+    </div>` : '';
+  const lockedRest = emailDef && otherFields.length
+    ? `<div class="lp-locked">${otherFields.map(fieldRow).join('')}</div>`
+    : otherFields.map(fieldRow).join('');
+
+  const benefitBlock = (amount > 0 || label || imgUrl)
+    ? `<div class="lp-benefit">
+         ${imgUrl ? `<img src="${imgUrl}" alt="혜택 이미지">` : ''}
+         ${amount > 0 ? `<div class="lp-amt">${won(amount)}</div>` : ''}
+         ${label ? `<div class="lp-lbl">${esc(label)}</div>` : ''}
+       </div>`
+    : `<div class="lp-benefit" style="text-align:center;color:#94a3b8;">혜택 정보를 입력하면 여기에 표시됩니다</div>`;
+
+  document.getElementById('lp-body').innerHTML = `
+    <div class="lp-frame">
+      <div class="lp-header">
+        <div class="lp-title">${esc(proj?.project_name || '')}</div>
+        <div class="lp-mode ${kind}">${esc(modeLabel)} 신청</div>
+      </div>
+      ${benefitBlock}
+      <div class="lp-form">
+        ${emailVerifyHtml}
+        ${selectedAll.length ? lockedRest : '<div style="color:#94a3b8;text-align:center;padding:14px;">선택된 항목이 없습니다.</div>'}
+        <button class="lp-submit">${modeLabel} 신청하기</button>
+      </div>
+      <div class="lp-note">※ 실제 visitor 화면 모의 미리보기 — 입력은 비활성 상태입니다.</div>
+    </div>`;
+  document.getElementById('modal-landing-preview').classList.add('open');
+}
+function closeLandingPreview() { document.getElementById('modal-landing-preview').classList.remove('open'); }
+
+// 항목보기 — 입장 희망객 view 미리보기 (checkbox 형태)
+function openFieldPreview(fieldDefId) {
+  const def = entryFieldDefs.find(d => Number(d.id) === Number(fieldDefId));
+  if (!def) return;
+  const opts = Array.isArray(def.options) ? def.options : [];
+  document.getElementById('fp-title').textContent = `미리보기 — ${def.label_ko}`;
+  const list = document.getElementById('fp-list');
+  list.innerHTML = opts.map((o, i) => {
+    const safe = esc(String(o));
+    return `<label class="fp-row" for="fp-opt-${i}">
+      <input type="checkbox" id="fp-opt-${i}" onchange="this.closest('.fp-row').classList.toggle('checked', this.checked)">
+      <span class="fp-text">${safe}</span>
+    </label>`;
+  }).join('') || '<div style="color:#94a3b8;padding:18px;text-align:center;">옵션이 없습니다.</div>';
+  document.getElementById('modal-field-preview').classList.add('open');
+}
+function closeFieldPreview() { document.getElementById('modal-field-preview').classList.remove('open'); }
 
 // ── 프로젝트 상세/수정 ──
 const STATUS_KO_PE = {
@@ -4379,6 +7258,13 @@ async function openProjectEdit(id) {
   document.getElementById('pe-prize').value = Number(p.prize_amount || 0).toLocaleString('ko-KR');
   document.getElementById('pe-prize-qty').value = Number(p.prize_qty || 0).toLocaleString('ko-KR');
   document.getElementById('pe-stop-overbudget').checked = Number(p.stop_on_budget_exceed) === 1;
+  // 사전등록 / 현장등록 옵션
+  document.getElementById('pe-reservation-use').checked = Number(p.reservation_use) === 1;
+  document.getElementById('pe-reservation-amount').value = Number(p.reservation_benefit_amount || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-reservation-max').value = Number(p.reservation_benefit_max_count || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-entry-use').checked = Number(p.entry_use) === 1;
+  document.getElementById('pe-entry-amount').value = Number(p.entry_benefit_amount || 0).toLocaleString('ko-KR');
+  document.getElementById('pe-entry-max').value = Number(p.entry_benefit_max_count || 0).toLocaleString('ko-KR');
   // Gift 단계별 보상 — 100% 외 추가 tier 가 있으면 사용 ON
   const extraTiers = (d.gift_tiers || []).filter(t => Number(t.pct) < 100);
   const enableEl = document.getElementById('pe-tiers-enable');
@@ -4386,8 +7272,18 @@ async function openProjectEdit(id) {
   renderGiftTiers('pe-gift-tiers', 'pe', d.gift_tiers || []);
   onGiftTiersEnableChange('pe');
   calcPeBudget();
-  ['pe-name','pe-desc','pe-from','pe-to','pe-gift','pe-qty','pe-prize','pe-prize-qty','pe-stop-overbudget','pe-save-btn']
-    .forEach(eid => { const el = document.getElementById(eid); if (el) el.disabled = !pcEditable; });
+  // pe-body 안의 모든 폼 컨트롤(인풋/셀렉트/텍스트영역/체크박스/숫자/단계별 보상 인풋·삭제 버튼) 일괄 disable
+  const peBody = document.getElementById('pe-body');
+  if (peBody) {
+    peBody.querySelectorAll('input, select, textarea, button').forEach(el => {
+      // 닫기(×) 버튼은 항상 동작
+      if (el.classList.contains('modal-close')) return;
+      el.disabled = !pcEditable;
+    });
+  }
+  // 저장 버튼은 위 루프에서 처리되지만 확실히 다시
+  const saveBtn = document.getElementById('pe-save-btn');
+  if (saveBtn) saveBtn.disabled = !pcEditable;
   clrMsg('pe-msg');
   document.getElementById('modal-project-edit').classList.add('open');
 }
@@ -4419,6 +7315,12 @@ async function saveProjectEdit() {
     prize_qty: String(parseNum(document.getElementById('pe-prize-qty').value)),
     stop_on_budget_exceed: document.getElementById('pe-stop-overbudget').checked ? '1' : '0',
     gift_tiers: document.getElementById('pe-tiers-enable').checked ? collectGiftTiers('pe-gift-tiers') : [],
+    reservation_use: document.getElementById('pe-reservation-use').checked ? '1' : '0',
+    reservation_benefit_amount: String(parseNum(document.getElementById('pe-reservation-amount').value)),
+    reservation_benefit_max_count: String(parseNum(document.getElementById('pe-reservation-max').value)),
+    entry_use: document.getElementById('pe-entry-use').checked ? '1' : '0',
+    entry_benefit_amount: String(parseNum(document.getElementById('pe-entry-amount').value)),
+    entry_benefit_max_count: String(parseNum(document.getElementById('pe-entry-max').value)),
   };
   if (!body.project_name || !body.description || !body.from_date || !body.to_date) {
     setMsg('pe-msg','e','필수값을 입력해 주세요.'); return;
