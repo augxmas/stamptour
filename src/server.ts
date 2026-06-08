@@ -14,6 +14,7 @@ import giftRouter from "./routes/gift";
 import merchantRouter from "./routes/merchant";
 import integrationRouter from "./routes/integration";
 import fieldAgentRouter from "./routes/field-agent";
+import surveyRouter from "./routes/survey";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
@@ -76,12 +77,40 @@ app.use("/api/gift", giftRouter);
 app.use("/api/merchant", merchantRouter);
 app.use("/api/integration", integrationRouter);
 app.use("/api/field-agent", fieldAgentRouter);   // 공개 등록 + 근태 PWA + admin (sess.host 검사 내부)
+app.use("/api/survey", surveyRouter);             // host 설문 설정 + 공개 응답
 
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "admin", "index.html"));
+});
+// 모바일 관리자 PWA (현장요원 근태, 경품수령, 사전·현장등록 확인 통합)
+app.get("/admin/m", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "admin-m", "index.html"));
+});
+app.get("/admin-m", (_req, res) => res.redirect("/admin/m"));
+app.get("/admin/m/manifest.json", (_req, res) => {
+  res.type("application/manifest+json").send(JSON.stringify({
+    id: "/admin/m",
+    name: "모노라마 관리자",
+    short_name: "관리자",
+    start_url: "/admin/m",
+    scope: "/admin/m/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#f8fafc",
+    theme_color: "#1d4ed8",
+    icons: [
+      { src: "/favicon-blue.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/favicon-blue.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
+    ],
+  }));
+});
+app.get("/admin/m/sw.js", (_req, res) => {
+  res.setHeader("Service-Worker-Allowed", "/admin/m/");
+  res.type("application/javascript");
+  res.sendFile(path.join(process.cwd(), "public", "admin-m", "service-worker.js"));
 });
 app.get("/supervisor", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "supervisor", "index.html"));
@@ -101,7 +130,7 @@ app.get("/v/:projectSerial/sw.js", (_req, res) => {
   res.type("application/javascript");
   res.sendFile(path.join(process.cwd(), "public", "visitor", "service-worker.js"));
 });
-// 목적지 QR 진입: /v/:serial/:seq, 설치된 PWA 홈: /v/:serial (진행현황만)
+// Tour QR 진입: /v/:serial/:seq, 설치된 PWA 홈: /v/:serial (진행현황만)
 app.get("/v/:projectSerial/:locationSeq", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "visitor", "index.html"));
 });
@@ -114,6 +143,39 @@ app.get("/reserve/:serial", (_req, res) => {
 });
 app.get("/entry/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "reserve", "index.html"));
+});
+
+// 사전/현장등록 통합 진입 — 프로젝트 상태에 따라 자동 분기
+//   - 프로젝트 시작 전 (status: ready_to_start, 또는 from_date 이전) → /reserve/{serial}
+//   - 프로젝트 시작 후 (status: started, 또는 from_date 이후) → /entry/{serial}
+app.get("/register/:serial", async (req, res) => {
+  const serial = String(req.params.serial || "");
+  try {
+    const [rows] = await pool.execute(
+      "SELECT status, from_date, reservation_use, entry_use FROM projects WHERE project_serial = ?",
+      [serial],
+    );
+    const p = (Array.isArray(rows) ? rows[0] : null) as any;
+    if (!p) { res.status(404).send("프로젝트를 찾을 수 없습니다."); return; }
+    const now = new Date();
+    const fromDate = p.from_date ? new Date(p.from_date) : null;
+    // 시작 여부: status='started' 이거나 from_date 가 오늘 이전
+    const started = p.status === "started"
+      || p.status === "completed"
+      || (fromDate && fromDate <= now);
+    // 분기 — 사용 옵션 함께 체크
+    if (started) {
+      if (Number(p.entry_use) === 1) { res.redirect(`/entry/${serial}`); return; }
+      if (Number(p.reservation_use) === 1) { res.redirect(`/reserve/${serial}`); return; }
+    } else {
+      if (Number(p.reservation_use) === 1) { res.redirect(`/reserve/${serial}`); return; }
+      if (Number(p.entry_use) === 1) { res.redirect(`/entry/${serial}`); return; }
+    }
+    // 둘 다 사용 안 함 → visitor 메뉴로
+    res.redirect(`/v/${serial}`);
+  } catch (e) {
+    res.status(500).send("서버 오류");
+  }
 });
 // 현장요원 PWA — 서비스워커 (스코프 /agent-register/{serial}/)
 app.get("/agent-register/sw.js", (_req, res) => {
@@ -129,17 +191,22 @@ app.get("/agent-register/:serial/sw.js", (_req, res) => {
 // 동적 manifest — 프로젝트 이름이 들어감
 app.get("/agent-register/:serial/manifest.json", async (req, res) => {
   const serial = String(req.params.serial || "");
-  let projectName = "현장요원 근태관리";
+  let projectName = "";
   try {
     const [rows] = await pool.execute(
       `SELECT project_name FROM projects WHERE project_serial = ?`, [serial],
     );
     const p = (Array.isArray(rows) ? rows[0] : null) as any;
-    if (p?.project_name) projectName = `${p.project_name} 근태`;
+    if (p?.project_name) projectName = String(p.project_name);
   } catch {/* fallback */}
+  // 앱 이름: "현장요원-프로젝트명" / 짧은 이름: "현장요원-(앞 8자)"
+  const appName = projectName ? `현장요원-${projectName}` : "현장요원";
+  const shortName = projectName
+    ? `현장요원-${projectName.length > 8 ? projectName.slice(0, 8) + "…" : projectName}`
+    : "현장요원";
   res.type("application/manifest+json").json({
-    name: `${projectName} · 현장요원`,
-    short_name: "현장요원",
+    name: appName,
+    short_name: shortName,
     start_url: `/agent-register/${serial}`,
     scope: `/agent-register/${serial}/`,
     display: "standalone",
@@ -173,6 +240,10 @@ app.get("/proposal/download", (_req, res) => {
 // 사전등록/현장등록 QR — 스마트 디스패처 (가맹점이면 사용처리, 아니면 visitor PWA 로 리디렉트)
 app.get("/r/:serial/:token", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "redeem", "index.html"));
+});
+// 설문조사 응답 페이지 (공개)
+app.get("/survey/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "survey", "index.html"));
 });
 
 app.get("/", (_req, res) => {

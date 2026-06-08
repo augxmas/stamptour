@@ -381,7 +381,7 @@
               <th class="sortable" onclick="sortProjects('quote_read')">견적확인<span class="sort-icon" id="psi-quote_read"></span></th>
               <th class="sortable" onclick="sortProjects('deposit_confirmed_at')">입금확인일<span class="sort-icon" id="psi-deposit_confirmed_at"></span></th>
               <th>입금여부</th>
-              <th>목적지정보</th>
+              <th>Tour정보</th>
               <th>Quiz정보</th>
               <th>상세보기</th>
               <th>미리보기</th>
@@ -786,7 +786,7 @@
             <div class="pd-row"><div class="lbl">견적금액</div><div class="val" id="pd-quote-amount">-</div></div>
             <div class="pd-row"><div class="lbl">사전등록</div><div class="val" id="pd-reservation">-</div></div>
             <div class="pd-row"><div class="lbl">현장등록</div><div class="val" id="pd-entry">-</div></div>
-            <div class="pd-row"><div class="lbl">목적지정보</div><div class="val" id="pd-locations">-</div></div>
+            <div class="pd-row"><div class="lbl">Tour정보</div><div class="val" id="pd-locations">-</div></div>
             <div class="pd-row"><div class="lbl">방문자수</div><div class="val" id="pd-visitors">-</div></div>
             <div class="pd-row"><div class="lbl">견적발송일</div><div class="val" id="pd-quote-sent">-</div></div>
             <div class="pd-row"><div class="lbl">등록일</div><div class="val" id="pd-created">-</div></div>
@@ -943,10 +943,10 @@
   </div>
 </div>
 
-<!-- 목적지 목록 모달 -->
+<!-- Tour 목록 모달 -->
 <div class="modal-overlay" id="loc-list-modal" onclick="if(event.target===this)closeProjectLocations()">
   <div class="modal" style="width:80vw;max-width:80vw;">
-    <div class="card-header"><h3>목적지 목록</h3><button class="modal-close" onclick="closeProjectLocations()">✕</button></div>
+    <div class="card-header"><h3>Tour 목록</h3><button class="modal-close" onclick="closeProjectLocations()">✕</button></div>
     <div class="card-body">
       <p id="loc-list-proj" style="font-size:13px;color:#64748b;margin-bottom:10px;"></p>
       <div id="loc-list-body" class="tbl-wrap" style="max-height:60vh;overflow:auto;"></div>
@@ -1254,7 +1254,7 @@
         : `<span style="${rewardCellStyle}">${stWon(m.totalReward)}</span>`;
       return `<tr>
         <td>${orgLink(p)}</td>
-        <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
+        ${projCellHtml(p)}
         <td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
         <td style="text-align:right;">${stWon(m.giftAmt)}</td>
         <td style="text-align:center;">${m.usedCnt}개</td>
@@ -1343,7 +1343,7 @@
   // 가맹점별·일별 공통 행 렌더링
   function renderSettleSubRow(p, opts) {
     const m = settleRowMetrics(p);
-    const projCell  = `<td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>`;
+    const projCell  = projCellHtml(p);
     const orgCell   = `<td>${orgLink(p)}</td>`;
     const stateCell = `<td style="text-align:center;"><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>`;
     const usedUsers = Number(p.used_users || 0);
@@ -1681,8 +1681,8 @@
           </tr>`).join('');
         return `
           <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;background:#f8fafc;">
-            <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;">
-              ${esc(p.project_name)}
+            <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;text-align:left;" title="${esc(p.project_name)}">
+              ${esc(truncProj(p.project_name, 10))}
               <span style="color:#64748b;font-weight:500;font-size:12px;">(${esc(p.project_serial)})</span>
             </div>
             <div style="font-size:12px;color:#475569;margin-bottom:10px;">
@@ -1810,7 +1810,7 @@
         <tbody>${list.map(p => `
           <tr>
             <td>${orgLink(p)}</td>
-            <td><b>${esc(p.project_name)}</b></td>
+            <td style="text-align:left;" title="${esc(p.project_name)}"><b>${esc(truncProj(p.project_name, 10))}</b></td>
             <td><span class="badge ${PROJ_STATUS_BADGE[p.status] || ''}">${PROJ_STATUS_LABEL[p.status] || p.status}</span></td>
             <td style="font-size:12px;color:#64748b;white-space:nowrap;">${dt(p.from_date)} ~ ${dt(p.to_date)}</td>
             <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="supportRequest(${p.id}, this)">지원</button></td>
@@ -1945,7 +1945,7 @@
     { key:'grant_gift_amount', label:'Gift증정액', won:true },
     { key:'gift_spent', label:'Gift전체소진금액', won:true },
     { key:'budget_consumption_rate', label:'예산소진율', pct:true },
-    { key:'active_locations', label:'목적지', cen:true },
+    { key:'active_locations', label:'Tour', cen:true },
     { key:'visitor_count', label:'전체방문자수', cen:true },
     { key:'gift_recipients', label:'Gift수령자수', cen:true },
     { key:'gift_receipt_rate', label:'Gift수령율', pct:true },
@@ -1993,7 +1993,7 @@
     const pnEsc = p => String(p.project_name || '').replace(/'/g, "\\'");
     const cell = (p, c) => {
       const v = p[c.key];
-      // 목적지 / 전체방문자수 / Gift수령자수 → 버튼으로 popup
+      // Tour / 전체방문자수 / Gift수령자수 → 버튼으로 popup
       if (c.key === 'active_locations') {
         const n = Number(v || 0);
         return `<td style="text-align:center;">${n > 0
@@ -2021,6 +2021,7 @@
       if (c.cen) return `<td style="text-align:center;">${v ?? 0}</td>`;
       if (c.key === 'status') return `<td><span class="badge ${PROJ_STATUS_BADGE[p.status] ?? ''}">${PROJ_STATUS_LABEL[p.status] ?? p.status}</span></td>`;
       if (c.key === 'organization_name') return `<td>${orgLink(p)}</td>`;
+      if (c.key === 'project_name') return `<td style="text-align:left;" title="${esc(p.project_name||'')}">${esc(truncProj(p.project_name, 10))}</td>`;
       return `<td>${esc(v ?? '-')}</td>`;
     };
     document.getElementById('vs-tbody').innerHTML = rows.length
@@ -2096,9 +2097,24 @@
     document.getElementById('image-modal').classList.add('open');
   }
 
-  // ── 프로젝트 목적지 목록 팝업 ──
+  // ── 프로젝트 Tour 목록 팝업 ──
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+  // 프로젝트명 10자 초과 시 말줄임 + hover tooltip 으로 전체 이름 노출
+  function truncProj(name, max) {
+    const s = String(name || '');
+    max = max || 10;
+    return s.length > max ? s.slice(0, max) + '…' : s;
+  }
+  // 프로젝트 셀 HTML — 좌측정렬 + 말줄임 + tooltip
+  function projCellHtml(p) {
+    const full = String(p.project_name || '');
+    const disp = truncProj(full, 10);
+    const serial = String(p.project_serial || '');
+    return `<td style="text-align:left;" title="${esc(full)}">
+      <b>${esc(disp)}</b>${serial ? `<br><span style="font-size:11px;color:#94a3b8;font-weight:400;">${esc(serial)}</span>` : ''}
+    </td>`;
   }
   // 모든 그리드의 소속기관 셀: 클릭 시 host 상세 모달 오픈
   function orgLink(row) {
@@ -2119,7 +2135,7 @@
     const body = document.getElementById('loc-list-body');
     if (!r.ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:24px;">불러오지 못했습니다.</div>'; return; }
     const list = d.data || [];
-    if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">등록된 목적지가 없습니다.</div>'; return; }
+    if (!list.length) { body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">등록된 Tour가 없습니다.</div>'; return; }
     const typeLabel = t => t === 'exhibit' ? '전시물' : '위치';
     body.innerHTML = `
       <table style="table-layout:fixed;width:100%;">
@@ -2135,7 +2151,7 @@
         <thead><tr>
           <th style="text-align:center;">번호</th>
           <th style="white-space:nowrap;">유형</th>
-          <th style="white-space:nowrap;">목적지명</th>
+          <th style="white-space:nowrap;">Tour명</th>
           <th>설명</th>
           <th>좌표</th>
           <th style="text-align:center;">이미지</th>
@@ -2149,7 +2165,7 @@
             <td style="font-size:12px;color:#475569;word-break:break-word;">${esc(l.location_desc || '-')}</td>
             <td style="font-size:12px;color:#64748b;white-space:nowrap;">${(l.kakao_lat != null && l.kakao_lng != null) ? (l.kakao_lat + ', ' + l.kakao_lng) : '-'}</td>
             <td style="text-align:center;">${l.image_url
-              ? `<img src="${l.image_url}" alt="" style="max-width:100px;max-height:60px;border-radius:6px;border:1px solid #e5e7eb;cursor:zoom-in;object-fit:cover;" onclick="showImageUrl('${l.image_url}','목적지 이미지')">`
+              ? `<img src="${l.image_url}" alt="" style="max-width:100px;max-height:60px;border-radius:6px;border:1px solid #e5e7eb;cursor:zoom-in;object-fit:cover;" onclick="showImageUrl('${l.image_url}','Tour 이미지')">`
               : '-'}</td>
             <td style="text-align:center;">${l.disabled ? '<span style="color:#94a3b8;font-weight:700;">비활성</span>' : '<span style="color:#138a36;font-weight:700;">활성</span>'}</td>
           </tr>`).join('')}</tbody>
@@ -2176,7 +2192,7 @@
       const isLinked = q.location_id !== null && q.location_id !== undefined;
       const typeBadge = `<span class="qtype ${isSingle ? 'single' : 'multi'}">${isSingle ? '단일' : '다중'}</span>`;
       const locBadge = isLinked
-        ? `<span class="qtype" style="background:#dbeafe;color:#1e40af;">📍 ${esc(q.location_name || ('목적지 #' + q.location_id))}</span>`
+        ? `<span class="qtype" style="background:#dbeafe;color:#1e40af;">📍 ${esc(q.location_name || ('Tour #' + q.location_id))}</span>`
         : '';
       const statusBadge = isDisabled
         ? '<span class="qtype" style="background:#f1f5f9;color:#94a3b8;">비활성</span>'
@@ -2235,7 +2251,7 @@
     if (mode === 'gift') list = list.filter(v => v.gift_issued);
     if (!list.length) {
       document.getElementById('vsv-summary').textContent =
-        mode === 'gift' ? `Gift 수령자 0명 · 전체 목적지 ${total}곳` : `방문자 0명 · 전체 목적지 ${total}곳`;
+        mode === 'gift' ? `Gift 수령자 0명 · 전체 Tour ${total}곳` : `방문자 0명 · 전체 Tour ${total}곳`;
       body.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:24px;">${mode === 'gift' ? 'Gift 수령자가 없습니다.' : '방문자가 없습니다.'}</div>`;
       return;
     }
@@ -2243,8 +2259,8 @@
     const usedCnt = list.filter(v => v.gift_used).length;
     document.getElementById('vsv-summary').textContent =
       mode === 'gift'
-        ? `Gift 수령자 ${list.length}명 · 사용 ${usedCnt}명 · 전체 목적지 ${total}곳`
-        : `방문자 ${list.length}명 · 미션완료 ${doneCnt}명 · 전체 목적지 ${total}곳`;
+        ? `Gift 수령자 ${list.length}명 · 사용 ${usedCnt}명 · 전체 Tour ${total}곳`
+        : `방문자 ${list.length}명 · 미션완료 ${doneCnt}명 · 전체 Tour ${total}곳`;
     const GIFT_TYPE_LABEL = { normal: '지급', grant: '증정' };
     body.innerHTML = `
       <table>
@@ -2715,7 +2731,7 @@
       return `<tr>
         <td>${p.id}</td>
         <td>${orgLink(p)}</td>
-        <td>${p.project_name}</td>
+        <td style="text-align:left;" title="${esc(p.project_name||'')}">${esc(truncProj(p.project_name, 10))}</td>
         <td>${p.project_serial}</td>
         <td>${created}</td>
         <td>${from}</td>

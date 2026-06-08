@@ -29,6 +29,28 @@ function baseCompanyInfo(sealCid?: string): string {
   ].join("<br>");
 }
 
+// DB email_templates 의 활성 양식이 있으면 가져와서 caller 양식을 override
+async function loadTemplateOverride(templateKey: string, vars?: Record<string, any>): Promise<{ subject?: string; html?: string } | null> {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT subject, body_html FROM email_templates
+        WHERE template_key = ? AND is_active = 1`,
+      [templateKey],
+    );
+    const row = (Array.isArray(rows) ? rows[0] : null) as any;
+    if (!row) return null;
+    const subject = interpolate(String(row.subject || ""), vars || {});
+    const html    = interpolate(String(row.body_html || ""), vars || {});
+    return { subject, html };
+  } catch { return null; }
+}
+function interpolate(tpl: string, vars: Record<string, any>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_m, k) => {
+    const v = vars[k];
+    return v === undefined || v === null ? `{${k}}` : String(v);
+  });
+}
+
 export async function sendEmail(params: {
   templateKey: string;
   to: string;
@@ -38,16 +60,26 @@ export async function sendEmail(params: {
   hostId?: number;
   triggerType?: "auto" | "manual";   // auto=시스템 자동(기본), manual=관리자가 직접 발송
   attachments?: nodemailer.SendMailOptions["attachments"];
+  vars?: Record<string, any>;        // DB 템플릿의 {변수명} 치환에 사용
 }): Promise<void> {
   let status: "sent" | "failed" = "sent";
   let error = "";
+
+  // DB 템플릿 override — 활성 양식이 있으면 subject/html 교체
+  let subject = params.subject;
+  let html = params.html;
+  try {
+    const ov = await loadTemplateOverride(params.templateKey, params.vars);
+    if (ov?.subject) subject = ov.subject;
+    if (ov?.html)    html    = ov.html;
+  } catch { /* fallback to caller-provided */ }
 
   try {
     await getTransporter().sendMail({
       from: `\"${process.env.SMTP_FROM_NAME ?? "(주)모노라마"}\" <${process.env.SMTP_FROM ?? process.env.SMTP_USER ?? ""}>`,
       to: params.to,
-      subject: params.subject,
-      html: params.html,
+      subject,
+      html,
       attachments: params.attachments,
     });
   } catch (err) {
@@ -59,7 +91,7 @@ export async function sendEmail(params: {
   await pool.execute(
     `INSERT INTO email_logs (template_key, to_email, subject, project_id, host_id, status, trigger_type, error_msg)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [params.templateKey, params.to, params.subject, params.projectId ?? null, params.hostId ?? null, status, trig, error || null],
+    [params.templateKey, params.to, subject, params.projectId ?? null, params.hostId ?? null, status, trig, error || null],
   );
 
   if (status === "failed") {
@@ -88,6 +120,7 @@ export async function sendEmailVerifyCode(email: string, code: string, actionUrl
       </div>
       ${actionBtn}
       <p style="color:#64748b;font-size:13px;">유효시간은 10분입니다. 본인이 요청하지 않았다면 이 메일을 무시하세요.</p>    </div>`,
+    vars: { code, actionUrl: actionUrl || "" },
   });
 }
 
@@ -116,6 +149,7 @@ export async function sendProjectPinEmail(hostEmail: string, hostName: string, p
       <p style="color:#dc2626;font-size:13px;font-weight:600;">※ 별도로 메모하여 안전하게 보관하십시오.</p>
       <p style="color:#64748b;font-size:13px;">유효시간은 10분입니다.</p>    </div>`,
     hostId,
+    vars: { hostName, pin },
   });
 }
 
@@ -154,6 +188,13 @@ export async function sendSupervisorNewHostNotification(params: {
         </a>
       </p>    </div>`,
     hostId: params.hostId,
+    vars: {
+      hostName: params.hostName,
+      hostEmail: params.hostEmail,
+      organizationName: params.organizationName || "-",
+      bizNo: bizNoFormatted,
+      reviewLink,
+    },
   });
 }
 
@@ -164,6 +205,7 @@ export async function sendHostRegistrationEmail(hostEmail: string, hostName: str
     subject: "[모노라마] 회원가입 신청이 완료되었습니다",
     html: `<div><h3>회원가입 신청 완료</h3><p>${hostName}님, 회원가입 신청이 접수되었습니다.</p><p>관리자 승인 후 로그인이 가능합니다. 승인 완료 시 이메일로 안내 드리겠습니다.</p></div>`,
     hostId,
+    vars: { hostName },
   });
 }
 
@@ -184,6 +226,7 @@ export async function sendHostStatusEmail(hostEmail: string, hostName: string, s
     subject: subjects[status] ?? `[모노라마] 계정 상태 변경 안내`,
     html: `<div><h3>계정 상태 변경 안내</h3>${bodies[status] ?? ""}</div>`,
     hostId,
+    vars: { hostName, reason: reason || "" },
   });
 }
 
@@ -194,6 +237,7 @@ export async function sendHostTempPasswordEmail(hostEmail: string, hostName: str
     subject: "[모노라마] 임시 비밀번호 안내",
     html: `<div><h3>임시 비밀번호 안내</h3><p>${hostName}님, 요청하신 임시 비밀번호입니다.</p><p style="font-size:22px;font-weight:bold;letter-spacing:4px;">${tempPassword}</p><p>로그인 후 반드시 비밀번호를 변경해 주세요.</p></div>`,
     hostId,
+    vars: { hostName, tempPassword },
   });
 }
 
@@ -236,6 +280,17 @@ export async function sendSupervisorQuoteNotification(params: {
       </p>    </div>`,
     projectId: params.projectId,
     hostId: params.hostId,
+    vars: {
+      hostName: params.hostName,
+      hostEmail: params.hostEmail,
+      projectName: params.projectName,
+      projectSerial: params.projectSerial,
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      days: params.days,
+      total: params.total.toLocaleString(),
+      reviewLink,
+    },
   });
 }
 
@@ -248,10 +303,23 @@ export async function sendQuoteEmail(input: {
   toDate: string;
   days: number;
   total: number;
-  usageFee: number;
+  // 구축
   mobileDesignFee: number;
   faviconFee: number;
   initialSetupFee: number;
+  // 구성 - 일 단위 (Tour/Quiz)
+  usageFee?: number;
+  tourFee?: number;
+  quizFee?: number;
+  // 구성 - 사전/현장등록
+  reservationDays?: number;
+  reservationFee?: number;
+  entryDays?: number;
+  entryFee?: number;
+  // 구성 - 정액
+  fieldAgentFee?: number;
+  surveyFee?: number;
+  surveyRewardUse?: boolean;     // 설문 응답자 경품 지급 사용 (별도 비용 없음, 표기용)
   projectId: number;
   hostId: number;
   requoteNote?: string;
@@ -271,22 +339,82 @@ export async function sendQuoteEmail(input: {
     subject: input.requoteNote
       ? `[모노라마] 재견적서 - ${input.projectName}`
       : `[모노라마] 견적서 - ${input.projectName}`,
-    html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
+    html: (() => {
+      const won = (n: number) => `${(n || 0).toLocaleString("ko-KR")}원`;
+      const days = input.days;
+      // 구축
+      const buildRows: string[] = [];
+      buildRows.push(`<tr><td style="padding-left:24px;">초기 세팅</td><td style="text-align:right;">${won(input.initialSetupFee)}</td></tr>`);
+      if ((input.mobileDesignFee || 0) > 0) {
+        buildRows.push(`<tr><td style="padding-left:24px;">랜딩페이지 디자인</td><td style="text-align:right;">${won(input.mobileDesignFee)}</td></tr>`);
+      }
+      if ((input.faviconFee || 0) > 0) {
+        buildRows.push(`<tr><td style="padding-left:24px;">모바일앱 아이콘</td><td style="text-align:right;">${won(input.faviconFee)}</td></tr>`);
+      }
+      const buildSubtotal = (input.initialSetupFee || 0) + (input.mobileDesignFee || 0) + (input.faviconFee || 0);
+
+      // 구성
+      const composeRows: string[] = [];
+      if ((input.fieldAgentFee || 0) > 0) {
+        composeRows.push(`<tr><td style="padding-left:24px;">현장요원관리 <span style="font-size:11px;color:#94a3b8;">(정액)</span></td><td style="text-align:right;">${won(input.fieldAgentFee!)}</td></tr>`);
+      }
+      const hasReg = (input.reservationFee || 0) > 0 || (input.entryFee || 0) > 0;
+      if (hasReg) {
+        composeRows.push(`<tr><td colspan="2" style="padding-left:24px;background:#f8fafc;font-weight:600;color:#166534;">입장관리</td></tr>`);
+        if ((input.reservationFee || 0) > 0) {
+          composeRows.push(`<tr><td style="padding-left:48px;">└ 방문객 사전등록 <span style="font-size:11px;color:#94a3b8;">(${input.reservationDays || 0}일)</span></td><td style="text-align:right;">${won(input.reservationFee!)}</td></tr>`);
+        }
+        if ((input.entryFee || 0) > 0) {
+          composeRows.push(`<tr><td style="padding-left:48px;">└ 방문객 현장등록 <span style="font-size:11px;color:#94a3b8;">(${input.entryDays || 0}일)</span></td><td style="text-align:right;">${won(input.entryFee!)}</td></tr>`);
+        }
+      }
+      if ((input.tourFee || 0) > 0) {
+        composeRows.push(`<tr><td style="padding-left:24px;">Tour 관리 <span style="font-size:11px;color:#94a3b8;">(${days}일)</span></td><td style="text-align:right;">${won(input.tourFee!)}</td></tr>`);
+      }
+      if ((input.quizFee || 0) > 0) {
+        composeRows.push(`<tr><td style="padding-left:24px;">Quiz 관리 <span style="font-size:11px;color:#94a3b8;">(${days}일)</span></td><td style="text-align:right;">${won(input.quizFee!)}</td></tr>`);
+      }
+      if ((input.surveyFee || 0) > 0) {
+        composeRows.push(`<tr><td style="padding-left:24px;">설문조사 <span style="font-size:11px;color:#94a3b8;">(정액)</span></td><td style="text-align:right;">${won(input.surveyFee!)}</td></tr>`);
+      }
+      if (input.surveyRewardUse) {
+        composeRows.push(`<tr><td style="padding-left:48px;color:#475569;">└ 응답자 경품 지급 <span style="font-size:11px;color:#94a3b8;">(별도 비용 없음)</span></td><td style="text-align:right;color:#94a3b8;">—</td></tr>`);
+      }
+      const composeSubtotal = (input.fieldAgentFee || 0) + (input.reservationFee || 0) + (input.entryFee || 0)
+        + (input.tourFee || 0) + (input.quizFee || 0) + (input.surveyFee || 0);
+
+      return `<div style="font-family:'Malgun Gothic',sans-serif;max-width:620px;">
       <h2 style="color:#2563eb;">${input.requoteNote ? '프로젝트 재견적서' : '프로젝트 견적서'}</h2>
       ${input.requoteNote ? `<div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px;line-height:1.6;">${input.requoteNote}</div>` : ''}
       <p>${input.hostName}님, 요청하신 견적 내역입니다.</p>
-      <table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;width:100%;margin:16px 0;">
-        <tr><td style="background:#f8fafc;font-weight:600;">프로젝트명</td><td>${input.projectName}</td></tr>
+      <table border="1" cellpadding="9" cellspacing="0" style="border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;">
+        <tr><td style="background:#f8fafc;font-weight:600;width:120px;">프로젝트명</td><td>${input.projectName}</td></tr>
         <tr><td style="background:#f8fafc;font-weight:600;">일련번호</td><td>${input.projectSerial}</td></tr>
-        <tr><td style="background:#f8fafc;font-weight:600;">기간</td><td>${input.fromDate} ~ ${input.toDate} (${input.days}일)</td></tr>
-        <tr style="border-top:2px solid #cbd5e1;"><td colspan="2" style="background:#f0f9ff;font-weight:600;font-size:13px;">견적 내역</td></tr>
-        <tr><td style="padding-left:20px;">이용료 (${input.days}일 × ${Math.round(input.usageFee / input.days).toLocaleString()}원)</td><td style="text-align:right;">${input.usageFee.toLocaleString()}원</td></tr>
-        <tr><td style="padding-left:20px;">모바일 디자인</td><td style="text-align:right;">${input.mobileDesignFee.toLocaleString()}원</td></tr>
-        <tr><td style="padding-left:20px;">파비콘</td><td style="text-align:right;">${input.faviconFee.toLocaleString()}원</td></tr>
-        <tr><td style="padding-left:20px;">초기 세팅</td><td style="text-align:right;">${input.initialSetupFee.toLocaleString()}원</td></tr>
-        <tr style="background:#1e293b;color:#fff;"><td style="font-weight:700;font-size:15px;">합계</td><td style="text-align:right;font-weight:700;font-size:15px;">${(input.usageFee + input.mobileDesignFee + input.faviconFee + input.initialSetupFee).toLocaleString()}원</td></tr>
+        <tr><td style="background:#f8fafc;font-weight:600;">기간</td><td>${input.fromDate} ~ ${input.toDate} (${days}일)</td></tr>
+
+        <tr style="background:#fef3c7;"><td colspan="2" style="font-weight:700;color:#92400e;">▎구축 <span style="font-weight:500;color:#a16207;font-size:11px;">(프로젝트 초기 1회)</span></td></tr>
+        ${buildRows.join('')}
+        <tr><td style="text-align:right;color:#64748b;font-size:12px;padding-right:14px;">구축 소계</td><td style="text-align:right;color:#92400e;font-weight:600;">${won(buildSubtotal)}</td></tr>
+
+        <tr style="background:#dbeafe;"><td colspan="2" style="font-weight:700;color:#1e3a8a;">▎구성 <span style="font-weight:500;color:#3b82f6;font-size:11px;">(기능 선택에 따라 적용)</span></td></tr>
+        ${composeRows.length ? composeRows.join('') : '<tr><td colspan="2" style="padding-left:24px;color:#94a3b8;">선택된 구성 항목이 없습니다.</td></tr>'}
+        <tr><td style="text-align:right;color:#64748b;font-size:12px;padding-right:14px;">구성 소계</td><td style="text-align:right;color:#1e3a8a;font-weight:600;">${won(composeSubtotal)}</td></tr>
+
+        <tr style="background:#1e293b;color:#fff;"><td style="font-weight:700;font-size:15px;">합계</td><td style="text-align:right;font-weight:700;font-size:15px;">${won(input.total)}</td></tr>
       </table>
-      <p style="font-size:13px;color:#64748b;">※ 추가 디자인 시안은 별도 견적입니다.</p>
+      <p style="font-size:13px;color:#64748b;">※ 표시된 항목 외 추가 디자인/기능 요청은 별도 견적입니다.</p>
+
+      <div style="margin:20px 0;padding:14px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+        <div style="font-size:14px;font-weight:700;color:#0c4a6e;margin-bottom:6px;">📞 견적 관련 문의</div>
+        <div style="font-size:13px;color:#0c4a6e;line-height:1.6;">
+          본 견적서에 대해 궁금하신 점이 있으시면 아래 연락처로 문의해 주세요.
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:#1e293b;line-height:1.8;">
+          <div>· 전화: <b><a href="tel:02-6925-4083" style="color:#0c4a6e;text-decoration:none;">02-6925-4083</a></b></div>
+          <div>· 이메일: <b><a href="mailto:kimch@monorama.kr" style="color:#0c4a6e;text-decoration:none;">kimch@monorama.kr</a></b></div>
+        </div>
+      </div>
+
       <div style="text-align:center;margin:24px 0;">
         <a href="${confirmUrl}" style="background:#16a34a;color:#fff;padding:13px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">
           ✓ 견적서를 확인했습니다
@@ -295,9 +423,19 @@ export async function sendQuoteEmail(input: {
       </div>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;">
       <p style="font-size:12px;color:#94a3b8;line-height:1.7;">${baseCompanyInfo("mono_seal")}</p>
-    </div>`,
+    </div>`;
+    })(),
     projectId: input.projectId,
     hostId: input.hostId,
+    vars: {
+      hostName: input.hostName,
+      projectName: input.projectName,
+      projectSerial: input.projectSerial,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      days: input.days,
+      total: input.total.toLocaleString(),
+    },
     attachments: [
       { filename: "인감.png", path: sealPath, cid: "mono_seal" },
       { filename: "사업자등록증.pdf", path: path.join(process.cwd(), "public", "image", "사업자등록증(강서구마곡)_주식회사모노라마.pdf") },
@@ -316,6 +454,7 @@ export async function sendMerchantRegistrationEmail(email: string, name: string)
       <h3 style="color:#2563eb;">가맹점 가입 신청 완료</h3>
       <p>${name} 가맹점님, 가입 신청이 접수되었습니다.</p>
       <p>관리자(supervisor) 승인 후 로그인이 가능합니다. 승인 완료 시 이메일로 안내 드리겠습니다.</p>    </div>`,
+    vars: { merchantName: name, contactName: name },
   });
 }
 
@@ -333,6 +472,7 @@ export async function sendMerchantTempPasswordEmail(email: string, name: string,
         </div>
       </div>
       <p style="color:#dc2626;font-size:13px;font-weight:600;">※ 로그인 후 반드시 새 비밀번호로 변경해 주세요.</p>    </div>`,
+    vars: { merchantName: name, tempPassword },
   });
 }
 
@@ -369,6 +509,13 @@ export async function sendSupervisorNewMerchantNotification(params: {
           가입 신청 확인하기 →
         </a>
       </p>    </div>`,
+    vars: {
+      merchantName: params.merchantName,
+      email: params.email,
+      bizNo: bizNoFormatted,
+      bankName: params.bankName || "-",
+      reviewLink,
+    },
   });
 }
 
@@ -386,6 +533,7 @@ export async function sendProjectSupportRequestEmail(hostEmail: string, hostName
         <tr><td style="background:#f8fafc;font-weight:600;">일련번호</td><td>${projectSerial}</td></tr>
       </table>
       <p style="font-size:13px;color:#64748b;">자세한 내용은 운영자(supervisor)에게 문의해 주세요.</p>    </div>`,
+    vars: { hostName, projectName, projectSerial },
   });
 }
 
@@ -408,7 +556,7 @@ export async function sendMerchantApplicationDecisionEmail(params: {
     ? `<div style="margin:20px 0;padding:16px 18px;background:#fff7ed;border:2px dashed #fed7aa;border-radius:12px;">
          <div style="font-size:14px;color:#9a3412;font-weight:700;margin-bottom:8px;">Gift 승인 비밀번호</div>
          <div style="font-size:30px;font-weight:700;letter-spacing:12px;color:#1e293b;font-family:'Courier New',monospace;text-align:center;user-select:all;-webkit-user-select:all;-moz-user-select:all;">${params.pin}</div>
-         <div style="margin-top:12px;font-size:13px;color:#7c2d12;line-height:1.6;">방문자가 모든 목적지를 방문한 뒤 Gift 결제를 요청하면, 가맹점에서 위 <b>Gift 승인 비밀번호</b>를 입력하여 결제를 승인합니다.</div>
+         <div style="margin-top:12px;font-size:13px;color:#7c2d12;line-height:1.6;">방문자가 모든 Tour를 방문한 뒤 Gift 결제를 요청하면, 가맹점에서 위 <b>Gift 승인 비밀번호</b>를 입력하여 결제를 승인합니다.</div>
          <div style="margin-top:6px;font-size:13px;color:#dc2626;font-weight:700;">※ 비밀번호를 꼭 기억하시고, 별도로 메모하여 안전하게 보관해 주세요.</div>
        </div>`
     : (approved
@@ -431,6 +579,13 @@ export async function sendMerchantApplicationDecisionEmail(params: {
         ${reasonRow}
       </table>
       ${pinBlock}    </div>`,
+    vars: {
+      merchantName: params.merchantName,
+      projectName: params.projectName,
+      projectSerial: params.projectSerial,
+      reason: params.reason || "",
+      pin: params.pin || "",
+    },
   });
 }
 
@@ -463,6 +618,13 @@ export async function sendHostNewApplicationEmail(params: {
         </a>
       </p>
       <p style="font-size:13px;color:#64748b;">'내 프로젝트'의 <b>지원현황</b> 버튼에서 승인 또는 거절할 수 있습니다.</p>    </div>`,
+    vars: {
+      hostName: params.hostName,
+      merchantName: params.merchantName,
+      projectName: params.projectName,
+      projectSerial: params.projectSerial,
+      reviewLink,
+    },
   });
 }
 
@@ -482,5 +644,6 @@ export async function sendMerchantStatusEmail(email: string, name: string, statu
     to: email,
     subject: subjects[status] ?? "[모노라마] 가맹점 상태 변경 안내",
     html: `<div><h3>가맹점 상태 변경 안내</h3>${bodies[status] ?? ""}</div>`,
+    vars: { merchantName: name, reason: reason || "" },
   });
 }

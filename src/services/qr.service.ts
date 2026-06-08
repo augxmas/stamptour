@@ -49,7 +49,7 @@ export async function createQrZip(projectId: number): Promise<string> {
 
   const zipPath = path.join(targetDir, `qr_${projectId}.zip`);
 
-  // zip 내부 파일명: {프로젝트일련번호}_{목적지일련번호}.png
+  // zip 내부 파일명: {프로젝트일련번호}_{Tour일련번호}.png
   const [rows] = await pool.execute(
     `SELECT p.project_serial, pl.location_seq, qr.qr_image_path
        FROM project_location_qr qr

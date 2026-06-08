@@ -768,7 +768,7 @@ router.get("/projects/:id", requireSupervisor, async (req, res) => {
   res.json({ ok: true, data: row });
 });
 
-// 프로젝트의 목적지 목록 (supervisor 전용)
+// 프로젝트의 Tour 목록 (supervisor 전용)
 // supervisor 화면: 프로젝트 방문자 목록(읽기전용) — admin /api/host/projects/:id/visitors 와 동일 응답 shape
 router.get("/projects/:id/visitors", requireSupervisor, async (req, res) => {
   const projectId = Number(req.params.id);
@@ -971,7 +971,7 @@ router.put("/projects/:id/fields", requireSupervisor, async (req, res) => {
   setClauses.push("updated_at = NOW()");
   await pool.execute(`UPDATE projects SET ${setClauses.join(", ")} WHERE id = ?`, [...params, projectId]);
 
-  // 입금확인 처리 시 목적지별 QR 코드를 자동 생성 (멱등, 실패해도 요청은 성공)
+  // 입금확인 처리 시 Tour별 QR 코드를 자동 생성 (멱등, 실패해도 요청은 성공)
   if (deposit_confirmed === true) {
     try {
       await generateProjectQrs(projectId, String(proj.project_serial));

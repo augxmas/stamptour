@@ -6,7 +6,7 @@ import multer from "multer";
 import ExcelJS from "exceljs";
 import pool from "../config/database";
 import { requireHost } from "../middleware/auth";
-import { sendProjectPinEmail, sendQuoteEmail, sendSupervisorQuoteNotification, sendMerchantApplicationDecisionEmail } from "../services/email.service";
+import { sendProjectPinEmail, sendQuoteEmail, sendSupervisorQuoteNotification, sendMerchantApplicationDecisionEmail, sendEmail } from "../services/email.service";
 import { calculateQuote } from "../services/quote.service";
 import { nextLocationNumbers, nextProjectSerial, validateProjectDates, verifyPin } from "../services/project.service";
 import { createQrZip, generateProjectQrs } from "../services/qr.service";
@@ -15,7 +15,7 @@ import { verifyQuoteToken } from "../utils/quote-token";
 
 const router = Router();
 
-// 목적지 아이콘 이미지 업로드 (위치/전시물 공통, 선택사항)
+// Tour 아이콘 이미지 업로드 (위치/전시물 공통, 선택사항)
 const iconDir = path.join(process.cwd(), "uploads", "location-icons");
 fs.mkdirSync(iconDir, { recursive: true });
 const iconUpload = multer({
@@ -23,6 +23,18 @@ const iconUpload = multer({
     destination: (_req, _file, cb) => cb(null, iconDir),
     filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`),
   }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+// Tour 대표 이미지 업로드
+const tourImageDir = path.join(process.cwd(), "uploads", "tour-images");
+fs.mkdirSync(tourImageDir, { recursive: true });
+const tourImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, tourImageDir),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`),
+  }),
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
@@ -60,7 +72,7 @@ function toUploadUrl(p?: string | null): string | null {
   return rel >= 0 ? `/${norm.slice(rel)}` : norm;
 }
 
-// 입금확인(deposit_confirmed) 이후에는 목적지 변경 시 QR을 보완 생성한다.
+// 입금확인(deposit_confirmed) 이후에는 Tour 변경 시 QR을 보완 생성한다.
 const QR_READY_STATUSES = ["deposit_confirmed", "ready_to_start", "started"];
 async function regenerateQrsIfReady(projectId: number): Promise<void> {
   try {
@@ -75,8 +87,11 @@ async function regenerateQrsIfReady(projectId: number): Promise<void> {
 }
 
 router.get("/quote-config", requireHost, (_req, res) => {
+  const dailyFee = Number(process.env.DAILY_USAGE_FEE ?? 100000000);
   res.json({
-    dailyFee: Number(process.env.DAILY_USAGE_FEE ?? 100000000),
+    dailyFee,
+    tourDailyFee: Number(process.env.TOUR_DAILY_FEE ?? Math.floor(dailyFee * 0.6)),
+    quizDailyFee: Number(process.env.QUIZ_DAILY_FEE ?? Math.floor(dailyFee * 0.4)),
     mobileCount: Number(process.env.MOBILE_DESIGN_COUNT ?? 2),
     mobileUnitFee: Number(process.env.MOBILE_DESIGN_UNIT_FEE ?? 100000),
     faviconFee: Number(process.env.FAVICON_FEE ?? 30000),
@@ -84,6 +99,7 @@ router.get("/quote-config", requireHost, (_req, res) => {
     reservationDailyFee: Number(process.env.RESERVATION_DAILY_FEE ?? 10000),
     entryDailyFee:       Number(process.env.ENTRY_DAILY_FEE       ?? 10000),
     fieldAgentFee:       Number(process.env.FIELD_AGENT_FEE       ?? 50000),
+    surveyFee:           Number(process.env.SURVEY_FEE            ?? 50000),
   });
 });
 
@@ -94,6 +110,44 @@ router.get("/kakao/js-key", requireHost, (_req, res) => {
 });
 
 // ── 발송이력 (이메일 로그) — 현재 host_id 기준 ──
+// ── 이메일 양식 (관리자 편집용) ──
+//  ※ 시스템에서 발송되는 메일의 제목·본문 양식을 조회/수정.
+//     실제 발송 시 sendEmail 이 DB 의 활성 템플릿을 우선 사용 (services 측에서 처리 예정).
+router.get("/email-templates", requireHost, async (_req, res) => {
+  const [rows] = await pool.execute(
+    `SELECT id, template_key, description, subject, is_active, updated_at
+       FROM email_templates ORDER BY template_key`,
+  );
+  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+});
+router.get("/email-templates/:key", requireHost, async (req, res) => {
+  const key = String(req.params.key || "").trim();
+  const [rows] = await pool.execute(
+    `SELECT id, template_key, description, subject, body_html, variables, is_active, updated_at
+       FROM email_templates WHERE template_key = ?`, [key],
+  );
+  const row = (Array.isArray(rows) ? rows[0] : null) as any;
+  if (!row) { res.status(404).json({ ok: false, error: "not_found" }); return; }
+  let vars: any = [];
+  try { vars = typeof row.variables === "string" ? JSON.parse(row.variables) : (row.variables || []); } catch {}
+  res.json({ ok: true, data: { ...row, variables: vars } });
+});
+router.put("/email-templates/:key", requireHost, async (req, res) => {
+  const key = String(req.params.key || "").trim();
+  const { subject, body_html, is_active } = (req.body || {}) as any;
+  if (!subject || !body_html) {
+    res.status(400).json({ ok: false, error: "required", message: "제목·본문은 필수입니다." }); return;
+  }
+  const [r] = await pool.execute(
+    `UPDATE email_templates SET subject=?, body_html=?, is_active=?, updated_at=NOW()
+      WHERE template_key=?`,
+    [String(subject).slice(0, 255), String(body_html), is_active === false ? 0 : 1, key],
+  );
+  const affected = (r as any).affectedRows || 0;
+  if (affected === 0) { res.status(404).json({ ok: false, error: "not_found" }); return; }
+  res.json({ ok: true });
+});
+// ── 발송 이력 ──
 router.get("/email-logs", requireHost, async (req, res) => {
   const host = req.session.host!;
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -149,6 +203,50 @@ router.get("/email-logs", requireHost, async (req, res) => {
   });
 });
 
+// 호스트의 임의 이메일 발송 (현장요원·방문객·가맹점 등에게 메일 보내기)
+router.post("/manual-email/send", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const { to = "", subject = "", body = "" } = (req.body || {}) as Record<string, string>;
+  const toClean = String(to).trim();
+  const subjectClean = String(subject).trim();
+  const bodyClean = String(body).trim();
+  if (!toClean || !subjectClean || !bodyClean) {
+    res.status(400).json({ error: "받는 사람·제목·내용을 입력해 주세요." }); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toClean)) {
+    res.status(400).json({ error: "받는 사람 이메일 형식이 올바르지 않습니다." }); return;
+  }
+  const safeBody = bodyClean
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+  const html = `<div style="font-family:'Malgun Gothic',sans-serif;max-width:600px;color:#1e293b;line-height:1.7;">
+    <div style="font-size:13px;color:#475569;margin-bottom:14px;">
+      ${host.name ? host.name + " 님" : "주관기관"} 에서 발송한 메일입니다.
+    </div>
+    <div style="background:#fff;padding:18px 20px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;">
+      ${safeBody}
+    </div>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0;">
+    <div style="font-size:11px;color:#94a3b8;line-height:1.7;">
+      회신 시 발신자(<b>${host.email || ''}</b>)에게 직접 전달됩니다.<br>
+      본 메일은 모노라마 트래커를 통해 발송되었습니다.
+    </div>
+  </div>`;
+  try {
+    await sendEmail({
+      templateKey: "host_manual_email",
+      to: toClean,
+      subject: subjectClean,
+      html,
+      hostId: host.id,
+      triggerType: "manual",
+    });
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: "메일 발송에 실패했습니다.", detail: String(e?.message || e) });
+  }
+});
+
 router.post("/project-pin/send", requireHost, async (req, res) => {
   const host = req.session.host!;
   const pin = String(Math.floor(100000 + Math.random() * 900000));
@@ -199,11 +297,8 @@ router.post("/projects", requireHost, async (req, res) => {
     return;
   }
 
-  const giftQtyNum = Math.floor(Number(gift_qty));
-  if (!Number.isInteger(giftQtyNum) || giftQtyNum < 1) {
-    res.status(400).json({ error: "발급수량은 1 이상의 정수여야 합니다." });
-    return;
-  }
+  // Gift 미사용 프로젝트 허용 — 수량 0 이상 정수
+  const giftQtyNum = Math.max(0, Math.floor(Number(gift_qty) || 0));
 
   const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
   const prizeQtyNum = Math.max(0, Math.floor(Number(prize_qty) || 0));
@@ -279,6 +374,14 @@ router.post("/projects", requireHost, async (req, res) => {
     const reservationUse = (req.body as any).reservation_use ? 1 : 0;
     const entryUse       = (req.body as any).entry_use ? 1 : 0;
     const fieldAgentUse  = (req.body as any).field_agent_use ? 1 : 0;
+    const surveyUse      = (req.body as any).survey_use ? 1 : 0;
+    // 설문 응답자 경품 — survey_use 가 꺼져 있으면 자동 0
+    const surveyRewardUse = (surveyUse && (req.body as any).survey_reward_use) ? 1 : 0;
+    const tourUse        = (req.body as any).tour_use ? 1 : 0;
+    const quizUse        = (req.body as any).quiz_use ? 1 : 0;
+    // 구축 옵션 — 명시적으로 false 일 때만 0, 미전송/true 면 1 (기본 사용)
+    const mobileDesignUse = (req.body as any).mobile_design_use === false ? 0 : 1;
+    const faviconUse      = (req.body as any).favicon_use === false ? 0 : 1;
     let reservationStartAt: string | null = null;
     const rsvStartRaw = String((req.body as any).reservation_start_at || "").trim();
     if (reservationUse) {
@@ -299,6 +402,11 @@ router.post("/projects", requireHost, async (req, res) => {
       reservation_start_at: reservationStartAt,
       entry_use: !!entryUse,
       field_agent_use: !!fieldAgentUse,
+      survey_use: !!surveyUse,
+      tour_use: !!tourUse,
+      quiz_use: !!quizUse,
+      mobile_design_use: !!mobileDesignUse,
+      favicon_use: !!faviconUse,
     });
     const giftAmountNum = Number(gift_amount);
     const budgetAmount = giftAmountNum * giftQtyNum;
@@ -306,11 +414,11 @@ router.post("/projects", requireHost, async (req, res) => {
     const [insertResult] = await connection.execute(
       `INSERT INTO projects
        (host_id, project_name, project_serial, description, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty, quiz_bonus_per_correct, stop_on_budget_exceed, budget_amount, pin_hash, pin_enc, status, quote_days, quote_amount, quote_sent_at,
-        reservation_enabled, reservation_use, reservation_start_at, entry_benefit_enabled, entry_use, field_agent_use)
+        reservation_enabled, reservation_use, reservation_start_at, entry_benefit_enabled, entry_use, field_agent_use, survey_use, survey_reward_use, tour_use, quiz_use, mobile_design_use, favicon_use)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${ENC}, 'quoted', ?, ?, NOW(),
-               ?, ?, ?, ?, ?, ?)`,
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [host.id, project_name, serial, description, from_date, to_date, giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, stopOverbudget, budgetAmount, pinHash, pin_input, encKey(), quote.days, quote.total,
-       reservationUse, reservationUse, reservationStartAt, entryUse, entryUse, fieldAgentUse],
+       reservationUse, reservationUse, reservationStartAt, entryUse, entryUse, fieldAgentUse, surveyUse, surveyRewardUse, tourUse, quizUse, mobileDesignUse, faviconUse],
     );
 
     const projectId = Number((insertResult as any).insertId);
@@ -353,10 +461,19 @@ router.post("/projects", requireHost, async (req, res) => {
       toDate: to_date,
       days: quote.days,
       total: quote.total,
-      usageFee: quote.usageFee,
       mobileDesignFee: quote.mobileDesignFee,
       faviconFee: quote.faviconFee,
       initialSetupFee: quote.initialSetupFee,
+      usageFee: quote.usageFee,
+      tourFee: quote.tourFee,
+      quizFee: quote.quizFee,
+      reservationDays: quote.reservationDays,
+      reservationFee: quote.reservationFee,
+      entryDays: quote.entryDays,
+      entryFee: quote.entryFee,
+      fieldAgentFee: quote.fieldAgentFee,
+      surveyFee: quote.surveyFee,
+      surveyRewardUse: !!surveyRewardUse,
       projectId,
       hostId: host.id,
     });
@@ -423,7 +540,9 @@ router.get("/projects", requireHost, async (req, res) => {
             (SELECT COALESCE(SUM(gr.amount), 0) FROM gift_redemptions gr WHERE gr.project_id = p.id) AS gift_spent,
             (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id) AS applied_count,
             (SELECT COUNT(*) FROM project_applications pa WHERE pa.project_id = p.id AND pa.status = 'approved') AS approved_count,
+            (SELECT COUNT(DISTINCT pa.merchant_id) FROM project_applications pa WHERE pa.project_id = p.id AND pa.status = 'approved' AND pa.support_type = 'tour') AS tour_merchant_count,
             (SELECT COUNT(*) FROM project_quizzes pq WHERE pq.project_id = p.id AND pq.disabled = 0) AS quiz_count,
+            (SELECT COUNT(*) FROM field_agents fa WHERE fa.project_id = p.id AND fa.status = 'active') AS field_agent_count,
             (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation') AS rsv_applied_count,
             (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation' AND rv.activated_at IS NOT NULL) AS rsv_visited_count,
             (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'entry') AS entry_count
@@ -497,7 +616,7 @@ router.get("/projects/export", requireHost, async (req, res) => {
     { header: "Gift 증정액", key: "grant_amt", width: 14 },
     { header: "Gift 전체소진금액", key: "spent", width: 16 },
     { header: "소진율(%)", key: "rate", width: 10 },
-    { header: "목적지", key: "locs", width: 8 },
+    { header: "Tour", key: "locs", width: 8 },
     { header: "방문수", key: "visitors", width: 8 },
     { header: "지원", key: "applied", width: 8 },
     { header: "승인", key: "approved", width: 8 },
@@ -570,6 +689,9 @@ router.get("/projects/:id", requireHost, async (req, res) => {
             reservation_benefit_amount, reservation_benefit_max_count, reservation_start_at,
             entry_use, entry_benefit_enabled,
             entry_benefit_amount, entry_benefit_max_count,
+            field_agent_use, survey_use, survey_reward_use, tour_use, quiz_use,
+            mobile_design_use, favicon_use,
+            tour_title, tour_description, tour_image_path,
             created_at, updated_at
        FROM projects WHERE id = ?`,
     [projectId],
@@ -585,6 +707,10 @@ router.get("/projects/:id", requireHost, async (req, res) => {
     [projectId],
   );
   const gift_tiers = (tRows as any[]).map((r) => ({ pct: Number(r.threshold_pct), amount: Number(r.amount) }));
+  // tour_image_path → 공개 URL
+  if (proj.tour_image_path) {
+    proj.tour_image_url = `/uploads/tour-images/${path.basename(String(proj.tour_image_path))}`;
+  }
   res.json({
     ok: true,
     project: proj,
@@ -603,7 +729,7 @@ router.put("/projects/:id", requireHost, async (req, res) => {
   }
   const [pRows] = await pool.execute(
     `SELECT id, status, from_date, to_date, gift_amount, gift_qty, prize_amount, prize_qty,
-            quiz_bonus_per_correct, quote_amount FROM projects WHERE id = ?`,
+            quiz_bonus_per_correct, quote_amount, reservation_start_at FROM projects WHERE id = ?`,
     [projectId],
   );
   const cur = (pRows as any[])[0];
@@ -627,11 +753,19 @@ router.put("/projects/:id", requireHost, async (req, res) => {
     quiz_bonus_per_correct = "0",
     stop_on_budget_exceed = "0",
     reservation_use,
+    reservation_start_at,
     reservation_benefit_amount,
     reservation_benefit_max_count,
     entry_use,
     entry_benefit_amount,
     entry_benefit_max_count,
+    field_agent_use,
+    survey_use,
+    survey_reward_use,
+    tour_use,
+    quiz_use,
+    mobile_design_use,
+    favicon_use,
   } = req.body as Record<string, string>;
   if (!project_name || !description || !from_date || !to_date || !gift_amount || !gift_qty) {
     res.status(400).json({ error: "필수값을 입력해 주세요." });
@@ -653,16 +787,37 @@ router.put("/projects/:id", requireHost, async (req, res) => {
   const quizBonusNum = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
   const stopOverbudget2 = String(stop_on_budget_exceed) === "1" ? 1 : 0;
   const budgetAmount = giftAmountNum * giftQtyNum;
-  // 사전등록 / 현장등록 옵션
+  // 사전등록 / 현장등록 / 현장요원 / 설문조사 옵션
   const rUse = String(reservation_use) === "1" ? 1 : 0;
   const eUse = String(entry_use) === "1" ? 1 : 0;
+  const faUse = String(field_agent_use) === "1" ? 1 : 0;
+  const svUse = String(survey_use) === "1" ? 1 : 0;
+  // 응답자 경품 — 설문 미사용 시 자동 0
+  const srUse = (svUse && String(survey_reward_use) === "1") ? 1 : 0;
+  const tUse  = String(tour_use) === "1" ? 1 : 0;
+  const qUse  = String(quiz_use) === "1" ? 1 : 0;
+  // 구축 옵션 — 명시적으로 '0' 일 때만 미사용, 그 외 사용
+  const mdUse = String(mobile_design_use) === "0" ? 0 : 1;
+  const fvUse = String(favicon_use)       === "0" ? 0 : 1;
   const rAmt = Math.max(0, Math.floor(Number(reservation_benefit_amount) || 0));
   const rMax = Math.max(0, Math.floor(Number(reservation_benefit_max_count) || 0));
   const eAmt = Math.max(0, Math.floor(Number(entry_benefit_amount) || 0));
   const eMax = Math.max(0, Math.floor(Number(entry_benefit_max_count) || 0));
 
+  // body 의 reservation_start_at 우선, 없으면 DB 기존값 유지
+  const rsvStartRaw = typeof reservation_start_at === "string" ? reservation_start_at.trim() : "";
+  let resolvedRsvStart: string | null = rsvStartRaw
+    ? rsvStartRaw.replace("T", " ").slice(0, 19)
+    : (cur.reservation_start_at ? null : null);  // 비전송이면 아래에서 DB값 사용
+  const passToQuote: string | Date | null = rsvStartRaw
+    ? rsvStartRaw
+    : (cur.reservation_start_at as any);
   const newQuote = calculateQuote(from_date, to_date, {
     reservation_use: !!rUse, entry_use: !!eUse,
+    reservation_start_at: passToQuote,
+    field_agent_use: !!faUse, survey_use: !!svUse,
+    tour_use: !!tUse, quiz_use: !!qUse,
+    mobile_design_use: !!mdUse, favicon_use: !!fvUse,
   });
 
   await pool.execute(
@@ -671,7 +826,11 @@ router.put("/projects/:id", requireHost, async (req, res) => {
         gift_amount = ?, gift_qty = ?, prize_amount = ?, prize_qty = ?,
         quiz_bonus_per_correct = ?, stop_on_budget_exceed = ?, budget_amount = ?,
         reservation_use = ?, reservation_enabled = ?, reservation_benefit_amount = ?, reservation_benefit_max_count = ?,
+        reservation_start_at = COALESCE(?, reservation_start_at),
         entry_use = ?, entry_benefit_enabled = ?, entry_benefit_amount = ?, entry_benefit_max_count = ?,
+        field_agent_use = ?, survey_use = ?, survey_reward_use = ?, tour_use = ?, quiz_use = ?,
+        mobile_design_use = ?, favicon_use = ?,
+        quote_amount = ?, quote_days = ?,
         updated_at = NOW()
       WHERE id = ?`,
     [
@@ -679,7 +838,11 @@ router.put("/projects/:id", requireHost, async (req, res) => {
       giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum,
       quizBonusNum, stopOverbudget2, budgetAmount,
       rUse, rUse, rAmt, rMax,
+      rsvStartRaw ? resolvedRsvStart : null,
       eUse, eUse, eAmt, eMax,
+      faUse, svUse, srUse, tUse, qUse,
+      mdUse, fvUse,
+      newQuote.total, newQuote.days,
       projectId,
     ],
   );
@@ -695,7 +858,7 @@ router.put("/projects/:id", requireHost, async (req, res) => {
         .filter((t) => t.pct >= 1 && t.pct <= 100 && t.amount > 0);
     }
   } catch { /* noop */ }
-  // 단계별 보상 사용 시(2단계 이상) — 단계 수 == 활성 목적지 수 (정확히 같아야 함)
+  // 단계별 보상 사용 시(2단계 이상) — 단계 수 == 활성 Tour 수 (정확히 같아야 함)
   const extraTiersCount = tiersToSave.filter((t) => t.pct < 100).length;
   if (extraTiersCount > 0) {
     const totalTiersCount = extraTiersCount + 1; // 100% 포함
@@ -706,7 +869,7 @@ router.put("/projects/:id", requireHost, async (req, res) => {
     const activeLocs = Number((locCntRows as any[])[0]?.n || 0);
     if (activeLocs !== totalTiersCount) {
       res.status(400).json({
-        error: `단계별 보상 사용 시 단계 수(${totalTiersCount})와 활성 목적지 수(${activeLocs})가 같아야 합니다.`,
+        error: `단계별 보상 사용 시 단계 수(${totalTiersCount})와 활성 Tour 수(${activeLocs})가 같아야 합니다.`,
       });
       return;
     }
@@ -742,6 +905,129 @@ router.put("/projects/:id", requireHost, async (req, res) => {
   });
 });
 
+// 보상 설정만 부분 업데이트 (Tour 관리 팝업에서 호출)
+router.put("/projects/:id/rewards", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const {
+    gift_amount = "0",
+    gift_qty = "0",
+    prize_amount = "0",
+    prize_qty = "0",
+    quiz_bonus_per_correct = "0",
+    stop_on_budget_exceed = "0",
+    gift_tiers = [],
+  } = (req.body || {}) as Record<string, unknown>;
+
+  const giftAmountNum = Math.max(0, Math.floor(Number(gift_amount) || 0));
+  const giftQtyNum    = Math.max(0, Math.floor(Number(gift_qty) || 0));
+  const prizeAmountNum = Math.max(0, Math.floor(Number(prize_amount) || 0));
+  const prizeQtyNum   = Math.max(0, Math.floor(Number(prize_qty) || 0));
+  const quizBonusNum  = Math.max(0, Math.floor(Number(quiz_bonus_per_correct) || 0));
+  const stopOverbudget = String(stop_on_budget_exceed) === "1" ? 1 : 0;
+  const budgetAmount = giftAmountNum * giftQtyNum;
+
+  // 단계별 보상 처리
+  let tiersToSave: Array<{ pct: number; amount: number }> = [];
+  if (Array.isArray(gift_tiers)) {
+    tiersToSave = (gift_tiers as Array<{ pct: number; amount: number }>)
+      .map((t) => ({ pct: Math.floor(Number(t.pct) || 0), amount: Math.floor(Number(t.amount) || 0) }))
+      .filter((t) => t.pct > 0 && t.pct <= 100 && t.amount >= 0);
+    const bad = tiersToSave.find((t) => t.pct < 100 && t.amount >= giftAmountNum);
+    if (bad && giftAmountNum > 0) {
+      res.status(400).json({
+        error: `${bad.pct}% 단계 보상은 Gift 단가(${giftAmountNum.toLocaleString("ko-KR")}원) 미만이어야 합니다.`,
+      });
+      return;
+    }
+  }
+
+  await pool.execute(
+    `UPDATE projects SET
+        gift_amount = ?, gift_qty = ?, prize_amount = ?, prize_qty = ?,
+        quiz_bonus_per_correct = ?, stop_on_budget_exceed = ?, budget_amount = ?,
+        updated_at = NOW()
+      WHERE id = ?`,
+    [giftAmountNum, giftQtyNum, prizeAmountNum, prizeQtyNum, quizBonusNum, stopOverbudget, budgetAmount, projectId],
+  );
+
+  // 단계별 보상 — DELETE 후 INSERT (100% 단계는 자동 추가)
+  await pool.execute(`DELETE FROM project_gift_tiers WHERE project_id = ?`, [projectId]);
+  const hasNon100 = tiersToSave.some((t) => t.pct === 100);
+  if (!hasNon100 && giftAmountNum > 0) tiersToSave.push({ pct: 100, amount: giftAmountNum });
+  for (const t of tiersToSave) {
+    await pool.execute(
+      `INSERT INTO project_gift_tiers (project_id, threshold_pct, amount) VALUES (?, ?, ?)`,
+      [projectId, t.pct, t.amount],
+    );
+  }
+
+  res.json({ ok: true, budget_amount: budgetAmount });
+});
+
+// Tour 메타(제목·설명) 저장 — 설명은 프로젝트 description 컬럼과 공용
+router.put("/projects/:id/tour-meta", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const { tour_title = "", tour_description = "" } = (req.body || {}) as Record<string, string>;
+  const title = String(tour_title).trim().slice(0, 200) || null;
+  const desc  = String(tour_description).trim().slice(0, 2000);
+  // Tour 설명 = 프로젝트의 기존 description 컬럼 재사용 (중복 방지 + visitor PWA 와 일관성)
+  await pool.execute(
+    `UPDATE projects SET tour_title = ?, description = ?, updated_at = NOW() WHERE id = ?`,
+    [title, desc, projectId],
+  );
+  res.json({ ok: true });
+});
+
+// Tour 대표 이미지 업로드
+router.post("/projects/:id/tour-image", requireHost, tourImageUpload.single("image"), async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file) { res.status(400).json({ error: "no_file" }); return; }
+  // 기존 이미지 제거
+  const [old] = await pool.execute(`SELECT tour_image_path FROM projects WHERE id = ?`, [projectId]);
+  const oldRow = (old as any[])[0];
+  if (oldRow?.tour_image_path) {
+    try { fs.unlinkSync(oldRow.tour_image_path); } catch (_) {}
+  }
+  await pool.execute(
+    `UPDATE projects SET tour_image_path = ?, updated_at = NOW() WHERE id = ?`,
+    [file.path, projectId],
+  );
+  res.json({
+    ok: true,
+    image_path: file.path,
+    image_url: `/uploads/tour-images/${path.basename(file.path)}`,
+  });
+});
+
+// Tour 대표 이미지 삭제
+router.delete("/projects/:id/tour-image", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const [rows] = await pool.execute(`SELECT tour_image_path FROM projects WHERE id = ?`, [projectId]);
+  const row = (rows as any[])[0];
+  if (row?.tour_image_path) {
+    try { fs.unlinkSync(row.tour_image_path); } catch (_) {}
+  }
+  await pool.execute(`UPDATE projects SET tour_image_path = NULL, updated_at = NOW() WHERE id = ?`, [projectId]);
+  res.json({ ok: true });
+});
+
 // 재견적 발송 — 상태를 'quoted'로 되돌리고 새 견적금액으로 메일 발송
 router.post("/projects/:id/re-quote", requireHost, async (req, res) => {
   const host = req.session.host!;
@@ -752,7 +1038,10 @@ router.post("/projects/:id/re-quote", requireHost, async (req, res) => {
   }
   const k = encKey();
   const [pRows] = await pool.execute(
-    `SELECT id, project_name, project_serial, description, from_date, to_date, status, host_id
+    `SELECT id, project_name, project_serial, description, from_date, to_date, status, host_id,
+            reservation_use, reservation_start_at, entry_use,
+            field_agent_use, survey_use, survey_reward_use, tour_use, quiz_use,
+            mobile_design_use, favicon_use
        FROM projects WHERE id = ?`,
     [projectId],
   );
@@ -774,7 +1063,35 @@ router.post("/projects/:id/re-quote", requireHost, async (req, res) => {
     res.status(404).json({ error: "host_not_found" });
     return;
   }
-  const newQuote = calculateQuote(proj.from_date, proj.to_date);
+  // proj.from_date / to_date 가 mysql2 Date 객체로 올 수 있어 안전 변환
+  const toYmd = (d: any): string => {
+    if (!d) return "";
+    if (typeof d === "string") return d.slice(0, 10);
+    if (d instanceof Date) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return String(d).slice(0, 10);
+  };
+  // 프로젝트에 저장된 옵션 그대로 사용해 재견적 계산
+  const newQuote = calculateQuote(
+    toYmd(proj.from_date),
+    toYmd(proj.to_date),
+    {
+      reservation_use: Number(proj.reservation_use) === 1,
+      // Date 객체 또는 문자열 모두 calculateQuote 가 처리 — String() 변환하지 말 것 (String(Date)는 비표준 형식)
+      reservation_start_at: proj.reservation_start_at ?? null,
+      entry_use: Number(proj.entry_use) === 1,
+      field_agent_use: Number(proj.field_agent_use) === 1,
+      survey_use: Number(proj.survey_use) === 1,
+      tour_use: Number(proj.tour_use) === 1,
+      quiz_use: Number(proj.quiz_use) === 1,
+      mobile_design_use: Number(proj.mobile_design_use) === 1,
+      favicon_use: Number(proj.favicon_use) === 1,
+    },
+  );
   const prevStatus = String(proj.status);
   // 상태를 'quoted'로 되돌리고 새 견적 정보 저장
   await pool.execute(
@@ -801,14 +1118,23 @@ router.post("/projects/:id/re-quote", requireHost, async (req, res) => {
       hostName: String(hostRow.host_name),
       projectName: String(proj.project_name),
       projectSerial: String(proj.project_serial),
-      fromDate: String(proj.from_date).slice(0, 10),
-      toDate: String(proj.to_date).slice(0, 10),
+      fromDate: toYmd(proj.from_date),
+      toDate: toYmd(proj.to_date),
       days: newQuote.days,
       total: newQuote.total,
-      usageFee: newQuote.usageFee,
       mobileDesignFee: newQuote.mobileDesignFee,
       faviconFee: newQuote.faviconFee,
       initialSetupFee: newQuote.initialSetupFee,
+      usageFee: newQuote.usageFee,
+      tourFee: newQuote.tourFee,
+      quizFee: newQuote.quizFee,
+      reservationDays: newQuote.reservationDays,
+      reservationFee: newQuote.reservationFee,
+      entryDays: newQuote.entryDays,
+      entryFee: newQuote.entryFee,
+      fieldAgentFee: newQuote.fieldAgentFee,
+      surveyFee: newQuote.surveyFee,
+      surveyRewardUse: Number(proj.survey_reward_use) === 1,
       projectId,
       hostId: host.id,
       requoteNote,
@@ -835,7 +1161,7 @@ router.get("/projects/:id/visit-stats", requireHost, async (req, res) => {
     return;
   }
 
-  // 1) 활성 목적지 + 각 목적지별 방문자 수
+  // 1) 활성 Tour + 각 Tour별 방문자 수
   const [locRows] = await pool.execute(
     `SELECT pl.id, pl.display_seq, pl.location_name,
             (SELECT COUNT(DISTINCT vv.visitor_id)
@@ -1059,7 +1385,7 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   );
   const activeCount = Number((activeRows as any)[0].count_active);
   if (activeCount >= 15) {
-    res.status(400).json({ error: "활성 목적지는 최대 15개까지 등록 가능합니다." });
+    res.status(400).json({ error: "활성 Tour는 최대 15개까지 등록 가능합니다." });
     return;
   }
 
@@ -1087,7 +1413,7 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
     ],
   );
 
-  // 입금확인 이후 추가된 목적지에도 QR이 생기도록 보완 생성
+  // 입금확인 이후 추가된 Tour에도 QR이 생기도록 보완 생성
   await regenerateQrsIfReady(projectId);
 
   res.json({ ok: true, locationSeq: numbers.locationSeq, displaySeq: numbers.displaySeq });
@@ -1188,7 +1514,7 @@ router.put("/projects/:projectId/locations/:locationId/enable", requireHost, asy
   // 활성 표시번호(1~15) 중 빈 자리를 새로 배정해 다시 활성화
   const numbers = await nextLocationNumbers(projectId);
   if (numbers.displaySeq === null) {
-    res.status(400).json({ error: "활성 목적지는 최대 15개까지 가능합니다." });
+    res.status(400).json({ error: "활성 Tour는 최대 15개까지 가능합니다." });
     return;
   }
 
@@ -1220,7 +1546,7 @@ router.post("/projects/:id/locations/submit", requireHost, async (req, res) => {
     [projectId],
   );
   if (Number((activeRows as any)[0].count_active) === 0) {
-    res.status(400).json({ error: "제출할 활성 목적지가 없습니다." });
+    res.status(400).json({ error: "제출할 활성 Tour가 없습니다." });
     return;
   }
 
@@ -2112,7 +2438,7 @@ router.get("/projects/:id/quizzes", requireHost, async (req, res) => {
   });
 });
 
-// 퀴즈 활성/비활성 토글 — 비연계 퀴즈만 허용 (연계 퀴즈는 목적지 상태를 따름)
+// 퀴즈 활성/비활성 토글 — 비연계 퀴즈만 허용 (연계 퀴즈는 Tour 상태를 따름)
 router.put("/projects/:id/quizzes/:qid/toggle", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
@@ -2131,7 +2457,7 @@ router.put("/projects/:id/quizzes/:qid/toggle", requireHost, async (req, res) =>
     return;
   }
   if (q.location_id !== null) {
-    res.status(400).json({ error: "연계 목적지의 활성 상태를 따릅니다. 목적지를 활성/비활성화하면 자동 적용됩니다." });
+    res.status(400).json({ error: "연계 Tour의 활성 상태를 따릅니다. Tour를 활성/비활성화하면 자동 적용됩니다." });
     return;
   }
   const newDisabled = Number(q.disabled) === 1 ? 0 : 1;
@@ -2202,7 +2528,7 @@ router.post(
 
     if (locationId !== null) {
       if (!Number.isFinite(locationId) || locationId <= 0) {
-        res.status(400).json({ error: "연계 목적지가 올바르지 않습니다." });
+        res.status(400).json({ error: "연계 Tour가 올바르지 않습니다." });
         return;
       }
       const [locRows] = await pool.execute(
@@ -2210,7 +2536,7 @@ router.post(
         [locationId, projectId],
       );
       if (!(locRows as any[]).length) {
-        res.status(400).json({ error: "선택한 목적지가 이 프로젝트에 존재하지 않습니다." });
+        res.status(400).json({ error: "선택한 Tour가 이 프로젝트에 존재하지 않습니다." });
         return;
       }
     }
@@ -2340,7 +2666,7 @@ router.put(
 
     if (locationId !== null) {
       if (!Number.isFinite(locationId) || locationId <= 0) {
-        res.status(400).json({ error: "연계 목적지가 올바르지 않습니다." });
+        res.status(400).json({ error: "연계 Tour가 올바르지 않습니다." });
         return;
       }
       const [locRows] = await pool.execute(
@@ -2348,7 +2674,7 @@ router.put(
         [locationId, projectId],
       );
       if (!(locRows as any[]).length) {
-        res.status(400).json({ error: "선택한 목적지가 이 프로젝트에 존재하지 않습니다." });
+        res.status(400).json({ error: "선택한 Tour가 이 프로젝트에 존재하지 않습니다." });
         return;
       }
     }
@@ -2459,7 +2785,7 @@ router.get("/projects/:id/visitors", requireHost, async (req, res) => {
   );
   const totalLocations = Number((totRows as any)[0].total);
 
-  // 활성 목적지를 1곳 이상 방문한 방문자 목록 (휴대폰번호 = 식별값) + Gift 사용 정보
+  // 활성 Tour를 1곳 이상 방문한 방문자 목록 (휴대폰번호 = 식별값) + Gift 사용 정보
   const [rows] = await pool.execute(
     `SELECT v.phone, v.consent_at,
             COUNT(DISTINCT vv.location_id) AS visited_count,
@@ -2708,29 +3034,291 @@ router.get("/projects/:id/applications", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
 
-  const [projectRows] = await pool.execute("SELECT id FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
+  const k = encKey();
+  const [projectRows] = await pool.execute(
+    `SELECT id, ${dec("pin_enc", "pin")} FROM projects WHERE id = ? AND host_id = ?`,
+    [k, projectId, host.id],
+  );
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
     res.status(404).json({ error: "project_not_found" });
     return;
   }
+  const projectPin = (projectRows[0] as any)?.pin || null;
 
-  const k = encKey();
   const [rows] = await pool.execute(
     `SELECT pa.id, pa.status, pa.applied_at, pa.decided_at, pa.decided_reason, pa.support_type,
             m.id AS merchant_id, m.biz_no, m.status AS merchant_status,
+            m.biz_cert_path, m.biz_cert_name,
+            m.bank_name, m.bank_copy_path, m.bank_copy_name,
             ${dec("m.merchant_name", "merchant_name")},
             ${dec("m.contact_name", "contact_name")},
             ${dec("m.contact_phone", "contact_phone")},
             ${dec("m.contact_mobile", "contact_mobile")},
-            ${dec("m.email", "email")}
+            ${dec("m.email", "email")},
+            ${dec("m.bank_account", "bank_account")}
      FROM project_applications pa
      JOIN merchants m ON m.id = pa.merchant_id
      WHERE pa.project_id = ?
      ORDER BY (pa.status = 'pending') DESC, pa.applied_at DESC, pa.support_type ASC`,
-    [k, k, k, k, k, projectId],
+    [k, k, k, k, k, k, projectId],
   );
 
-  res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
+  const data = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+    ...r,
+    biz_cert_url:  toUploadUrl(r.biz_cert_path),
+    bank_copy_url: toUploadUrl(r.bank_copy_path),
+  }));
+  res.json({ ok: true, data, project_pin: projectPin });
+});
+
+// ── Tour 방문자별 통계 — 응시한 방문자(전화번호) 목록 + 방문 Tour 수 ──
+router.get("/projects/:id/tour-visitors", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  // 활성 Tour 수
+  const [locRows] = await pool.execute(
+    `SELECT COUNT(*) AS cnt FROM project_locations WHERE project_id = ? AND disabled = 0`,
+    [projectId],
+  );
+  const totalLocs = Number((locRows as any[])[0]?.cnt || 0);
+
+  // 방문자별 — 방문 횟수, 첫/마지막 방문, gift 발급/사용 수
+  const [rows] = await pool.execute(
+    `SELECT v.id AS visitor_id, v.phone, v.created_at,
+            COUNT(DISTINCT vv.location_id) AS visited_locs,
+            MIN(vv.visited_at) AS first_visit,
+            MAX(vv.visited_at) AS last_visit,
+            (SELECT COUNT(*) FROM gifts g WHERE g.visitor_id = v.id AND g.project_id = ?) AS gift_issued,
+            (SELECT COUNT(*) FROM gifts g WHERE g.visitor_id = v.id AND g.project_id = ? AND g.status = 'used') AS gift_used,
+            (SELECT COALESCE(SUM(g.amount), 0) FROM gifts g WHERE g.visitor_id = v.id AND g.project_id = ? AND g.status = 'used') AS gift_used_amount
+       FROM visitors v
+       LEFT JOIN visitor_visits vv ON vv.visitor_id = v.id
+       LEFT JOIN project_locations pl ON pl.id = vv.location_id AND pl.disabled = 0
+      WHERE v.project_id = ?
+      GROUP BY v.id
+     HAVING visited_locs > 0
+      ORDER BY last_visit DESC, v.id DESC`,
+    [projectId, projectId, projectId, projectId],
+  );
+  const data = (Array.isArray(rows) ? rows : []) as any[];
+
+  // 발급된 Gift 목록 (방문자별) — visitor_id 단위로 묶어서 첨부
+  const giftsByVisitor = new Map<number, any[]>();
+  if (data.length > 0) {
+    const visIds = data.map(r => Number(r.visitor_id));
+    const ph = visIds.map(() => "?").join(",");
+    const [giftRows] = await pool.execute(
+      `SELECT id, visitor_id, token, amount, status, qr_image_path, issued_at, used_at
+         FROM gifts
+        WHERE project_id = ? AND visitor_id IN (${ph})
+        ORDER BY issued_at DESC`,
+      [projectId, ...visIds],
+    );
+    (Array.isArray(giftRows) ? giftRows : []).forEach((g: any) => {
+      const vid = Number(g.visitor_id);
+      if (!giftsByVisitor.has(vid)) giftsByVisitor.set(vid, []);
+      giftsByVisitor.get(vid)!.push({
+        id: g.id,
+        token: g.token,
+        amount: Number(g.amount || 0),
+        status: g.status,
+        qr_image_url: toUploadUrl(g.qr_image_path),
+        issued_at: g.issued_at,
+        used_at: g.used_at,
+      });
+    });
+  }
+
+  // reservations 매칭 — phone 기반 이름/이메일 조회
+  const phones = data.map(r => String(r.phone || '').replace(/\D/g, '')).filter(Boolean);
+  const nameMap = new Map<string, string>();
+  const emailMap = new Map<string, string>();
+  if (phones.length > 0) {
+    const [resvRows] = await pool.execute(
+      `SELECT fields_json, email_lower FROM reservations WHERE project_id = ?`,
+      [projectId],
+    );
+    (Array.isArray(resvRows) ? resvRows : []).forEach((r: any) => {
+      try {
+        const f = JSON.parse(r.fields_json || "{}");
+        const ph = String(f.mobile || f.phone || "").replace(/\D/g, "");
+        if (!ph) return;
+        if (f.name) nameMap.set(ph, String(f.name));
+        const em = r.email_lower || f.email;
+        if (em) emailMap.set(ph, String(em));
+      } catch {}
+    });
+  }
+
+  res.json({
+    ok: true,
+    total_locations: totalLocs,
+    data: data.map(r => {
+      const phKey = String(r.phone || '').replace(/\D/g, '');
+      return {
+        visitor_id: r.visitor_id,
+        phone: r.phone,
+        name: nameMap.get(phKey) || null,
+        email: emailMap.get(phKey) || null,
+        visited_locs: Number(r.visited_locs || 0),
+        total_locs: totalLocs,
+        progress_pct: totalLocs > 0 ? Math.round((Number(r.visited_locs || 0) / totalLocs) * 1000) / 10 : 0,
+        first_visit: r.first_visit,
+        last_visit: r.last_visit,
+        gift_issued: Number(r.gift_issued || 0),
+        gift_used: Number(r.gift_used || 0),
+        gift_used_amount: Number(r.gift_used_amount || 0),
+        gifts: giftsByVisitor.get(Number(r.visitor_id)) || [],
+        created_at: r.created_at,
+      };
+    }),
+  });
+});
+
+// ── Quiz 응시자별 통계 — 응시한 방문자(전화번호) 목록 + 정답률 ──
+router.get("/projects/:id/quiz-visitors", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  // 활성 Quiz 수
+  const [qzRows] = await pool.execute(
+    `SELECT COUNT(*) AS cnt FROM project_quizzes WHERE project_id = ? AND disabled = 0`,
+    [projectId],
+  );
+  const totalQuizzes = Number((qzRows as any[])[0]?.cnt || 0);
+
+  // 방문자별 — 응시한 quiz 수, 정답 수
+  const [rows] = await pool.execute(
+    `SELECT v.id AS visitor_id, v.phone, v.created_at,
+            COUNT(DISTINCT vqa.quiz_id) AS attempted,
+            SUM(CASE WHEN vqa.is_correct = 1 THEN 1 ELSE 0 END) AS correct,
+            MIN(vqa.attempted_at) AS first_attempt,
+            MAX(vqa.attempted_at) AS last_attempt
+       FROM visitors v
+       JOIN visitor_quiz_attempts vqa ON vqa.visitor_id = v.id
+       JOIN project_quizzes pq ON pq.id = vqa.quiz_id AND pq.project_id = ? AND pq.disabled = 0
+      WHERE v.project_id = ?
+      GROUP BY v.id
+     HAVING attempted > 0
+      ORDER BY last_attempt DESC, v.id DESC`,
+    [projectId, projectId],
+  );
+  const data = (Array.isArray(rows) ? rows : []) as any[];
+
+  // reservations 매칭 — phone 기반 이름/이메일 조회
+  const phones = data.map(r => String(r.phone || '').replace(/\D/g, '')).filter(Boolean);
+  const nameMap = new Map<string, string>();
+  const emailMap = new Map<string, string>();
+  if (phones.length > 0) {
+    const [resvRows] = await pool.execute(
+      `SELECT fields_json, email_lower FROM reservations WHERE project_id = ?`,
+      [projectId],
+    );
+    (Array.isArray(resvRows) ? resvRows : []).forEach((r: any) => {
+      try {
+        const f = JSON.parse(r.fields_json || "{}");
+        const ph = String(f.mobile || f.phone || "").replace(/\D/g, "");
+        if (!ph) return;
+        if (f.name) nameMap.set(ph, String(f.name));
+        const em = r.email_lower || f.email;
+        if (em) emailMap.set(ph, String(em));
+      } catch {}
+    });
+  }
+
+  res.json({
+    ok: true,
+    total_quizzes: totalQuizzes,
+    data: data.map(r => {
+      const phKey = String(r.phone || '').replace(/\D/g, '');
+      const attempted = Number(r.attempted || 0);
+      const correct = Number(r.correct || 0);
+      return {
+        visitor_id: r.visitor_id,
+        phone: r.phone,
+        name: nameMap.get(phKey) || null,
+        email: emailMap.get(phKey) || null,
+        attempted,
+        correct,
+        total_quizzes: totalQuizzes,
+        accuracy: attempted > 0 ? Math.round((correct / attempted) * 1000) / 10 : 0,
+        progress_pct: totalQuizzes > 0 ? Math.round((attempted / totalQuizzes) * 1000) / 10 : 0,
+        first_attempt: r.first_attempt,
+        last_attempt: r.last_attempt,
+        created_at: r.created_at,
+      };
+    }),
+  });
+});
+
+// ── 사전/현장등록 방문확인 (QR 스캔 기반) ──
+router.post("/projects/:id/reservations/visit", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const token = String((req.body || {}).token || "").trim();
+  if (!token) { res.status(400).json({ ok: false, error: "token_required" }); return; }
+
+  // 프로젝트 소유 검증
+  const [pRows] = await pool.execute(
+    "SELECT id, project_name, project_serial FROM projects WHERE id = ? AND host_id = ?",
+    [projectId, host.id],
+  );
+  if (!Array.isArray(pRows) || pRows.length === 0) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+
+  // 예약/등록 조회 — 프로젝트 + 토큰 매칭
+  const [rRows] = await pool.execute(
+    `SELECT id, mode, status, fields_json, amount, activated_at, used_at, created_at
+       FROM reservations
+      WHERE project_id = ? AND token = ?`,
+    [projectId, token],
+  );
+  const r = (Array.isArray(rRows) ? rRows[0] : null) as any;
+  if (!r) {
+    res.status(404).json({ ok: false, error: "not_found", message: "이 프로젝트의 등록 QR 이 아닙니다." });
+    return;
+  }
+
+  let alreadyVisited = false;
+  let activatedAt = r.activated_at;
+  if (activatedAt) {
+    alreadyVisited = true;
+  } else {
+    await pool.execute(
+      `UPDATE reservations
+          SET activated_at = NOW(), activated_by_host_id = ?,
+              status = CASE WHEN status = 'pending' THEN 'activated' ELSE status END
+        WHERE id = ?`,
+      [host.id, r.id],
+    );
+    const [r2] = await pool.execute(`SELECT activated_at FROM reservations WHERE id = ?`, [r.id]);
+    activatedAt = (Array.isArray(r2) ? (r2[0] as any)?.activated_at : null);
+  }
+
+  let fields: any = {};
+  try { fields = JSON.parse(r.fields_json || "{}"); } catch {}
+
+  res.json({
+    ok: true,
+    already_visited: alreadyVisited,
+    mode: r.mode,
+    status: r.status,
+    amount: Number(r.amount || 0),
+    activated_at: activatedAt,
+    used_at: r.used_at,
+    created_at: r.created_at,
+    visitor: {
+      name:   fields.name || null,
+      email:  fields.email || null,
+      mobile: fields.mobile || fields.phone || null,
+    },
+  });
 });
 
 // ── 가맹점 지원 승인/거절 (결과 메일 발송, 승인 시 PIN 동봉) ──
@@ -2809,6 +3397,11 @@ router.get("/settlement", requireHost, async (req, res) => {
             p.gift_amount, p.prize_amount, p.budget_amount,
             p.reservation_use, p.reservation_benefit_amount,
             p.entry_use, p.entry_benefit_amount,
+            p.survey_use, p.survey_reward_use,
+            (SELECT s.reward_amount FROM project_surveys s WHERE s.project_id = p.id LIMIT 1) AS sv_reward_amount,
+            (SELECT s.reward_qty FROM project_surveys s WHERE s.project_id = p.id LIMIT 1) AS sv_reward_qty,
+            (SELECT COUNT(*) FROM survey_responses sr WHERE sr.project_id = p.id AND sr.qr_token IS NOT NULL) AS sv_issued_count,
+            (SELECT COUNT(*) FROM survey_responses sr WHERE sr.project_id = p.id AND sr.reward_used_at IS NOT NULL) AS sv_used_count,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_count,
             (SELECT COALESCE(SUM(gr.amount),0) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'normal') AS used_amount,
             (SELECT COUNT(*) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.redemption_type = 'grant') AS grant_count,
@@ -2915,10 +3508,29 @@ router.get("/settlement/by-day", requireHost, async (req, res) => {
     params2,
   );
 
-  // gift 행 그대로 유지 (입장 컬럼은 0)
+  // ── 설문 경품 (수령 완료) 일별 집계: (project_id, day) 키 ──
+  const [svRows] = await pool.execute(
+    `SELECT p.id AS project_id, p.project_name, p.project_serial, p.status,
+            p.gift_amount, p.prize_amount, p.budget_amount,
+            p.reservation_use, p.reservation_benefit_amount,
+            p.entry_use, p.entry_benefit_amount,
+            p.survey_use, p.survey_reward_use,
+            (SELECT s.reward_amount FROM project_surveys s WHERE s.project_id = p.id LIMIT 1) AS sv_reward_amount,
+            DATE(sr.reward_used_at) AS day,
+            COUNT(*) AS used_count
+     FROM projects p
+     JOIN survey_responses sr ON sr.project_id = p.id
+     ${where}
+     AND sr.reward_used_at IS NOT NULL
+     GROUP BY p.id, day`,
+    params2,
+  );
+
+  // gift 행 그대로 유지 (입장 / 설문 컬럼은 0)
   const giftData = (Array.isArray(rows) ? rows : []).map((r: any) => ({
     ...r,
     rsv_cnt: 0, rsv_amt: 0, ent_cnt: 0, ent_amt: 0,
+    sv_reward_amount: 0, sv_used_count: 0, sv_amt: 0,
     row_type: "gift",
   }));
 
@@ -2942,11 +3554,38 @@ router.get("/settlement/by-day", requireHost, async (req, res) => {
       rsv_amt: isRsv ? Number(r.used_amount || 0) : 0,
       ent_cnt: !isRsv ? Number(r.used_count || 0) : 0,
       ent_amt: !isRsv ? Number(r.used_amount || 0) : 0,
+      sv_reward_amount: 0, sv_used_count: 0, sv_amt: 0,
       row_type: r.mode,
     };
   });
 
-  const merged = [...giftData, ...rsvData].sort((a, b) => {
+  // 설문 경품 — 별도 행 (가맹점명 자리에 "🎁 설문경품 정산")
+  const svData = (Array.isArray(svRows) ? svRows : []).map((r: any) => {
+    const unit = Number(r.sv_reward_amount || 0);
+    const cnt  = Number(r.used_count || 0);
+    return {
+      project_id: r.project_id, project_name: r.project_name, project_serial: r.project_serial,
+      status: r.status,
+      gift_amount: Number(r.gift_amount || 0),
+      prize_amount: Number(r.prize_amount || 0),
+      budget_amount: Number(r.budget_amount || 0),
+      reservation_use: r.reservation_use, reservation_benefit_amount: r.reservation_benefit_amount,
+      entry_use: r.entry_use, entry_benefit_amount: r.entry_benefit_amount,
+      survey_use: r.survey_use, survey_reward_use: r.survey_reward_use,
+      day: r.day,
+      merchant_id: null,
+      merchant_name: "🎁 설문경품 정산",
+      used_count: 0, used_amount: 0, grant_count: 0, grant_amount: 0,
+      used_users: 0, grant_users: 0,
+      rsv_cnt: 0, rsv_amt: 0, ent_cnt: 0, ent_amt: 0,
+      sv_reward_amount: unit,
+      sv_used_count: cnt,
+      sv_amt: unit * cnt,
+      row_type: "survey_reward",
+    };
+  });
+
+  const merged = [...giftData, ...rsvData, ...svData].sort((a, b) => {
     const da = String(a.day||""), db = String(b.day||"");
     if (da !== db) return da < db ? 1 : -1;
     const pa = String(a.project_name||""), pb = String(b.project_name||"");

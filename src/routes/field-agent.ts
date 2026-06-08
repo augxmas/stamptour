@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import pool from "../config/database";
 import { publicBaseUrl } from "../services/qr.service";
 import { sendEmail } from "../services/email.service";
+import { requireHost } from "../middleware/auth";
 
 const router = Router();
 
@@ -305,6 +306,95 @@ router.get("/projects/:serial/att/lookup", async (req, res) => {
     today: todayAtt
       ? { date: today, attendance_type: todayAtt.attendance_type, checked_in_at: todayAtt.checked_in_at }
       : null,
+  });
+});
+
+// =====================================================================
+// (Host) QR 스캔으로 현장요원 근태 등록 — 관리자 PWA 의 QR 스캔 기능
+//   body: { qr_token, attendance_type: 'on_time' | 'late', note? }
+//   - 호스트 인증 + 본인 프로젝트 + QR 토큰의 요원이 프로젝트 소속이어야 함
+// =====================================================================
+router.post("/host/projects/:id/agent-check-in", requireHost, async (req, res) => {
+  const host = (req.session as any).host;
+  const projectId = Number(req.params.id);
+  // 프로젝트 소유 검증
+  const [pRows] = await pool.execute(
+    "SELECT id FROM projects WHERE id = ? AND host_id = ?",
+    [projectId, host.id],
+  );
+  if (!Array.isArray(pRows) || pRows.length === 0) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+
+  const body = req.body || {};
+  const qrToken = String(body.qr_token || "").trim();
+  const type    = String(body.attendance_type || "on_time");
+  const note    = String(body.note || "").slice(0, 255) || null;
+  if (!qrToken) {
+    res.status(400).json({ ok: false, error: "qr_required",
+      message: "QR 스캔 후 진행해 주세요." }); return;
+  }
+  if (!["on_time","late"].includes(type)) {
+    res.status(400).json({ ok: false, error: "invalid_type" }); return;
+  }
+
+  // QR 토큰으로 요원 조회 — 반드시 같은 프로젝트 + 활성
+  const [chk] = await pool.execute(
+    `SELECT id, name, mobile, email FROM field_agents
+     WHERE qr_token = ? AND project_id = ? AND status='active'`,
+    [qrToken, projectId],
+  );
+  const a = (Array.isArray(chk) ? chk[0] : null) as any;
+  if (!a) {
+    res.status(404).json({ ok: false, error: "agent_not_found",
+      message: "이 프로젝트에서 발급된 QR 이 아니거나 비활성 요원입니다." }); return;
+  }
+
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
+
+  // 이미 출근 여부 확인
+  const [todayRows] = await pool.execute(
+    `SELECT id, attendance_type, checked_in_at FROM field_agent_attendance
+     WHERE agent_id = ? AND attended_date = ?`,
+    [a.id, today],
+  );
+  const existing = (Array.isArray(todayRows) ? todayRows[0] : null) as any;
+  if (existing) {
+    res.json({
+      ok: true,
+      already_checked_in: true,
+      agent: { id: a.id, name: a.name, mobile: a.mobile, email: a.email },
+      date: today,
+      attendance_type: existing.attendance_type,
+      checked_in_at: existing.checked_in_at,
+    });
+    return;
+  }
+
+  try {
+    await pool.execute(
+      `INSERT INTO field_agent_attendance (agent_id, project_id, attended_date, checked_in_at, attendance_type, note)
+       VALUES (?, ?, ?, NOW(), ?, ?)`,
+      [a.id, projectId, today, type, note],
+    );
+  } catch (e: any) {
+    if (String(e?.code) === "ER_DUP_ENTRY") {
+      res.status(409).json({ ok: false, error: "already_checked_in",
+        message: "오늘은 이미 출근 처리되었습니다." }); return;
+    }
+    throw e;
+  }
+
+  res.json({
+    ok: true,
+    already_checked_in: false,
+    agent: { id: a.id, name: a.name, mobile: a.mobile, email: a.email },
+    date: today,
+    attendance_type: type,
+    checked_in_at: new Date().toISOString(),
   });
 });
 

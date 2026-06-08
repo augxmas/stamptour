@@ -15,7 +15,7 @@ export function giftQrUrlPath(token: string): string {
   return `/uploads/gift-qr/${token}.png`;
 }
 
-// 해당 방문자가 활성 목적지를 모두 방문했는지(미션 완료) 확인
+// 해당 방문자가 활성 Tour를 모두 방문했는지(미션 완료) 확인
 async function isMissionComplete(projectId: number, visitorId: number): Promise<boolean> {
   const r = await getVisitorProgress(projectId, visitorId);
   return r.total > 0 && r.visited >= r.total;
@@ -290,11 +290,11 @@ export async function useGift(token: string, pin: string, merchantId?: number | 
   const pinOk = await verifyPin(pin, String(g.pin_hash));
   if (!pinOk) return { ok: false, error: "invalid_pin" };
 
-  // 가맹점 지원 유형 검증 — Gift QR (목적지+Quiz) 는 'quest' 유형 approved 가맹점만 승인 가능
+  // 가맹점 지원 유형 검증 — Gift QR (Tour) 또는 Quiz 보상 유형 중 하나라도 approved 면 승인
   if (merchantId) {
     const [appRows] = await pool.execute(
       `SELECT id FROM project_applications
-       WHERE project_id = ? AND merchant_id = ? AND support_type='quest' AND status='approved'`,
+       WHERE project_id = ? AND merchant_id = ? AND support_type IN ('tour','quiz') AND status='approved'`,
       [g.project_id, merchantId],
     );
     if (!Array.isArray(appRows) || appRows.length === 0) {

@@ -251,6 +251,12 @@ async function init() {
       return;
     }
     projectInfo = d.project;
+    // 브라우저 탭 제목 / iOS '홈 화면에 추가' 시 제목 — "현장요원-프로젝트명"
+    if (projectInfo && projectInfo.name) {
+      document.title = `현장요원-${projectInfo.name}`;
+      const applTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (applTitle) applTitle.setAttribute('content', `현장요원-${projectInfo.name}`);
+    }
     // 저장된 QR 토큰이 있으면 My Page 직접 진입 (재방문/PWA 실행)
     const tk = savedToken();
     if (tk) {

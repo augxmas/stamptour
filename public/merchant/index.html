@@ -102,6 +102,15 @@
     .tab { background:none; border:none; padding:9px 18px; font-size:14px; font-weight:600; color:#94a3b8;
            cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
     .tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .stl-sub { padding:7px 14px; border:none; background:none; font-size:13px; font-weight:600;
+               color:#94a3b8; border-bottom:2px solid transparent; cursor:pointer; }
+    .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .stl-sub:hover { color:#1d4ed8; }
+    .ptyp { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+    .ptyp input { width:14px; height:14px; cursor:pointer; }
+    .ptyp span { font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; }
+    .ptyp input:not(:checked) + span { opacity:.4; }
+    .ttag { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; }
     .pane { display:none; } .pane.active { display:block; }
     /* 조회 조건 */
     .pj-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
@@ -185,7 +194,15 @@
       #sec-dashboard.active { width: 100%; max-width: 100%; }
       .topbar { position: static; width: 100%; border-radius: 12px; padding: 8px 12px; margin: 0 0 16px;
                 justify-content: space-between; flex-wrap: wrap; }
-      .topbar-brand { border-right: none; padding-right: 0; margin-right: 0; }
+      /* 브랜드 라벨을 최상단 줄로 분리 (전체 너비, 가운데 정렬) */
+      .topbar-brand {
+        width: 100%; flex: 0 0 100%;
+        text-align: center; font-size: 15px; font-weight: 800; color: #0d3b66;
+        padding: 8px 0 10px;
+        border-bottom: 1px solid #e2e8f0;
+        margin: 0 0 8px;
+        border-right: none; padding-right: 0; margin-right: 0;
+      }
     }
   </style>
 </head>
@@ -364,9 +381,14 @@
     <div id="pane-settle" class="pane">
       <div class="panel-card">
         <h3>정산</h3>
+        <!-- sub 탭 -->
+        <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:14px;">
+          <button type="button" class="stl-sub active" data-sm-sub="by-proj" onclick="switchSettleSub('by-proj')">프로젝트별</button>
+          <button type="button" class="stl-sub" data-sm-sub="by-person" onclick="switchSettleSub('by-person')">👥 인원별</button>
+        </div>
         <div class="pj-filters">
-          <input id="sf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadSettlement()">
-          <input id="sf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadSettlement()">
+          <input id="sf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadSettleCurrent()">
+          <input id="sf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadSettleCurrent()">
           <select id="sf-status">
             <option value="">상태 전체</option>
             <option value="ready_to_start">시작대기</option>
@@ -378,7 +400,7 @@
             <option value="y">지원함</option>
             <option value="n">미지원</option>
           </select>
-          <button class="btn btn-p btn-sm" onclick="loadSettlement()">조회</button>
+          <button class="btn btn-p btn-sm" onclick="loadSettleCurrent()">조회</button>
           <button class="btn btn-o btn-sm" onclick="resetSettleFilter()">초기화</button>
           <button class="btn btn-o btn-sm" id="settle-excel" onclick="downloadSettlementExcel()" disabled>⬇ 엑셀 다운로드</button>
           <label style="margin-left:auto;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
@@ -390,7 +412,23 @@
             </select>
           </label>
         </div>
-        <div id="st-body"></div>
+        <!-- 프로젝트별 sub -->
+        <div id="sm-sub-by-proj" class="sm-sub-pane">
+          <div id="st-body"></div>
+        </div>
+        <!-- 인원별 sub -->
+        <div id="sm-sub-by-person" class="sm-sub-pane" style="display:none;">
+          <!-- 유형 필터 -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+            <span style="font-size:12px;color:#475569;font-weight:600;">유형:</span>
+            <label class="ptyp"><input type="checkbox" data-ptype="gift_use" checked onchange="renderSettleByPerson()"><span style="background:#bfdbfe;color:#1e40af;">🎯 Tour/Quiz Gift 사용</span></label>
+            <label class="ptyp"><input type="checkbox" data-ptype="gift_grant" checked onchange="renderSettleByPerson()"><span style="background:#fed7aa;color:#9a3412;">🎁 Gift 증정</span></label>
+            <label class="ptyp"><input type="checkbox" data-ptype="reservation" checked onchange="renderSettleByPerson()"><span style="background:#ddd6fe;color:#5b21b6;">🟠 사전등록</span></label>
+            <label class="ptyp"><input type="checkbox" data-ptype="entry" checked onchange="renderSettleByPerson()"><span style="background:#bbf7d0;color:#166534;">🟢 현장등록</span></label>
+          </div>
+          <div id="sm-person-summary" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;"></div>
+          <div id="sm-person-body"></div>
+        </div>
       </div>
     </div>
     </div><!-- /#mode-manage -->
@@ -424,7 +462,7 @@
           <div id="scan-msg" class="msg center"></div>
           <button class="btn btn-o btn-full" id="btn-photo">📷 사진으로 스캔</button>
           <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;">
-          <button class="btn btn-o btn-full" id="btn-grant" style="margin-top:8px;" onclick="openGrant()">🎁 Gift 증정</button>
+          <button class="btn btn-o btn-full" id="btn-grant" style="margin-top:8px;opacity:.45;cursor:not-allowed;" disabled title="Gift 증정 기능은 현재 준비 중입니다.">🎁 Gift 증정 (준비 중)</button>
 
           <!-- Gift 증정 입력 -->
           <div id="grant-box" style="display:none;margin-top:12px;">
@@ -917,7 +955,7 @@
     document.getElementById('tab-settle').classList.toggle('active', name === 'settle');
     document.getElementById('pane-projects').classList.toggle('active', name === 'projects');
     document.getElementById('pane-settle').classList.toggle('active', name === 'settle');
-    if (name === 'settle') loadSettlement();
+    if (name === 'settle') loadSettleCurrent();
   }
 
   // ── 프로젝트 ──
@@ -951,9 +989,11 @@
     { key: 'from_date',         label: '프로젝트 기간', cls: '' },
     { key: 'remaining_days',    label: '잔여일', cls: 'c', num: true },
     { key: 'project_status',    label: '프로젝트<br>상태', cls: 'c' },
-    { key: 'status_quest',      label: '🎯 목적지+Quiz<br>상태', cls: 'c' },
-    { key: 'status_reservation',label: '🟠 사전등록<br>상태', cls: 'c' },
-    { key: 'status_entry',      label: '🟢 현장등록<br>상태', cls: 'c' },
+    { key: 'status_reservation',label: '🟠 사전등록<br>지원', cls: 'c' },
+    { key: 'status_entry',      label: '🟢 현장등록<br>지원', cls: 'c' },
+    { key: 'status_tour',       label: '🎯 Tour<br>지원여부', cls: 'c' },
+    { key: 'status_quiz',       label: '🧩 Quiz<br>지원여부', cls: 'c' },
+    { key: 'status_survey_reward', label: '🎁 설문경품<br>지원여부', cls: 'c' },
     { key: 'pin_code',          label: '인증코드', cls: 'c' },
     { key: 'application_status',label: '지원', cls: 'c' },
   ];
@@ -975,13 +1015,17 @@
     if (key === 'from_date') return p.from_date ? new Date(p.from_date).getTime() : 0;
     if (key === 'status' || key === 'project_status') return STATUS_RANK[p.status] ?? 9;
     if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
-    if (key === 'status_quest' || key === 'status_reservation' || key === 'status_entry') {
+    if (key === 'status_reservation' || key === 'status_entry' || key === 'status_tour' || key === 'status_quiz' || key === 'status_survey_reward') {
       const t = key.replace('status_', '');
-      const a = (p.applications || []).find(x => x.support_type === t);
+      const apps = p.applications || [];
+      let a = apps.find(x => x.support_type === t);
       const ORDER = { approved:0, pending:1, rejected:2 };
       if (a) return ORDER[a.status] ?? 8;
       if (t === 'reservation' && Number(p.reservation_use) !== 1) return 99;
       if (t === 'entry' && Number(p.entry_use) !== 1) return 99;
+      if (t === 'tour' && Number(p.tour_use) !== 1) return 99;
+      if (t === 'quiz' && Number(p.quiz_use) !== 1) return 99;
+      if (t === 'survey_reward' && Number(p.survey_reward_use) !== 1) return 99;
       return 9;
     }
     return String(p[key] ?? '').toLowerCase();
@@ -1084,7 +1128,7 @@
           const APP_CLS = { pending:'b-stat', approved:'b-on', rejected:'b-off' };
           // 유형별 상태 셀 빌더
           function typeStatusCell(type, useFlag) {
-            if (type !== 'quest' && Number(useFlag) !== 1) {
+            if (Number(useFlag) !== 1) {
               return '<span style="color:#cbd5e1;font-size:11px;">프로젝트 미사용</span>';
             }
             const a = apps.find(x => x.support_type === type);
@@ -1093,9 +1137,11 @@
             const lbl = APP_LBL[a.status] || a.status;
             return `<span class="badge ${cls}">${lbl}</span>`;
           }
-          const cellQuest = typeStatusCell('quest', 1);
-          const cellRsv   = typeStatusCell('reservation', p.reservation_use);
-          const cellEnt   = typeStatusCell('entry', p.entry_use);
+          const cellRsv    = typeStatusCell('reservation',    p.reservation_use);
+          const cellEnt    = typeStatusCell('entry',          p.entry_use);
+          const cellTour   = typeStatusCell('tour',           p.tour_use);
+          const cellQuiz   = typeStatusCell('quiz',           p.quiz_use);
+          const cellSurvey = typeStatusCell('survey_reward',  p.survey_reward_use);
           // 지원 버튼
           let action;
           if (!projectOpen && !p.has_any_application) {
@@ -1124,9 +1170,11 @@
             <td style="font-size:12px;color:#64748b;">${from} ~ ${to}</td>
             <td class="c" style="font-size:12px;">${remainLabel(p)}</td>
             <td class="c"><span class="badge ${STATUS_BADGE[p.status] || 'b-stat'}">${STATUS_LABEL[p.status] || p.status}</span></td>
-            <td class="c">${cellQuest}</td>
             <td class="c">${cellRsv}</td>
             <td class="c">${cellEnt}</td>
+            <td class="c">${cellTour}</td>
+            <td class="c">${cellQuiz}</td>
+            <td class="c">${cellSurvey}</td>
             <td class="c">${pinCell}</td>
             <td class="c">${action}</td>
           </tr>`;
@@ -1223,8 +1271,22 @@
     document.getElementById('sf-org').value = '';
     document.getElementById('sf-status').value = '';
     document.getElementById('sf-applied').value = '';
-    loadSettlement();
+    loadSettleCurrent();
   }
+  // 정산 sub 탭 전환
+  let settleSub = 'by-proj';
+  function switchSettleSub(name) {
+    settleSub = name;
+    document.querySelectorAll('.stl-sub[data-sm-sub]').forEach(b => b.classList.toggle('active', b.dataset.smSub === name));
+    document.getElementById('sm-sub-by-proj').style.display   = (name === 'by-proj')   ? '' : 'none';
+    document.getElementById('sm-sub-by-person').style.display = (name === 'by-person') ? '' : 'none';
+    loadSettleCurrent();
+  }
+  function loadSettleCurrent() {
+    if (settleSub === 'by-person') return loadSettleByPerson();
+    return loadSettlement();
+  }
+
   async function loadSettlement() {
     const body = document.getElementById('st-body');
     body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
@@ -1239,6 +1301,105 @@
     settleData = d.data || [];
     settlePage = 1;
     renderSettlement();
+  }
+
+  // ── 정산 (인원별) ──
+  let settlePersonData = [];
+  async function loadSettleByPerson() {
+    const body = document.getElementById('sm-person-body');
+    const summary = document.getElementById('sm-person-summary');
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
+    summary.innerHTML = '';
+    const qs = new URLSearchParams({
+      project_name: document.getElementById('sf-name').value.trim(),
+      organization: document.getElementById('sf-org').value.trim(),
+      status: document.getElementById('sf-status').value,
+      applied: document.getElementById('sf-applied').value,
+    });
+    const { ok, d } = await api('/api/merchant/settlement/by-person?' + qs.toString());
+    if (!ok) { body.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; return; }
+    settlePersonData = d.data || [];
+    renderSettleByPerson();
+  }
+  const TYPE_META = {
+    gift_use:    { label: '🎯 Tour/Quiz Gift 사용', bg: '#bfdbfe', fg: '#1e40af', emoji: '🎯' },
+    gift_grant:  { label: '🎁 Gift 증정',           bg: '#fed7aa', fg: '#9a3412', emoji: '🎁' },
+    reservation: { label: '🟠 사전등록',             bg: '#ddd6fe', fg: '#5b21b6', emoji: '🟠' },
+    entry:       { label: '🟢 현장등록',             bg: '#bbf7d0', fg: '#166534', emoji: '🟢' },
+  };
+
+  function renderSettleByPerson() {
+    const summary = document.getElementById('sm-person-summary');
+    const body = document.getElementById('sm-person-body');
+
+    // 활성 유형 필터
+    const active = new Set();
+    document.querySelectorAll('input[data-ptype]').forEach(el => {
+      if (el.checked) active.add(el.dataset.ptype);
+    });
+
+    const filtered = settlePersonData.filter(r => active.has(r.type));
+    const excelBtn = document.getElementById('settle-excel');
+    if (excelBtn) excelBtn.disabled = !filtered.length;
+
+    // 요약 5개 카드 — 고유 인원 + 유형별 금액
+    const uniqVisitors = new Set(filtered.map(r => r.phone)).size;
+    const byType = { gift_use:0, gift_grant:0, reservation:0, entry:0 };
+    filtered.forEach(r => { if (byType[r.type] !== undefined) byType[r.type] += Number(r.amount || 0); });
+    summary.innerHTML = `
+      ${personSummaryCard('👥', '고유 인원', uniqVisitors.toLocaleString('ko-KR') + '명', '#dbeafe', '#1e40af')}
+      ${personSummaryCard(TYPE_META.gift_use.emoji,    'Gift 사용',  won(byType.gift_use),    TYPE_META.gift_use.bg,    TYPE_META.gift_use.fg)}
+      ${personSummaryCard(TYPE_META.gift_grant.emoji,  'Gift 증정',  won(byType.gift_grant),  TYPE_META.gift_grant.bg,  TYPE_META.gift_grant.fg)}
+      ${personSummaryCard(TYPE_META.reservation.emoji, '사전등록',   won(byType.reservation), TYPE_META.reservation.bg, TYPE_META.reservation.fg)}
+      ${personSummaryCard(TYPE_META.entry.emoji,       '현장등록',   won(byType.entry),       TYPE_META.entry.bg,       TYPE_META.entry.fg)}
+    `;
+
+    if (!filtered.length) {
+      body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">조회된 사용 내역이 없습니다.</div>';
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr>
+          <th>이름</th>
+          <th>전화번호</th>
+          <th>소속기관</th>
+          <th>프로젝트</th>
+          <th class="c">유형</th>
+          <th class="c">횟수</th>
+          <th class="r">금액</th>
+          <th class="c">최초 사용</th>
+          <th class="c">최근 사용</th>
+        </tr></thead>
+        <tbody>${filtered.map(r => {
+          const m = TYPE_META[r.type] || { label: r.type, bg: '#f1f5f9', fg: '#64748b' };
+          return `<tr>
+            <td><b>${esc(r.name || '(이름 없음)')}</b></td>
+            <td style="font-family:Consolas,monospace;font-size:12px;white-space:nowrap;">${esc(fmtPhone(r.phone||''))}</td>
+            <td style="font-size:12px;">${esc(r.organization_name || '-')}</td>
+            <td><b>${esc(r.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(r.project_serial)}</span></td>
+            <td class="c"><span class="ttag" style="background:${m.bg};color:${m.fg};">${esc(m.label)}</span></td>
+            <td class="c">${Number(r.count||0)}건</td>
+            <td class="r"><b style="color:#1d4ed8;">${won(r.amount)}</b></td>
+            <td class="c" style="font-size:11px;color:#475569;white-space:nowrap;">${esc(fmtDt(r.first_at))}</td>
+            <td class="c" style="font-size:11px;color:#475569;white-space:nowrap;">${esc(fmtDt(r.last_at))}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  }
+
+  function personSummaryCard(emoji, label, value, bg, fg) {
+    return `<div style="background:${bg};border-radius:10px;padding:14px;">
+      <div style="font-size:11px;color:${fg};font-weight:600;margin-bottom:4px;">${emoji} ${label}</div>
+      <div style="font-size:20px;font-weight:800;color:${fg};">${value}</div>
+    </div>`;
+  }
+  function fmtDt(s) {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return '-';
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
   }
   function renderSettlement() {
     const excelBtn = document.getElementById('settle-excel');
@@ -1395,6 +1556,65 @@
     document.getElementById('pf-mc-newpw').value = '';
     document.getElementById('pf-mc-newpw2').value = '';
     document.getElementById('pf-mc-curpw').value = '';
+    // 모바일 (Gift 결제 모드) → 읽기 전용. 데스크탑/관리 모드 → 편집 가능.
+    applyProfileReadonly(giftMode);
+  }
+
+  // 프로필 모달의 input/select/button 을 모드별로 토글
+  function applyProfileReadonly(readonly) {
+    const ids = ['pf-mc-name','pf-mc-cname','pf-mc-cphone','pf-mc-cmobile',
+                 'pf-mc-bank','pf-mc-account','pf-mc-addr2'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'SELECT') el.disabled = !!readonly;
+      else el.readOnly = !!readonly;
+      el.style.background = readonly ? '#f8fafc' : '';
+      el.style.color = readonly ? '#475569' : '';
+    });
+    // 주소 검색 버튼 / 비밀번호 영역 / 저장 버튼 / 안내 노출 토글
+    const postBtn = document.querySelector('button[onclick="openPostcodeProfile()"]');
+    if (postBtn) postBtn.style.display = readonly ? 'none' : '';
+
+    // 비밀번호 변경 섹션 — readonly 시 통째로 숨김 (divider 부터 현재비밀번호 입력란까지)
+    const divider = document.querySelector('#modal-profile .divider');
+    if (divider) divider.style.display = readonly ? 'none' : '';
+    const pwSec = document.querySelectorAll('#pf-mc-newpw, #pf-mc-newpw2, #pf-mc-curpw');
+    pwSec.forEach(el => {
+      const fg = el.closest('.fg'); if (fg) fg.style.display = readonly ? 'none' : '';
+    });
+    // 비밀번호 변경 헤더 라벨 — divider 다음의 div (text "비밀번호 변경") 찾기
+    const modal = document.getElementById('modal-profile');
+    if (modal) {
+      modal.querySelectorAll('div').forEach(el => {
+        if (el.textContent && el.textContent.startsWith('비밀번호 변경')) {
+          el.style.display = readonly ? 'none' : '';
+        }
+      });
+    }
+    // 저장 버튼 숨김 + 취소 → "닫기" 라벨 + 안내 메시지
+    const saveBtn = document.getElementById('pf-mc-save');
+    if (saveBtn) saveBtn.style.display = readonly ? 'none' : '';
+    const cancelBtn = saveBtn ? saveBtn.previousElementSibling : null;
+    if (cancelBtn) {
+      cancelBtn.textContent = readonly ? '닫기' : '취소';
+      if (readonly) cancelBtn.style.flex = '1';
+    }
+    // 안내 박스 — readonly 모드에서 상단에 표시
+    let notice = document.getElementById('pf-mc-readonly-notice');
+    if (readonly) {
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'pf-mc-readonly-notice';
+        notice.style.cssText = 'background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e;line-height:1.55;';
+        notice.innerHTML = '🔒 <b>읽기 전용 모드</b> — 모바일에서는 기본 정보 확인만 가능합니다. 수정은 PC(관리 모드) 에서 진행해 주세요.';
+        const grid = document.querySelector('#modal-profile .reg-grid');
+        if (grid && grid.parentNode) grid.parentNode.insertBefore(notice, grid);
+      }
+      notice.style.display = '';
+    } else if (notice) {
+      notice.style.display = 'none';
+    }
   }
   function closeProfile() { document.getElementById('modal-profile').classList.remove('open'); }
   // 가맹점 기본정보 모달용 우편번호 주소 검색
@@ -1520,9 +1740,11 @@
     const apps = Array.isArray(p.applications) ? p.applications : [];
     const statusOf = t => (apps.find(a => a.support_type === t)?.status) || null;
     const types = [];
-    types.push({ key:'quest', label:'🎯 목적지 방문 + Quiz', desc:`Gift 단가 ${wonStr(p.gift_amount||0)}` });
-    if (Number(p.reservation_use) === 1) types.push({ key:'reservation', label:'🟠 사전등록', desc:`혜택 ${wonStr(p.reservation_benefit_amount||0)}` });
-    if (Number(p.entry_use) === 1)       types.push({ key:'entry',       label:'🟢 현장등록', desc:`혜택 ${wonStr(p.entry_benefit_amount||0)}` });
+    if (Number(p.reservation_use) === 1)    types.push({ key:'reservation',   label:'🟠 사전등록', desc:`혜택 ${wonStr(p.reservation_benefit_amount||0)}` });
+    if (Number(p.entry_use) === 1)          types.push({ key:'entry',         label:'🟢 현장등록', desc:`혜택 ${wonStr(p.entry_benefit_amount||0)}` });
+    if (Number(p.tour_use) === 1)           types.push({ key:'tour',          label:'🎯 Tour 방문 지원',      desc:`Gift 단가 ${wonStr(p.gift_amount||0)}` });
+    if (Number(p.quiz_use) === 1)           types.push({ key:'quiz',          label:'🧩 Quiz 정답 보상',      desc:`Gift 단가 ${wonStr(p.gift_amount||0)}` });
+    if (Number(p.survey_reward_use) === 1)  types.push({ key:'survey_reward', label:'🎁 설문 응답 경품',      desc:'설문 완료자에게 경품 지급' });
     document.getElementById('apply-types').innerHTML = types.map(t => {
       const cur = statusOf(t.key);
       const isApproved = cur === 'approved';
@@ -1628,12 +1850,16 @@
     box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
     const { ok, d } = await api('/api/merchant/gift-projects');
     if (!ok) { box.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; return; }
-    giftProjData = d.data || [];
+    // 진행중(started) 프로젝트만 노출 — 백엔드 변경 전 캐시 대응 안전망
+    giftProjData = (d.data || []).filter(p => String(p.status || '') === 'started');
     if (!giftProjData.length) {
-      box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;">승인된 참여 프로젝트가 없습니다.</div>';
+      box.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:24px;line-height:1.6;">
+        진행 중인 참여 프로젝트가 없습니다.<br>
+        <span style="font-size:11px;color:#cbd5e1;">※ Gift 사용 확인은 <b>진행중</b> 상태의 프로젝트에서만 가능합니다.</span>
+      </div>`;
       return;
     }
-    const TYPE_LBL = { quest:'🎯 목적지+Quiz', reservation:'🟠 사전등록', entry:'🟢 현장등록' };
+    const TYPE_LBL = { tour:'🎯 Tour', quiz:'🧩 Quiz', reservation:'🟠 사전등록', entry:'🟢 현장등록', survey_reward:'🎁 설문경품' };
     box.innerHTML = giftProjData.map((p, i) => {
       const types = String(p.approved_types || '').split(',').filter(Boolean);
       const typeBadges = types.map(t =>

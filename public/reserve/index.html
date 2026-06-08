@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>입장 신청 · 모노라마 트래커</title>
+<!-- PWA: 프로젝트별 manifest (스크립트에서 serial 적용) -->
+<link rel="manifest" id="manifest-link" href="/visitor/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="스탬프투어">
+<meta name="theme-color" content="#15803d">
+<link rel="icon" href="/favicon-green.svg" type="image/svg+xml">
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,6 +128,10 @@
 </head>
 <body>
 <div class="wrap" id="wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <a id="back-menu" href="#" style="display:inline-flex;align-items:center;gap:4px;color:#15803d;text-decoration:none;font-size:12px;font-weight:600;">◀ 메뉴로</a>
+    <button id="close-x" type="button" title="닫기" style="background:#fff;border:1.5px solid #cbd5e1;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#475569;line-height:1;">×</button>
+  </div>
   <div class="loading" id="loading">불러오는 중…</div>
 </div>
 
@@ -140,9 +151,88 @@ const isReserve = location.pathname.startsWith('/reserve/');
 const mode = isReserve ? 'r' : 'e';
 const modeLabel = isReserve ? '사전등록' : '현장등록';
 const serial = location.pathname.split('/').filter(Boolean)[1] || '';
+// 메뉴로 돌아가기 링크 + × close
+(function(){
+  const a = document.getElementById('back-menu'); if (a && serial) a.href = `/v/${serial}`;
+  const x = document.getElementById('close-x');
+  if (x) x.onclick = () => { location.href = serial ? `/v/${serial}` : '/'; };
+})();
+
+// 이메일·인증코드 자동 저장 (localStorage) — 재방문 시 자동 prefill
+const SAVE_KEY_PREFIX = 'visitor_save_';
+function loadSavedEmail(serial) {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY_PREFIX + serial);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return d && d.email ? d : null;
+  } catch (e) { return null; }
+}
+function saveEmail(serial, email, verified, name) {
+  try {
+    const prev = JSON.parse(localStorage.getItem(SAVE_KEY_PREFIX + serial) || '{}') || {};
+    const merged = { ...prev, email, verified: !!verified, savedAt: Date.now() };
+    if (name) merged.name = name;
+    localStorage.setItem(SAVE_KEY_PREFIX + serial, JSON.stringify(merged));
+  } catch (e) {}
+}
+function clearSavedEmail(serial) {
+  try { localStorage.removeItem(SAVE_KEY_PREFIX + serial); } catch (e) {}
+}
 let cfg = null;
 let emailVerified = false;
 let pendingCode = '';
+
+// ── PWA: 프로젝트별 manifest + 서비스워커 등록 + 설치 안내 ──
+if (serial) {
+  document.getElementById('manifest-link').setAttribute('href', `/api/visitor/manifest/${encodeURIComponent(serial)}`);
+}
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  refreshPwaInstallBox();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const box = document.getElementById('pwa-install-box');
+  if (box) box.style.display = 'none';
+});
+// 서비스워커 등록 — visitor PWA 의 SW 와 스코프 공유
+if ('serviceWorker' in navigator && serial) {
+  navigator.serviceWorker.register(`/v/${serial}/sw.js`, { scope: `/v/${serial}/` }).catch(() => {});
+}
+// 완료 카드에서 PWA 설치 박스 표시 갱신
+function refreshPwaInstallBox() {
+  const box = document.getElementById('pwa-install-box');
+  if (!box) return;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone === true);
+  if (isStandalone) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const iosTip = document.getElementById('pwa-ios-tip');
+  const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (iosTip) iosTip.style.display = isiOS ? '' : 'none';
+  const btn = document.getElementById('btn-pwa-install');
+  if (btn) {
+    if (deferredInstallPrompt) {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.onclick = async () => {
+        try {
+          await deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.userChoice;
+        } catch (e) {}
+        deferredInstallPrompt = null;
+      };
+    } else if (isiOS) {
+      btn.disabled = true; btn.style.opacity = '.55';
+      btn.textContent = '↓ 아래 안내에 따라 설치해 주세요';
+    } else {
+      btn.disabled = true; btn.style.opacity = '.55';
+      btn.textContent = '⏳ 설치 가능 상태 대기 중...';
+    }
+  }
+}
 
 function esc(s) { return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function won(n) { return Number(n||0).toLocaleString('ko-KR') + '원'; }
@@ -206,10 +296,10 @@ function render() {
     }
   }
 
-  const benefitBlock = (benefit.amount > 0 || benefit.label || benefit.image_url)
+  // 혜택 금액은 visitor 에게 노출하지 않음 — 라벨/이미지만
+  const benefitBlock = (benefit.label || benefit.image_url)
     ? `<div class="benefit-card">
          ${benefit.image_url ? `<img src="${benefit.image_url}" alt="혜택">` : ''}
-         ${benefit.amount > 0 ? `<div class="amt">${won(benefit.amount)}</div>` : ''}
          ${benefit.label ? `<div class="lbl">${esc(benefit.label)}</div>` : ''}
        </div>`
     : '';
@@ -234,6 +324,10 @@ function render() {
         </div>
         <button type="button" id="btn-verify" onclick="confirmVerifyCode()" ${disabled?'disabled':''}>확인</button>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#475569;cursor:pointer;">
+        <input type="checkbox" id="f-remember" checked style="width:16px;height:16px;cursor:pointer;">
+        <span>이메일·인증코드 자동 저장 <span style="color:#94a3b8;">(다음 방문 시 자동 입력)</span></span>
+      </label>
       <div class="verify-msg" id="verify-msg">※ 이메일 인증을 완료해야 아래 항목을 입력할 수 있습니다.</div>
     </div>` : '';
 
@@ -280,18 +374,44 @@ function render() {
     : '';
 
   document.getElementById('wrap').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <a id="back-menu" href="/v/${esc(serial)}" style="display:inline-flex;align-items:center;gap:4px;color:#15803d;text-decoration:none;font-size:12px;font-weight:600;">◀ 메뉴로</a>
+      <button id="close-x" type="button" title="닫기" onclick="location.href='/v/${esc(serial)}'" style="background:#fff;border:1.5px solid #cbd5e1;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#475569;line-height:1;">×</button>
+    </div>
     <div class="header">
       <div class="title">${esc(proj.name)}</div>
       <div class="mode-badge ${mode}">${esc(modeLabel)} 신청</div>
     </div>
     ${banner}
     ${benefitBlock}
+    <!-- PWA 설치 안내 — 미설치 시 form 화면에서도 노출 -->
+    <div id="pwa-install-box" style="display:none;margin-bottom:14px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;text-align:left;">
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:5px;">📲 ${esc(proj.name || '프로젝트')} 앱 설치</div>
+      <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;">
+        홈 화면에 앱으로 설치하면 빠른 접근과 알림이 가능합니다.
+      </div>
+      <button id="btn-pwa-install" style="width:100%;padding:10px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📲 홈 화면에 앱 설치</button>
+      <div id="pwa-ios-tip" style="display:none;margin-top:8px;font-size:11px;color:#64748b;line-height:1.5;">
+        📱 iOS: Safari 하단 <b>공유 아이콘</b> → <b>"홈 화면에 추가"</b>
+      </div>
+    </div>
     <div class="form-card">
       ${emailHtml}
       ${othersHtml}
       <button type="button" class="submit" id="btn-submit" disabled onclick="onSubmit()">${modeLabel} 신청하기</button>
       <div class="footer-note">※ 본 페이지는 입장 신청용 입력 폼입니다. 제출 처리 흐름은 다음 단계에서 활성화됩니다.</div>
     </div>`;
+  // form 화면 표시 후 PWA 설치 박스 갱신
+  try { refreshPwaInstallBox(); } catch (e) {}
+
+  // 저장된 이메일 prefill
+  const saved = loadSavedEmail(serial);
+  if (saved && saved.email) {
+    const emailEl = document.getElementById('f-email');
+    if (emailEl) emailEl.value = saved.email;
+    const rememberEl = document.getElementById('f-remember');
+    if (rememberEl) rememberEl.checked = true;
+  }
 }
 
 // ── 글로벌 헬퍼 (inline onclick 에서 호출되도록 전역 스코프) ──
@@ -553,6 +673,10 @@ async function confirmVerifyCode() {
   const wrap = document.getElementById('others-wrap');
   if (wrap) wrap.classList.remove('locked');
   document.getElementById('btn-submit').disabled = false;
+  // 자동 저장 옵션이 체크되어 있으면 localStorage 에 저장
+  const remember = document.getElementById('f-remember');
+  if (remember && remember.checked) saveEmail(serial, email, true);
+  else clearSavedEmail(serial);
 }
 
 function renderAlreadyRegistered(rsv) {
@@ -602,13 +726,16 @@ function renderAlreadyRegistered(rsv) {
         ${rsv.used_at ? `<div style="display:flex;gap:10px;padding:4px 0;font-size:12px;color:#94a3b8;"><div style="width:110px;">Gift 사용</div><div>${fmtDT(rsv.used_at)}</div></div>` : ''}
         <div style="display:flex;gap:10px;padding:4px 0;font-size:12px;"><div style="width:110px;color:#94a3b8;">상태</div><div>${statusBadge}</div></div>
       </div>
-      ${rsv.amount > 0 ? `<p style="color:#15803d;font-weight:700;font-size:15px;margin-bottom:10px;">혜택: ${won(rsv.amount)}</p>` : ''}
       ${rsv.qr_image_url ? `<div class="qr-box"><img src="${rsv.qr_image_url}" alt="QR"></div>` : ''}
       <div class="btn-row">
         ${rsv.qr_image_url ? `<button class="btn-save" onclick="downloadQr('${rsv.qr_image_url}','existing')">💾 QR 저장</button>` : ''}
         <a class="btn-visit" href="${esc(rsv.visitor_url || '#')}">🚀 입장/활동 시작</a>
       </div>
       <p class="done-tip">동일 이메일로 다시 신청할 수 없습니다. 위 QR 또는 링크로 입장 절차를 진행해 주세요.</p>
+      <!-- 메뉴로 돌아가기 -->
+      <a href="/v/${esc(serial)}" style="display:block;width:100%;margin-top:14px;padding:14px;background:#fff;border:1.5px solid #cbd5e1;color:#475569;border-radius:10px;text-align:center;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer;">
+        ◀ 메뉴로 돌아가기
+      </a>
     </div>`;
 }
 async function onSubmit() {
@@ -668,6 +795,11 @@ async function onSubmit() {
       btn.disabled = false; btn.textContent = modeLabel + ' 신청하기';
       return;
     }
+    // 자동 저장 옵션 체크되어 있으면 이메일 + 이름 저장 → visitor 앱 자동 로그인용
+    const remember = document.getElementById('f-remember');
+    if (remember && remember.checked) {
+      saveEmail(serial, fieldsObj.email, true, fieldsObj.name || '');
+    }
     renderDone(d);
   } catch (e) {
     alert('네트워크 오류로 신청에 실패했습니다.');
@@ -688,13 +820,32 @@ function renderDone(d) {
       <div class="qr-box"><img id="qr-img" src="${d.qr_image_url}" alt="QR 코드"></div>
       ${d.benefit_message
         ? `<p style="color:#15803d;font-weight:700;font-size:16px;margin-bottom:14px;">${esc(d.benefit_message)}</p>`
-        : (d.amount > 0 ? `<p style="color:#15803d;font-weight:700;font-size:15px;margin-bottom:14px;">혜택: ${won(d.amount)}</p>` : '')}
+        : ''}
       <div class="btn-row">
         <button class="btn-save" onclick="downloadQr('${d.qr_image_url}', '${d.token}')">💾 QR 저장</button>
         <a class="btn-visit" href="${esc(d.visitor_url)}">🚀 입장/활동 시작</a>
       </div>
       <p class="done-tip">※ 'QR 저장' 으로 휴대폰 갤러리에 저장한 후, 현장에서 'QR 저장' 으로 다운로드된 이미지나 본 페이지의 링크로 입장 절차를 진행할 수 있습니다.</p>
+
+      <!-- PWA 설치 안내 -->
+      <div id="pwa-install-box" style="display:none;margin-top:14px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;text-align:left;">
+        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:6px;">📲 ${esc(d.project.name || '프로젝트')} 앱 설치</div>
+        <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;">
+          ${esc(d.project.name || '본 프로젝트')} 앱을 설치하면 등록 정보·QR·혜택을 한 곳에서 관리할 수 있습니다.
+        </div>
+        <button id="btn-pwa-install" style="width:100%;padding:11px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">📲 홈 화면에 앱 설치</button>
+        <div id="pwa-ios-tip" style="display:none;margin-top:8px;font-size:11px;color:#64748b;line-height:1.5;">
+          📱 iOS: Safari 하단 <b>공유 아이콘</b> → <b>"홈 화면에 추가"</b>
+        </div>
+      </div>
+
+      <!-- 메뉴로 돌아가기 — 등록 완료 후 다른 기능(Tour/Quiz/설문)으로 이동 -->
+      <a href="/v/${esc(serial)}" style="display:block;width:100%;margin-top:14px;padding:14px;background:#fff;border:1.5px solid #cbd5e1;color:#475569;border-radius:10px;text-align:center;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer;">
+        ◀ 메뉴로 돌아가기
+      </a>
     </div>`;
+  // 완료 카드 표시 후 PWA 설치 안내 갱신
+  refreshPwaInstallBox();
 }
 
 async function downloadQr(url, token) {

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>설문조사 · 모노라마 트래커</title>
+<!-- PWA — visitor 통합 PWA 와 동일한 manifest -->
+<link rel="manifest" id="manifest-link" href="/visitor/manifest.json">
+<meta name="theme-color" content="#15803d">
+<link rel="icon" href="/favicon-green.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon-green.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="스탬프투어">
+<style>
+  *{box-sizing:border-box;} body{margin:0;padding:0;background:#f8fafc;color:#1e293b;
+    font-family:-apple-system,"Malgun Gothic",sans-serif;}
+  .wrap{max-width:560px;margin:0 auto;padding:16px;}
+  .header{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px;
+    border-left:4px solid #15803d;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .header img{width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:10px;}
+  .title{font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px;}
+  .desc{font-size:13px;color:#475569;line-height:1.55;white-space:pre-line;}
+  .card{background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .row{margin-bottom:14px;}
+  .row > label{display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:6px;}
+  .row > label::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:#15803d;vertical-align:middle;margin-right:8px;}
+  .req{color:#dc2626;margin-left:2px;}
+  input[type=text],input[type=email],input[type=tel],textarea{width:100%;padding:10px 12px;
+    border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none;background:#fff;}
+  textarea{resize:vertical;min-height:70px;font-family:inherit;}
+  input:focus,textarea:focus{border-color:#15803d;}
+  .opts{display:flex;flex-direction:column;gap:6px;}
+  .opt-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;
+    border-radius:8px;cursor:pointer;user-select:none;background:#f8fafc;}
+  .opt-row:hover{border-color:#f9a8d4;}
+  .opt-row.checked{border-color:#15803d;background:#f0fdf4;font-weight:700;color:#166534;}
+  .opt-row input{width:18px;height:18px;accent-color:#15803d;cursor:pointer;}
+  .rating{display:flex;gap:6px;justify-content:space-between;}
+  .rating-btn{flex:1;padding:10px 0;border:1.5px solid #cbd5e1;border-radius:8px;background:#fff;
+    cursor:pointer;font-weight:700;color:#64748b;font-size:14px;}
+  .rating-btn.active{background:#15803d;color:#fff;border-color:#15803d;}
+  .yesno{display:flex;gap:8px;}
+  .yesno-btn{flex:1;padding:12px;border:1.5px solid #cbd5e1;border-radius:8px;background:#fff;
+    cursor:pointer;font-weight:700;color:#64748b;font-size:14px;}
+  .yesno-btn.active{background:#15803d;color:#fff;border-color:#15803d;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;
+    background:#dcfce7;color:#166534;margin-bottom:8px;}
+  .submit{width:100%;margin-top:6px;padding:14px;background:#15803d;color:#fff;border:none;
+    border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;}
+  .submit:disabled{background:#94a3b8;cursor:not-allowed;}
+  .submit:not(:disabled):hover{background:#166534;}
+  .done{background:#fff;border-radius:14px;padding:36px 20px;text-align:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);}
+  .done .ico{font-size:54px;color:#15803d;}
+  .done h2{margin:10px 0;font-size:20px;color:#166534;}
+  .done p{font-size:13px;color:#475569;line-height:1.55;}
+  .err{color:#dc2626;font-size:12px;margin-top:4px;}
+  .info-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;
+    font-size:12px;color:#166534;margin-bottom:12px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <a id="back-menu" href="#" style="display:inline-flex;align-items:center;gap:4px;color:#15803d;text-decoration:none;font-size:12px;font-weight:600;">◀ 메뉴로</a>
+    <button id="close-x" type="button" title="닫기" style="background:#fff;border:1.5px solid #cbd5e1;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#475569;line-height:1;">×</button>
+  </div>
+  <div class="card" id="loading" style="text-align:center;color:#94a3b8;">불러오는 중…</div>
+</div>
+<script>
+const serial = location.pathname.split('/').pop();
+const resvToken = new URLSearchParams(location.search).get('resv') || '';
+let surveyData = null;
+// 메뉴로 돌아가기 + × close
+(function(){
+  const a = document.getElementById('back-menu'); if (a && serial) a.href = `/v/${serial}`;
+  const x = document.getElementById('close-x');
+  if (x) x.onclick = () => { location.href = serial ? `/v/${serial}` : '/'; };
+})();
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ── PWA: 프로젝트별 manifest + 서비스워커 + 설치 안내 (visitor PWA 통합) ──
+if (serial) {
+  document.getElementById('manifest-link').setAttribute('href', `/api/visitor/manifest/${encodeURIComponent(serial)}`);
+}
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  refreshPwaInstallBox();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const box = document.getElementById('pwa-install-box');
+  if (box) box.style.display = 'none';
+});
+// visitor PWA 와 동일 SW 등록 — 어떤 visitor 페이지에서 설치하든 동일 PWA
+if ('serviceWorker' in navigator && serial) {
+  navigator.serviceWorker.register(`/v/${serial}/sw.js`, { scope: `/v/${serial}/` }).catch(() => {});
+}
+
+function applyProjectNameForInstall(name) {
+  if (!name) return;
+  try {
+    document.title = name;
+    const m = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (m) m.setAttribute('content', name);
+    const titleEl = document.getElementById('install-title');
+    if (titleEl) titleEl.textContent = `📲 ${name} 앱 설치`;
+  } catch (e) {}
+}
+
+function refreshPwaInstallBox() {
+  const box = document.getElementById('pwa-install-box');
+  if (!box) return;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone === true);
+  if (isStandalone) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const iosTip = document.getElementById('pwa-ios-tip');
+  const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (iosTip) iosTip.style.display = isiOS ? '' : 'none';
+  const btn = document.getElementById('btn-pwa-install');
+  if (!btn) return;
+  if (deferredInstallPrompt) {
+    btn.disabled = false; btn.style.opacity = ''; btn.textContent = '📲 홈 화면에 앱 설치';
+    btn.onclick = async () => {
+      try { await deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; } catch (e) {}
+      deferredInstallPrompt = null;
+      box.style.display = 'none';
+    };
+  } else if (isiOS) {
+    btn.disabled = true; btn.style.opacity = '.55';
+    btn.textContent = '↓ 아래 안내에 따라 설치해 주세요';
+  } else {
+    btn.disabled = true; btn.style.opacity = '.55';
+    btn.textContent = '⏳ 설치 가능 상태 대기 중...';
+  }
+}
+// 페이지 로드 800ms 후 자동 노출
+setTimeout(refreshPwaInstallBox, 800);
+
+async function init(){
+  try{
+    const url = `/api/survey/public/projects/${encodeURIComponent(serial)}/survey${resvToken?'?resv='+encodeURIComponent(resvToken):''}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if(!r.ok||!d.ok){renderError(d.message||'설문을 불러올 수 없습니다.');return;}
+    surveyData = d;
+    // 프로젝트명으로 앱 제목/메타 갱신 + 설치 박스 갱신
+    if (d.project && d.project.name) applyProjectNameForInstall(d.project.name);
+    render();
+    setTimeout(refreshPwaInstallBox, 50);
+  }catch(e){renderError('네트워크 오류로 설문을 열 수 없습니다.');}
+}
+
+function renderError(msg){
+  const back = serial ? `<a href="/v/${esc(serial)}" style="display:inline-flex;align-items:center;gap:4px;color:#15803d;text-decoration:none;font-size:13px;font-weight:600;margin-top:8px;">◀ 메뉴로</a>` : '';
+  document.getElementById('wrap').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      ${back}
+      <button type="button" title="닫기" onclick="location.href='/v/${esc(serial)}'" style="background:#fff;border:1.5px solid #cbd5e1;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#475569;line-height:1;">×</button>
+    </div>
+    <div class="card" style="text-align:center;padding:30px 20px;">
+      <div style="font-size:48px;">⚠</div>
+      <h2 style="color:#dc2626;margin:10px 0;font-size:18px;">${esc(msg)}</h2>
+      <p style="color:#64748b;font-size:13px;margin-top:6px;">잠시 후 다시 시도하시거나 메뉴로 돌아가 주세요.</p>
+      <a href="/v/${esc(serial)}" style="display:inline-block;margin-top:18px;background:#15803d;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:700;">◀ 메뉴로 돌아가기</a>
+    </div>`;
+}
+
+function render(){
+  const s = surveyData.survey;
+  const isRegistered = !!surveyData.reservation;
+  const img = s.image_url ? `<img src="${s.image_url}" alt="설문 이미지">` : '';
+  const badge = isRegistered
+    ? `<span class="badge">${esc(surveyData.reservation.mode === 'reservation' ? '사전등록자' : '현장등록자')} 응답</span>`
+    : `<span class="badge">방문객 응답</span>`;
+  const respondentHtml = isRegistered
+    ? `<div class="info-box">📌 ${esc(surveyData.reservation.fields.name || '')} 님의 응답으로 기록됩니다. 추가 정보 입력은 필요하지 않습니다.</div>`
+    : renderRespondentFields(surveyData.respondent_fields);
+  const questionsHtml = surveyData.questions.map((q,i)=>renderQuestion(q,i)).join('');
+
+  document.getElementById('wrap').innerHTML = `
+    <div class="header">
+      ${img}
+      ${badge}
+      <div class="title">${esc(s.title)}</div>
+      ${s.description ? `<div class="desc">${esc(s.description)}</div>` : ''}
+    </div>
+    <div class="card">
+      ${respondentHtml}
+      ${questionsHtml}
+      <div id="err-msg" class="err"></div>
+      <button class="submit" onclick="submitSurvey()">제출하기</button>
+    </div>
+    <!-- PWA 설치 안내 -->
+    <div id="pwa-install-box" style="display:none;background:#fff;border:1.5px solid #bbf7d0;border-radius:14px;padding:14px;margin-top:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+      <div id="install-title" style="font-size:14px;font-weight:800;color:#166534;margin-bottom:6px;text-align:center;">📲 스탬프투어 앱 설치</div>
+      <div style="font-size:12px;color:#475569;line-height:1.5;text-align:center;margin-bottom:10px;">
+        앱을 홈 화면에 추가하면 사전등록·현장등록·설문·Tour·Quiz 를 한 곳에서 빠르게 이용할 수 있습니다.
+      </div>
+      <button id="btn-pwa-install" type="button" style="width:100%;padding:12px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">📲 홈 화면에 앱 설치</button>
+      <div id="pwa-ios-tip" style="display:none;margin-top:10px;font-size:11px;color:#475569;background:#f0fdf4;border-radius:8px;padding:8px 10px;line-height:1.55;">
+        <b>iPhone (Safari)</b> 에서는<br>
+        ① 화면 하단의 <b>공유 버튼</b>(⬆) → ② <b>"홈 화면에 추가"</b> 선택 → ③ <b>"추가"</b> 를 눌러주세요.
+      </div>
+    </div>`;
+
+  // bind opt-row clicks after render
+  document.querySelectorAll('.opt-row input').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      if(inp.type==='radio'){
+        document.querySelectorAll(`input[name="${inp.name}"]`).forEach(el=>{
+          el.closest('.opt-row').classList.toggle('checked',el.checked);
+        });
+      }else{
+        inp.closest('.opt-row').classList.toggle('checked',inp.checked);
+      }
+    });
+  });
+}
+
+function renderRespondentFields(fields){
+  if(!fields||fields.length===0) return '';
+  return `<div class="info-box">📋 응답자 정보를 입력해 주세요.</div>` +
+    fields.map(f=>{
+      const req = f.required?'<span class="req">*</span>':'';
+      let body;
+      if(f.input_type==='email') body = `<input type="email" id="rf-${f.field_key}" placeholder="${esc(f.placeholder||'')}">`;
+      else if(f.input_type==='phone') body = `<input type="tel" id="rf-${f.field_key}" inputmode="numeric" placeholder="${esc(f.placeholder||'')}">`;
+      else if(f.input_type==='select'){
+        body = `<div class="opts">${(f.options||[]).map(o=>`
+          <label class="opt-row"><input type="checkbox" name="rf-${f.field_key}" value="${esc(o)}">${esc(o)}</label>`).join('')}</div>`;
+      } else body = `<input type="text" id="rf-${f.field_key}" placeholder="${esc(f.placeholder||'')}">`;
+      return `<div class="row"><label>${esc(f.label)}${req}</label>${body}</div>`;
+    }).join('');
+}
+
+function renderQuestion(q,i){
+  const req = q.is_required?'<span class="req">*</span>':'';
+  let body;
+  if(q.input_type==='text') body = `<input type="text" id="q-${q.id}" placeholder="">`;
+  else if(q.input_type==='textarea') body = `<textarea id="q-${q.id}" placeholder=""></textarea>`;
+  else if(q.input_type==='rating'){
+    body = `<div class="rating">${[1,2,3,4,5].map(n=>`
+      <button type="button" class="rating-btn" data-q="${q.id}" data-val="${n}" onclick="setRating(${q.id},${n})">${n}점</button>`).join('')}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;text-align:right;">1 매우 불만족 ↔ 5 매우 만족</div>`;
+  } else if(q.input_type==='yesno'){
+    body = `<div class="yesno">
+      <button type="button" class="yesno-btn" data-q="${q.id}" data-val="yes" onclick="setYesno(${q.id},'yes')">예</button>
+      <button type="button" class="yesno-btn" data-q="${q.id}" data-val="no" onclick="setYesno(${q.id},'no')">아니오</button>
+    </div>`;
+  } else if(q.input_type==='choice'){
+    const single = q.choice_type === 'single';
+    body = `<div class="opts">${(q.options||[]).map(o=>`
+      <label class="opt-row"><input type="${single?'radio':'checkbox'}" name="q-${q.id}" value="${esc(o)}">${esc(o)}</label>`).join('')}</div>`;
+  } else body = `<input type="text" id="q-${q.id}">`;
+  return `<div class="row"><label>${esc(q.label)}${req}</label>${body}</div>`;
+}
+
+const ratingAnswers = {};
+function setRating(qid,val){
+  ratingAnswers[qid] = val;
+  document.querySelectorAll(`[data-q="${qid}"]`).forEach(b=>{
+    b.classList.toggle('active', Number(b.dataset.val) === val);
+  });
+}
+const yesnoAnswers = {};
+function setYesno(qid,val){
+  yesnoAnswers[qid] = val;
+  document.querySelectorAll(`[data-q="${qid}"]`).forEach(b=>{
+    b.classList.toggle('active', b.dataset.val === val);
+  });
+}
+
+async function submitSurvey(){
+  const err = document.getElementById('err-msg');
+  err.textContent = '';
+  const answers = {};
+  for(const q of surveyData.questions){
+    let val = null;
+    if(q.input_type==='text'||q.input_type==='textarea'){
+      val = (document.getElementById('q-'+q.id)?.value || '').trim();
+    } else if(q.input_type==='rating'){
+      val = ratingAnswers[q.id] || null;
+    } else if(q.input_type==='yesno'){
+      val = yesnoAnswers[q.id] || null;
+    } else if(q.input_type==='choice'){
+      const sel = Array.from(document.querySelectorAll(`input[name="q-${q.id}"]:checked`)).map(x=>x.value);
+      val = q.choice_type==='single' ? (sel[0]||null) : sel;
+    }
+    if(q.is_required){
+      if(val===null||val===undefined||val===''||(Array.isArray(val)&&val.length===0)){
+        err.textContent = `'${q.label}' 항목은 필수입니다.`; return;
+      }
+    }
+    answers[q.id] = val;
+  }
+  // 익명 응답자 필드
+  let respondent_fields = null;
+  if(!surveyData.reservation && (surveyData.respondent_fields||[]).length){
+    respondent_fields = {};
+    for(const f of surveyData.respondent_fields){
+      let val;
+      if(f.input_type==='select'){
+        val = Array.from(document.querySelectorAll(`input[name="rf-${f.field_key}"]:checked`)).map(x=>x.value);
+      } else val = (document.getElementById('rf-'+f.field_key)?.value || '').trim();
+      if(f.required && (!val||(Array.isArray(val)&&val.length===0))){
+        err.textContent = `'${f.label}' 항목은 필수입니다.`; return;
+      }
+      respondent_fields[f.field_key] = val;
+    }
+  }
+  try{
+    const r = await fetch(`/api/survey/public/projects/${encodeURIComponent(serial)}/survey/submit`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ resv: resvToken, answers, respondent_fields }),
+    });
+    const d = await r.json();
+    if(!r.ok||!d.ok){err.textContent = d.message||'제출에 실패했습니다.';return;}
+    const thankMsg = d.thank_you_message || surveyData.survey.thank_you_message || '응답해주셔서 감사합니다.';
+    const rw = d.reward || {};
+    const hasReward = (d.reward_issued && d.qr_image_url && (rw.label || rw.message || rw.image_url));
+    // 경품 한도 소진 안내
+    const limitExceededBlock = (!d.reward_issued && d.reward_unavailable_reason === '한도 소진') ? `
+      <div style="margin-top:18px;padding:14px;background:#fee2e2;border:1px solid #fecaca;border-radius:10px;text-align:center;color:#991b1b;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">😢 경품이 모두 소진되었습니다</div>
+        <div style="font-size:12px;color:#7f1d1d;line-height:1.5;">소중한 응답에 감사드립니다. 다음 기회에 경품을 받아보실 수 있습니다.</div>
+      </div>` : '';
+    const wonFmt = n => Number(n||0).toLocaleString('ko-KR') + '원';
+    const rewardBlock = hasReward ? `
+      <div style="margin-top:18px;padding:18px;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#9a3412;margin-bottom:8px;">🎁 경품 수령 QR</div>
+        ${rw.image_url ? `<img src="${esc(rw.image_url)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ''}
+        ${rw.label   ? `<div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">${esc(rw.label)}</div>` : ''}
+        <div style="background:#fff;border:2px dashed #fcd34d;border-radius:12px;padding:12px;display:inline-block;margin:8px 0;">
+          <img src="${esc(d.qr_image_url)}" alt="경품 QR" style="width:220px;height:220px;display:block;">
+        </div>
+        <div style="font-size:13px;font-weight:700;color:#9a3412;background:#fde68a;padding:10px 14px;border-radius:8px;margin-top:8px;">
+          ${esc(rw.message || '입구에서 QR보여주시고 경품을 수령해주세요')}
+        </div>
+        <button onclick="downloadRewardQr('${esc(d.qr_image_url)}','${esc(d.qr_token)}')" style="width:100%;margin-top:12px;padding:12px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">💾 QR 저장</button>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;">※ QR을 휴대폰에 저장하거나 본 페이지를 캡처하여 보관해 주세요.</div>
+      </div>` : '';
+    // 경품이 발급된 경우 → 혜택 메시지를 안내 문구로
+    // 경품이 없는 경우 → 완료 메시지(thank_you_message)
+    const headerMsg = hasReward
+      ? (rw.message || '입구에서 QR보여주시고 경품을 수령해주세요')
+      : thankMsg;
+    document.getElementById('wrap').innerHTML = `
+      <div class="done">
+        <div class="ico">✓</div>
+        <h2>제출이 완료되었습니다</h2>
+        <p>${esc(headerMsg)}</p>
+      </div>
+      ${rewardBlock}
+      ${limitExceededBlock}`;
+  }catch(e){err.textContent = '네트워크 오류로 제출에 실패했습니다.';}
+}
+
+async function downloadRewardQr(url, token){
+  try{
+    const r = await fetch(url);
+    const blob = await r.blob();
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u; a.download = `reward_qr_${token}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(u);
+  }catch(e){ window.open(url,'_blank'); }
+}
+
+init();
+</script>
+</body>
+</html>

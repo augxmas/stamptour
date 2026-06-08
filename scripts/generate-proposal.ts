@@ -152,7 +152,7 @@ function addBullets(s: PptxGenJS.Slide, items: string[], opts?: any) {
   const rows = [
     ["회사명",          "(주)모노라마"],
     ["설립 비전",        "오프라인 운영 현장의 디지털 전환(DX) 가속"],
-    ["대표 솔루션",      "모노라마 트래커 (Stamp Tour + Gift + 입장관리 + 현장요원관리)"],
+    ["대표 솔루션",      "모노라마 트래커 (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
     ["적용 분야",        "전시·축제·관광·박물관·문화행사·기업 마케팅 이벤트·교육 체험"],
     ["기술 스택",        "Node.js + TypeScript + MySQL · PWA · 카카오 지도/우편번호 · 결제 연동"],
     ["운영 모델",        "SaaS 임대형(월·프로젝트 단위) + 온프레미스 구축형(별도 견적)"],
@@ -236,7 +236,7 @@ addSectionDivider(pres.addSlide(), "01.", "스탬프 투어 (목적지 방문 + 
 // ───────────────────────────────────────────────────────────────
 {
   const s = pres.addSlide();
-  addContentSlide(s, "01. Stamp Tour", "방문객이 스스로 움직이도록 만듭니다");
+  addContentSlide(s, "01. Stamp 목적지", "방문객이 스스로 움직이도록 만듭니다");
   s.addText("핵심 기능", { x: 0.5, y: 1.2, w: 6, h: 0.4, fontFace: F, fontSize: 16, bold: true, color: C.primary });
   addBullets(s, [
     "프로젝트별 목적지(Location) 자유 등록 — 각 목적지마다 QR 코드 자동 발급",
@@ -395,7 +395,7 @@ addSectionDivider(pres.addSlide(), "05.", "시스템 아키텍처 · 보안 · �
   // 계층 박스
   const layers = [
     { y: 1.4, w: 13.0, x: 0.15, t: "방문객 PWA · 사전등록 폼 · 현장요원 PWA · 가맹점 PWA · 관리자 콘솔(/admin) · 슈퍼바이저(/supervisor)", c: C.primary, label: "Presentation (PWA · Web)" },
-    { y: 2.5, w: 13.0, x: 0.15, t: "Stamp Tour · Gift · 사전·현장등록 · 현장요원관리 · 정산 엔진 · 발송이력 · 견적 자동 계산", c: C.accent, label: "Business Logic (Node.js + TypeScript)" },
+    { y: 2.5, w: 13.0, x: 0.15, t: "Stamp 목적지 · Gift · 사전·현장등록 · 현장요원관리 · 정산 엔진 · 발송이력 · 견적 자동 계산", c: C.accent, label: "Business Logic (Node.js + TypeScript)" },
     { y: 3.6, w: 13.0, x: 0.15, t: "MySQL 8 / MariaDB · fn_encrypt/fn_decrypt 함수 기반 컬럼 암호화 · 일/주/월 자동 백업", c: "9333EA", label: "Data Layer" },
     { y: 4.7, w: 13.0, x: 0.15, t: "SMTP · 카카오 지도/우편번호 · QR 라이브러리 · 결제(PG) 연동 인터페이스 · Push 알림(Web Push)", c: C.warn, label: "Integration" },
     { y: 5.8, w: 13.0, x: 0.15, t: "Docker · PM2 · Nginx · HTTPS(Let's Encrypt) · Rate Limit · Session 관리 · 로그·모니터링",  c: C.gray, label: "Infrastructure" },
@@ -765,7 +765,7 @@ addSectionDivider(pres.addSlide(), "08.", "도입 일정 · 운영 지원",
     ["대표",     "김창호"],
     ["사업자등록번호", "277-86-00185"],
     ["사업분야", "디지털 인터랙티브 콘텐츠 · 운영 시스템 SaaS"],
-    ["대표 솔루션", "모노라마 트래커 (Stamp Tour + Gift + 입장관리 + 현장요원관리)"],
+    ["대표 솔루션", "모노라마 트래커 (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
     ["주요 적용 분야", "전시·축제·관광·박물관·체험형 행사·기업 마케팅 이벤트·교육"],
     ["기술 스택", "Node.js · TypeScript · MySQL · PWA · 카카오 지도/우편번호 · Push 알림"],
     ["문의",     "contact@monorama.kr   ·   02-0000-0000   ·   https://monorama.kr"],

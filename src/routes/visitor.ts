@@ -22,7 +22,7 @@ function toUploadUrl(p?: string | null): string | null {
   return rel >= 0 ? `/${norm.slice(rel)}` : norm;
 }
 
-// 활성 목적지 목록 + 해당 방문자의 목적지별 방문 여부
+// 활성 Tour 목록 + 해당 방문자의 Tour별 방문 여부
 async function getVisitorLocations(projectId: number, visitorId: number) {
   const [rows] = await pool.execute(
     `SELECT pl.location_seq, pl.display_seq, pl.dest_type, pl.location_name, pl.location_desc, pl.image_path,
@@ -150,7 +150,7 @@ router.post("/visit", async (req, res) => {
   }
   const locationId = Number((locationRows as any)[0].id);
 
-  // 이미 방문한 목적지인지 확인 (재촬영 시 안내용)
+  // 이미 방문한 Tour인지 확인 (재촬영 시 안내용)
   const [dupRows] = await pool.execute(
     "SELECT id FROM visitor_visits WHERE visitor_id = ? AND location_id = ?",
     [visitorId, locationId],
@@ -212,7 +212,7 @@ router.post("/visit", async (req, res) => {
 router.get("/progress/:projectSerial", async (req, res) => {
   const projectSerial = req.params.projectSerial;
   const [projectRows] = await pool.execute(
-    "SELECT id, project_name, description FROM projects WHERE project_serial = ?",
+    "SELECT id, project_name, description, status, from_date, to_date FROM projects WHERE project_serial = ?",
     [projectSerial],
   );
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
@@ -223,6 +223,9 @@ router.get("/progress/:projectSerial", async (req, res) => {
   const projectId = Number(projectRow.id);
   const projectName = projectRow.project_name as string;
   const projectDesc = projectRow.description as string;
+  const projectStatus = String(projectRow.status || "");
+  const projectFromDate = projectRow.from_date;
+  const projectToDate   = projectRow.to_date;
   const phone = extractVisitorPhone(req, projectId);
   if (!phone) {
     res.status(400).json({ error: "phone_required" });
@@ -253,10 +256,41 @@ router.get("/progress/:projectSerial", async (req, res) => {
   const giftData = await getVisitorGift(projectId, visitorId);
   const projTiers = await getProjectTierStatus(projectId, visitorId, Number(totals.total_locations), Number(totals.visited_locations));
 
+  // 프로젝트 진행상태 — visitor 앱에서 QR 스캔 가능 여부 판별
+  const toYmd = (d: any): string => {
+    if (!d) return "";
+    if (typeof d === "string") return d.slice(0, 10);
+    if (d instanceof Date) {
+      const z = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    }
+    return String(d).slice(0, 10);
+  };
+  const fromYmd = toYmd(projectFromDate);
+  const toYmdStr = toYmd(projectToDate);
+  // 현재 KST 기준 yyyy-mm-dd
+  const now = new Date();
+  const todayYmd = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const notStartedYet =
+    projectStatus === "quoted" ||
+    projectStatus === "deposit_wait" ||
+    projectStatus === "deposit_confirmed" ||
+    projectStatus === "ready_to_start" ||
+    (!!fromYmd && todayYmd < fromYmd);
+  const alreadyEnded =
+    projectStatus === "completed" || projectStatus === "ended" || projectStatus === "cancelled" ||
+    (!!toYmdStr && todayYmd > toYmdStr);
+  const scanEnabled = !notStartedYet && !alreadyEnded;
   res.json({
     ok: true,
     project_name: projectName,
     description: projectDesc,
+    project_status: projectStatus,
+    project_from_date: fromYmd,
+    project_to_date: toYmdStr,
+    not_started_yet: notStartedYet,
+    already_ended: alreadyEnded,
+    scan_enabled: scanEnabled,
     totalLocations: Number(totals.total_locations),
     visitedLocations: Number(totals.visited_locations),
     locations,
@@ -343,7 +377,7 @@ async function getVisitorQuizzes(projectId: number, visitorId: number, locations
     }
   }
 
-  // 비연계 퀴즈 활성화 조건: 모든 활성 목적지 방문 완료
+  // 비연계 퀴즈 활성화 조건: 모든 활성 Tour 방문 완료
   const allVisited = locations.length > 0 && locations.every((l) => l.visited);
   const visitedLocIds = new Set(
     locations.filter((l) => l.visited).map((l) => l.location_id || l.id),
@@ -369,7 +403,7 @@ async function getVisitorQuizzes(projectId: number, visitorId: number, locations
       }
     } else {
       activated = allVisited;
-      if (!activated) activation_reason = "모든 목적지를 방문하면 활성화됩니다.";
+      if (!activated) activation_reason = "모든 Tour를 방문하면 활성화됩니다.";
     }
     return {
       id: q.id,
@@ -437,7 +471,7 @@ router.post("/quiz-answer", async (req, res) => {
       [visitorId, quiz.location_id],
     );
     if (!(vv as any[]).length) {
-      res.status(403).json({ error: "이 퀴즈는 연계 목적지를 먼저 방문해야 응시할 수 있습니다." });
+      res.status(403).json({ error: "이 퀴즈는 연계 Tour를 먼저 방문해야 응시할 수 있습니다." });
       return;
     }
   } else {
@@ -451,7 +485,7 @@ router.post("/quiz-answer", async (req, res) => {
     );
     const row = (chk as any[])[0];
     if (Number(row.total) === 0 || Number(row.visited) < Number(row.total)) {
-      res.status(403).json({ error: "이 퀴즈는 모든 목적지를 방문해야 응시할 수 있습니다." });
+      res.status(403).json({ error: "이 퀴즈는 모든 Tour를 방문해야 응시할 수 있습니다." });
       return;
     }
   }
@@ -678,12 +712,16 @@ router.get("/manifest/:projectSerial", async (req, res) => {
         { src: "/favicon-green.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
         { src: "/favicon-green.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
       ];
+  // 앱 이름·짧은 이름 모두 프로젝트명으로 통일
+  const safeName = name || "스탬프투어";
+  // scope 를 origin 전체로 두어 reserve / entry / survey / r 모든 visitor 경로에서
+  // 동일 PWA 로 설치 안내가 노출되고, 설치 후에도 standalone 윈도우 안에서 동작하도록 함
   res.type("application/manifest+json").send(JSON.stringify({
     id: `/v/${projectSerial}`,
-    name: `${name} 스탬프투어`,
-    short_name: name.slice(0, 12) || "스탬프투어",
+    name: safeName,
+    short_name: safeName.length > 12 ? safeName.slice(0, 12) + "…" : safeName,
     start_url: `/v/${projectSerial}`,
-    scope: `/v/${projectSerial}/`,
+    scope: `/`,
     display: "standalone",
     orientation: "portrait",
     background_color: "#f0fdf4",
@@ -693,9 +731,114 @@ router.get("/manifest/:projectSerial", async (req, res) => {
 });
 
 // 방문자 랜딩 브랜딩 (프로젝트별 랜딩페이지 이미지 / 아이콘 / 이름)
+// 방문자 인라인 개인정보 등록 — 사전·현장등록 기능이 없거나 빠른 등록 시
+//   POST /api/visitor/identity
+//   body: { serial, email, code, fields: { name, email, mobile } }
+//   동작: 이메일 인증 후 reservations 에 mode='entry' 로 저장 (기능 비활성 무시)
+router.post("/identity", async (req, res) => {
+  const body = req.body || {};
+  const serial = String(body.serial || "").trim();
+  const email  = String(body.email || "").trim().toLowerCase();
+  const code   = String(body.code || "").trim();
+  const fields = (body.fields && typeof body.fields === "object") ? body.fields : {};
+  if (!serial || !email || !code) { res.status(400).json({ ok: false, error: "missing" }); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ ok: false, error: "invalid_email" }); return;
+  }
+  if (!String(fields.name || "").trim()) { res.status(400).json({ ok: false, error: "missing_name" }); return; }
+
+  // 프로젝트 조회
+  const [pr] = await pool.execute(
+    `SELECT id, project_name FROM projects WHERE project_serial = ?`, [serial],
+  );
+  const proj = (Array.isArray(pr) ? pr[0] : null) as any;
+  if (!proj) { res.status(404).json({ ok: false, error: "project_not_found" }); return; }
+
+  // 인증코드 검증
+  const [codeRows] = await pool.execute(
+    `SELECT id FROM host_email_verify_codes
+      WHERE email = ? AND code = ? AND used = 0 AND expires_at > NOW()
+      ORDER BY id DESC LIMIT 1`,
+    [email, code],
+  );
+  if (!Array.isArray(codeRows) || codeRows.length === 0) {
+    res.status(400).json({ ok: false, error: "email_not_verified" }); return;
+  }
+  await pool.execute(`UPDATE host_email_verify_codes SET used = 1 WHERE id = ?`,
+    [(codeRows as any)[0].id]);
+
+  // 이미 같은 이메일로 등록 → 그대로 OK 처리 (재인증 후 자동 로그인 흐름)
+  const [exist] = await pool.execute(
+    `SELECT id FROM reservations WHERE project_id = ? AND email_lower = ? LIMIT 1`,
+    [proj.id, email],
+  );
+  if (Array.isArray(exist) && exist.length > 0) {
+    res.json({ ok: true, found: true, message: "이미 등록된 이메일입니다. 기존 정보로 로그인됩니다." });
+    return;
+  }
+
+  // 신규 등록 — mode='entry' 로 저장 (기능 활성/비활성 무시, 혜택 금액 0)
+  const token = require("crypto").randomBytes(20).toString("hex");
+  try {
+    await pool.execute(
+      `INSERT INTO reservations (project_id, mode, email_lower, token, fields_json, amount, status)
+       VALUES (?, 'entry', ?, ?, ?, 0, 'pending')`,
+      [proj.id, email, token, JSON.stringify(fields)],
+    );
+  } catch (e: any) {
+    if (e && (e.code === "ER_DUP_ENTRY" || e.errno === 1062)) {
+      res.json({ ok: true, found: true });
+      return;
+    }
+    throw e;
+  }
+
+  res.json({ ok: true, found: false, message: "등록되었습니다." });
+});
+
+// 방문자 프로필 조회 — 자동 로그인용 (이메일 기반, 인증코드 없이 조회 가능)
+//   /api/visitor/profile?serial=X&email=Y
+//   응답: 사전·현장등록 정보(name·email·mobile·기타 필드)
+router.get("/profile", async (req, res) => {
+  const serial = String(req.query.serial || "").trim();
+  const email  = String(req.query.email || "").trim().toLowerCase();
+  if (!serial || !email) { res.status(400).json({ ok: false, error: "missing" }); return; }
+  const [pr] = await pool.execute(
+    `SELECT id, project_name FROM projects WHERE project_serial = ? LIMIT 1`, [serial],
+  );
+  const proj = (Array.isArray(pr) ? pr[0] : null) as any;
+  if (!proj) { res.status(404).json({ ok: false, error: "project_not_found" }); return; }
+  const [rows] = await pool.execute(
+    `SELECT mode, status, fields_json, amount, token, qr_image_path,
+            created_at, activated_at, used_at
+       FROM reservations WHERE project_id = ? AND email_lower = ? LIMIT 1`,
+    [proj.id, email],
+  );
+  if (!Array.isArray(rows) || rows.length === 0) {
+    res.json({ ok: true, found: false }); return;
+  }
+  const r = rows[0] as any;
+  let fields: any = {};
+  try { fields = r.fields_json ? JSON.parse(r.fields_json) : {}; } catch {}
+  res.json({
+    ok: true, found: true,
+    profile: {
+      mode: r.mode, status: r.status, fields,
+      amount: Number(r.amount || 0),
+      token: r.token,
+      qr_image_url: toUploadUrl(r.qr_image_path),
+      created_at: r.created_at, activated_at: r.activated_at, used_at: r.used_at,
+      project_name: proj.project_name,
+    },
+  });
+});
+
 router.get("/project/:projectSerial", async (req, res) => {
   const [rows] = await pool.execute(
-    "SELECT project_name, supervisor_mobile_image_path, supervisor_favicon_path FROM projects WHERE project_serial = ?",
+    `SELECT project_name, supervisor_mobile_image_path, supervisor_favicon_path,
+            reservation_use, entry_use, tour_use, quiz_use, survey_use, survey_reward_use,
+            status, from_date, to_date, reservation_start_at
+       FROM projects WHERE project_serial = ?`,
     [req.params.projectSerial],
   );
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -708,6 +851,18 @@ router.get("/project/:projectSerial", async (req, res) => {
     project_name: p.project_name,
     landing_image_url: toUploadUrl(p.supervisor_mobile_image_path),
     icon_url: toUploadUrl(p.supervisor_favicon_path),
+    status: p.status,
+    from_date: p.from_date,
+    to_date: p.to_date,
+    reservation_start_at: p.reservation_start_at,
+    features: {
+      reservation:    Number(p.reservation_use) === 1,
+      entry:          Number(p.entry_use) === 1,
+      tour:           Number(p.tour_use) === 1,
+      quiz:           Number(p.quiz_use) === 1,
+      survey:         Number(p.survey_use) === 1,
+      survey_reward:  Number(p.survey_reward_use) === 1,
+    },
   });
 });
 
