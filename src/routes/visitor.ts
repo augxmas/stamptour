@@ -835,7 +835,7 @@ router.get("/profile", async (req, res) => {
 
 router.get("/project/:projectSerial", async (req, res) => {
   const [rows] = await pool.execute(
-    `SELECT project_name, supervisor_mobile_image_path, supervisor_favicon_path,
+    `SELECT id, project_name, supervisor_mobile_image_path, supervisor_favicon_path,
             reservation_use, entry_use, tour_use, quiz_use, survey_use, survey_reward_use,
             status, from_date, to_date, reservation_start_at
        FROM projects WHERE project_serial = ?`,
@@ -846,6 +846,15 @@ router.get("/project/:projectSerial", async (req, res) => {
     return;
   }
   const p = (rows as any)[0];
+  // 투표 활성 여부 — published 상태일 때만 vote 기능 노출
+  let voteActive = false;
+  try {
+    const [vRows] = await pool.execute(
+      "SELECT status FROM project_votes WHERE project_id = ?", [p.id],
+    );
+    const v = (Array.isArray(vRows) ? vRows[0] : null) as any;
+    voteActive = !!(v && v.status === "published");
+  } catch {}
   res.json({
     ok: true,
     project_name: p.project_name,
@@ -862,6 +871,7 @@ router.get("/project/:projectSerial", async (req, res) => {
       quiz:           Number(p.quiz_use) === 1,
       survey:         Number(p.survey_use) === 1,
       survey_reward:  Number(p.survey_reward_use) === 1,
+      vote:           voteActive,
     },
   });
 });

@@ -655,9 +655,17 @@
     }
 
     // 우상단 × 닫기 버튼 — 메뉴 외 화면에서는 메뉴로 복귀, 메뉴에서 누르면 앱 종료
+    // 출처 — landing 에서 왔으면 닫기/메뉴 시 랜딩 #menu 로 이동
+    const FROM_LANDING_V = new URLSearchParams(location.search).get('from') === 'landing';
     function closeApp() {
       const menu = document.getElementById('screen-menu');
       const onMenu = menu && !menu.classList.contains('hidden');
+      // landing 에서 진입한 경우 — 어떤 화면이든 랜딩 #menu 로 복귀
+      if (FROM_LANDING_V && projectSerial) {
+        try { if (typeof closeScanner === 'function') closeScanner(); } catch (e) {}
+        location.href = `/landing/${projectSerial}#menu`;
+        return;
+      }
       if (onMenu) {
         // 이미 메뉴 화면 → 실제 닫기 시도
         try { window.close(); } catch (e) {}
@@ -1483,12 +1491,14 @@
       const canTour   = previewMode ? !!f.tour   : (!!f.tour   && projectActive && !projectEnded);
       const canQuiz   = previewMode ? !!f.quiz   : (!!f.quiz   && projectActive && !projectEnded);
       const canSurvey = previewMode ? !!f.survey : (!!f.survey && projectActive && !projectEnded);
+      const canVote   = previewMode ? !!f.vote   : (!!f.vote   && projectActive && !projectEnded);
 
       const items = [];
       if (canReservation)  items.push({ key:'reservation', emoji:'📋', label:'사전등록',     desc:'미리 등록하고 혜택 받기',     url:`/reserve/${projectSerial}`, color:'#bfdbfe', fg:'#1e40af' });
       if (canEntry)        items.push({ key:'entry',       emoji:'🎫', label:'현장등록',     desc:'행사장에서 즉시 등록',       url:`/entry/${projectSerial}`,   color:'#bbf7d0', fg:'#166534' });
       if (canTour || canQuiz) items.push({ key:'tour',     emoji:'🎯', label: (canTour && canQuiz ? 'Tour · Quiz' : (canTour ? 'Tour' : 'Quiz')), desc:'각 장소 QR을 스캔하여 참여', action:'scan', color:'#fde68a', fg:'#92400e', primary:true });
       if (canSurvey)       items.push({ key:'survey',      emoji:'📝', label:'설문조사',     desc:'설문 응답하고 경품 받기',     url:`/survey/${projectSerial}`,  color:'#fce7f3', fg:'#9d174d' });
+      if (canVote)         items.push({ key:'vote',        emoji:'🏆', label:'투표',         desc:'참여기업에 투표하기',         url:`/vote/${projectSerial}`,    color:'#fef3c7', fg:'#92400e' });
 
       if (!items.length) {
         // 왜 비어있는지 상태별 안내 메시지 분기
@@ -1573,6 +1583,11 @@
 
     // 하단 "닫기" 버튼 — 랜딩 페이지에서 앱 종료
     function closeFromMenu() {
+      // landing 에서 진입한 경우 — 랜딩 #menu 로 복귀
+      if (FROM_LANDING_V && projectSerial) {
+        location.href = `/landing/${projectSerial}#menu`;
+        return;
+      }
       try { window.close(); } catch (e) {}
       setTimeout(() => {
         if (!document.hidden) { try { window.location.href = 'about:blank'; } catch (e) {} }

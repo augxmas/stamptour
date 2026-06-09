@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>대전 컨텐츠 페어 2026</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#1e293b;background:#fff;line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+
+  /* 상단 헤더 (고정) */
+  .header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid #e2e8f0;}
+  .header-inner{max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .logo{font-size:18px;font-weight:900;color:#0c4a6e;display:flex;align-items:center;gap:8px;}
+  .logo .badge{background:linear-gradient(135deg,#f59e0b,#dc2626);color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;}
+  .nav{display:flex;gap:6px;align-items:center;}
+  .nav a{padding:8px 14px;font-size:14px;font-weight:600;color:#475569;border-radius:8px;transition:all .15s;}
+  .nav a:hover{background:#f1f5f9;color:#0c4a6e;}
+  .cta{background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff !important;padding:10px 22px !important;font-weight:800 !important;border-radius:10px !important;box-shadow:0 4px 12px rgba(220,38,38,.25);}
+  .cta:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(220,38,38,.35);}
+  .menu-toggle{display:none;background:none;border:none;font-size:24px;cursor:pointer;}
+
+  /* Hero */
+  .hero{position:relative;min-height:520px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0c4a6e 0%,#0284c7 50%,#0ea5e9 100%);color:#fff;text-align:center;padding:60px 20px;overflow:hidden;}
+  .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(255,255,255,.15) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(245,158,11,.2) 0%,transparent 50%);}
+  .hero-content{position:relative;z-index:1;max-width:900px;}
+  .hero-badge{display:inline-block;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);padding:8px 20px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:1px;margin-bottom:24px;border:1px solid rgba(255,255,255,.3);}
+  .hero h1{font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1.15;margin-bottom:18px;text-shadow:0 4px 24px rgba(0,0,0,.2);}
+  .hero h1 .accent{background:linear-gradient(135deg,#fde047,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero-desc{font-size:18px;font-weight:500;opacity:.95;margin-bottom:30px;}
+  .hero-meta{display:inline-flex;flex-wrap:wrap;gap:22px;font-size:15px;font-weight:600;background:rgba(0,0,0,.18);padding:14px 28px;border-radius:14px;backdrop-filter:blur(8px);}
+  .hero-meta .icon{font-size:18px;margin-right:6px;}
+  .hero-cta{margin-top:30px;display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .hero-cta a{background:#fff;color:#0c4a6e;padding:14px 32px;border-radius:12px;font-weight:800;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.15);transition:all .15s;}
+  .hero-cta a:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.22);}
+  .hero-cta a.alt{background:linear-gradient(135deg,#f59e0b,#dc2626);color:#fff;}
+
+  /* 섹션 공통 */
+  section{padding:80px 24px;}
+  .wrap{max-width:1280px;margin:0 auto;}
+  .sec-title{text-align:center;margin-bottom:50px;}
+  .sec-title .label{display:inline-block;background:#fef3c7;color:#92400e;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:10px;}
+  .sec-title h2{font-size:38px;font-weight:900;color:#0c4a6e;letter-spacing:-1px;margin-bottom:8px;}
+  .sec-title p{color:#64748b;font-size:15px;}
+
+  /* 메뉴 카드 */
+  .menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+  .menu-card{background:#fff;border:2px solid #e2e8f0;border-radius:18px;padding:30px 22px;text-align:center;transition:all .2s;display:block;}
+  .menu-card:hover{border-color:#0284c7;transform:translateY(-4px);box-shadow:0 12px 32px rgba(2,132,199,.15);}
+  .menu-card .ic{font-size:48px;margin-bottom:14px;}
+  .menu-card h3{font-size:18px;font-weight:800;color:#0c4a6e;margin-bottom:8px;}
+  .menu-card p{font-size:13px;color:#64748b;line-height:1.6;}
+  .menu-card.featured{background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#f59e0b;}
+  .menu-card.featured h3{color:#92400e;}
+
+  /* 참여기업 그리드 */
+  .partner-section{background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);}
+  .partner-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+  .partner-cell{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px 14px;text-align:center;transition:all .15s;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+  .partner-cell:hover{border-color:#0284c7;transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08);}
+  .partner-cell img{max-width:100%;max-height:60px;object-fit:contain;}
+  .partner-cell .name{font-size:11px;color:#475569;font-weight:600;line-height:1.4;}
+  .partner-loading,.partner-empty{grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px;font-size:14px;}
+
+  /* 안내 정보 */
+  .info-section{background:#0c4a6e;color:#fff;}
+  .info-section .sec-title h2{color:#fff;}
+  .info-section .sec-title p{color:#bae6fd;}
+  .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  .info-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:30px 24px;backdrop-filter:blur(8px);}
+  .info-card .ic{font-size:34px;margin-bottom:10px;}
+  .info-card h3{font-size:16px;font-weight:800;color:#fde68a;margin-bottom:10px;}
+  .info-card p{font-size:14px;line-height:1.7;color:#e0f2fe;}
+  .info-card p b{color:#fff;}
+
+  /* Footer */
+  footer{background:#0f172a;color:#94a3b8;padding:40px 24px;text-align:center;font-size:13px;}
+  footer .ft-logo{font-size:16px;font-weight:800;color:#fff;margin-bottom:8px;}
+
+  /* 모바일 */
+  @media (max-width:960px){
+    .nav{display:none;}
+    .menu-toggle{display:block;color:#0c4a6e;}
+    .hero h1{font-size:38px;}
+    .hero-desc{font-size:15px;}
+    .hero-meta{font-size:13px;gap:14px;padding:12px 18px;}
+    .sec-title h2{font-size:28px;}
+    section{padding:54px 18px;}
+    .menu-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
+    .menu-card{padding:24px 14px;}
+    .menu-card .ic{font-size:38px;}
+    .menu-card h3{font-size:16px;}
+    .partner-grid{grid-template-columns:repeat(3,1fr);}
+    .info-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width:480px){
+    .header-inner{padding:10px 16px;}
+    .logo{font-size:15px;}
+    .cta{padding:8px 14px !important;font-size:12px;}
+    .hero h1{font-size:32px;}
+    .partner-grid{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* 모바일 메뉴 드로어 */
+  .mobile-nav{display:none;position:fixed;inset:0;background:rgba(15,23,42,.96);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+  .mobile-nav.open{display:flex;}
+  .mobile-nav a{color:#fff;font-size:20px;font-weight:700;padding:12px 24px;border-radius:10px;}
+  .mobile-nav a:hover{background:rgba(255,255,255,.1);}
+  .mobile-nav .close{position:absolute;top:20px;right:20px;font-size:32px;color:#fff;background:none;border:none;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="header">
+  <div class="header-inner">
+    <a href="#top" class="logo">
+      <span class="badge">DCF</span>
+      <span>대전 컨텐츠 페어 2026</span>
+    </a>
+    <nav class="nav">
+      <a href="#about">소개</a>
+      <a href="#menu">참여 안내</a>
+      <a href="#partners">참여 기업</a>
+      <a href="#info">행사 정보</a>
+      <a href="/reserve/20260606_0001?from=landing" class="cta">📋 사전예약하기</a>
+    </nav>
+    <button class="menu-toggle" onclick="document.getElementById('mnav').classList.add('open')" aria-label="메뉴">☰</button>
+  </div>
+</header>
+<div class="mobile-nav" id="mnav">
+  <button class="close" onclick="document.getElementById('mnav').classList.remove('open')">×</button>
+  <a href="#about" onclick="document.getElementById('mnav').classList.remove('open')">소개</a>
+  <a href="#menu" onclick="document.getElementById('mnav').classList.remove('open')">참여 안내</a>
+  <a href="#partners" onclick="document.getElementById('mnav').classList.remove('open')">참여 기업</a>
+  <a href="#info" onclick="document.getElementById('mnav').classList.remove('open')">행사 정보</a>
+  <a href="/reserve/20260606_0001?from=landing" class="cta">📋 사전예약하기</a>
+</div>
+
+<!-- Hero -->
+<section class="hero" id="top">
+  <div class="hero-content">
+    <div class="hero-badge">📍 DAEJEON CONTENTS FAIR 2026</div>
+    <h1>대전 <span class="accent">컨텐츠</span> 페어</h1>
+    <p class="hero-desc">콘텐츠 산업의 모든 것 — 21개 참여 기업과 함께하는 3일간의 축제</p>
+    <div class="hero-meta">
+      <span><span class="icon">📅</span>2026년 10월 16일 ~ 10월 18일</span>
+      <span><span class="icon">📍</span>대전 컨벤션 센터</span>
+      <span><span class="icon">🕐</span>10:00 ~ 18:00</span>
+    </div>
+    <div class="hero-cta">
+      <a href="/reserve/20260606_0001?from=landing" class="alt">📋 사전예약하기</a>
+      <a href="#partners">참여 기업 보기 →</a>
+    </div>
+  </div>
+</section>
+
+<!-- About / 소개 -->
+<section id="about">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">ABOUT</div>
+      <h2>행사 소개</h2>
+      <p>국내 콘텐츠 산업의 최전선에서 만나보는 혁신과 영감</p>
+    </div>
+    <div style="max-width:760px;margin:0 auto;text-align:center;font-size:16px;color:#475569;line-height:1.9;">
+      <p>대전 컨텐츠 페어 2026 은 국내 콘텐츠 산업의 미래를 미리 만나볼 수 있는 종합 박람회입니다.
+        애니메이션·만화·캐릭터·게임·웹툰·웹소설 등 다양한 분야의 21개 참여 기업이 함께합니다.</p>
+      <p style="margin-top:14px;">방문하시는 모든 분께 Tour 미션, Quiz, 설문조사, 인기 기업 투표 등 풍성한 참여 프로그램과 경품을 제공합니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Menu -->
+<section id="menu" style="background:#f8fafc;">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">PROGRAMS</div>
+      <h2>참여 안내</h2>
+      <p>아래 프로그램에 참여하시고 다양한 혜택을 받으세요</p>
+    </div>
+    <div class="menu-grid">
+      <a href="/reserve/20260606_0001?from=landing" class="menu-card featured">
+        <div class="ic">📋</div>
+        <h3>사전예약</h3>
+        <p>미리 등록하고<br>입장 혜택 받기</p>
+      </a>
+      <a href="/v/20260606_0001?from=landing" class="menu-card">
+        <div class="ic">🎯</div>
+        <h3>Tour · Quiz</h3>
+        <p>QR 스캔하고<br>퀴즈 풀어 경품 획득</p>
+      </a>
+      <a href="/survey/20260606_0001?from=landing" class="menu-card">
+        <div class="ic">📝</div>
+        <h3>설문조사</h3>
+        <p>의견을 들려주시고<br>설문 경품 받기</p>
+      </a>
+      <a href="/vote/20260606_0001?from=landing" class="menu-card">
+        <div class="ic">🏆</div>
+        <h3>인기 기업 투표</h3>
+        <p>최고의 참여 기업에게<br>투표하기</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- 참여 기업 -->
+<section id="partners" class="partner-section">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">PARTNERS</div>
+      <h2>참여 기업</h2>
+      <p id="partner-count">행사에 참여하는 기업을 확인하세요</p>
+    </div>
+    <div class="partner-grid" id="partner-grid">
+      <div class="partner-loading">불러오는 중…</div>
+    </div>
+  </div>
+</section>
+
+<!-- 행사 정보 -->
+<section id="info" class="info-section">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">INFORMATION</div>
+      <h2>행사 정보</h2>
+      <p>방문하시기 전 확인해 주세요</p>
+    </div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="ic">📅</div>
+        <h3>일정</h3>
+        <p><b>2026년 10월 16일(금) ~ 10월 18일(일)</b><br>3일간 진행<br>매일 10:00 ~ 18:00 운영</p>
+      </div>
+      <div class="info-card">
+        <div class="ic">📍</div>
+        <h3>장소</h3>
+        <p><b>대전 컨벤션 센터</b><br>대전광역시 유성구 엑스포로 107<br>지하철: 정부청사역 → 도보 15분</p>
+      </div>
+      <div class="info-card">
+        <div class="ic">💌</div>
+        <h3>문의</h3>
+        <p><b>(주)모노라마</b><br>tracker.monorama.kr<br>02-6925-4083</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="ft-logo">대전 컨텐츠 페어 2026</div>
+  <div>© 2026 (주)모노라마. All rights reserved.</div>
+  <div style="margin-top:12px;">
+    <a href="/reserve/20260606_0001?from=landing" style="color:#fde68a;font-weight:700;">📋 사전예약하기</a>
+  </div>
+</footer>
+
+<script>
+const SERIAL = '20260606_0001';
+
+// 참여기업 fetch + 렌더
+(async function loadPartners() {
+  const grid = document.getElementById('partner-grid');
+  try {
+    const r = await fetch(`/api/partner/public/projects/${SERIAL}/partners`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    const list = d.data || [];
+    if (!list.length) {
+      grid.innerHTML = '<div class="partner-empty">아직 등록된 참여 기업이 없습니다.</div>';
+      return;
+    }
+    document.getElementById('partner-count').textContent = `총 ${list.length}개 기업이 참여합니다`;
+    grid.innerHTML = list.map(p => {
+      const safe = String(p.name || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const cell = `
+        <div class="partner-cell" ${p.homepage ? `onclick="window.open('${String(p.homepage).replace(/'/g,'')}','_blank')"` : ''}>
+          ${p.logo_url
+            ? `<img src="${p.logo_url}" alt="${safe}">`
+            : `<div style="font-size:32px;color:#cbd5e1;">🏢</div>`}
+          <div class="name">${safe}</div>
+        </div>`;
+      return cell;
+    }).join('');
+  } catch (e) {
+    grid.innerHTML = '<div class="partner-empty">참여 기업 정보를 불러오지 못했습니다.</div>';
+  }
+})();
+
+// 스무스 스크롤
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>참여기업 투표 · 모노라마</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;max-width:100%;}
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:linear-gradient(180deg,#fef3c7 0%,#fffbeb 280px,#f8fafc 600px) fixed;color:#1e293b;min-height:100vh;}
+  .wrap{max-width:760px;margin:0 auto;padding:14px;width:100%;}
+  .card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:22px;width:100%;max-width:100%;overflow:hidden;}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .back{display:inline-flex;align-items:center;gap:4px;color:#92400e;text-decoration:none;font-size:13px;font-weight:600;}
+  .x{background:#fff;border:1.5px solid #cbd5e1;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#475569;}
+  .title{font-size:22px;font-weight:800;color:#92400e;}
+  .sub{font-size:13px;color:#64748b;margin-bottom:10px;}
+  .info-box{background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;line-height:1.6;margin:12px 0;}
+  .progress{font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;}
+  .progress b{color:#dc2626;font-size:16px;}
+
+  /* 경품 섹션 */
+  .sec-label{font-size:13px;font-weight:800;color:#0c4a6e;margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
+  .sec-label::before{content:'';width:4px;height:14px;background:#f59e0b;border-radius:2px;}
+  .prizes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px;}
+  .prize{background:#fff;border:2px solid #fcd34d;border-radius:14px;padding:10px 8px;text-align:center;min-width:0;overflow:hidden;box-shadow:0 4px 12px rgba(245,158,11,.08);}
+  .prize.gold{border-color:#f59e0b;background:linear-gradient(180deg,#fffbeb 0%,#fff 100%);}
+  .prize.silver{border-color:#94a3b8;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);}
+  .prize.bronze{border-color:#d97706;background:linear-gradient(180deg,#fff7ed 0%,#fff 100%);}
+  .prize .rank-badge{display:inline-block;font-size:11px;font-weight:900;padding:2px 8px;border-radius:999px;margin-bottom:6px;}
+  .prize.gold   .rank-badge{background:#f59e0b;color:#fff;}
+  .prize.silver .rank-badge{background:#94a3b8;color:#fff;}
+  .prize.bronze .rank-badge{background:#d97706;color:#fff;}
+  .prize-img{width:100%;height:80px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:8px;margin-bottom:6px;overflow:hidden;}
+  .prize-img img{max-width:100%;max-height:100%;object-fit:contain;}
+  .prize-img .ph{font-size:34px;color:#cbd5e1;}
+  .prize-title{font-size:11px;font-weight:700;color:#1e293b;line-height:1.4;min-height:30px;display:flex;align-items:center;justify-content:center;padding:0 2px;word-break:keep-all;}
+  .prize-desc{font-size:10px;color:#64748b;margin-top:3px;line-height:1.4;word-break:keep-all;}
+  .prize-winner{display:inline-block;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;font-size:9px;font-weight:700;margin-top:4px;}
+
+  /* 후보 그리드 — overflow 방지 */
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
+  .cand{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px 8px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;min-width:0;overflow:hidden;}
+  .cand:hover{border-color:#fcd34d;}
+  .cand.sel{border-color:#f59e0b;background:#fffbeb;box-shadow:0 4px 12px rgba(245,158,11,.15);}
+  .cand.voted{border-color:#15803d;background:#f0fdf4;cursor:not-allowed;}
+  .cand img{max-width:100%;max-height:60px;object-fit:contain;}
+  .cand-name{font-size:12px;font-weight:700;color:#1e293b;word-break:keep-all;overflow-wrap:break-word;width:100%;}
+  .cand-mark{position:relative;width:22px;height:22px;border-radius:50%;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;background:#fff;color:#fff;font-weight:700;font-size:13px;}
+  .cand.sel .cand-mark{border-color:#f59e0b;background:#f59e0b;}
+  .cand.voted .cand-mark{border-color:#15803d;background:#15803d;}
+  .submit{width:100%;background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;margin-top:18px;}
+  .submit:disabled{background:#94a3b8;cursor:not-allowed;opacity:.6;}
+  .done{text-align:center;padding:50px 20px;}
+  .done .ic{font-size:64px;}
+  .done h2{color:#15803d;margin:12px 0;}
+  .empty{text-align:center;color:#94a3b8;padding:40px 20px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;}
+  @media(max-width:480px){
+    .wrap{padding:10px;}
+    .card{padding:16px 14px;}
+    .title{font-size:19px;}
+    .prizes{gap:6px;}
+    .prize{padding:8px 6px;border-width:1.5px;}
+    .prize-img{height:60px;}
+    .prize-title{min-height:28px;}
+    .grid{gap:8px;}
+    .cand{padding:10px 6px;border-width:1.5px;}
+    .cand img{max-height:50px;}
+    .cand-name{font-size:11px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="root">
+    <div style="text-align:center;color:#94a3b8;padding:40px;">불러오는 중…</div>
+  </div>
+</div>
+<script>
+const serial = location.pathname.split('/').filter(Boolean)[1] || '';
+const FROM_LANDING = new URLSearchParams(location.search).get('from') === 'landing';
+const MENU_URL = serial ? (FROM_LANDING ? `/landing/${serial}#menu` : `/v/${serial}`) : '/';
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// localStorage 에서 visitor 정보 (이메일) 가져오기
+function getVoterEmail() {
+  try {
+    const raw = localStorage.getItem(`visitor_save_${serial}`);
+    if (raw) { const d = JSON.parse(raw); if (d && d.email) return d.email; }
+  } catch {}
+  return '';
+}
+
+let data = null;
+let selected = new Set();
+let alreadyVoted = false;
+
+(async function init() {
+  const email = getVoterEmail();
+  const url = `/api/vote/public/projects/${encodeURIComponent(serial)}/vote${email ? '?email=' + encodeURIComponent(email) : ''}`;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!r.ok || !d.ok) { renderError(d.message || '투표를 불러올 수 없습니다.'); return; }
+    data = d;
+    alreadyVoted = Array.isArray(d.my_votes) && d.my_votes.length > 0;
+    render();
+  } catch (e) { renderError('네트워크 오류'); }
+})();
+
+function renderError(msg) {
+  document.getElementById('root').innerHTML = `
+    <div class="top">
+      <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
+      <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+    </div>
+    <div class="done"><div class="ic">⚠</div><h2 style="color:#dc2626;">${esc(msg)}</h2>
+    <a href="${MENU_URL}" style="display:inline-block;margin-top:16px;background:#0284c7;color:#fff;text-decoration:none;padding:11px 28px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a></div>`;
+}
+
+function render() {
+  const limit = Number(data.vote.votes_per_visitor) || 1;
+  const candidates = data.candidates || [];
+  if (!candidates.length) {
+    document.getElementById('root').innerHTML = `
+      <div class="top">
+        <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
+        <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+      </div>
+      <div class="title">🏆 ${esc(data.vote.title || '참여기업 투표')}</div>
+      <div class="sub">${esc(data.project.name)}</div>
+      <div class="empty">투표 대상 참여기업이 없습니다.<br>승인된 참여기업만 후보로 노출됩니다.</div>`;
+    return;
+  }
+
+  if (alreadyVoted) {
+    const votedCompanies = (data.my_votes || []).map(id => {
+      const c = candidates.find(x => Number(x.id) === Number(id));
+      return c ? esc(c.name) : '';
+    }).filter(Boolean);
+    document.getElementById('root').innerHTML = `
+      <div class="top">
+        <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
+        <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+      </div>
+      <div class="done">
+        <div class="ic">✅</div>
+        <h2>이미 투표하셨습니다</h2>
+        <p style="color:#475569;font-size:14px;line-height:1.7;margin-top:10px;">
+          귀하의 투표 결과:<br>
+          <b style="color:#15803d;font-size:15px;">${votedCompanies.join(', ')}</b>
+        </p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:14px;">결과는 행사 종료 후 발표됩니다.</p>
+        <a href="${MENU_URL}" style="display:inline-block;margin-top:20px;background:#f59e0b;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('root').innerHTML = `
+    <div class="top">
+      <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
+      <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+    </div>
+    <div class="title">🏆 ${esc(data.vote.title || '참여기업 투표')}</div>
+    <div class="sub">${esc(data.project.name)}</div>
+    ${data.vote.description ? `<div class="info-box">${esc(data.vote.description)}</div>` : ''}
+    ${renderPrizes()}
+    <div class="info-box" style="background:#fffbeb;border-color:#fcd34d;">
+      📌 <b>한 분당 최대 ${limit}개</b>의 참여기업에 투표할 수 있습니다.<br>
+      ⚠ 제출 후에는 <b>변경/재투표 불가능</b>합니다. 신중히 선택해 주세요.
+    </div>
+    <div class="sec-label">🏢 투표 대상 참여기업</div>
+    <div class="progress">선택 <b id="sel-count">0</b> / ${limit}</div>
+    <div class="grid" id="cand-grid">
+      ${candidates.map(c => `
+        <div class="cand" data-id="${c.id}" onclick="toggleCand(${c.id})">
+          ${c.logo_url ? `<img src="${esc(c.logo_url)}" alt="${esc(c.name)}">` : `<div style="height:60px;display:flex;align-items:center;color:#cbd5e1;font-size:36px;">🏢</div>`}
+          <div class="cand-name">${esc(c.name)}</div>
+          <div class="cand-mark" data-mark="${c.id}"></div>
+        </div>
+      `).join('')}
+    </div>
+    <button class="submit" id="btn-submit" disabled onclick="submitVote()">📤 투표하기 (선택 0개)</button>`;
+}
+
+function renderPrizes() {
+  const tiers = Array.isArray(data.tiers) ? data.tiers : [];
+  if (!tiers.length) return '';
+  const klass = r => r === 1 ? 'gold' : r === 2 ? 'silver' : r === 3 ? 'bronze' : '';
+  const medal = r => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '🏅';
+  return `<div class="sec-label">🎁 수상 경품</div>
+    <div class="prizes">
+      ${tiers.map(t => `
+        <div class="prize ${klass(t.rank)}">
+          <div class="rank-badge">${medal(t.rank)} ${esc(t.award_title || (t.rank + '위'))}</div>
+          <div class="prize-img">
+            ${t.prize_image_url
+              ? `<img src="${esc(t.prize_image_url)}" alt="${esc(t.prize_title || '')}">`
+              : '<span class="ph">🎁</span>'}
+          </div>
+          ${t.prize_title ? `<div class="prize-title">${esc(t.prize_title)}</div>` : ''}
+          ${t.prize_desc  ? `<div class="prize-desc">${esc(t.prize_desc)}</div>` : ''}
+          <div class="prize-winner">${t.winner_count || 1}명</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function toggleCand(id) {
+  if (alreadyVoted) return;
+  const limit = Number(data.vote.votes_per_visitor) || 1;
+  if (selected.has(id)) {
+    selected.delete(id);
+  } else {
+    if (selected.size >= limit) {
+      alert(`최대 ${limit}개까지 선택 가능합니다.\n다른 항목을 해제 후 선택해 주세요.`);
+      return;
+    }
+    selected.add(id);
+  }
+  // UI 갱신
+  document.querySelectorAll('.cand').forEach(el => {
+    const idAttr = Number(el.dataset.id);
+    el.classList.toggle('sel', selected.has(idAttr));
+    const mark = el.querySelector('.cand-mark');
+    if (mark) mark.textContent = selected.has(idAttr) ? '✓' : '';
+  });
+  document.getElementById('sel-count').textContent = String(selected.size);
+  const btn = document.getElementById('btn-submit');
+  if (selected.size > 0) {
+    btn.disabled = false;
+    btn.textContent = `📤 투표하기 (선택 ${selected.size}개)`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = `📤 투표하기 (선택 0개)`;
+  }
+}
+
+async function submitVote() {
+  if (!selected.size) return;
+  const email = getVoterEmail();
+  if (!email) {
+    if (!confirm('투표하려면 먼저 등록(이메일 인증)이 필요합니다.\n등록 페이지로 이동하시겠습니까?')) return;
+    location.href = MENU_URL;
+    return;
+  }
+  const ok = confirm(`선택하신 ${selected.size}개 참여기업에 투표를 제출하시겠습니까?\n\n⚠ 제출 후에는 수정/재투표가 불가능합니다.`);
+  if (!ok) return;
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = '제출 중…';
+  try {
+    const r = await fetch(`/api/vote/public/projects/${encodeURIComponent(serial)}/vote/submit`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, partner_ids: Array.from(selected) }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      alert(d.message || d.error || '제출에 실패했습니다.');
+      btn.disabled = false; btn.textContent = `📤 투표하기 (선택 ${selected.size}개)`;
+      return;
+    }
+    // 완료 화면
+    alreadyVoted = true;
+    data.my_votes = Array.from(selected);
+    render();
+  } catch (e) {
+    alert('네트워크 오류로 제출에 실패했습니다.');
+    btn.disabled = false; btn.textContent = `📤 투표하기 (선택 ${selected.size}개)`;
+  }
+}
+</script>
+</body>
+</html>

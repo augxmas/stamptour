@@ -859,6 +859,7 @@
     <button class="tab-btn" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">발송이력</button>
     <button class="tab-btn" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
     <button class="tab-btn" id="tb-pform" onclick="switchTab('pform')">📋 참여기관등록 폼</button>
+    <button class="tab-btn" id="tb-vote" onclick="switchTab('vote')">🏆 투표등록</button>
     <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
   </div>
 
@@ -2417,6 +2418,68 @@
     </div>
   </div>
 
+  <!-- 투표등록 탭 -->
+  <div class="tab-panel" id="tab-vote">
+    <div class="panel-card">
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택</label>
+        <select id="vote-project" onchange="loadVoteConfig()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <div id="vote-body" style="display:none;">
+        <div class="fg"><label>투표 제목 <span class="hint">(예: 2026 컨텐츠 페어 인기상 투표)</span></label>
+          <input id="vote-title" type="text" maxlength="255" placeholder="투표 제목">
+        </div>
+        <div class="fg"><label>설명 <span class="hint">(선택)</span></label>
+          <textarea id="vote-description" rows="2" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;" placeholder="투표 안내 / 진행 규칙 등"></textarea>
+        </div>
+        <div class="fg" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:not-allowed;font-size:13px;color:#0c4a6e;">
+            <input type="checkbox" id="vote-target-partner" checked disabled style="width:18px;height:18px;cursor:not-allowed;">
+            <span><b>투표 대상: 참여기업</b> <span style="color:#94a3b8;font-weight:500;">— 현재는 참여기업 대상 투표만 지원</span></span>
+          </label>
+        </div>
+        <div class="fg" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label style="margin:0;">수상 등급 개수 <span class="req">*</span></label>
+          <input id="vote-tier-count" type="number" min="1" max="10" value="3" style="width:90px;" oninput="onVoteTierCountChange()">
+          <span style="font-size:11px;color:#94a3b8;">1 ~ 10 (예: 3 → 1·2·3등 수상)</span>
+          <label style="margin:0;margin-left:14px;">투표 가능 횟수 <span class="req">*</span></label>
+          <input id="vote-per-visitor" type="number" min="1" max="100" value="1" style="width:90px;">
+          <span style="font-size:11px;color:#94a3b8;">한 방문자가 투표할 수 있는 참여기업 개수 (기본 1)</span>
+        </div>
+        <div class="fg" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label style="margin:0;">상태</label>
+          <select id="vote-status" style="width:160px;">
+            <option value="draft">📝 작성중</option>
+            <option value="published">✓ 공개</option>
+            <option value="closed">🔒 마감</option>
+          </select>
+          <span style="font-size:11px;color:#94a3b8;">공개 상태에서만 visitor 앱에 노출됩니다.</span>
+        </div>
+        <div id="vote-tiers" style="margin-top:12px;"></div>
+        <div id="vote-msg" class="msg" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-p" style="flex:1;" onclick="saveVoteConfig()">💾 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 견적 상세 모달 -->
+  <div class="modal-ov" id="modal-quote-detail">
+    <div class="modal" style="width:90vw;max-width:560px;max-height:88vh;display:flex;flex-direction:column;">
+      <div class="card-header" style="flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#2563eb);">
+        <h2 id="qd-title">💰 견적 상세</h2>
+        <button class="modal-close" onclick="closeQuoteDetail()">×</button>
+      </div>
+      <div class="card-body" id="qd-body" style="overflow-y:auto;flex:1;min-height:0;padding:20px;"></div>
+      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:flex-end;">
+        <button class="btn btn-o" onclick="closeQuoteDetail()">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 사업자등록증 미리보기 모달 -->
   <div class="modal-ov" id="modal-bizcert-preview">
     <div class="modal" style="width:90vw;max-width:880px;max-height:92vh;display:flex;flex-direction:column;">
@@ -3527,7 +3590,7 @@ function switchTab(name) {
     if (btn.title) uiAlert(btn.title);
     return;
   }
-  ['proj','new','entry','agent','tour','quiz','survey','apps','settle','mail','mailtpl','pform','partner'].forEach(t => {
+  ['proj','new','entry','agent','tour','quiz','survey','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
     document.getElementById('tb-'+t).classList.toggle('act', t===name);
     document.getElementById('tab-'+t).classList.toggle('act', t===name);
   });
@@ -3539,6 +3602,7 @@ function switchTab(name) {
   if (name === 'mailtpl') loadEmailTemplates();
   if (name === 'pform') loadPartnerFormProjects();
   if (name === 'partner') loadPartnerListProjects();
+  if (name === 'vote') loadVoteProjects();
   if (name === 'tour') loadTourProjects();
   if (name === 'quiz') loadQuizProjects();
   if (name === 'survey') loadSurveyProjects();
@@ -10670,7 +10734,7 @@ function renderPartnerList() {
   wrap.innerHTML = summary + `<div class="tbl-wrap"><table style="width:100%;font-size:12px;">
     <thead><tr>
       <th>프로젝트</th><th>회사명</th><th>대표자</th><th>사업자등록증</th><th>로고</th>
-      <th>상태</th><th>담당자</th><th>직위</th><th>이메일</th><th>연락처</th>
+      <th>상태</th><th>견적</th><th>담당자</th><th>직위</th><th>이메일</th><th>연락처</th>
       <th>접수일시</th><th>승인일시</th><th>입금확인일시</th><th>관리</th>
     </tr></thead>
     <tbody>${filtered.map(p => {
@@ -10690,6 +10754,11 @@ function renderPartnerList() {
         <td style="text-align:center;">${bizBtn}</td>
         <td style="text-align:center;">${logoBtn}</td>
         <td style="text-align:center;">${statusBadge(p.status, p.deposit_confirmed_at)}</td>
+        <td style="text-align:center;white-space:nowrap;">
+          ${Number(p.quote_total) > 0
+            ? `<button class="btn btn-o btn-sm" style="padding:4px 10px;font-size:11px;font-weight:700;color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff;" onclick="openQuoteDetail(${origIdx})">💰 ${Number(p.quote_total).toLocaleString('ko-KR')}원</button>`
+            : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}
+        </td>
         <td>${esc(p.contact_name || '-')}</td>
         <td>${esc(p.contact_position || '-')}</td>
         <td style="font-size:11px;">${esc(p.contact_email || '-')}</td>
@@ -10725,6 +10794,67 @@ function openBizCertPreview(url, companyName) {
 function closeBizCertPreview() {
   document.getElementById('modal-bizcert-preview').classList.remove('open');
   document.getElementById('bp-body').innerHTML = '';
+}
+
+// 견적 상세 모달
+function openQuoteDetail(i) {
+  const p = partnerListCache[i];
+  if (!p) return;
+  const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+  const companyName = p.company_name_ko || p.company_name_en || '';
+  document.getElementById('qd-title').textContent = `💰 견적 상세 — ${companyName}`;
+  const body = document.getElementById('qd-body');
+  const items = (p.quote_json && Array.isArray(p.quote_json.items)) ? p.quote_json.items : [];
+  const total = Number(p.quote_total || 0);
+  if (!items.length && total === 0) {
+    body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px 20px;">견적 정보가 없습니다.</div>';
+    document.getElementById('modal-quote-detail').classList.add('open');
+    return;
+  }
+  // 카테고리별 그룹
+  const grouped = {};
+  items.forEach(it => {
+    const cat = it.category || '기타';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(it);
+  });
+  let html = '';
+  Object.keys(grouped).forEach(cat => {
+    const groupItems = grouped[cat];
+    const groupSum = groupItems.reduce((a, x) => a + Number(x.subtotal || 0), 0);
+    html += `<div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:800;color:#1d4ed8;">${esc(cat)}</span>
+        <span style="font-size:12px;color:#475569;font-family:Consolas,monospace;">${won(groupSum)}</span>
+      </div>`;
+    groupItems.forEach(it => {
+      html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed #cbd5e1;font-size:13px;">
+        <div>
+          <div><b>${esc(it.name)}</b> × ${Number(it.count) || 1}개</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">단가 ${won(it.unit_cost)}</div>
+        </div>
+        <div style="font-family:Consolas,monospace;font-weight:700;color:#1e293b;align-self:center;">${won(it.subtotal)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  // 합계 박스
+  html += `<div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border-radius:12px;padding:18px 22px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:15px;font-weight:700;">📊 견적 합계</span>
+    <span style="font-size:24px;font-weight:900;font-family:Consolas,monospace;">${won(total)}</span>
+  </div>`;
+  // 부가 정보 — 상태/일시
+  const fmt = s => { if (!s) return '-'; const d = new Date(s); if (isNaN(d)) return '-'; const z = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  html += `<div style="margin-top:14px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#475569;line-height:1.7;">
+    <div><b>접수일시</b> : ${esc(fmt(p.created_at))}</div>
+    ${p.approved_at ? `<div><b>승인일시</b> : <span style="color:#15803d;font-weight:700;">${esc(fmt(p.approved_at))}</span></div>` : ''}
+    ${p.deposit_confirmed_at ? `<div><b>입금확인</b> : <span style="color:#1d4ed8;font-weight:700;">${esc(fmt(p.deposit_confirmed_at))}</span></div>` : ''}
+  </div>`;
+  body.innerHTML = html;
+  document.getElementById('modal-quote-detail').classList.add('open');
+}
+function closeQuoteDetail() {
+  document.getElementById('modal-quote-detail').classList.remove('open');
 }
 
 // 로고 미리보기 — bizcert 모달 재활용
@@ -10831,6 +10961,182 @@ async function decidePartner(partnerId, decision) {
     await loadPartnerList();
     await uiAlert(lbl.done);
   } catch (e) { await uiAlert('네트워크 오류'); }
+}
+
+// ════════════════════════════════════════════════════════
+// 🏆 투표등록 — 수상 등급별 경품 설정
+// ════════════════════════════════════════════════════════
+let voteTiersData = [];   // 현재 입력 중인 등급 데이터 (서버 + 변경분)
+async function loadVoteProjects() {
+  const sel = document.getElementById('vote-project');
+  if (!sel || sel.options.length > 1) return;
+  try {
+    const r = await fetch('/api/host/projects?page=1&size=100');
+    const d = await r.json();
+    (d.data || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = `${p.project_name} (${p.project_serial})`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+async function loadVoteConfig() {
+  const pid = document.getElementById('vote-project').value;
+  const body = document.getElementById('vote-body');
+  if (!pid) { body.style.display = 'none'; return; }
+  body.style.display = '';
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote`);
+    const d = await r.json();
+    const vote = d.vote || {};
+    const tiers = Array.isArray(d.tiers) ? d.tiers : [];
+    document.getElementById('vote-title').value = vote.vote_title || '';
+    document.getElementById('vote-description').value = vote.description || '';
+    document.getElementById('vote-tier-count').value = vote.tier_count || 3;
+    document.getElementById('vote-per-visitor').value = vote.votes_per_visitor || 1;
+    document.getElementById('vote-status').value = vote.status || 'draft';
+    voteTiersData = tiers;
+    renderVoteTiers();
+  } catch (e) {
+    voteTiersData = [];
+    renderVoteTiers();
+  }
+}
+function onVoteTierCountChange() {
+  // 등급 수 변경 → 현재 데이터 보존하면서 list 길이 맞춤
+  const n = Math.max(1, Math.min(10, Number(document.getElementById('vote-tier-count').value) || 1));
+  document.getElementById('vote-tier-count').value = n;
+  // 기존 입력값 수집
+  saveTierInputsToCache();
+  // 부족하면 default 채움, 초과면 자름
+  while (voteTiersData.length < n) {
+    const rank = voteTiersData.length + 1;
+    voteTiersData.push({ tier_rank: rank, award_title: `${rank}위`, winner_count: 1, prize_title: '', prize_desc: '', prize_image_url: '' });
+  }
+  voteTiersData = voteTiersData.slice(0, n);
+  renderVoteTiers();
+}
+function saveTierInputsToCache() {
+  voteTiersData.forEach((t, i) => {
+    const aw = document.getElementById(`vt-award-${i}`);
+    const wc = document.getElementById(`vt-winner-${i}`);
+    const pt = document.getElementById(`vt-prize-title-${i}`);
+    const pd = document.getElementById(`vt-prize-desc-${i}`);
+    if (aw) t.award_title = aw.value;
+    if (wc) t.winner_count = Number(wc.value) || 1;
+    if (pt) t.prize_title = pt.value;
+    if (pd) t.prize_desc = pd.value;
+  });
+}
+function renderVoteTiers() {
+  const n = Number(document.getElementById('vote-tier-count').value) || 1;
+  // 데이터 길이가 안 맞으면 채움
+  while (voteTiersData.length < n) {
+    const rank = voteTiersData.length + 1;
+    voteTiersData.push({ tier_rank: rank, award_title: `${rank}위`, winner_count: 1, prize_title: '', prize_desc: '', prize_image_url: '' });
+  }
+  if (voteTiersData.length > n) voteTiersData = voteTiersData.slice(0, n);
+  const wrap = document.getElementById('vote-tiers');
+  if (!wrap) return;
+  wrap.innerHTML = voteTiersData.map((t, i) => {
+    const rank = i + 1;
+    const img = t.prize_image_url
+      ? `<div style="margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+           <img src="${esc(t.prize_image_url)}" alt="경품" style="max-width:140px;max-height:80px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;padding:4px;">
+           <button class="btn btn-o btn-sm" style="padding:4px 10px;font-size:11px;" type="button" onclick="deleteVoteImage(${rank})">🗑 이미지 삭제</button>
+         </div>`
+      : '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">등록된 경품 이미지 없음</div>';
+    return `<div style="border:1.5px solid #cbd5e1;border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#f8fafc;">
+      <div style="font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:10px;">🏆 ${rank}위</div>
+      <div class="grid2" style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">
+        <div class="fg" style="margin-bottom:0;"><label>수상 타이틀 <span class="req">*</span></label>
+          <input id="vt-award-${i}" type="text" maxlength="255" value="${esc(t.award_title||'')}" placeholder="예: 대상 / 최우수상 / 우수상"></div>
+        <div class="fg" style="margin-bottom:0;"><label>수상자 수 <span class="req">*</span></label>
+          <input id="vt-winner-${i}" type="number" min="1" value="${Number(t.winner_count)||1}"></div>
+      </div>
+      <div class="fg" style="margin-top:10px;margin-bottom:8px;"><label>경품 타이틀</label>
+        <input id="vt-prize-title-${i}" type="text" maxlength="255" value="${esc(t.prize_title||'')}" placeholder="예: 갤럭시 워치, 도서상품권 10만원"></div>
+      <div class="fg" style="margin-bottom:8px;"><label>경품 설명</label>
+        <textarea id="vt-prize-desc-${i}" rows="2" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;" placeholder="경품 상세 (옵션)">${esc(t.prize_desc||'')}</textarea></div>
+      <div class="fg" style="margin-bottom:0;"><label>경품 이미지 <span class="hint">(5MB 이하)</span></label>
+        ${img}
+        <input id="vt-img-${i}" type="file" accept="image/*" style="font-size:12px;" onchange="uploadVoteImage(${rank}, this)">
+      </div>
+    </div>`;
+  }).join('');
+}
+async function saveVoteConfig() {
+  const pid = document.getElementById('vote-project').value;
+  if (!pid) return;
+  saveTierInputsToCache();
+  const msg = document.getElementById('vote-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  // 검증
+  for (let i = 0; i < voteTiersData.length; i++) {
+    if (!voteTiersData[i].award_title || !voteTiersData[i].award_title.trim()) {
+      msg.className = 'msg e'; msg.textContent = `${i + 1}위 수상 타이틀을 입력해 주세요.`;
+      const el = document.getElementById(`vt-award-${i}`); if (el) el.focus();
+      return;
+    }
+  }
+  const ok = await uiConfirm('투표 설정을 저장하시겠습니까?', { title: '저장 확인', okText: '저장', cancelText: '취소' });
+  if (!ok) return;
+  const body = {
+    vote_title: document.getElementById('vote-title').value.trim(),
+    description: document.getElementById('vote-description').value,
+    tier_count: Number(document.getElementById('vote-tier-count').value) || 1,
+    votes_per_visitor: Math.max(1, Number(document.getElementById('vote-per-visitor').value) || 1),
+    status: document.getElementById('vote-status').value,
+    tiers: voteTiersData.map(t => ({
+      award_title: t.award_title, winner_count: t.winner_count,
+      prize_title: t.prize_title, prize_desc: t.prize_desc,
+    })),
+  };
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { msg.className = 'msg e'; msg.textContent = d.message || '저장 실패'; return; }
+    msg.className = 'msg g'; msg.textContent = '✓ 저장되었습니다.';
+  } catch (e) { msg.className = 'msg e'; msg.textContent = '네트워크 오류'; }
+}
+async function uploadVoteImage(rank, input) {
+  const pid = document.getElementById('vote-project').value;
+  const file = input.files && input.files[0];
+  if (!file || !pid) return;
+  // 저장이 되어있지 않은 경우 안내
+  const tierExists = voteTiersData[rank - 1] && voteTiersData[rank - 1].tier_rank;
+  if (!tierExists) {
+    alert('먼저 투표 설정을 저장한 뒤 이미지를 업로드해 주세요.');
+    input.value = '';
+    return;
+  }
+  // 서버 저장 보장 — 우선 현재 입력 저장
+  await saveVoteConfig();
+  const fd = new FormData(); fd.append('image', file);
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote/tiers/${rank}/image`, {
+      method: 'POST', body: fd,
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { alert(d.error || '업로드 실패'); return; }
+    voteTiersData[rank - 1].prize_image_url = d.image_url;
+    renderVoteTiers();
+  } catch (e) { alert('네트워크 오류'); }
+}
+async function deleteVoteImage(rank) {
+  const pid = document.getElementById('vote-project').value;
+  if (!pid) return;
+  const ok = await uiConfirm(`${rank}위 경품 이미지를 삭제하시겠습니까?`, { title: '이미지 삭제', okText: '삭제', cancelText: '취소' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote/tiers/${rank}/image`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { alert(d.error || '삭제 실패'); return; }
+    voteTiersData[rank - 1].prize_image_url = '';
+    renderVoteTiers();
+  } catch (e) { alert('네트워크 오류'); }
 }
 
 async function loadEmailTemplates() {

@@ -331,6 +331,34 @@ router.get("/public/projects/:serial/partner-form", async (req, res) => {
   res.json({ ok: true, project: { id: proj.id, name: proj.project_name, serial: proj.project_serial }, config: cfg });
 });
 
+// 공개 참여기업 목록 (랜딩 페이지용) — approved 만, 민감 정보 제외
+router.get("/public/projects/:serial/partners", async (req, res) => {
+  const serial = String(req.params.serial || "").trim();
+  const [pr] = await pool.execute(
+    "SELECT id, project_name FROM projects WHERE project_serial = ?", [serial],
+  );
+  const proj = (Array.isArray(pr) ? pr[0] : null) as any;
+  if (!proj) { res.status(404).json({ ok: false, error: "project_not_found" }); return; }
+  const [rows] = await pool.execute(
+    `SELECT id, company_name_ko, company_name_en, company_homepage, company_logo_path,
+            company_fields, booth_type
+       FROM project_partners
+      WHERE project_id = ? AND status = 'approved'
+      ORDER BY company_name_ko ASC, id ASC`,
+    [proj.id],
+  );
+  const data = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+    id: r.id,
+    name: r.company_name_ko || r.company_name_en || "",
+    name_en: r.company_name_en || null,
+    homepage: r.company_homepage || null,
+    logo_url: toUploadUrl(r.company_logo_path),
+    fields: (() => { try { return r.company_fields ? JSON.parse(r.company_fields) : []; } catch { return []; } })(),
+    booth_type: r.booth_type || null,
+  }));
+  res.json({ ok: true, project: { id: proj.id, name: proj.project_name, serial }, data });
+});
+
 // 신청 제출 (공개)
 router.post("/public/projects/:serial/partner/submit",
   upload.fields([{ name: "biz_cert", maxCount: 1 }, { name: "company_logo", maxCount: 1 }]),
