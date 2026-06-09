@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>참여기관 신청 · 모노라마</title>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f8fafc;color:#1e293b;}
+  .wrap{max-width:760px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:24px 22px;}
+  .title{font-size:20px;font-weight:800;color:#1d4ed8;margin:0 0 4px;}
+  .sub{font-size:13px;color:#64748b;margin-bottom:18px;}
+  h3{font-size:15px;color:#1e293b;margin:22px 0 12px;padding-bottom:6px;border-bottom:2px solid #1d4ed8;}
+  .fg{margin-bottom:14px;}
+  label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px;}
+  .req{color:#dc2626;}
+  input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],select,textarea{
+    width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:#1d4ed8;}
+  textarea{resize:vertical;min-height:70px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .chk-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .chk-list label{display:flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;color:#475569;cursor:pointer;font-weight:500;}
+  .chk-list input[type=checkbox]{width:16px;height:16px;cursor:pointer;}
+  .booth-list{display:flex;flex-direction:column;gap:8px;}
+  .booth-item{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;}
+  .booth-item:hover{border-color:#cbd5e1;}
+  .booth-item.sel{border-color:#1d4ed8;background:#eff6ff;}
+  .booth-item input{width:18px;height:18px;cursor:pointer;}
+  .booth-name{font-weight:700;color:#1e293b;font-size:14px;}
+  .booth-cost{font-weight:800;color:#dc2626;font-size:13px;}
+  .booth-desc{font-size:11px;color:#64748b;}
+  .facility-item{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;}
+  .facility-item:hover{border-color:#cbd5e1;}
+  .facility-item.sel{border-color:#15803d;background:#f0fdf4;}
+  .facility-item .ft-head{display:flex;align-items:center;gap:10px;}
+  .facility-item .ft-head input[type=checkbox]{width:18px;height:18px;cursor:pointer;}
+  .facility-item .ft-qty{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #cbd5e1;align-items:center;gap:8px;}
+  .facility-item.sel .ft-qty{display:flex;}
+  .facility-item .ft-qty input[type=number]{width:110px;font-size:13px;}
+  .agree-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:12px;color:#475569;line-height:1.6;max-height:160px;overflow-y:auto;margin-bottom:6px;white-space:pre-wrap;}
+  .agree-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#1e293b;font-weight:600;cursor:pointer;}
+  .agree-row input{width:18px;height:18px;cursor:pointer;}
+  .submit{width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;}
+  .submit:disabled{opacity:.5;cursor:not-allowed;background:#94a3b8;}
+  .err{color:#dc2626;font-size:12px;margin-top:6px;}
+  .info{background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;line-height:1.6;}
+  .done{text-align:center;padding:40px 20px;}
+  .done .icon{font-size:48px;}
+  .done h2{color:#15803d;margin:10px 0;}
+  .form-locked.locked{pointer-events:none;opacity:.45;filter:grayscale(.3);}
+  .step-pill{display:inline-block;padding:3px 10px;background:#e2e8f0;color:#475569;border-radius:999px;font-size:11px;font-weight:700;margin-right:6px;}
+  .step-pill.ok{background:#bbf7d0;color:#166534;}
+  .verify-line{display:flex;gap:6px;align-items:flex-start;}
+  .verify-line input{flex:1;}
+  .verify-line button{background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .verify-line button:disabled{opacity:.4;cursor:not-allowed;}
+  .verify-msg{font-size:11px;color:#64748b;margin-top:5px;line-height:1.6;white-space:pre-line;}
+  /* 인증코드 + 눈 아이콘 — input 안쪽 우측에 배치 */
+  .code-wrap{flex:1;position:relative;display:flex;}
+  .code-wrap input{flex:1;padding-right:42px;letter-spacing:6px;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:16px;font-weight:700;}
+  .code-eye{position:absolute;top:50%;right:6px;transform:translateY(-50%);background:transparent;border:none;padding:6px 8px;font-size:16px;cursor:pointer;color:#64748b;border-radius:6px;opacity:.55;transition:opacity .15s,background .15s;}
+  .code-eye:not(:disabled):hover{background:#f1f5f9;opacity:1;color:#1d4ed8;}
+  .code-eye:disabled{cursor:not-allowed;}
+  .code-eye.on{opacity:1;color:#1d4ed8;}
+  .verify-msg.ok{color:#15803d;}
+  .verify-msg.err{color:#dc2626;}
+  .quote-card{background:#f0f9ff;border:2px solid #1d4ed8;border-radius:12px;padding:16px 18px;margin-top:24px;}
+  .quote-card h3{margin:0 0 12px;border:none;color:#1d4ed8;font-size:16px;padding:0;}
+  .quote-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px dashed #cbd5e1;font-size:13px;}
+  .quote-row .desc{color:#64748b;font-size:11px;margin-top:2px;}
+  .quote-row .amount{font-weight:700;color:#1e293b;font-family:Consolas,monospace;}
+  .quote-total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 4px;margin-top:8px;border-top:2px solid #1d4ed8;font-size:16px;font-weight:800;color:#dc2626;}
+  .quote-empty{color:#94a3b8;font-size:13px;text-align:center;padding:20px 0;}
+  .review-box{background:#fff;border:1.5px solid #1d4ed8;border-radius:8px;padding:12px 14px;margin-top:12px;}
+  .review-box label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;margin:0;}
+  .review-box input{width:18px;height:18px;cursor:pointer;}
+  /* 커스텀 confirm 모달 */
+  .uc-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:300;display:none;align-items:center;justify-content:center;padding:14px;}
+  .uc-ov.open{display:flex;}
+  .uc-box{background:#fff;border-radius:16px;max-width:420px;width:100%;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.18);animation:ucPop .18s ease-out;}
+  @keyframes ucPop{from{transform:scale(.92);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .uc-head{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;padding:18px 22px;display:flex;align-items:center;gap:10px;}
+  .uc-head .ic{font-size:22px;}
+  .uc-head .t{font-weight:800;font-size:15px;}
+  .uc-body{padding:22px;color:#1e293b;font-size:14px;line-height:1.7;white-space:pre-line;}
+  .uc-foot{display:flex;gap:10px;padding:0 22px 22px;}
+  .uc-btn{flex:1;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .08s,opacity .15s;}
+  .uc-btn:active{transform:scale(.97);}
+  .uc-btn.ok{background:#1d4ed8;color:#fff;}
+  .uc-btn.ok:hover{background:#1e40af;}
+  .uc-btn.cancel{background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;}
+  .uc-btn.cancel:hover{background:#e2e8f0;}
+  .field-err{display:none;color:#dc2626;font-size:11px;margin-top:4px;font-weight:600;}
+  .field-err.show{display:block;}
+  input.invalid{border-color:#dc2626 !important;}
+  .addr-row{display:flex;gap:6px;}
+  .addr-row input{flex:1;background:#f8fafc;}
+  .addr-btn{background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="root">
+    <div style="text-align:center;color:#94a3b8;padding:30px;">불러오는 중…</div>
+  </div>
+</div>
+<!-- 커스텀 confirm/alert 모달 -->
+<div class="uc-ov" id="uc-modal">
+  <div class="uc-box">
+    <div class="uc-head"><span class="ic" id="uc-icon">📋</span><span class="t" id="uc-title">확인</span></div>
+    <div class="uc-body" id="uc-body"></div>
+    <div class="uc-foot" id="uc-foot">
+      <button class="uc-btn cancel" id="uc-cancel" type="button">취소</button>
+      <button class="uc-btn ok"     id="uc-ok"     type="button">확인</button>
+    </div>
+  </div>
+</div>
+<script>
+const serial = location.pathname.split('/').filter(Boolean)[1] || '';
+let cfg = null, projectName = '';
+let agreed = false, quoteReviewed = false, emailVerified = false, verifiedCode = null, verifiedEmail = null;
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function won(n){return Number(n||0).toLocaleString('ko-KR') + '원';}
+
+// 커스텀 confirm/alert 모달 — Promise<boolean> 반환
+function ucConfirm(opts) {
+  return new Promise(resolve => {
+    const ov = document.getElementById('uc-modal');
+    document.getElementById('uc-icon').textContent  = opts.icon  || '📋';
+    document.getElementById('uc-title').textContent = opts.title || '확인';
+    document.getElementById('uc-body').textContent  = opts.body  || '';
+    const okBtn = document.getElementById('uc-ok');
+    const caBtn = document.getElementById('uc-cancel');
+    okBtn.textContent = opts.okText || '확인';
+    caBtn.textContent = opts.cancelText || '취소';
+    caBtn.style.display = opts.alertOnly ? 'none' : '';
+    function cleanup(v) {
+      ov.classList.remove('open');
+      okBtn.onclick = null;
+      caBtn.onclick = null;
+      ov.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape' && !opts.alertOnly) cleanup(false);
+      else if (e.key === 'Enter') cleanup(true);
+    }
+    okBtn.onclick = () => cleanup(true);
+    caBtn.onclick = () => cleanup(false);
+    ov.onclick = e => { if (e.target === ov && !opts.alertOnly) cleanup(false); };
+    document.addEventListener('keydown', onKey);
+    ov.classList.add('open');
+    okBtn.focus();
+  });
+}
+function ucAlert(opts) { return ucConfirm({ ...opts, alertOnly: true }); }
+
+// ── 필드 검증/필터/포매팅 ──
+const KOR_RE = /[ㄱ-힝]/g;            // 한글 자모/완성형
+const ENG_OK_RE = /^[A-Za-z0-9\s.,\-&'()]*$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MOBILE_RE = /^01[016789]-\d{3,4}-\d{4}$/;
+const TEL_RE = /^0\d{1,2}-\d{3,4}-\d{4}$/;        // 02-1234-5678, 031-123-4567 등
+const FAX_RE = /^(0\d{1,2}-\d{3,4}-\d{4}|0\d{3}-\d{3,4}-\d{4})$/;  // 02-/031-/0303- 등
+// URL: 프로토콜 + 도메인.TLD 필수 (예: https://bookiss 만 입력 시 거부)
+const URL_RE = /^https?:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d{1,5})?(?:\/[^\s]*)?$/i;
+
+function filterEnglishOnly(el) {
+  el.value = el.value.replace(KOR_RE, '');
+}
+function formatMobile(el) {
+  const d = el.value.replace(/[^0-9]/g, '').slice(0, 11);
+  if (d.length <= 3) el.value = d;
+  else if (d.length <= 7) el.value = d.slice(0,3) + '-' + d.slice(3);
+  else el.value = d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7);
+}
+function formatTel(el) {
+  let d = el.value.replace(/[^0-9]/g, '').slice(0, 12);
+  if (!d) { el.value = ''; return; }
+  // 첫 그룹 자릿수: 02(서울)→2자리, 그 외 0X 또는 0XX → 3자리, 0XXX(0303 등) → 4자리
+  let g1Len;
+  if (d.startsWith('02')) g1Len = 2;
+  else if (d.startsWith('0303') || d.startsWith('0505') || d.startsWith('0507') || d.startsWith('0508')) g1Len = 4;
+  else g1Len = 3;
+  if (d.length <= g1Len) { el.value = d; return; }
+  const rest = d.slice(g1Len);
+  // 중간 그룹 — 전체 길이 따라 3/4 자리 결정
+  let g2Len;
+  if (rest.length <= 7) g2Len = 3;
+  else g2Len = 4;
+  if (rest.length <= g2Len) { el.value = d.slice(0,g1Len) + '-' + rest; return; }
+  el.value = d.slice(0,g1Len) + '-' + rest.slice(0,g2Len) + '-' + rest.slice(g2Len).slice(0,4);
+}
+function validateField(el, type, errId) {
+  const val = (el.value || '').trim();
+  const errEl = document.getElementById(errId);
+  let err = '';
+  if (val) {
+    switch (type) {
+      case 'engonly':
+        if (KOR_RE.test(val)) err = '영문/숫자만 입력 가능합니다. (한글 제거됨)';
+        else if (!ENG_OK_RE.test(val)) err = '영문/숫자/특수문자(.,-&\'())만 사용 가능합니다.';
+        break;
+      case 'email':
+        if (!EMAIL_RE.test(val)) err = '올바른 이메일 형식이 아닙니다. (예: name@example.com)';
+        break;
+      case 'mobile':
+        if (!MOBILE_RE.test(val)) err = '올바른 휴대폰 형식이 아닙니다. (예: 010-1234-5678)';
+        break;
+      case 'tel':
+        if (!TEL_RE.test(val)) err = '올바른 전화번호 형식이 아닙니다. (예: 02-1234-5678, 031-123-4567)';
+        break;
+      case 'fax':
+        if (!FAX_RE.test(val)) err = '올바른 팩스 형식이 아닙니다. (예: 02-1234-5678, 0303-1234-5678)';
+        break;
+      case 'url':
+        if (!URL_RE.test(val)) err = '올바른 URL 형식이 아닙니다. (예: https://example.com)';
+        break;
+    }
+  }
+  if (errEl) {
+    errEl.textContent = err;
+    errEl.classList.toggle('show', !!err);
+  }
+  el.classList.toggle('invalid', !!err);
+  return !err;
+}
+// 인증코드 보기 / 숨기기 토글
+function toggleCodeReveal() {
+  const inp = document.getElementById('f-verify_code');
+  const btn = document.getElementById('code-eye-btn');
+  if (!inp || !btn) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+    btn.classList.add('on');
+    btn.title = '코드 숨기기';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+    btn.classList.remove('on');
+    btn.title = '코드 보기';
+  }
+}
+function openPostcode(targetId) {
+  if (typeof daum === 'undefined' || !daum.Postcode) {
+    alert('주소 검색 서비스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+  new daum.Postcode({
+    oncomplete(data) {
+      const addr = data.roadAddress || data.autoRoadAddress || data.jibunAddress || '';
+      const v = `(${data.zonecode}) ${addr}`;
+      const t = document.getElementById(targetId);
+      if (t) t.value = v;
+      // 상세주소 input 자동 포커스
+      const detail = document.getElementById(targetId + '_detail');
+      if (detail) detail.focus();
+    },
+  }).open();
+}
+
+(async function init() {
+  try {
+    const r = await fetch(`/api/partner/public/projects/${encodeURIComponent(serial)}/partner-form`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) { renderError(d.message || '신청 폼을 불러올 수 없습니다.'); return; }
+    cfg = d.config; projectName = d.project.name;
+    document.title = `참여기관 신청 · ${projectName}`;
+    render();
+  } catch (e) { renderError('네트워크 오류'); }
+})();
+
+function renderError(msg) {
+  document.getElementById('root').innerHTML = `
+    <div class="done"><div class="icon">⚠</div>
+    <h2 style="color:#dc2626;">${esc(msg)}</h2></div>`;
+}
+
+// 라벨은 HTML 허용 (호출 측에서 통제) — small/strong 등 허용
+function fieldRow(label, html, required, id) {
+  const r = required ? ' <span class="req">*</span>' : '';
+  return `<div class="fg" ${id?`id="${id}"`:''}><label>${label}${r}</label>${html}</div>`;
+}
+function input(id, type, ph) { return `<input id="${id}" type="${type}" placeholder="${esc(ph||'')}" oninput="updateQuote()">`; }
+
+function boothListHtml(opts) {
+  return `<div class="booth-list">${opts.map((o, i) => {
+    const item = typeof o === 'string' ? { name: o, cost: 0, desc: '' } : o;
+    return `<label class="booth-item" data-i="${i}" onclick="selBooth(${i})">
+      <input type="radio" name="f-booth_type" value="${esc(item.name)}" data-cost="${item.cost||0}" onchange="updateQuote()">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <span class="booth-name">${esc(item.name)}</span>
+          ${item.cost ? `<span class="booth-cost">${won(item.cost)} <span style="font-size:10px;color:#94a3b8;font-weight:500;">/ 단가</span></span>` : ''}
+        </div>
+        ${item.desc ? `<div class="booth-desc" style="margin-top:3px;">${esc(item.desc)}</div>` : ''}
+      </div>
+    </label>`;
+  }).join('')}</div>`;
+}
+function selBooth(i) {
+  document.querySelectorAll('.booth-item').forEach(el => el.classList.toggle('sel', Number(el.dataset.i) === i));
+  setTimeout(updateQuote, 0);
+}
+function facilityListHtml(opts) {
+  return `<div class="booth-list">${opts.map((o, i) => {
+    const item = typeof o === 'string' ? { name: o, cost: 0, desc: '' } : o;
+    return `<div class="facility-item" data-i="${i}">
+      <label class="ft-head">
+        <input type="checkbox" name="f-facility" value="${esc(item.name)}" data-cost="${item.cost||0}" data-i="${i}" onchange="toggleFacility(this)">
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <span class="booth-name">${esc(item.name)}</span>
+            ${item.cost ? `<span class="booth-cost" style="color:#166534;">+ ${won(item.cost)} <span style="font-size:10px;color:#94a3b8;font-weight:500;">/ 단가</span></span>` : ''}
+          </div>
+          ${item.desc ? `<div class="booth-desc" style="margin-top:3px;">${esc(item.desc)}</div>` : ''}
+        </div>
+      </label>
+      <div class="ft-qty">
+        <span style="font-size:12px;color:#475569;font-weight:600;">개수</span>
+        <input type="number" min="1" value="1" data-facility-qty="${i}" oninput="updateQuote()">
+        <span id="ft-sub-${i}" style="margin-left:auto;font-size:13px;color:#166534;font-weight:700;font-family:Consolas,monospace;"></span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function toggleFacility(cb) {
+  const item = cb.closest('.facility-item');
+  item.classList.toggle('sel', cb.checked);
+  updateQuote();
+}
+
+function render() {
+  // 동의 본문
+  const termsBox = `
+    <div class="fg">
+      <label>약관 동의</label>
+      <div class="agree-box">${esc(cfg.terms_text || '약관 본문이 등록되지 않았습니다.')}</div>
+      <label class="agree-row"><input type="checkbox" id="agree-terms" onchange="onAgreeChange()"> 위 약관에 동의합니다 <span class="req">(필수)</span></label>
+    </div>
+    <div class="fg">
+      <label>개인정보 수집·이용 동의</label>
+      <div class="agree-box">${esc(cfg.privacy_text || '개인정보 처리 방침이 등록되지 않았습니다.')}</div>
+      <label class="agree-row"><input type="checkbox" id="agree-privacy" onchange="onAgreeChange()"> 개인정보 수집·이용에 동의합니다 <span class="req">(필수)</span></label>
+    </div>`;
+
+  // 기관정보 필드 (검증 포함)
+  const company = [];
+  const errDiv = id => `<div id="err-${id}" class="field-err"></div>`;
+  if (cfg.use_company_name_ko)  company.push(fieldRow('회사명(국문)',  input('f-company_name_ko','text','예: 모노라마'), true));
+  if (cfg.use_company_name_en)  company.push(fieldRow('회사명(영문) <small style="color:#94a3b8;font-weight:500;">(한글 입력 불가)</small>',
+    `<input id="f-company_name_en" type="text" placeholder="예: Monorama" oninput="filterEnglishOnly(this)" onblur="validateField(this,'engonly','err-f-company_name_en')">${errDiv('f-company_name_en')}`, false));
+  if (cfg.use_ceo_name)         company.push(fieldRow('대표자성명',    input('f-ceo_name','text','홍길동'), true));
+  if (cfg.use_ceo_email)        company.push(fieldRow('대표자 이메일',
+    `<input id="f-ceo_email" type="email" placeholder="ceo@example.com" oninput="updateQuote()" onblur="validateField(this,'email','err-f-ceo_email')">${errDiv('f-ceo_email')}`, true));
+  if (cfg.use_ceo_mobile)       company.push(fieldRow('대표자 모바일 <small style="color:#94a3b8;font-weight:500;">(010-1234-5678)</small>',
+    `<input id="f-ceo_mobile" type="tel" inputmode="numeric" maxlength="13" placeholder="010-1234-5678" oninput="formatMobile(this)" onblur="validateField(this,'mobile','err-f-ceo_mobile')">${errDiv('f-ceo_mobile')}`, false));
+  if (cfg.use_biz_cert_file)    company.push(fieldRow('사업자등록증',  `<input id="f-biz_cert" type="file" accept="image/*,.pdf" style="font-size:12px;">`, false));
+  if (cfg.use_company_phone)    company.push(fieldRow('전화번호 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678 / 031-1234-5678)</small>',
+    `<input id="f-company_phone" type="tel" inputmode="numeric" maxlength="13" placeholder="02-1234-5678" oninput="formatTel(this)" onblur="validateField(this,'tel','err-f-company_phone')">${errDiv('f-company_phone')}`, false));
+  if (cfg.use_company_fax)      company.push(fieldRow('팩스 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678 / 0303-1234-5678)</small>',
+    `<input id="f-company_fax" type="tel" inputmode="numeric" maxlength="14" placeholder="02-1234-5678" oninput="formatTel(this)" onblur="validateField(this,'fax','err-f-company_fax')">${errDiv('f-company_fax')}`, false));
+  if (cfg.use_company_address)  company.push(fieldRow('주소',
+    `<div class="addr-row">
+       <input id="f-company_address" type="text" placeholder="주소 검색 버튼을 눌러 주세요" readonly>
+       <button type="button" class="addr-btn" onclick="openPostcode('f-company_address')">🔍 주소 검색</button>
+     </div>
+     <input id="f-company_address_detail" type="text" placeholder="상세주소 (선택)" style="margin-top:6px;">`, false));
+  if (cfg.use_company_homepage) company.push(fieldRow('홈페이지 <small style="color:#94a3b8;font-weight:500;">(http://example.com — 도메인.TLD 필수)</small>',
+    `<input id="f-company_homepage" type="text" placeholder="https://example.com" oninput="validateField(this,'url','err-f-company_homepage')" onblur="validateField(this,'url','err-f-company_homepage')">${errDiv('f-company_homepage')}`, false));
+  if (cfg.use_company_logo)     company.push(fieldRow('참가기업 로고 (W:140, H:40)', `<input id="f-company_logo" type="file" accept="image/*" style="font-size:12px;">`, false));
+  if (cfg.use_company_fields && Array.isArray(cfg.field_options) && cfg.field_options.length) {
+    company.push(fieldRow('참가분야 (다중선택)',
+      `<div class="chk-list">${cfg.field_options.map(o => `<label><input type="checkbox" name="f-company_fields" value="${esc(o)}">${esc(o)}</label>`).join('')}</div>`,
+      false));
+  }
+
+  // 담당자정보 필드 (이메일은 인증 흐름 별도 — 견적 확인 후)
+  const contact = [];
+  if (cfg.use_contact_name)     contact.push(fieldRow('담당자성명',  input('f-contact_name','text','홍길동'), true));
+  if (cfg.use_contact_dept)     contact.push(fieldRow('부서',        input('f-contact_dept','text','마케팅팀'), false));
+  if (cfg.use_contact_position) contact.push(fieldRow('직위',        input('f-contact_position','text','과장'), false));
+  if (cfg.use_contact_phone)    contact.push(fieldRow('전화번호 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678)</small>',
+    `<input id="f-contact_phone" type="tel" inputmode="numeric" maxlength="13" placeholder="02-1234-5678" oninput="formatTel(this)" onblur="validateField(this,'tel','err-f-contact_phone')">${errDiv('f-contact_phone')}`, false));
+  if (cfg.use_booth_type && Array.isArray(cfg.booth_type_options) && cfg.booth_type_options.length) {
+    contact.push(fieldRow('부스타입 (단가 안내 — 견적 자동 계산)', boothListHtml(cfg.booth_type_options), false));
+  }
+  if (cfg.use_booth_count) {
+    contact.push(fieldRow('부스개수',
+      `<input id="f-booth_count" type="number" min="1" value="1" placeholder="1" oninput="updateQuote()" style="max-width:160px;">`,
+      false));
+  }
+  if (cfg.use_facility && Array.isArray(cfg.facility_options) && cfg.facility_options.length) {
+    contact.push(fieldRow('부대시설 (다중선택)',
+      `${facilityListHtml(cfg.facility_options)}<div style="font-size:11px;color:#94a3b8;margin-top:6px;">※ 선택한 시설에 대해 개수를 입력하시면 견적이 자동 계산됩니다.</div>`,
+      false));
+  }
+  if (cfg.use_extra_request) contact.push(fieldRow('기타요청 사항', `<textarea id="f-extra_request" placeholder="요청 사항을 자유롭게 입력하세요"></textarea>`, false));
+
+  // 견적 + 견적 확인 + 이메일 인증
+  const emailVerifyBlock = cfg.use_contact_email ? `
+    <div id="contact-email-block">
+      <h3>📧 담당자 이메일 인증</h3>
+      <div class="fg">
+        <label>이메일 <span class="req">*</span></label>
+        <div class="verify-line">
+          <input id="f-contact_email" type="email" placeholder="contact@example.com" disabled>
+          <button type="button" id="btn-send-code" onclick="sendVerifyCode()" disabled>인증코드 발송</button>
+        </div>
+        <div class="verify-line" style="margin-top:6px;">
+          <div class="code-wrap">
+            <input id="f-verify_code" type="password" maxlength="6" inputmode="numeric" placeholder="6자리 인증코드 입력" disabled autocomplete="one-time-code">
+            <button type="button" class="code-eye" id="code-eye-btn" onclick="toggleCodeReveal()" disabled title="코드 보기/숨기기" aria-label="코드 표시 전환">👁</button>
+          </div>
+          <button type="button" id="btn-verify-code" onclick="confirmVerifyCode()" disabled>확인</button>
+        </div>
+        <div id="verify-msg" class="verify-msg">※ 세금계산서 발행 시 입력하신 메일 주소로 발송됩니다.
+견적을 확인하신 후 이메일 인증을 진행해 주세요.
+🔐 발급되는 6자리 인증코드는 귀 기관의 로그인 비밀번호로 사용되므로 별도로 안전하게 저장해 주세요.</div>
+      </div>
+    </div>` : '';
+
+  document.getElementById('root').innerHTML = `
+    <div class="title">📋 참여기관 신청</div>
+    <div class="sub">${esc(projectName)}</div>
+
+    <div class="info">
+      <b>📌 신청 절차</b><br>
+      <span class="step-pill" id="pill-1">1</span>약관·개인정보 동의 →
+      <span class="step-pill" id="pill-2">2</span>정보 입력 →
+      <span class="step-pill" id="pill-3">3</span>견적 확인 →
+      <span class="step-pill" id="pill-4">4</span>이메일 인증 →
+      <span class="step-pill" id="pill-5">5</span>제출
+    </div>
+    ${Number(cfg.show_work_hours) === 1 ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#1e3a8a;line-height:1.6;">
+      🕐 <b>근무시간 안내</b> : ${esc(cfg.work_hours_from || '10:00')} ~ ${esc(cfg.work_hours_to || '18:00')}
+    </div>` : ''}
+
+    <h3>📜 약관 및 개인정보 동의</h3>
+    ${termsBox}
+
+    <div id="form-section" class="form-locked locked">
+      ${company.length ? `<h3>🏢 기관정보</h3>${company.join('')}` : ''}
+      ${contact.length ? `<h3>👤 담당자정보</h3>${contact.join('')}` : ''}
+
+      <!-- 동적 견적 -->
+      <div class="quote-card" id="quote-card">
+        <h3>💰 견적 (예상 비용 — 실시간 계산)</h3>
+        <div id="quote-body"><div class="quote-empty">부스타입/부스개수/부대시설을 선택하시면 자동 계산됩니다.</div></div>
+        <div class="review-box" id="quote-review-box" style="display:none;">
+          <label><input type="checkbox" id="quote-reviewed" onchange="onQuoteReviewChange()">
+            ✓ 위 견적 내용을 확인하였습니다 <span class="req">(필수)</span>
+          </label>
+        </div>
+      </div>
+
+      ${emailVerifyBlock}
+    </div>
+
+    <div id="err-msg" class="err"></div>
+    <button class="submit" id="btn-submit" disabled onclick="submitForm()">📤 제출하기 (약관 동의 필요)</button>
+  `;
+  updateQuote();
+  updateStepPills();
+}
+
+function onAgreeChange() {
+  const a = document.getElementById('agree-terms').checked;
+  const b = document.getElementById('agree-privacy').checked;
+  agreed = a && b;
+  const sec = document.getElementById('form-section');
+  if (sec) sec.classList.toggle('locked', !agreed);
+  updateStepPills();
+  updateSubmitBtn();
+}
+
+function onQuoteReviewChange() {
+  quoteReviewed = !!document.getElementById('quote-reviewed').checked;
+  // 견적 확인 → 이메일 인증 활성화
+  const emEl = document.getElementById('f-contact_email');
+  const sendBtn = document.getElementById('btn-send-code');
+  if (emEl) emEl.disabled = !quoteReviewed;
+  if (sendBtn) sendBtn.disabled = !quoteReviewed;
+  if (quoteReviewed && !emailVerified) {
+    showVerifyMsg('', '✓ 견적 확인 완료. 이메일을 입력하시고 인증코드를 발송해 주세요.');
+  }
+  updateStepPills();
+  updateSubmitBtn();
+}
+
+function updateStepPills() {
+  const set = (id, ok) => { const el = document.getElementById(id); if (el) el.classList.toggle('ok', ok); };
+  set('pill-1', agreed);
+  set('pill-2', agreed);
+  set('pill-3', quoteReviewed);
+  set('pill-4', emailVerified);
+  set('pill-5', agreed && quoteReviewed && emailVerified);
+}
+
+function updateSubmitBtn() {
+  const btn = document.getElementById('btn-submit');
+  if (!btn) return;
+  const ready = agreed && quoteReviewed && emailVerified;
+  btn.disabled = !ready;
+  if (ready) btn.textContent = '📤 제출하기';
+  else if (!agreed) btn.textContent = '📤 제출하기 (약관 동의 필요)';
+  else if (!quoteReviewed) btn.textContent = '📤 제출하기 (견적 확인 필요)';
+  else btn.textContent = '📤 제출하기 (이메일 인증 필요)';
+}
+
+// ── 견적 계산 (실시간) ──
+function getQuoteData() {
+  const items = [];
+  // 부스
+  const boothChecked = document.querySelector('input[name="f-booth_type"]:checked');
+  const boothCountEl = document.getElementById('f-booth_count');
+  if (boothChecked) {
+    const name = boothChecked.value;
+    const unit = Number(boothChecked.dataset.cost || 0);
+    const cnt = boothCountEl ? Math.max(1, Number(boothCountEl.value || 1)) : 1;
+    items.push({ category: '부스', name, unit_cost: unit, count: cnt, subtotal: unit * cnt });
+  }
+  // 부대시설
+  document.querySelectorAll('input[name="f-facility"]:checked').forEach(cb => {
+    const i = cb.dataset.i;
+    const qtyEl = document.querySelector(`input[data-facility-qty="${i}"]`);
+    const cnt = qtyEl ? Math.max(1, Number(qtyEl.value || 1)) : 1;
+    const unit = Number(cb.dataset.cost || 0);
+    items.push({ category: '부대시설', name: cb.value, unit_cost: unit, count: cnt, subtotal: unit * cnt });
+    // 합계 표시 (개수 영역 안)
+    const sub = document.getElementById(`ft-sub-${i}`);
+    if (sub) sub.textContent = unit ? `소계 ${won(unit * cnt)}` : '';
+  });
+  const total = items.reduce((a, x) => a + x.subtotal, 0);
+  return { items, total };
+}
+
+function updateQuote() {
+  const q = getQuoteData();
+  const body = document.getElementById('quote-body');
+  const reviewBox = document.getElementById('quote-review-box');
+  if (!body) return;
+  if (!q.items.length || q.total === 0) {
+    body.innerHTML = '<div class="quote-empty">부스타입 / 부대시설을 선택하시면 자동 계산됩니다.</div>';
+    if (reviewBox) reviewBox.style.display = 'none';
+    // 견적 사라지면 review 초기화
+    const cb = document.getElementById('quote-reviewed');
+    if (cb && cb.checked) { cb.checked = false; onQuoteReviewChange(); }
+    return;
+  }
+  let html = '';
+  let lastCat = '';
+  q.items.forEach(it => {
+    if (it.category !== lastCat) {
+      html += `<div style="font-size:11px;font-weight:800;color:#1d4ed8;margin-top:6px;">${esc(it.category)}</div>`;
+      lastCat = it.category;
+    }
+    html += `<div class="quote-row">
+      <div>
+        <div><b>${esc(it.name)}</b> × ${it.count}개</div>
+        <div class="desc">단가 ${won(it.unit_cost)}</div>
+      </div>
+      <div class="amount">${won(it.subtotal)}</div>
+    </div>`;
+  });
+  html += `<div class="quote-total"><span>합계 (예상)</span><span>${won(q.total)}</span></div>`;
+  body.innerHTML = html;
+  if (reviewBox) reviewBox.style.display = '';
+}
+
+// ── 이메일 인증코드 발송/확인 ──
+let sendCooldownTimer = null;
+async function sendVerifyCode() {
+  if (!quoteReviewed) { showVerifyMsg('err', '먼저 견적 내용을 확인해 주세요.'); return; }
+  const emEl = document.getElementById('f-contact_email');
+  const email = (emEl && emEl.value || '').trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showVerifyMsg('err', '담당자 이메일을 정확히 입력해 주세요.');
+    if (emEl) emEl.focus();
+    return;
+  }
+  const sendBtn = document.getElementById('btn-send-code');
+  sendBtn.disabled = true; sendBtn.textContent = '발송 중…';
+  try {
+    const r = await fetch('/api/partner/public/email-verify/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, project_serial: serial }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      showVerifyMsg('err', d.error === 'rate_limited' ? '잠시 후 다시 시도해 주세요. (1분 대기)' : '발송 실패');
+      sendBtn.disabled = false; sendBtn.textContent = '인증코드 발송';
+      return;
+    }
+    showVerifyMsg('ok', '✓ 이메일로 6자리 인증코드를 발송했습니다. (유효시간 10분)\n🔐 이 코드는 귀 기관의 로그인 비밀번호로 사용되므로 반드시 별도로 저장해 주세요.');
+    document.getElementById('f-verify_code').disabled = false;
+    document.getElementById('btn-verify-code').disabled = false;
+    document.getElementById('code-eye-btn').disabled = false;
+    document.getElementById('f-verify_code').focus();
+    let left = 30;
+    const setText = () => { sendBtn.textContent = left > 0 ? `재발송 (${left}초)` : '재발송'; };
+    setText(); sendBtn.disabled = true;
+    if (sendCooldownTimer) clearInterval(sendCooldownTimer);
+    sendCooldownTimer = setInterval(() => {
+      left--; setText();
+      if (left <= 0) { clearInterval(sendCooldownTimer); sendCooldownTimer = null; sendBtn.disabled = false; }
+    }, 1000);
+  } catch (e) {
+    showVerifyMsg('err', '네트워크 오류');
+    sendBtn.disabled = false; sendBtn.textContent = '인증코드 발송';
+  }
+}
+
+async function confirmVerifyCode() {
+  const email = (document.getElementById('f-contact_email').value || '').trim();
+  const code = (document.getElementById('f-verify_code').value || '').trim();
+  if (!code || code.length !== 6) { showVerifyMsg('err', '6자리 인증코드를 입력해 주세요.'); return; }
+  try {
+    const r = await fetch('/api/partner/public/email-verify/check', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { showVerifyMsg('err', '인증코드가 일치하지 않거나 만료되었습니다.'); return; }
+    emailVerified = true; verifiedCode = code; verifiedEmail = email;
+    showVerifyMsg('ok', '✓ 이메일 인증이 완료되었습니다. 제출이 가능합니다.');
+    document.getElementById('f-contact_email').disabled = true;
+    document.getElementById('f-verify_code').disabled = true;
+    document.getElementById('btn-send-code').disabled = true;
+    document.getElementById('btn-verify-code').disabled = true;
+    // 인증 완료 후엔 눈 아이콘도 잠금
+    document.getElementById('code-eye-btn').disabled = true;
+    updateStepPills();
+    updateSubmitBtn();
+  } catch (e) { showVerifyMsg('err', '네트워크 오류'); }
+}
+
+function showVerifyMsg(cls, txt) {
+  const el = document.getElementById('verify-msg');
+  if (!el) return;
+  el.className = 'verify-msg ' + cls;
+  el.textContent = txt;
+}
+
+async function submitForm() {
+  const errEl = document.getElementById('err-msg');
+  errEl.textContent = '';
+  if (!agreed) return showErr('약관 및 개인정보수집에 동의해 주세요.');
+  if (!quoteReviewed) return showErr('견적 내용을 확인 후 체크해 주세요.');
+  if (!emailVerified) return showErr('담당자 이메일 인증을 완료해 주세요.');
+
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const file = id => { const el = document.getElementById(id); return el && el.files && el.files[0] ? el.files[0] : null; };
+
+  if (cfg.use_company_name_ko && !v('f-company_name_ko')) return showErr('회사명(국문)을 입력해 주세요.', 'f-company_name_ko');
+  if (cfg.use_ceo_name && !v('f-ceo_name')) return showErr('대표자성명을 입력해 주세요.', 'f-ceo_name');
+  if (cfg.use_ceo_email) {
+    const em = v('f-ceo_email');
+    if (!em || !EMAIL_RE.test(em)) return showErr('대표자 이메일을 정확히 입력해 주세요.', 'f-ceo_email');
+  }
+  // 입력된 검증 필드 모두 형식 확인
+  const validations = [
+    ['f-company_name_en','engonly','err-f-company_name_en'],
+    ['f-ceo_mobile','mobile','err-f-ceo_mobile'],
+    ['f-company_phone','tel','err-f-company_phone'],
+    ['f-company_fax','fax','err-f-company_fax'],
+    ['f-company_homepage','url','err-f-company_homepage'],
+    ['f-contact_phone','tel','err-f-contact_phone'],
+  ];
+  for (const [fid, type, errId] of validations) {
+    const el = document.getElementById(fid);
+    if (!el || !el.value.trim()) continue;
+    if (!validateField(el, type, errId)) return showErr('입력 형식 오류가 있습니다. 빨간색 표시된 필드를 확인해 주세요.', fid);
+  }
+  if (cfg.use_contact_name && !v('f-contact_name')) return showErr('담당자성명을 입력해 주세요.', 'f-contact_name');
+
+  // 커스텀 확인 모달 — 견적 합계 + 안내 포함
+  const q = getQuoteData();
+  const summary = q.total > 0 ? `\n\n💰 신청 견적 합계: ${won(q.total)}` : '';
+  const ok = await ucConfirm({
+    icon: '📤',
+    title: '신청서 제출 확인',
+    body: `아래 내용으로 신청서를 제출하시겠습니까?\n\n• 회사명: ${(document.getElementById('f-company_name_ko')?.value || '-').trim()}\n• 담당자 이메일: ${verifiedEmail}${summary}\n\n신청 후에는 수정이 어려우니 입력 내용을 다시 한 번 확인해 주세요.`,
+    okText: '제출하기',
+    cancelText: '취소',
+  });
+  if (!ok) return;
+
+  const fd = new FormData();
+  const textFields = [
+    'company_name_ko','company_name_en','ceo_name','ceo_email','ceo_mobile',
+    'company_phone','company_fax','company_address','company_homepage',
+    'contact_name','contact_dept','contact_position','contact_phone',
+    'booth_count','extra_request',
+  ];
+  textFields.forEach(k => { const val = v(`f-${k}`); if (val) fd.append(k, val); });
+  // 주소 + 상세주소 결합 (있을 때만 덮어쓰기)
+  const baseAddr = v('f-company_address');
+  const detailAddr = v('f-company_address_detail');
+  if (baseAddr) {
+    fd.delete('company_address');
+    fd.append('company_address', detailAddr ? `${baseAddr} ${detailAddr}` : baseAddr);
+  }
+  fd.append('contact_email', verifiedEmail);
+  fd.append('email_verify_code', verifiedCode);
+  // 부스타입 + 단가
+  const bt = document.querySelector('input[name="f-booth_type"]:checked');
+  if (bt) {
+    fd.append('booth_type', bt.value);
+    fd.append('booth_unit_cost', String(bt.dataset.cost || 0));
+  }
+  // 부대시설 — JSON 으로 (각 시설별 개수 포함)
+  const facilityArr = q.items.filter(x => x.category === '부대시설').map(x => ({ name: x.name, unit_cost: x.unit_cost, count: x.count }));
+  if (facilityArr.length) {
+    fd.append('facility_json', JSON.stringify(facilityArr));
+    fd.append('facility', facilityArr.map(x => `${x.name}×${x.count}`).join(', '));
+  }
+  // 참가분야 (다중)
+  Array.from(document.querySelectorAll('input[name="f-company_fields"]:checked')).forEach(c => fd.append('company_fields', c.value));
+  // 견적 합계 + 전체 JSON
+  fd.append('quote_total', String(q.total));
+  fd.append('quote_json', JSON.stringify(q));
+  // 파일
+  const bizCert = file('f-biz_cert'); if (bizCert) fd.append('biz_cert', bizCert);
+  const logo = file('f-company_logo'); if (logo) fd.append('company_logo', logo);
+  // 동의
+  fd.append('agreed_terms', '1');
+  fd.append('agreed_privacy', '1');
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = '제출 중…';
+  try {
+    const r = await fetch(`/api/partner/public/projects/${encodeURIComponent(serial)}/partner/submit`, {
+      method: 'POST', body: fd,
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      showErr(d.message || d.error || '제출에 실패했습니다.');
+      btn.disabled = false; btn.textContent = '📤 제출하기';
+      return;
+    }
+    document.getElementById('root').innerHTML = `
+      <div class="done">
+        <div class="icon">✅</div>
+        <h2>신청이 접수되었습니다</h2>
+        <p style="color:#475569;font-size:14px;line-height:1.7;">${esc(d.message || '검토 후 별도 안내드리겠습니다.')}</p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:14px;">이 페이지를 닫으셔도 됩니다.</p>
+      </div>`;
+  } catch (e) {
+    showErr('네트워크 오류로 제출에 실패했습니다.');
+    btn.disabled = false; btn.textContent = '📤 제출하기';
+  }
+}
+
+function showErr(msg, focusId) {
+  document.getElementById('err-msg').textContent = msg;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); el.scrollIntoView({ behavior:'smooth', block:'center' }); } }
+}
+</script>
+</body>
+</html>

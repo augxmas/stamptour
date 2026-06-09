@@ -15,6 +15,7 @@ import merchantRouter from "./routes/merchant";
 import integrationRouter from "./routes/integration";
 import fieldAgentRouter from "./routes/field-agent";
 import surveyRouter from "./routes/survey";
+import partnerRouter from "./routes/partner";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
@@ -78,8 +79,14 @@ app.use("/api/merchant", merchantRouter);
 app.use("/api/integration", integrationRouter);
 app.use("/api/field-agent", fieldAgentRouter);   // 공개 등록 + 근태 PWA + admin (sess.host 검사 내부)
 app.use("/api/survey", surveyRouter);             // host 설문 설정 + 공개 응답
+app.use("/api/partner", partnerRouter);           // 참여기관 폼 설정 + 신청/관리
 
-app.use(express.static(path.join(process.cwd(), "public")));
+// 참가기관 로그인 — 정적 미들웨어보다 먼저 처리 (public/partner/index.html 자동 서빙 차단)
+app.get(["/partner", "/partner/"], (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "partner", "auth.html"));
+});
+// public 정적 파일 — 단, partner 디렉토리의 자동 index.html 서빙은 막음
+app.use(express.static(path.join(process.cwd(), "public"), { index: false }));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/admin", (_req, res) => {
@@ -242,6 +249,20 @@ app.get("/r/:serial/:token", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "redeem", "index.html"));
 });
 // 설문조사 응답 페이지 (공개)
+// 참가기관 로그인/대시보드 — serial 없이 접속 시 로그인
+//   /partner, /partner/ 둘 다 로그인 페이지로 (trailing slash 호환)
+app.get(["/partner", "/partner/"], (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "partner", "auth.html"));
+});
+app.get("/partner/:serial", (_req, res) => {
+  // serial 이 빈 문자열이면 (즉 /partner/ 접속 시) 로그인으로 fallback
+  const serial = String(_req.params.serial || "").trim();
+  if (!serial) {
+    res.sendFile(path.join(process.cwd(), "public", "partner", "auth.html"));
+    return;
+  }
+  res.sendFile(path.join(process.cwd(), "public", "partner", "index.html"));
+});
 app.get("/survey/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "survey", "index.html"));
 });

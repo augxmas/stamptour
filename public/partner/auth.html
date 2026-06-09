@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>참여기관 로그인 · 모노라마</title>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:linear-gradient(180deg,#e0f2fe 0%,#f0f9ff 280px,#f8fafc 600px) fixed;color:#1e293b;min-height:100vh;}
+  .wrap{max-width:760px;margin:0 auto;padding:14px;}
+  .card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:24px 22px;}
+  .title{font-size:20px;font-weight:800;color:#0284c7;margin:0 0 4px;}
+  .sub{font-size:13px;color:#64748b;margin-bottom:18px;}
+  h3{font-size:15px;color:#1e293b;margin:22px 0 12px;padding-bottom:6px;border-bottom:2px solid #0284c7;}
+  .fg{margin-bottom:14px;}
+  label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px;}
+  input[type=text],input[type=email],input[type=password]{
+    width:100%;padding:11px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none;
+  }
+  input:focus{border-color:#0284c7;}
+  .row{display:flex;gap:6px;}
+  .btn{background:#0284c7;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.full{width:100%;}
+  .btn.alt{background:#fff;color:#475569;border:1.5px solid #cbd5e1;}
+  .btn.alt:hover{background:#f8fafc;}
+  .btn.sm{padding:10px 14px;font-size:12px;}
+  .msg{font-size:12px;margin-top:6px;line-height:1.5;}
+  .msg.err{color:#dc2626;font-weight:700;}
+  .msg.ok{color:#15803d;font-weight:700;}
+  .link{font-size:12px;color:#0284c7;cursor:pointer;text-decoration:underline;font-weight:600;}
+  .code-wrap{flex:1;position:relative;display:flex;}
+  .code-wrap input{flex:1;padding-right:42px;letter-spacing:6px;text-align:center;font-family:Consolas,monospace;font-weight:700;}
+  .code-eye{position:absolute;top:50%;right:6px;transform:translateY(-50%);background:transparent;border:none;padding:6px 8px;font-size:16px;cursor:pointer;color:#64748b;border-radius:6px;opacity:.55;}
+  .code-eye:hover{opacity:1;color:#0284c7;background:#f1f5f9;}
+  .code-eye.on{opacity:1;color:#0284c7;}
+  .remember{display:flex;align-items:center;gap:8px;font-size:13px;color:#1e293b;cursor:pointer;margin:6px 0;}
+  .remember input{width:18px;height:18px;cursor:pointer;}
+  .panel-card{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:20px;margin-top:16px;}
+  .app-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:10px;}
+  .app-row:last-child{border-bottom:none;}
+  .app-info{flex:1;min-width:200px;}
+  .app-title{font-weight:800;color:#1e293b;font-size:14px;}
+  .app-sub{font-size:11px;color:#94a3b8;margin-top:3px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+  .badge.pending{background:#fef3c7;color:#92400e;}
+  .badge.approved{background:#d1fae5;color:#065f46;}
+  .badge.rejected{background:#fee2e2;color:#991b1b;}
+  .badge.deposit{background:#dbeafe;color:#1e40af;}
+  .info-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:12px;color:#0c4a6e;line-height:1.6;margin-bottom:14px;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .topbar .who{font-size:13px;color:#475569;font-weight:600;}
+  /* edit modal */
+  .mov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:300;display:none;align-items:center;justify-content:center;padding:14px;}
+  .mov.open{display:flex;}
+  .mbox{background:#fff;border-radius:14px;width:92vw;max-width:600px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+  .mhead{background:linear-gradient(135deg,#0284c7,#0ea5e9);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;font-weight:800;}
+  .mbody{padding:18px;overflow-y:auto;flex:1;}
+  .mfoot{padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;gap:8px;}
+  .x{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;}
+  /* 부스/시설 카드 */
+  .booth-list{display:flex;flex-direction:column;gap:8px;}
+  .booth-item{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;}
+  .booth-item.sel{border-color:#0284c7;background:#f0f9ff;}
+  .booth-item input{width:18px;height:18px;cursor:pointer;}
+  .bn{font-weight:700;color:#1e293b;font-size:14px;}
+  .bc{font-weight:800;color:#dc2626;font-size:13px;}
+  .bd{font-size:11px;color:#64748b;}
+  .facility-item{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;}
+  .facility-item.sel{border-color:#15803d;background:#f0fdf4;}
+  .facility-item .ft-head{display:flex;align-items:center;gap:10px;}
+  .facility-item .ft-head input[type=checkbox]{width:18px;height:18px;cursor:pointer;}
+  .facility-item .ft-qty{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #cbd5e1;align-items:center;gap:8px;}
+  .facility-item.sel .ft-qty{display:flex;}
+  .facility-item .ft-qty input[type=number]{width:110px;font-size:13px;}
+  /* 견적 카드 */
+  .quote-card{background:#f0f9ff;border:2px solid #0284c7;border-radius:12px;padding:14px 16px;margin-top:18px;}
+  /* 검증 오류 표시 */
+  .field-err{display:none;color:#dc2626;font-size:11px;margin-top:4px;font-weight:600;}
+  .field-err.show{display:block;}
+  input.invalid{border-color:#dc2626 !important;}
+  .addr-row{display:flex;gap:6px;}
+  .addr-row input{flex:1;background:#f8fafc;}
+  .addr-btn{background:#0284c7;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  /* 커스텀 confirm 모달 (저장 확인용) */
+  .uc-ov{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:400;display:none;align-items:center;justify-content:center;padding:14px;}
+  .uc-ov.open{display:flex;}
+  .uc-box{background:#fff;border-radius:14px;max-width:380px;width:100%;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.2);}
+  .uc-head{background:linear-gradient(135deg,#0284c7,#0ea5e9);color:#fff;padding:16px 20px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;}
+  .uc-body{padding:20px;color:#1e293b;font-size:14px;line-height:1.7;white-space:pre-line;}
+  .uc-foot{display:flex;gap:8px;padding:0 18px 18px;}
+  .uc-btn{flex:1;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;}
+  .uc-btn.ok{background:#0284c7;color:#fff;}
+  .uc-btn.ok:hover{background:#075985;}
+  .uc-btn.cancel{background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="card">
+    <div class="title">📋 참여기관 로그인</div>
+    <div class="sub">이메일과 인증코드로 로그인하세요.</div>
+
+    <!-- 로그인 화면 -->
+    <div id="login-view">
+      <div class="fg">
+        <label>이메일</label>
+        <input id="login-email" type="email" placeholder="contact@example.com">
+      </div>
+      <div class="fg">
+        <label>인증코드 <span style="color:#94a3b8;font-weight:500;">(등록 시 받으신 6자리)</span></label>
+        <div class="row">
+          <div class="code-wrap">
+            <input id="login-code" type="password" maxlength="6" inputmode="numeric" placeholder="6자리 코드" autocomplete="one-time-code">
+            <button type="button" class="code-eye" onclick="toggleEye('login-code', this)" title="보기/숨기기">👁</button>
+          </div>
+        </div>
+      </div>
+      <label class="remember">
+        <input type="checkbox" id="login-save" checked>
+        <span>이메일·인증코드 자동 저장 <span style="color:#94a3b8;font-weight:500;">(다음 방문 시 자동 입력)</span></span>
+      </label>
+      <div id="login-msg" class="msg"></div>
+      <button class="btn full" onclick="doLogin()">🔑 로그인</button>
+      <div style="text-align:center;margin-top:14px;">
+        <span class="link" onclick="showForgot()">🔐 비밀번호(인증코드)를 잊으셨나요?</span>
+      </div>
+    </div>
+
+    <!-- 비밀번호 분실 화면 -->
+    <div id="forgot-view" style="display:none;">
+      <div class="info-box">
+        등록 시 사용한 <b>담당자 이메일</b> 을 입력하시면 새 6자리 인증코드를 발송해 드립니다.<br>
+        <b>새 코드가 귀 기관의 새 비밀번호가 됩니다</b> — 반드시 별도로 저장해 주세요.
+      </div>
+      <div class="fg">
+        <label>이메일</label>
+        <input id="forgot-email" type="email" placeholder="등록 시 사용한 담당자 이메일">
+      </div>
+      <div id="forgot-msg" class="msg"></div>
+      <div class="row">
+        <button class="btn alt full" onclick="showLogin()">← 로그인</button>
+        <button class="btn full" id="forgot-btn" onclick="doForgot()">📧 새 인증코드 발송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 파일 미리보기 모달 -->
+<div class="mov" id="file-preview-modal" style="z-index:350;">
+  <div class="mbox" style="max-width:880px;">
+    <div class="mhead">
+      <span id="fp-title">파일 미리보기</span>
+      <button class="x" onclick="closeFilePreview()">×</button>
+    </div>
+    <div class="mbody" id="fp-body" style="padding:0;background:#f8fafc;text-align:center;min-height:50vh;display:flex;align-items:center;justify-content:center;"></div>
+    <div class="mfoot" style="display:flex;justify-content:flex-end;">
+      <a id="fp-download" href="#" target="_blank" rel="noopener" class="btn sm" style="background:#0284c7;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;">⬇ 새 탭에서 열기</a>
+    </div>
+  </div>
+</div>
+
+<!-- 커스텀 confirm 모달 -->
+<div class="uc-ov" id="uc-modal">
+  <div class="uc-box">
+    <div class="uc-head"><span id="uc-icon">💾</span><span id="uc-title">저장 확인</span></div>
+    <div class="uc-body" id="uc-body">저장하시겠습니까?</div>
+    <div class="uc-foot">
+      <button class="uc-btn cancel" id="uc-cancel" type="button">취소</button>
+      <button class="uc-btn ok" id="uc-ok" type="button">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수정 모달 -->
+<div class="mov" id="edit-modal">
+  <div class="mbox">
+    <div class="mhead">
+      <span id="edit-title">신청서 수정</span>
+      <button class="x" onclick="closeEdit()">×</button>
+    </div>
+    <div class="mbody" id="edit-body"></div>
+    <div class="mfoot">
+      <button class="btn alt" style="flex:1;" onclick="closeEdit()">취소</button>
+      <button class="btn" style="flex:2;" onclick="saveEdit()">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SAVE_KEY = 'partner_login_save';
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function won(n){return Number(n||0).toLocaleString('ko-KR') + '원';}
+function fmtDT(s){if(!s)return '-';const d=new Date(s);if(isNaN(d))return '-';const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;}
+
+// ── 필드 검증/필터/포매팅 ──
+const KOR_RE = /[ㄱ-힝]/g;
+const ENG_OK_RE = /^[A-Za-z0-9\s.,\-&'()]*$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MOBILE_RE = /^01[016789]-\d{3,4}-\d{4}$/;
+const TEL_RE = /^0\d{1,2}-\d{3,4}-\d{4}$/;
+const FAX_RE = /^(0\d{1,2}-\d{3,4}-\d{4}|0\d{3}-\d{3,4}-\d{4})$/;
+// URL: 프로토콜 + 도메인.TLD 필수 (예: https://bookiss 만 입력 시 거부)
+const URL_RE = /^https?:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d{1,5})?(?:\/[^\s]*)?$/i;
+
+function filterEnglishOnly(el) { el.value = el.value.replace(KOR_RE, ''); }
+function formatMobile(el) {
+  const d = el.value.replace(/[^0-9]/g, '').slice(0, 11);
+  if (d.length <= 3) el.value = d;
+  else if (d.length <= 7) el.value = d.slice(0,3) + '-' + d.slice(3);
+  else el.value = d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7);
+}
+function formatTel(el) {
+  let d = el.value.replace(/[^0-9]/g, '').slice(0, 12);
+  if (!d) { el.value = ''; return; }
+  let g1Len;
+  if (d.startsWith('02')) g1Len = 2;
+  else if (d.startsWith('0303') || d.startsWith('0505') || d.startsWith('0507') || d.startsWith('0508')) g1Len = 4;
+  else g1Len = 3;
+  if (d.length <= g1Len) { el.value = d; return; }
+  const rest = d.slice(g1Len);
+  let g2Len = rest.length <= 7 ? 3 : 4;
+  if (rest.length <= g2Len) { el.value = d.slice(0,g1Len) + '-' + rest; return; }
+  el.value = d.slice(0,g1Len) + '-' + rest.slice(0,g2Len) + '-' + rest.slice(g2Len).slice(0,4);
+}
+function digitsOnly(el) { el.value = el.value.replace(/[^0-9]/g, ''); }
+function validateField(el, type, errId) {
+  const val = (el.value || '').trim();
+  const errEl = document.getElementById(errId);
+  let err = '';
+  if (val) {
+    switch (type) {
+      case 'engonly': if (KOR_RE.test(val)) err = '영문/숫자만 입력 가능합니다.'; else if (!ENG_OK_RE.test(val)) err = '영문/숫자/특수문자(.,-&\'())만 사용 가능합니다.'; break;
+      case 'email':   if (!EMAIL_RE.test(val)) err = '올바른 이메일 형식이 아닙니다.'; break;
+      case 'mobile':  if (!MOBILE_RE.test(val)) err = '올바른 휴대폰 형식이 아닙니다. (예: 010-1234-5678)'; break;
+      case 'tel':     if (!TEL_RE.test(val)) err = '올바른 전화번호 형식이 아닙니다. (예: 02-1234-5678, 031-123-4567)'; break;
+      case 'fax':     if (!FAX_RE.test(val)) err = '올바른 팩스 형식이 아닙니다. (예: 02-1234-5678, 0303-1234-5678)'; break;
+      case 'url':     if (!URL_RE.test(val)) err = '올바른 URL 형식이 아닙니다. (예: https://example.com)'; break;
+    }
+  }
+  if (errEl) { errEl.textContent = err; errEl.classList.toggle('show', !!err); }
+  el.classList.toggle('invalid', !!err);
+  return !err;
+}
+
+// 커스텀 confirm — Promise<boolean>
+function ucConfirm(opts) {
+  return new Promise(resolve => {
+    const ov = document.getElementById('uc-modal');
+    document.getElementById('uc-icon').textContent = opts.icon || '💾';
+    document.getElementById('uc-title').textContent = opts.title || '확인';
+    document.getElementById('uc-body').textContent = opts.body || '';
+    const okBtn = document.getElementById('uc-ok');
+    const caBtn = document.getElementById('uc-cancel');
+    okBtn.textContent = opts.okText || '확인';
+    caBtn.textContent = opts.cancelText || '취소';
+    caBtn.style.display = opts.cancelText === '' ? 'none' : '';
+    function cleanup(v) {
+      ov.classList.remove('open');
+      okBtn.onclick = null; caBtn.onclick = null; ov.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      else if (e.key === 'Enter') cleanup(true);
+    }
+    okBtn.onclick = () => cleanup(true);
+    caBtn.onclick = () => cleanup(false);
+    ov.onclick = e => { if (e.target === ov) cleanup(false); };
+    document.addEventListener('keydown', onKey);
+    ov.classList.add('open');
+    setTimeout(() => okBtn.focus(), 0);
+  });
+}
+
+// 카카오(다음) 우편번호 검색
+function openPostcode(targetId) {
+  if (typeof daum === 'undefined' || !daum.Postcode) {
+    alert('주소 검색 서비스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+  new daum.Postcode({
+    oncomplete(data) {
+      const addr = data.roadAddress || data.autoRoadAddress || data.jibunAddress || '';
+      const v = `(${data.zonecode}) ${addr}`;
+      const t = document.getElementById(targetId);
+      if (t) t.value = v;
+      const detail = document.getElementById(targetId + '_detail');
+      if (detail) detail.focus();
+    },
+  }).open();
+}
+
+function toggleEye(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; btn.classList.add('on'); }
+  else { inp.type = 'password'; btn.textContent = '👁'; btn.classList.remove('on'); }
+}
+
+// 저장된 로그인 정보 자동 채우기 + 자동 로그인 시도 (실패 시 조용히 무시)
+(async function autoLogin() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && d.email) document.getElementById('login-email').value = d.email;
+      if (d && d.code)  document.getElementById('login-code').value  = d.code;
+    }
+  } catch (e) {}
+  // 이미 세션이 있으면 바로 대시보드 — 네트워크/401 오류는 무시 (로그인 화면 유지)
+  try {
+    const r = await fetch('/api/partner/me');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ok) renderDashboard(d);
+    }
+  } catch (e) { /* 무시 */ }
+})();
+
+function showLogin() {
+  document.getElementById('login-view').style.display = '';
+  document.getElementById('forgot-view').style.display = 'none';
+}
+function showForgot() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('forgot-view').style.display = '';
+  const em = document.getElementById('login-email').value;
+  if (em) document.getElementById('forgot-email').value = em;
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const code  = document.getElementById('login-code').value.trim();
+  const save  = document.getElementById('login-save').checked;
+  const msg = document.getElementById('login-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = 'msg err'; msg.textContent = '올바른 이메일을 입력해 주세요.'; return; }
+  if (!code || code.length !== 6) { msg.className = 'msg err'; msg.textContent = '6자리 인증코드를 입력해 주세요.'; return; }
+  try {
+    const r = await fetch('/api/partner/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      msg.className = 'msg err';
+      msg.textContent = d.message || '이메일 또는 인증코드가 일치하지 않습니다.';
+      return;
+    }
+    if (save) localStorage.setItem(SAVE_KEY, JSON.stringify({ email, code, savedAt: Date.now() }));
+    else localStorage.removeItem(SAVE_KEY);
+    // 대시보드 로드
+    const me = await fetch('/api/partner/me').then(r => r.json());
+    renderDashboard(me);
+  } catch (e) { msg.className = 'msg err'; msg.textContent = '네트워크 오류'; }
+}
+
+async function doForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg = document.getElementById('forgot-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  const btn = document.getElementById('forgot-btn');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = 'msg err'; msg.textContent = '올바른 이메일을 입력해 주세요.'; return; }
+  btn.disabled = true; btn.textContent = '발송 중…';
+  try {
+    const r = await fetch('/api/partner/auth/forgot', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      msg.className = 'msg err';
+      msg.textContent = d.error === 'rate_limited' ? '잠시 후 다시 시도해 주세요.' : (d.message || '발송 실패');
+      btn.disabled = false; btn.textContent = '📧 새 인증코드 발송';
+      return;
+    }
+    msg.className = 'msg ok';
+    msg.textContent = d.message || '새 인증코드가 발송되었습니다.';
+    btn.textContent = '✓ 발송됨';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📧 새 인증코드 발송'; }, 30000);
+    // 로그인 화면으로 자동 전환 + 이메일 미리 채움
+    setTimeout(() => {
+      showLogin();
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-code').focus();
+    }, 1500);
+  } catch (e) { msg.className = 'msg err'; msg.textContent = '네트워크 오류'; btn.disabled = false; btn.textContent = '📧 새 인증코드 발송'; }
+}
+
+// ── 대시보드 ──
+let myApps = [];
+function renderDashboard(d) {
+  myApps = d.applications || [];
+  const root = document.getElementById('root');
+  root.innerHTML = `
+    <div class="card">
+      <div class="topbar">
+        <div>
+          <div class="title">📋 참여기관 대시보드</div>
+          <div class="who">로그인: ${esc(d.email || '')}</div>
+        </div>
+        <button class="btn alt sm" onclick="doLogout()">🚪 로그아웃</button>
+      </div>
+      <div class="info-box">총 <b>${myApps.length}건</b>의 신청 내역이 있습니다. 대기 중인 신청은 수정할 수 있습니다.</div>
+      ${myApps.length === 0
+        ? `<div style="text-align:center;color:#94a3b8;padding:40px 20px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;">아직 신청한 내역이 없습니다.</div>`
+        : myApps.map((a, i) => `
+        <div class="app-row">
+          <div class="app-info">
+            <div class="app-title">
+              ${esc(a.project_name)}
+              <span class="badge ${esc(a.status)}">${a.status === 'pending' ? '⌛ 대기' : a.status === 'approved' ? '✓ 승인' : '✗ 거절'}</span>
+              ${a.deposit_confirmed_at ? '<span class="badge deposit">💰 입금확인</span>' : ''}
+            </div>
+            <div class="app-sub">
+              회사: ${esc(a.company_name_ko || a.company_name_en || '-')} ·
+              담당자: ${esc(a.contact_name || '-')} ·
+              접수일: ${esc(fmtDT(a.created_at))}
+              ${a.approved_at ? ` · 승인 ${esc(fmtDT(a.approved_at))}` : ''}
+              ${a.deposit_confirmed_at ? ` · 입금확인 <span style="color:#1d4ed8;font-weight:700;">${esc(fmtDT(a.deposit_confirmed_at))}</span>` : ''}
+              ${a.quote_total ? ` · 견적 <b style="color:#0284c7;">${esc(won(a.quote_total))}</b>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn alt sm" onclick="viewApp(${i})">👁 보기</button>
+            ${(a.status === 'pending' || a.status === 'approved') ? `<button class="btn sm" onclick="editApp(${i})">✏ 수정</button>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function doLogout() {
+  await fetch('/api/partner/auth/logout', { method: 'POST' });
+  location.reload();
+}
+
+function viewApp(i) {
+  const a = myApps[i];
+  if (!a) return;
+  const row = (k, v) => `<div style="display:flex;padding:7px 0;border-bottom:1px solid #f1f5f9;"><div style="width:130px;color:#64748b;font-weight:600;font-size:12px;">${esc(k)}</div><div style="flex:1;font-size:13px;color:#1e293b;">${v}</div></div>`;
+  let html = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#475569;line-height:1.7;">
+      <div><b>참여 승인</b>: ${a.status === 'approved' ? `<span style="color:#15803d;">✓ ${esc(fmtDT(a.approved_at))}</span>` : a.status === 'rejected' ? `<span style="color:#dc2626;">✗ 거절</span>` : '<span style="color:#94a3b8;">⌛ 대기 중</span>'}</div>
+      <div><b>입금 확인</b>: ${a.deposit_confirmed_at ? `<span style="color:#1d4ed8;">💰 ${esc(fmtDT(a.deposit_confirmed_at))}</span>` : '<span style="color:#94a3b8;">⌛ 미확인</span>'}</div>
+    </div>
+    <h3 style="margin-top:0;">🏢 기관정보</h3>
+    ${row('회사명(국문)', esc(a.company_name_ko || '-'))}
+    ${row('회사명(영문)', esc(a.company_name_en || '-'))}
+    ${row('대표자', esc(a.ceo_name || '-'))}
+    ${row('대표자 이메일', esc(a.ceo_email || '-'))}
+    ${row('대표자 모바일', esc(a.ceo_mobile || '-'))}
+    ${row('전화번호', esc(a.company_phone || '-'))}
+    ${row('주소', esc(a.company_address || '-'))}
+    ${row('홈페이지', a.company_homepage ? `<a href="${esc(a.company_homepage)}" target="_blank" style="color:#0284c7;">${esc(a.company_homepage)}</a>` : '-')}
+    <h3>👤 담당자정보</h3>
+    ${row('담당자', esc(a.contact_name || '-'))}
+    ${row('부서', esc(a.contact_dept || '-'))}
+    ${row('직위', esc(a.contact_position || '-'))}
+    ${row('이메일', esc(a.contact_email || '-'))}
+    ${row('전화번호', esc(a.contact_phone || '-'))}
+    ${row('부스타입', a.booth_type ? `${esc(a.booth_type)} ${a.booth_unit_cost ? `<span style="color:#94a3b8;font-size:11px;">(단가 ${won(a.booth_unit_cost)})</span>` : ''}` : '-')}
+    ${row('부스개수', a.booth_count != null ? esc(String(a.booth_count)) : '-')}
+    ${row('부대시설', Array.isArray(a.facility_json) && a.facility_json.length
+        ? a.facility_json.map(f => `${esc(f.name)} × ${f.count} <span style="color:#94a3b8;font-size:11px;">(${won((f.unit_cost||0)*f.count)})</span>`).join('<br>')
+        : esc(a.facility || '-'))}
+    ${row('기타요청', esc(a.extra_request || '-'))}
+    ${a.quote_total ? `<div style="margin-top:12px;padding:10px 14px;background:#f0f9ff;border:2px solid #0284c7;border-radius:8px;display:flex;justify-content:space-between;"><span style="font-size:12px;color:#0284c7;font-weight:700;">📊 견적 합계</span><span style="font-size:16px;font-weight:800;color:#dc2626;">${won(a.quote_total)}</span></div>` : ''}`;
+  document.getElementById('edit-title').textContent = `📄 ${a.project_name} — 신청 상세 (조회)`;
+  document.getElementById('edit-body').innerHTML = html;
+  document.querySelector('.mfoot').style.display = 'none';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+let editingApp = null;
+let editBoothFacLocked = false;   // 입금확인 후 부스/시설 잠금 여부
+function editApp(i) {
+  const a = myApps[i];
+  if (!a || a.status === 'rejected') return;
+  editBoothFacLocked = !!a.deposit_confirmed_at;
+  editingApp = a;
+  const inp = (id, v, type='text', attrs='') => `<input id="e-${id}" type="${type}" value="${esc(v||'')}" placeholder="${esc(id)}" ${attrs}>`;
+  const errDiv = id => `<div id="err-e-${id}" class="field-err"></div>`;
+  // 필드별 검증 attribute 매핑
+  const VAL = {
+    company_name_en:   `oninput="filterEnglishOnly(this)" onblur="validateField(this,'engonly','err-e-company_name_en')"`,
+    ceo_mobile:        `inputmode="numeric" maxlength="13" oninput="formatMobile(this)" onblur="validateField(this,'mobile','err-e-ceo_mobile')"`,
+    company_phone:     `inputmode="numeric" maxlength="13" oninput="formatTel(this)" onblur="validateField(this,'tel','err-e-company_phone')"`,
+    company_fax:       `inputmode="numeric" maxlength="14" oninput="formatTel(this)" onblur="validateField(this,'fax','err-e-company_fax')"`,
+    company_homepage:  `oninput="validateField(this,'url','err-e-company_homepage');markEditDirty()" onblur="validateField(this,'url','err-e-company_homepage')"`,
+    contact_phone:     `inputmode="numeric" maxlength="13" oninput="formatTel(this)" onblur="validateField(this,'tel','err-e-contact_phone')"`,
+    booth_count:       `min="1" inputmode="numeric" oninput="digitsOnly(this);recalcEditQuote()"`,
+  };
+  // 현재 선택된 부스/시설 매핑
+  const currentBoothName = a.booth_type || '';
+  const facMap = {};
+  (Array.isArray(a.facility_json) ? a.facility_json : []).forEach(f => { if (f && f.name) facMap[f.name] = f; });
+
+  // 근무시간 안내 (수정 불가 — 호스트가 설정한 값)
+  const workInfo = (Number(a.show_work_hours) === 1 && a.work_hours_from)
+    ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:12px;color:#0c4a6e;margin-bottom:14px;">
+        🕐 <b>근무시간 안내</b> : ${esc(a.work_hours_from || '10:00')} ~ ${esc(a.work_hours_to || '18:00')}
+        <span style="color:#94a3b8;margin-left:8px;">(호스트 설정 — 변경 불가)</span>
+      </div>` : '';
+
+  // 부스타입 카드 리스트 — 입금확인 후 잠금
+  const boothOpts = Array.isArray(a.booth_type_options) ? a.booth_type_options : [];
+  const boothHtml = boothOpts.length ? (editBoothFacLocked
+    ? `<div class="fg"><label>부스타입 <small style="color:#94a3b8;font-weight:500;">(입금확인 완료 — 변경 불가)</small></label>
+        <div style="padding:10px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#475569;">
+          ${esc(a.booth_type || '-')} ${a.booth_unit_cost ? `<span style="color:#94a3b8;font-size:11px;">(단가 ${won(a.booth_unit_cost)})</span>` : ''}
+        </div></div>
+       <div class="fg"><label>부스개수 <small style="color:#94a3b8;font-weight:500;">(변경 불가)</small></label>
+        <div style="padding:10px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#475569;">${a.booth_count != null ? esc(String(a.booth_count)) : '-'}</div>
+       </div>`
+    : `
+    <div class="fg">
+      <label>부스타입 <span style="color:#94a3b8;font-weight:500;">(단가 안내 — 견적 자동 계산)</span></label>
+      <div class="booth-list">
+        ${boothOpts.map((o, idx) => {
+          const it = typeof o === 'string' ? { name: o, cost: 0, desc: '' } : o;
+          const checked = it.name === currentBoothName;
+          return `<label class="booth-item ${checked?'sel':''}" onclick="selectBoothEdit(${idx})">
+            <input type="radio" name="e-booth_type" value="${esc(it.name)}" data-cost="${it.cost||0}" ${checked?'checked':''} onchange="recalcEditQuote()">
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <span class="bn">${esc(it.name)}</span>
+                ${it.cost ? `<span class="bc">${won(it.cost)} <span style="font-size:10px;color:#94a3b8;font-weight:500;">/ 단가</span></span>` : ''}
+              </div>
+              ${it.desc ? `<div class="bd">${esc(it.desc)}</div>` : ''}
+            </div>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="fg"><label>부스개수</label>${inp('booth_count', a.booth_count, 'number', VAL.booth_count)}</div>`) : '';
+
+  // 부대시설 (다중) — 입금확인 후 잠금
+  const facOpts = Array.isArray(a.facility_options) ? a.facility_options : [];
+  const facHtml = facOpts.length ? (editBoothFacLocked
+    ? `<div class="fg"><label>부대시설 <small style="color:#94a3b8;font-weight:500;">(입금확인 완료 — 변경 불가)</small></label>
+        <div style="padding:10px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#475569;line-height:1.6;">
+          ${Array.isArray(a.facility_json) && a.facility_json.length
+            ? a.facility_json.map(f => `${esc(f.name)} × ${f.count} <span style="color:#94a3b8;font-size:11px;">(${won((f.unit_cost||0)*f.count)})</span>`).join('<br>')
+            : '-'}
+        </div></div>`
+    : `
+    <div class="fg">
+      <label>부대시설 (다중선택)</label>
+      <div class="booth-list">
+        ${facOpts.map((o, idx) => {
+          const it = typeof o === 'string' ? { name: o, cost: 0, desc: '' } : o;
+          const sel = !!facMap[it.name];
+          const cnt = facMap[it.name]?.count || 1;
+          return `<div class="facility-item ${sel?'sel':''}" data-fi="${idx}">
+            <label class="ft-head">
+              <input type="checkbox" name="e-facility" value="${esc(it.name)}" data-cost="${it.cost||0}" data-i="${idx}" ${sel?'checked':''} onchange="toggleFacEdit(this)">
+              <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                  <span class="bn">${esc(it.name)}</span>
+                  ${it.cost ? `<span class="bc" style="color:#166534;">+ ${won(it.cost)} <span style="font-size:10px;color:#94a3b8;font-weight:500;">/ 단가</span></span>` : ''}
+                </div>
+                ${it.desc ? `<div class="bd">${esc(it.desc)}</div>` : ''}
+              </div>
+            </label>
+            <div class="ft-qty">
+              <span style="font-size:12px;color:#475569;font-weight:600;">개수</span>
+              <input type="number" min="1" value="${cnt}" data-facility-qty="${idx}" inputmode="numeric" oninput="digitsOnly(this);recalcEditQuote()">
+              <span id="e-fsub-${idx}" style="margin-left:auto;font-size:13px;color:#166534;font-weight:700;font-family:Consolas,monospace;"></span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`) : '';
+
+  const stateNotice = editBoothFacLocked
+    ? `<div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:14px;line-height:1.6;">
+        🔒 <b>입금확인 완료</b> — 기관/담당자 정보만 수정 가능합니다. <b>부스타입·부스개수·부대시설</b> 은 잠금됩니다.
+      </div>`
+    : (a.status === 'approved'
+      ? `<div style="background:#d1fae5;border:1px solid #a7f3d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46;margin-bottom:14px;">✓ <b>승인 완료</b> — 입금확인 전까지 모든 필드 수정 가능합니다.</div>`
+      : `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">⌛ <b>대기 상태</b> — 모든 필드 수정 가능합니다.</div>`);
+  let html = stateNotice + `
+    ${workInfo}
+    <h3 style="margin-top:0;">🏢 기관정보</h3>
+    <div class="fg"><label>회사명(국문)</label>${inp('company_name_ko', a.company_name_ko)}</div>
+    <div class="fg"><label>회사명(영문) <small style="color:#94a3b8;font-weight:500;">(한글 입력 불가)</small></label>${inp('company_name_en', a.company_name_en, 'text', VAL.company_name_en)}${errDiv('company_name_en')}</div>
+    <div class="fg"><label>대표자</label>${inp('ceo_name', a.ceo_name)}</div>
+    <div class="fg"><label>대표자 모바일 <small style="color:#94a3b8;font-weight:500;">(010-1234-5678)</small></label>${inp('ceo_mobile', a.ceo_mobile, 'tel', VAL.ceo_mobile)}${errDiv('ceo_mobile')}</div>
+    <div class="fg"><label>전화번호 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678)</small></label>${inp('company_phone', a.company_phone, 'tel', VAL.company_phone)}${errDiv('company_phone')}</div>
+    <div class="fg"><label>팩스 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678 / 0303-1234-5678)</small></label>${inp('company_fax', a.company_fax, 'tel', VAL.company_fax)}${errDiv('company_fax')}</div>
+    <div class="fg"><label>주소</label>
+      <div class="addr-row">
+        <input id="e-company_address" type="text" value="${esc(a.company_address || '')}" placeholder="주소 검색 버튼을 눌러 주세요" readonly>
+        <button type="button" class="addr-btn" onclick="openPostcode('e-company_address')">🔍 주소 검색</button>
+      </div>
+      <input id="e-company_address_detail" type="text" placeholder="상세주소 (선택)" style="margin-top:6px;">
+    </div>
+    <div class="fg"><label>홈페이지 <small style="color:#94a3b8;font-weight:500;">(http:// 또는 https:// 로 시작)</small></label>${inp('company_homepage', a.company_homepage, 'text', VAL.company_homepage)}${errDiv('company_homepage')}</div>
+    <div class="fg">
+      <label>사업자등록증 <small style="color:#94a3b8;font-weight:500;">(이미지 또는 PDF, 5MB 이하)</small></label>
+      <div id="e-biz_cert-current" style="margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        ${a.biz_cert_url
+          ? `<button type="button" class="btn sm" style="padding:6px 10px;font-size:11px;background:#0284c7;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="openFilePreview('${esc(a.biz_cert_url)}','사업자등록증',true)">👁 보기</button>
+             <button type="button" class="btn sm alt" style="padding:6px 10px;font-size:11px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer;" onclick="markFileRemove('biz_cert')">🗑 삭제</button>
+             <span style="font-size:11px;color:#94a3b8;">현재 파일 등록됨</span>`
+          : '<span style="font-size:12px;color:#94a3b8;">등록된 파일 없음</span>'}
+      </div>
+      <input type="hidden" id="e-remove_biz_cert" value="0">
+      <input id="e-biz_cert" type="file" accept="image/*,.pdf" style="font-size:12px;" onchange="onFileChangeEdit(this)">
+      <div id="e-biz_cert-name" style="font-size:11px;color:#15803d;font-weight:600;margin-top:4px;"></div>
+    </div>
+    <div class="fg">
+      <label>참가기업 로고 <small style="color:#94a3b8;font-weight:500;">(이미지, W:140 × H:40 권장, 5MB 이하)</small></label>
+      <div id="e-company_logo-current" style="margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${a.company_logo_url
+          ? `<img src="${esc(a.company_logo_url)}" alt="로고" style="max-width:140px;max-height:60px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;padding:4px;">
+             <button type="button" class="btn sm" style="padding:6px 10px;font-size:11px;background:#0284c7;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="openFilePreview('${esc(a.company_logo_url)}','기업 로고',false)">👁 보기</button>
+             <button type="button" class="btn sm alt" style="padding:6px 10px;font-size:11px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer;" onclick="markFileRemove('company_logo')">🗑 삭제</button>`
+          : '<span style="font-size:12px;color:#94a3b8;">등록된 로고 없음</span>'}
+      </div>
+      <input type="hidden" id="e-remove_company_logo" value="0">
+      <input id="e-company_logo" type="file" accept="image/*" style="font-size:12px;" onchange="onFileChangeEdit(this)">
+      <div id="e-company_logo-name" style="font-size:11px;color:#15803d;font-weight:600;margin-top:4px;"></div>
+    </div>
+    <h3>👤 담당자정보</h3>
+    <div class="fg"><label>담당자</label>${inp('contact_name', a.contact_name)}</div>
+    <div class="fg"><label>부서</label>${inp('contact_dept', a.contact_dept)}</div>
+    <div class="fg"><label>직위</label>${inp('contact_position', a.contact_position)}</div>
+    <div class="fg"><label>전화번호 <small style="color:#94a3b8;font-weight:500;">(02-1234-5678)</small></label>${inp('contact_phone', a.contact_phone, 'tel', VAL.contact_phone)}${errDiv('contact_phone')}</div>
+    ${boothHtml}
+    ${facHtml}
+    <div class="fg"><label>기타요청</label><textarea id="e-extra_request" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px;font-size:13px;min-height:70px;">${esc(a.extra_request||'')}</textarea></div>
+    <div class="quote-card" id="e-quote-card">
+      <h4 style="margin:0 0 10px;color:#0284c7;font-size:14px;">💰 견적 (실시간 계산)</h4>
+      <div id="e-quote-body"></div>
+    </div>`;
+  document.getElementById('edit-title').textContent = `✏ ${a.project_name} — 신청 수정`;
+  document.getElementById('edit-body').innerHTML = html;
+  document.querySelector('.mfoot').style.display = '';
+  document.getElementById('edit-modal').classList.add('open');
+  // 부스개수 변경 시에도 재계산
+  const bcEl = document.getElementById('e-booth_count');
+  if (bcEl) bcEl.addEventListener('input', recalcEditQuote);
+  recalcEditQuote();
+  // 변경 감지 — snapshot 저장 + 모달 내 모든 input/change 에 dirty 마커 부착
+  setTimeout(() => {
+    editSnapshot = captureEditSnapshot();
+    const root = document.getElementById('edit-body');
+    if (root) {
+      root.querySelectorAll('input, textarea, select').forEach(el => {
+        el.addEventListener('input', markEditDirty);
+        el.addEventListener('change', markEditDirty);
+      });
+    }
+    // 진입 시점 검증 — 기존 값이 형식 오류면 즉시 빨간 표시
+    [['e-company_name_en','engonly'],['e-ceo_mobile','mobile'],
+     ['e-company_phone','tel'],['e-company_fax','fax'],
+     ['e-company_homepage','url'],['e-contact_phone','tel']].forEach(([fid, type]) => {
+      const el = document.getElementById(fid);
+      if (el && el.value && el.value.trim()) validateField(el, type, `err-${fid}`);
+    });
+    updateSaveBtnState();
+  }, 0);
+}
+
+// ── 변경 감지 ──
+let editSnapshot = null;
+function captureEditSnapshot() {
+  const snap = {};
+  const ids = ['e-company_name_ko','e-company_name_en','e-ceo_name','e-ceo_mobile',
+    'e-company_phone','e-company_fax','e-company_address','e-company_address_detail',
+    'e-company_homepage','e-contact_name','e-contact_dept','e-contact_position',
+    'e-contact_phone','e-booth_count','e-extra_request'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) snap[id] = el.value; });
+  const bt = document.querySelector('input[name="e-booth_type"]:checked');
+  snap._booth = bt ? bt.value : '';
+  snap._facility = [];
+  document.querySelectorAll('input[name="e-facility"]').forEach(cb => {
+    const i = cb.dataset.i;
+    const qty = document.querySelector(`input[data-facility-qty="${i}"]`);
+    snap._facility.push({ v: cb.value, on: cb.checked, c: qty ? qty.value : '1' });
+  });
+  // 파일 — 선택 여부만 마커로 (실제 비교는 새 파일 선택 = dirty)
+  const bc = document.getElementById('e-biz_cert');
+  const lg = document.getElementById('e-company_logo');
+  snap._biz_cert_picked = !!(bc && bc.files && bc.files[0]);
+  snap._logo_picked     = !!(lg && lg.files && lg.files[0]);
+  snap._biz_cert_remove = (document.getElementById('e-remove_biz_cert')?.value || '0') === '1';
+  snap._logo_remove     = (document.getElementById('e-remove_company_logo')?.value || '0') === '1';
+  return snap;
+}
+function isEditDirty() {
+  if (!editSnapshot) return false;
+  return JSON.stringify(captureEditSnapshot()) !== JSON.stringify(editSnapshot);
+}
+function markEditDirty() { updateSaveBtnState(); }
+function onFileChangeEdit(input) {
+  const f = input.files && input.files[0];
+  const nameEl = document.getElementById(input.id + '-name');
+  if (nameEl) nameEl.textContent = f ? `✓ 선택됨: ${f.name} (${Math.round(f.size/1024)} KB)` : '';
+  // 새 파일을 선택하면 삭제 플래그 자동 해제
+  const removeKey = input.id === 'e-biz_cert' ? 'e-remove_biz_cert'
+                   : input.id === 'e-company_logo' ? 'e-remove_company_logo' : null;
+  if (removeKey) { const rm = document.getElementById(removeKey); if (rm) rm.value = '0'; }
+  markEditDirty();
+}
+
+// 현재 파일 삭제 표시 (저장 시 서버에 NULL 처리 요청)
+async function markFileRemove(kind) {
+  const labels = { biz_cert: '사업자등록증', company_logo: '기업 로고' };
+  const ok = await ucConfirm({
+    icon: '🗑', title: '파일 삭제 확인',
+    body: `${labels[kind]} 파일을 삭제하시겠습니까?\n\n저장 시 영구 삭제되며 되돌릴 수 없습니다.`,
+    okText: '삭제 표시', cancelText: '취소',
+  });
+  if (!ok) return;
+  const removeEl = document.getElementById(`e-remove_${kind}`);
+  if (removeEl) removeEl.value = '1';
+  // 시각 표시 — 현재 파일 영역 회색 처리
+  const cur = document.getElementById(`e-${kind}-current`);
+  if (cur) {
+    cur.style.opacity = '.5';
+    cur.style.textDecoration = 'line-through';
+    cur.insertAdjacentHTML('beforeend', '<span style="font-size:11px;color:#dc2626;font-weight:700;margin-left:8px;text-decoration:none;">🗑 삭제 예정 (저장 시 적용)</span>');
+  }
+  markEditDirty();
+}
+
+// 파일 미리보기 모달
+function openFilePreview(url, title, isCert) {
+  if (!url) return;
+  document.getElementById('fp-title').textContent = title || '파일 미리보기';
+  document.getElementById('fp-download').href = url;
+  const body = document.getElementById('fp-body');
+  const ext = (url.split('.').pop() || '').toLowerCase().split('?')[0];
+  if (ext === 'pdf') {
+    body.innerHTML = `<iframe src="${esc(url)}" style="width:100%;height:75vh;border:none;background:#fff;"></iframe>`;
+  } else if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) {
+    body.innerHTML = `<img src="${esc(url)}" alt="${esc(title)}" style="max-width:100%;max-height:75vh;background:#fff;padding:10px;">`;
+  } else {
+    body.innerHTML = `<div style="padding:40px 20px;color:#64748b;text-align:center;">이 파일 형식은 미리보기를 지원하지 않습니다.<br><a href="${esc(url)}" target="_blank" style="color:#0284c7;font-weight:700;">새 탭에서 열기</a></div>`;
+  }
+  document.getElementById('file-preview-modal').classList.add('open');
+}
+function closeFilePreview() {
+  document.getElementById('file-preview-modal').classList.remove('open');
+  document.getElementById('fp-body').innerHTML = '';
+}
+function updateSaveBtnState() {
+  // 모달 풋터의 저장 버튼 (alt 아닌 두 번째 btn)
+  const foot = document.querySelector('#edit-modal .mfoot');
+  if (!foot) return;
+  const saveBtn = foot.querySelector('.btn:not(.alt)');
+  if (!saveBtn) return;
+  const dirty = isEditDirty();
+  saveBtn.disabled = !dirty;
+  saveBtn.style.opacity = dirty ? '' : '.4';
+  saveBtn.style.cursor = dirty ? '' : 'not-allowed';
+  saveBtn.textContent = dirty ? '💾 저장' : '💾 저장 (변경 사항 없음)';
+}
+
+function selectBoothEdit(idx) {
+  document.querySelectorAll('.booth-item').forEach((el, i) => el.classList.toggle('sel', i === idx));
+  setTimeout(recalcEditQuote, 0);
+}
+function toggleFacEdit(cb) {
+  const item = cb.closest('.facility-item');
+  if (item) item.classList.toggle('sel', cb.checked);
+  recalcEditQuote();
+}
+
+function getEditQuote() {
+  const items = [];
+  const bt = document.querySelector('input[name="e-booth_type"]:checked');
+  const bcEl = document.getElementById('e-booth_count');
+  if (bt) {
+    const unit = Number(bt.dataset.cost || 0);
+    const cnt = bcEl ? Math.max(1, Number(bcEl.value || 1)) : 1;
+    items.push({ category: '부스', name: bt.value, unit_cost: unit, count: cnt, subtotal: unit * cnt });
+  }
+  document.querySelectorAll('input[name="e-facility"]:checked').forEach(cb => {
+    const i = cb.dataset.i;
+    const qtyEl = document.querySelector(`input[data-facility-qty="${i}"]`);
+    const cnt = qtyEl ? Math.max(1, Number(qtyEl.value || 1)) : 1;
+    const unit = Number(cb.dataset.cost || 0);
+    items.push({ category: '부대시설', name: cb.value, unit_cost: unit, count: cnt, subtotal: unit * cnt });
+    const sub = document.getElementById(`e-fsub-${i}`);
+    if (sub) sub.textContent = unit ? `소계 ${won(unit * cnt)}` : '';
+  });
+  const total = items.reduce((a, x) => a + x.subtotal, 0);
+  return { items, total };
+}
+
+function recalcEditQuote() {
+  const q = getEditQuote();
+  const body = document.getElementById('e-quote-body');
+  if (!body) return;
+  if (!q.items.length || q.total === 0) {
+    body.innerHTML = '<div style="color:#94a3b8;font-size:13px;text-align:center;padding:14px 0;">부스/시설을 선택하시면 자동 계산됩니다.</div>';
+    return;
+  }
+  let html = '';
+  let lastCat = '';
+  q.items.forEach(it => {
+    if (it.category !== lastCat) {
+      html += `<div style="font-size:11px;font-weight:800;color:#0284c7;margin-top:6px;">${esc(it.category)}</div>`;
+      lastCat = it.category;
+    }
+    html += `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #cbd5e1;font-size:13px;">
+      <div><b>${esc(it.name)}</b> × ${it.count}개 <span style="color:#94a3b8;font-size:11px;">(단가 ${won(it.unit_cost)})</span></div>
+      <div style="font-weight:700;font-family:Consolas,monospace;">${won(it.subtotal)}</div>
+    </div>`;
+  });
+  html += `<div style="display:flex;justify-content:space-between;padding:8px 0 4px;margin-top:6px;border-top:2px solid #0284c7;font-size:15px;font-weight:800;color:#dc2626;">
+    <span>합계</span><span>${won(q.total)}</span>
+  </div>`;
+  body.innerHTML = html;
+}
+
+function closeEdit() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingApp = null;
+}
+
+async function saveEdit() {
+  if (!editingApp) return;
+  if (!isEditDirty()) {
+    await ucConfirm({ icon: 'ℹ', title: '안내', body: '변경된 내용이 없습니다.', okText: '확인', cancelText: '' });
+    return;
+  }
+  // 검증된 필드 일괄 재검증
+  const validations = [
+    ['e-company_name_en','engonly','err-e-company_name_en'],
+    ['e-ceo_mobile','mobile','err-e-ceo_mobile'],
+    ['e-company_phone','tel','err-e-company_phone'],
+    ['e-company_fax','fax','err-e-company_fax'],
+    ['e-company_homepage','url','err-e-company_homepage'],
+    ['e-contact_phone','tel','err-e-contact_phone'],
+  ];
+  for (const [fid, type, errId] of validations) {
+    const el = document.getElementById(fid);
+    if (!el || !el.value.trim()) continue;
+    if (!validateField(el, type, errId)) {
+      el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      alert('입력 형식 오류가 있습니다. 빨간색으로 표시된 필드를 확인해 주세요.');
+      return;
+    }
+  }
+  const fields = ['company_name_ko','company_name_en','ceo_name','ceo_mobile',
+    'company_phone','company_fax','company_homepage',
+    'contact_name','contact_dept','contact_position','contact_phone','extra_request'];
+  const body = {};
+  fields.forEach(k => { const el = document.getElementById(`e-${k}`); if (el) body[k] = el.value; });
+  // 주소 — 기본 + 상세주소 결합
+  const baseAddr   = (document.getElementById('e-company_address')?.value || '').trim();
+  const detailAddr = (document.getElementById('e-company_address_detail')?.value || '').trim();
+  body.company_address = baseAddr ? (detailAddr ? `${baseAddr} ${detailAddr}` : baseAddr) : '';
+  // 부스/시설 — 입금확인 후엔 변경 미전송 (서버 측에서도 막아야 안전)
+  if (!editBoothFacLocked) {
+    const bt = document.querySelector('input[name="e-booth_type"]:checked');
+    if (bt) {
+      body.booth_type = bt.value;
+      body.booth_unit_cost = Number(bt.dataset.cost || 0);
+    } else {
+      body.booth_type = '';
+      body.booth_unit_cost = null;
+    }
+    const bcEl = document.getElementById('e-booth_count');
+    if (bcEl) body.booth_count = bcEl.value ? Number(bcEl.value) : null;
+    const q = getEditQuote();
+    body.facility_json = q.items.filter(x => x.category === '부대시설').map(x => ({ name: x.name, unit_cost: x.unit_cost, count: x.count }));
+    body.quote_total = q.total;
+    body.quote_json = q;
+  }
+  // 저장 확인
+  const ok = await ucConfirm({
+    icon: '💾',
+    title: '저장 확인',
+    body: `변경하신 내용으로 저장하시겠습니까?\n\n프로젝트: ${editingApp.project_name}${body.quote_total ? `\n견적 합계: ${won(body.quote_total)}` : ''}`,
+    okText: '저장',
+    cancelText: '취소',
+  });
+  if (!ok) return;
+  // FormData 로 변환 — 파일이 있을 때도 JSON 텍스트 필드 전송 가능
+  const fd = new FormData();
+  Object.keys(body).forEach(k => {
+    const v = body[k];
+    if (v === undefined || v === null) return;
+    fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+  });
+  // 파일 첨부 + 삭제 플래그
+  const bcEl = document.getElementById('e-biz_cert');
+  if (bcEl && bcEl.files && bcEl.files[0]) fd.append('biz_cert', bcEl.files[0]);
+  const lgEl = document.getElementById('e-company_logo');
+  if (lgEl && lgEl.files && lgEl.files[0]) fd.append('company_logo', lgEl.files[0]);
+  const rmBc = document.getElementById('e-remove_biz_cert');
+  if (rmBc && rmBc.value === '1') fd.append('remove_biz_cert', '1');
+  const rmLg = document.getElementById('e-remove_company_logo');
+  if (rmLg && rmLg.value === '1') fd.append('remove_company_logo', '1');
+  try {
+    const r = await fetch(`/api/partner/me/applications/${editingApp.id}`, {
+      method: 'PUT', body: fd,  // multipart/form-data 자동
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { alert(d.message || '수정 실패'); return; }
+    closeEdit();
+    const me = await fetch('/api/partner/me').then(r => r.json());
+    renderDashboard(me);
+  } catch (e) { alert('네트워크 오류'); }
+}
+</script>
+</body>
+</html>

@@ -337,7 +337,18 @@
     .topbar .user { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 12px; }
     .topbar .user .name { font-weight: 700; color: #1e293b; white-space: nowrap; }
     .topbar .user .name span { color: #2563eb; }
-    .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
+    /* Chrome 브라우저 스타일 탭 — 사다리꼴(slanted) 모양 */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 0;
+      padding: 0 8px;
+      border-bottom: none;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      background: linear-gradient(to bottom, transparent 0%, transparent calc(100% - 2px), #cbd5e1 calc(100% - 2px), #cbd5e1 100%);
+      position: relative;
+    }
     /* 일별 sub-tab 칩 (현장요원관리 > 일별) */
     .day-chip { flex-shrink: 0; padding: 7px 12px; font-size: 12px; font-weight: 600;
                 background: #f8fafc; color: #475569; border: 1.5px solid #e2e8f0; border-radius: 8px;
@@ -356,9 +367,53 @@
     .pj-pin-eye { background:none; border:none; cursor:pointer; color:#64748b; padding:2px;
                   display:inline-flex; align-items:center; }
     .pj-pin-eye:hover { color:#0f172a; }
-    .tab-btn { padding: 9px 18px; border: none; background: none; font-size: 14px; font-weight: 600;
-               color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-    .tab-btn.act { color: #2563eb; border-bottom-color: #2563eb; }
+    /* Chrome 스타일 탭 버튼 — 사다리꼴 + 상단 둥글림 */
+    .tab-btn {
+      position: relative;
+      padding: 10px 22px 9px;
+      border: 1px solid #cbd5e1;
+      border-bottom: none;
+      background: linear-gradient(to bottom, #f1f5f9, #e2e8f0);
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 10px 10px 0 0;
+      margin-bottom: -1px;
+      transition: background .15s ease, color .15s ease, transform .12s ease;
+      transform: skewX(0);          /* 기본은 평형 */
+      box-shadow: 0 -1px 2px rgba(0,0,0,.04);
+      white-space: nowrap;
+      min-width: 60px;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tab-btn:hover {
+      background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+      color: #1e293b;
+    }
+    .tab-btn.act {
+      background: #ffffff;
+      color: #1d4ed8;
+      border-color: #cbd5e1;
+      border-bottom: 2px solid #ffffff;  /* 활성 탭은 하단 보더라인을 덮어서 contiguous 효과 */
+      font-weight: 800;
+      z-index: 2;
+      padding-bottom: 10px;
+      transform: translateY(1px);    /* 살짝 떠오르듯 */
+      box-shadow: 0 -2px 4px rgba(0,0,0,.06);
+    }
+    /* 활성 탭 상단의 파란 강조선 */
+    .tab-btn.act::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: #1d4ed8;
+      border-radius: 10px 10px 0 0;
+    }
+    .tab-btn:focus { outline: none; }
     /* 정산 sub 탭 */
     /* 정산 그리드 — 색상 없이 구분선으로만 영역 분리 */
     .settle-grid .grp-end { border-right: 1px solid #cbd5e1 !important; }
@@ -371,7 +426,7 @@
     #tab-new { width: 90%; margin: 0 auto; }
     /* 등록 폼은 기존 너비 유지(넓은 대시보드에서 과도하게 늘어나지 않도록) */
     #tab-new { max-width: 1020px; }
-    .panel-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; }
+    .panel-card { background: #fff; border-radius: 0 0 14px 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; border-top: 1px solid #cbd5e1; }
     .panel-card h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
 
     /* ── 테이블 ── */
@@ -799,9 +854,11 @@
     <button class="tab-btn" id="tb-quiz" onclick="switchTab('quiz')">Quiz관리</button>
     <button class="tab-btn" id="tb-survey" onclick="switchTab('survey')">설문조사</button>
     <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">가맹점관리</button>
+    <button class="tab-btn" id="tb-partner" onclick="switchTab('partner')">참여기관관리</button>
     <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">정산</button>
     <button class="tab-btn" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">발송이력</button>
     <button class="tab-btn" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
+    <button class="tab-btn" id="tb-pform" onclick="switchTab('pform')">📋 참여기관등록 폼</button>
     <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
   </div>
 
@@ -952,6 +1009,15 @@
 
       <!-- 위치 입력부 -->
       <div id="mode-location">
+        <!-- 지도 제공자 선택 -->
+        <div class="fg">
+          <label>지도 제공자</label>
+          <div class="seg" id="map-provider-seg" style="display:inline-flex;">
+            <button type="button" class="seg-btn act" data-provider="kakao"  onclick="setMapProvider('kakao')">🇰🇷 카카오</button>
+            <button type="button" class="seg-btn"     data-provider="google" onclick="setMapProvider('google')">🌏 Google</button>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">국내 위치는 카카오, 해외 위치는 Google 권장</div>
+        </div>
         <div class="fg">
           <label>주소 검색 <span class="req">*</span></label>
           <div class="search-wrap">
@@ -2249,6 +2315,144 @@
     </div>
   </div>
 
+  <!-- 참여기관등록 폼 탭 (관리자가 어떤 필드를 받을지 설정) -->
+  <div class="tab-panel" id="tab-pform">
+    <div class="panel-card">
+      <h3>참여기관등록 폼 설정 <span style="font-size:12px;font-weight:500;color:#94a3b8;margin-left:10px;">(프로젝트별로 받을 필드 + 약관/개인정보 동의 본문 + 선택지 관리)</span></h3>
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택</label>
+        <select id="pform-project" onchange="loadPartnerFormConfig()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <div id="pform-body" style="display:none;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#166534;line-height:1.55;">
+          ✓ 체크된 항목만 신청 폼에 노출됩니다. 약관·개인정보수집 동의는 필수입니다.
+          공개 신청 URL: <code id="pform-url" style="background:#fff;padding:2px 6px;border-radius:4px;color:#1d4ed8;"></code>
+          <button class="btn btn-o btn-sm" type="button" onclick="copyPformUrl()" style="margin-left:6px;padding:2px 8px;font-size:11px;">📋 복사</button>
+        </div>
+        <h4 style="margin:18px 0 10px;font-size:14px;color:#1e293b;">🏢 기관정보 필드</h4>
+        <div class="pform-grid" id="pform-grid-company"></div>
+        <h4 style="margin:18px 0 10px;font-size:14px;color:#1e293b;">👤 담당자정보 필드</h4>
+        <div class="pform-grid" id="pform-grid-contact"></div>
+        <h4 style="margin:18px 0 10px;font-size:14px;color:#1e293b;">📝 선택지 (각 섹션을 사용 여부 체크박스로 토글)</h4>
+
+        <div class="fg pform-sec" id="sec-fields">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;">
+            <input type="checkbox" id="sec-use-fields" onchange="onSecToggle('fields')" checked style="width:18px;height:18px;">
+            <span><b>참가분야</b> (다중선택) — 참가 신청 폼에 사용</span>
+          </label>
+          <textarea id="pform-field-opts" rows="2" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:8px;" placeholder="예: AI, 로보틱스, 바이오, 친환경"></textarea>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">콤마 또는 줄바꿈으로 항목 구분</div>
+        </div>
+
+        <div class="fg pform-sec" id="sec-booth">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;">
+            <input type="checkbox" id="sec-use-booth" onchange="onSecToggle('booth')" checked style="width:18px;height:18px;">
+            <span><b>부스타입</b> (단일선택) — 한 줄당 한 부스 / 콤마로 [부스명, 단가, 설명]</span>
+          </label>
+          <textarea id="pform-booth-opts" rows="3" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;font-family:Consolas,monospace;margin-top:8px;" placeholder="일반부스, 1000000, 6m × 3m / 1구좌&#10;프리미엄부스, 2000000, 9m × 3m / 코너 위치&#10;소형부스, 500000, 3m × 3m / 입문용"></textarea>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">형식: <code>부스타입, 단가(원), 설명</code> (한 줄당 1개)</div>
+        </div>
+
+        <div class="fg pform-sec" id="sec-facility">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;">
+            <input type="checkbox" id="sec-use-facility" onchange="onSecToggle('facility')" checked style="width:18px;height:18px;">
+            <span><b>부대시설</b> (다중선택) — 한 줄당 한 시설 / 콤마로 [시설명, 단가, 설명]</span>
+          </label>
+          <textarea id="pform-facility-opts" rows="3" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;font-family:Consolas,monospace;margin-top:8px;" placeholder="전기, 50000, 220V 3kW&#10;인터넷, 30000, 유선 100Mbps&#10;조명, 100000, 추가 스팟 4개&#10;음향, 200000, 마이크 + 스피커 세트"></textarea>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">형식: <code>시설명, 단가(원), 설명</code> (한 줄당 1개)</div>
+        </div>
+
+        <div class="fg pform-sec" id="sec-work">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;">
+            <input type="checkbox" id="sec-show-work" onchange="onSecToggle('work')" checked style="width:18px;height:18px;">
+            <span><b>🕐 근무시간 안내</b> — 참가기관 신청 폼 상단에 표시</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
+            <input id="pform-work-from" type="time" value="10:00" style="width:130px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+            <span style="color:#475569;font-weight:600;">~</span>
+            <input id="pform-work-to"   type="time" value="18:00" style="width:130px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+            <button type="button" class="btn btn-o btn-sm" style="padding:6px 12px;font-size:12px;"
+              onclick="document.getElementById('pform-work-from').value='10:00';document.getElementById('pform-work-to').value='18:00';">↺ 기본값</button>
+          </div>
+        </div>
+
+        <h4 style="margin:18px 0 10px;font-size:14px;color:#1e293b;">📜 동의 본문</h4>
+        <div class="fg"><label>약관 동의 본문</label>
+          <textarea id="pform-terms" rows="4" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;"></textarea></div>
+        <div class="fg"><label>개인정보수집·이용 동의 본문</label>
+          <textarea id="pform-privacy" rows="4" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;"></textarea></div>
+        <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
+          <input type="checkbox" id="pform-active" style="width:18px;height:18px;cursor:pointer;" checked>
+          <span style="font-weight:700;color:#1e293b;">신청 받기 활성화</span>
+        </label>
+        <div id="pform-msg" class="msg" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-p" style="flex:1;" onclick="savePartnerFormConfig()">💾 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 참여기관관리 탭 (신청 목록 + 승인/거절) -->
+  <div class="tab-panel" id="tab-partner">
+    <div class="panel-card">
+      <div style="display:flex;flex-wrap:nowrap;gap:8px;align-items:center;margin-bottom:14px;overflow-x:auto;">
+        <input id="partner-filter-project" type="text" placeholder="프로젝트명" style="min-width:160px;flex:1;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;" onkeydown="if(event.key==='Enter')renderPartnerList()">
+        <select id="partner-filter-status" style="min-width:130px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;">
+          <option value="">상태 전체</option>
+          <option value="pending">⌛ 대기</option>
+          <option value="approved">✓ 승인 (입금 전)</option>
+          <option value="deposit">💰 입금확인</option>
+          <option value="rejected">✗ 거절</option>
+        </select>
+        <input id="partner-filter-name" type="text" placeholder="회사명" style="min-width:160px;flex:1;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;" onkeydown="if(event.key==='Enter')renderPartnerList()">
+        <button class="btn btn-primary btn-sm" style="white-space:nowrap;" onclick="renderPartnerList()">🔍 검색</button>
+        <button class="btn btn-outline btn-sm" style="white-space:nowrap;" onclick="resetPartnerFilters()">↺ 초기화</button>
+        <!-- hidden 호환: 기존 코드의 partner-project 요소 유지 -->
+        <input id="partner-project" type="hidden" value="">
+      </div>
+      <div id="partner-list-wrap"></div>
+    </div>
+  </div>
+
+  <!-- 사업자등록증 미리보기 모달 -->
+  <div class="modal-ov" id="modal-bizcert-preview">
+    <div class="modal" style="width:90vw;max-width:880px;max-height:92vh;display:flex;flex-direction:column;">
+      <div class="card-header" style="flex-shrink:0;">
+        <h2 id="bp-title">사업자등록증</h2>
+        <button class="modal-close" onclick="closeBizCertPreview()">×</button>
+      </div>
+      <div class="card-body" id="bp-body" style="flex:1;min-height:0;overflow-y:auto;padding:0;background:#f8fafc;text-align:center;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:flex-end;">
+        <a id="bp-download" href="#" target="_blank" rel="noopener" class="btn btn-p btn-sm" style="text-decoration:none;">⬇ 새 탭에서 열기</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 참여기관 상세 모달 -->
+  <div class="modal-ov" id="modal-partner-detail">
+    <div class="modal" style="width:92vw;max-width:720px;max-height:92vh;display:flex;flex-direction:column;">
+      <div class="card-header" style="flex-shrink:0;">
+        <h2 id="ptn-title">참여기관 상세</h2>
+        <button class="modal-close" onclick="closePartnerDetail()">×</button>
+      </div>
+      <div class="card-body" id="ptn-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
+    </div>
+  </div>
+
+  <style>
+    .pform-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px 14px; }
+    .pform-grid label { display:flex; align-items:center; gap:6px; font-size:13px; color:#475569; cursor:pointer; padding:6px 8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; }
+    .pform-grid input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
+    /* 옵션 섹션 — 사용 여부 토글 (체크 해제 시 회색·잠금) */
+    .pform-sec { padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; background:#fff; transition:opacity .15s, background .15s; }
+    .pform-sec.off { opacity:.55; background:#f8fafc; }
+    .pform-sec.off textarea, .pform-sec.off input[type=time], .pform-sec.off button { pointer-events:none; }
+    @media (max-width:760px) { .pform-grid { grid-template-columns:repeat(2, 1fr); } }
+  </style>
+
   <!-- 메일양식 편집 모달 -->
   <div class="modal-ov" id="modal-mailtpl-edit">
     <div class="modal" style="width:90vw;max-width:780px;max-height:92vh;display:flex;flex-direction:column;">
@@ -3034,6 +3238,13 @@
         <input id="el-name" type="text" maxlength="100"></div>
       <div class="fg" id="el-desc-row"><label>설명 <span class="hint">(선택, 최대 500자)</span></label>
         <textarea id="el-desc" maxlength="500" style="resize:vertical;min-height:80px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea></div>
+      <div class="fg" id="el-provider-row">
+        <label>지도 제공자 <span class="hint">(저장된 좌표를 어느 지도로 보여줄지)</span></label>
+        <div class="seg" id="el-provider-seg" style="display:inline-flex;">
+          <button type="button" class="seg-btn" data-provider="kakao"  onclick="setElProvider('kakao')">🇰🇷 카카오</button>
+          <button type="button" class="seg-btn" data-provider="google" onclick="setElProvider('google')">🌏 Google</button>
+        </div>
+      </div>
       <div id="el-coord-row" class="grid2" style="display:grid;">
         <div class="fg"><label>위도 <span class="hint">(필요 시 수정)</span></label>
           <input id="el-lat" type="text"></div>
@@ -3316,7 +3527,7 @@ function switchTab(name) {
     if (btn.title) uiAlert(btn.title);
     return;
   }
-  ['proj','new','entry','agent','tour','quiz','survey','apps','settle','mail','mailtpl'].forEach(t => {
+  ['proj','new','entry','agent','tour','quiz','survey','apps','settle','mail','mailtpl','pform','partner'].forEach(t => {
     document.getElementById('tb-'+t).classList.toggle('act', t===name);
     document.getElementById('tab-'+t).classList.toggle('act', t===name);
   });
@@ -3326,6 +3537,8 @@ function switchTab(name) {
   if (name === 'agent') loadAgentProjects();
   if (name === 'apps') loadAppsTabProjects();
   if (name === 'mailtpl') loadEmailTemplates();
+  if (name === 'pform') loadPartnerFormProjects();
+  if (name === 'partner') loadPartnerListProjects();
   if (name === 'tour') loadTourProjects();
   if (name === 'quiz') loadQuizProjects();
   if (name === 'survey') loadSurveyProjects();
@@ -4086,6 +4299,20 @@ async function saveLocTourMeta() {
     const d = await r.json();
     if (!r.ok) { msg.className = 'msg e'; msg.textContent = d.error || '저장에 실패했습니다.'; return; }
     msg.className = 'msg s'; msg.textContent = '✓ Tour 정보가 저장되었습니다.';
+
+    // 단계 수 vs 활성 위치/전시물 수 비교 — 부족하면 경고 (저장은 이미 완료됨)
+    try {
+      const tierCountEl = document.getElementById('loc-tiers-count');
+      const tierCount = tierCountEl ? Number(tierCountEl.value || 0) : 0;
+      const activeCount = Array.isArray(locDataCache) ? locDataCache.filter(l => !l.disabled).length : 0;
+      // 단계가 2 이상이고 활성 Tour 가 단계보다 적은 경우 (또는 동일이라도 추가 권장)
+      if (tierCount >= 2 && activeCount < tierCount) {
+        const lackCnt = tierCount - activeCount;
+        await uiAlert(`✓ Tour 정보가 저장되었습니다.\n\n⚠ 추가적으로 전시물 또는 위치 정보 입력이 필요합니다.\n\n현재 단계: ${tierCount}단계 / 활성 Tour: ${activeCount}개\n→ ${lackCnt}개 더 등록하는 것을 권장합니다.`);
+      } else if (tierCount === 0 && activeCount < 3) {
+        await uiAlert(`✓ Tour 정보가 저장되었습니다.\n\n⚠ 추가적으로 전시물 또는 위치 정보 입력이 필요합니다.\n\n현재 활성 Tour: ${activeCount}개\n→ Tour 운영을 위해 최소 3개 이상 권장합니다.`);
+      }
+    } catch (e) { /* 경고 표시 실패는 저장 결과에 영향 없음 */ }
   } catch (e) {
     msg.className = 'msg e'; msg.textContent = '네트워크 오류로 저장에 실패했습니다.';
   }
@@ -5398,8 +5625,9 @@ async function saveProfile() {
 }
 
 // ── 랜딩페이지 미리보기 (방문자가 보는 실제 랜딩 페이지) ──
+//   ?preview=1 — 시간 윈도우/상태 검사 우회 (활성화된 모든 기능 노출)
 function openPreview(serial) {
-  const url = `/v/${serial}`;
+  const url = `/v/${serial}?preview=1`;
   document.getElementById('preview-frame').src = url;
   document.getElementById('preview-open').href = url;
   document.getElementById('modal-preview').classList.add('open');
@@ -6070,8 +6298,13 @@ function renderLocRow(l, started) {
   const badge = `<span class="loc-tag ${isExhibit ? 'tag-exh' : 'tag-loc'}">${isExhibit ? '전시물' : '위치'}</span>`;
   const coord = hasCoord
     ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">위도 ${l.kakao_lat} · 경도 ${l.kakao_lng}</div>` : '';
+  const isGoogleLoc = l.map_provider === 'google';
+  const mapUrl = isGoogleLoc
+    ? `https://www.google.com/maps/search/?api=1&query=${l.kakao_lat},${l.kakao_lng}`
+    : `https://map.kakao.com/link/map/${encodeURIComponent(l.location_name)},${l.kakao_lat},${l.kakao_lng}`;
+  const mapLabel = isGoogleLoc ? '🌏 Google' : '🇰🇷 카카오';
   const mapLink = hasCoord
-    ? `<a class="map-link" href="https://map.kakao.com/link/map/${encodeURIComponent(l.location_name)},${l.kakao_lat},${l.kakao_lng}" target="_blank" rel="noopener">🗺 지도</a>` : '';
+    ? `<a class="map-link" href="${mapUrl}" target="_blank" rel="noopener" title="${isGoogleLoc ? 'Google Maps' : '카카오맵'} 에서 보기">🗺 지도 (${mapLabel})</a>` : '';
   const qrUrl = l.qr_image_url ? `${l.qr_image_url}?t=${qrCacheBust}` : '';
   const safeLocName = String(l.location_name || '').replace(/'/g, "\\'");
   const qr = qrUrl
@@ -6104,6 +6337,13 @@ function onLocCardClick(e, id) {
 // ── Tour(전시물/위치) 수정 ──
 let editingLocId = null;
 let elRemoveImage = false;
+let elMapProvider = 'kakao';   // 편집 모달의 현재 선택된 지도 제공자
+function setElProvider(p, silent) {
+  if (p !== 'kakao' && p !== 'google') p = 'kakao';
+  elMapProvider = p;
+  document.querySelectorAll('#el-provider-seg .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.provider === p));
+  if (!silent) elMarkChanged();
+}
 async function openEditLoc(locId) {
   const l = locDataCache.find(x => Number(x.id) === Number(locId));
   if (!l) { await uiAlert('Tour 정보를 찾을 수 없습니다.'); return; }
@@ -6121,6 +6361,10 @@ async function openEditLoc(locId) {
   document.getElementById('el-desc').value = l.location_desc || '';
   document.getElementById('el-lat').value = l.kakao_lat != null ? l.kakao_lat : '';
   document.getElementById('el-lng').value = l.kakao_lng != null ? l.kakao_lng : '';
+  // 지도 제공자 반영 (저장된 값 또는 기본 'kakao')
+  const provRow = document.getElementById('el-provider-row');
+  if (provRow) provRow.style.display = isExhibit ? 'none' : '';
+  setElProvider(l.map_provider === 'google' ? 'google' : 'kakao', /*silent*/true);
   const fileEl = document.getElementById('el-image');
   if (fileEl) fileEl.value = '';
   const pv = document.getElementById('el-img-preview');
@@ -6193,6 +6437,8 @@ async function saveEditLoc() {
   fd.append('location_desc', desc);
   if (lat) fd.append('kakao_lat', lat);
   if (lng) fd.append('kakao_lng', lng);
+  // 사용자가 편집 모달에서 선택한 지도 제공자
+  if (elMapProvider) fd.append('map_provider', elMapProvider);
   if (elRemoveImage) fd.append('remove_image', '1');
   const fileEl = document.getElementById('el-image');
   if (fileEl && fileEl.files && fileEl.files[0]) fd.append('image', fileEl.files[0]);
@@ -6298,6 +6544,45 @@ async function downloadQrZip() {
   }
 }
 
+// ── 지도 제공자 (kakao / google) ──
+let mapProvider = 'kakao';
+function setMapProvider(p) {
+  if (p !== 'kakao' && p !== 'google') p = 'kakao';
+  mapProvider = p;
+  document.querySelectorAll('#map-provider-seg .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.provider === p));
+  // 선택 변경 시 진행중인 검색·프리뷰 초기화 (혼선 방지)
+  hideSug();
+  const search = document.getElementById('loc-search');
+  if (search && !document.getElementById('loc-fields').style.display.includes('block')) {
+    // 아직 장소 선택 전이면 검색창도 깔끔하게
+  }
+}
+
+// ── Google Maps JS SDK 로더 (Places + Geocoding) ──
+let googleSdkReady = false;
+let googleSdkLoading = null;
+async function loadGoogleSdk() {
+  if (googleSdkReady) return;
+  if (googleSdkLoading) return googleSdkLoading;
+  googleSdkLoading = (async () => {
+    const r = await fetch('/api/host/google/js-key');
+    if (!r.ok) throw new Error('GOOGLE_MAPS_JS_KEY 가 설정되지 않았습니다. .env 에 추가해 주세요.');
+    const { key } = await r.json();
+    const sdkUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&language=ko&loading=async`;
+    await new Promise((resolve, reject) => {
+      // 이미 로드 중이면 재사용
+      if (window.google && window.google.maps) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = sdkUrl; s.async = true; s.defer = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Google Maps SDK 로드 실패 (API 키·결제 계정·도메인 제한 확인)'));
+      document.head.appendChild(s);
+    });
+    googleSdkReady = true;
+  })();
+  try { await googleSdkLoading; } finally { googleSdkLoading = null; }
+}
+
 // ── Kakao 장소 키워드 검색 (JS SDK) ──
 let kakaoSdkReady = false;
 
@@ -6333,20 +6618,62 @@ function onLocSearch(input) {
 }
 
 async function fetchPlaces(q) {
+  if (mapProvider === 'google') return fetchPlacesGoogle(q);
+  return fetchPlacesKakao(q);
+}
+async function fetchPlacesKakao(q) {
   try { await loadKakaoSdk(); } catch(e) { showSugError(e.message); return; }
   const ps = new kakao.maps.services.Places();
   ps.keywordSearch(q, (data, status) => {
     if (status !== kakao.maps.services.Status.OK) { showSugError('검색 결과가 없습니다.'); return; }
-    sugDocs = data;
-    const box = document.getElementById('sug-box');
-    box.innerHTML = sugDocs.map((doc, i) =>
-      `<div class="sug-item" onclick="selectPlace(${i})">
-        <div class="sug-name">${doc.place_name}</div>
-        <div class="sug-addr">${doc.road_address_name||doc.address_name}</div>
-      </div>`
-    ).join('');
-    box.style.display = 'block';
+    sugDocs = data.map(d => ({
+      provider: 'kakao',
+      place_name: d.place_name,
+      road_address_name: d.road_address_name,
+      address_name: d.address_name,
+      x: d.x, y: d.y,
+      place_url: d.place_url,
+    }));
+    renderSug();
   });
+}
+async function fetchPlacesGoogle(q) {
+  try { await loadGoogleSdk(); } catch(e) { showSugError(e.message); return; }
+  // Google Places textSearch — 자유 텍스트 검색에 가장 적합
+  //   결과 객체에 name/formatted_address/geometry 가 모두 포함되어 getDetails 호출 불필요
+  const psSvc = new google.maps.places.PlacesService(document.createElement('div'));
+  psSvc.textSearch({ query: q, language: 'ko' }, (results, status) => {
+    const STATUS = google.maps.places.PlacesServiceStatus;
+    if (status === STATUS.ZERO_RESULTS) { showSugError('검색 결과가 없습니다.'); return; }
+    if (status === STATUS.REQUEST_DENIED) {
+      showSugError('Google Places API 가 활성화되지 않았습니다. (Cloud Console 확인)'); return;
+    }
+    if (status === STATUS.INVALID_REQUEST) { showSugError('잘못된 요청 — 검색어를 다시 입력해 주세요.'); return; }
+    if (status !== STATUS.OK || !results || !results.length) {
+      showSugError(`검색 실패 (status: ${status})`); return;
+    }
+    sugDocs = results.slice(0, 10).filter(d => d.geometry && d.geometry.location).map(d => ({
+      provider: 'google',
+      place_name: d.name || d.formatted_address || '(이름 없음)',
+      road_address_name: d.formatted_address || '',
+      address_name: d.formatted_address || '',
+      x: String(d.geometry.location.lng()),
+      y: String(d.geometry.location.lat()),
+      place_url: d.place_id ? `https://www.google.com/maps/place/?q=place_id:${d.place_id}` : '',
+    }));
+    if (!sugDocs.length) { showSugError('좌표 정보가 있는 결과가 없습니다.'); return; }
+    renderSug();
+  });
+}
+function renderSug() {
+  const box = document.getElementById('sug-box');
+  box.innerHTML = sugDocs.map((doc, i) =>
+    `<div class="sug-item" onclick="selectPlace(${i})">
+      <div class="sug-name">${doc.place_name}</div>
+      <div class="sug-addr">${doc.road_address_name||doc.address_name}</div>
+    </div>`
+  ).join('');
+  box.style.display = 'block';
 }
 
 function showSugError(msg) {
@@ -6365,8 +6692,12 @@ function selectPlace(i) {
   document.getElementById('prev-pname').textContent = doc.place_name;
   document.getElementById('prev-paddr').textContent = doc.road_address_name || doc.address_name;
   document.getElementById('prev-pcoord').textContent = `위도 ${doc.y} · 경도 ${doc.x}`;
-  const mapUrl = doc.place_url || `https://map.kakao.com/link/map/${encodeURIComponent(doc.place_name)},${doc.y},${doc.x}`;
-  document.getElementById('prev-link').href = mapUrl;
+  const isGoogle = doc.provider === 'google';
+  const fallbackUrl = isGoogle
+    ? `https://www.google.com/maps/search/?api=1&query=${doc.y},${doc.x}`
+    : `https://map.kakao.com/link/map/${encodeURIComponent(doc.place_name)},${doc.y},${doc.x}`;
+  document.getElementById('prev-link').href = doc.place_url || fallbackUrl;
+  document.getElementById('prev-link').textContent = isGoogle ? '🗺 Google Maps 에서 보기' : '🗺 카카오맵에서 보기';
   document.getElementById('place-prev').style.display = 'block';
 
   // 필드
@@ -6427,20 +6758,34 @@ function resetLocForm() {
   clearSelectedPlace();
 }
 
-// ── 지도에서 위치 선택 (Kakao 지도 + 좌표→주소 변환) ──
+// ── 지도에서 위치 선택 (provider 분기: kakao / google) ──
+//   pick 형식: { provider, lat, lng, addr, name }
 let mapPicker = null, mapMarker = null, mapGeocoder = null, mapPick = null;
+let googleMap = null, googleMarker = null, googleGeocoder = null;
+let mapPickerProvider = null;  // 현재 picker 가 만들어진 provider
 
 async function openMapPicker() {
+  if (mapProvider === 'google') return openMapPickerGoogle();
+  return openMapPickerKakao();
+}
+
+async function openMapPickerKakao() {
   try { await loadKakaoSdk(); } catch (e) { await uiAlert(e.message); return; }
   document.getElementById('modal-map').classList.add('open');
+  // 이전에 Google picker 가 떠 있었으면 DOM 정리
+  if (mapPickerProvider === 'google') {
+    document.getElementById('map-canvas').innerHTML = '';
+    googleMap = null; googleMarker = null;
+  }
+  mapPickerProvider = 'kakao';
   setTimeout(() => {
     const center = new kakao.maps.LatLng(37.5665, 126.9780);
-    if (!mapPicker) {
+    if (!mapPicker || !document.getElementById('map-canvas').firstChild) {
       mapPicker = new kakao.maps.Map(document.getElementById('map-canvas'), { center, level: 4 });
       mapMarker = new kakao.maps.Marker({ position: center, draggable: true });
       mapGeocoder = new kakao.maps.services.Geocoder();
-      kakao.maps.event.addListener(mapPicker, 'click', e => placeMapMarker(e.latLng));
-      kakao.maps.event.addListener(mapMarker, 'dragend', () => placeMapMarker(mapMarker.getPosition()));
+      kakao.maps.event.addListener(mapPicker, 'click', e => placeMapMarkerKakao(e.latLng));
+      kakao.maps.event.addListener(mapMarker, 'dragend', () => placeMapMarkerKakao(mapMarker.getPosition()));
     } else {
       mapPicker.relayout();
       mapPicker.setCenter(center);
@@ -6452,7 +6797,35 @@ async function openMapPicker() {
   }, 60);
 }
 
-function placeMapMarker(latLng) {
+async function openMapPickerGoogle() {
+  try { await loadGoogleSdk(); } catch (e) { await uiAlert(e.message); return; }
+  document.getElementById('modal-map').classList.add('open');
+  // 이전 Kakao picker DOM 제거
+  if (mapPickerProvider === 'kakao') {
+    document.getElementById('map-canvas').innerHTML = '';
+    mapPicker = null; mapMarker = null;
+  }
+  mapPickerProvider = 'google';
+  setTimeout(() => {
+    const center = { lat: 37.5665, lng: 126.9780 };  // 서울 시청 기본
+    if (!googleMap || !document.getElementById('map-canvas').firstChild) {
+      googleMap = new google.maps.Map(document.getElementById('map-canvas'), {
+        center, zoom: 13, streetViewControl: false, mapTypeControl: false,
+      });
+      googleGeocoder = new google.maps.Geocoder();
+      googleMap.addListener('click', e => placeMapMarkerGoogle(e.latLng));
+    } else {
+      googleMap.setCenter(center);
+      google.maps.event.trigger(googleMap, 'resize');
+    }
+    if (googleMarker) { googleMarker.setMap(null); googleMarker = null; }
+    mapPick = null;
+    document.getElementById('map-confirm').disabled = true;
+    document.getElementById('map-pick-info').textContent = '';
+  }, 60);
+}
+
+function placeMapMarkerKakao(latLng) {
   mapMarker.setPosition(latLng);
   mapMarker.setMap(mapPicker);
   const lat = latLng.getLat(), lng = latLng.getLng();
@@ -6463,7 +6836,27 @@ function placeMapMarker(latLng) {
              (res[0].address && res[0].address.address_name) || '';
     }
     const name = addr || `좌표(${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-    mapPick = { lat, lng, addr, name };
+    mapPick = { provider: 'kakao', lat, lng, addr, name };
+    document.getElementById('map-pick-info').textContent =
+      addr ? `선택: ${addr}` : `선택: 위도 ${lat.toFixed(6)}, 경도 ${lng.toFixed(6)}`;
+    document.getElementById('map-confirm').disabled = false;
+  });
+}
+
+function placeMapMarkerGoogle(latLng) {
+  const lat = latLng.lat(), lng = latLng.lng();
+  if (!googleMarker) {
+    googleMarker = new google.maps.Marker({ position: latLng, map: googleMap, draggable: true });
+    googleMarker.addListener('dragend', e => placeMapMarkerGoogle(e.latLng));
+  } else {
+    googleMarker.setPosition(latLng);
+  }
+  // 역지오코딩 (한글 우선)
+  googleGeocoder.geocode({ location: latLng, language: 'ko' }, (res, status) => {
+    let addr = '';
+    if (status === 'OK' && res && res[0]) addr = res[0].formatted_address || '';
+    const name = addr || `좌표(${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+    mapPick = { provider: 'google', lat, lng, addr, name };
     document.getElementById('map-pick-info').textContent =
       addr ? `선택: ${addr}` : `선택: 위도 ${lat.toFixed(6)}, 경도 ${lng.toFixed(6)}`;
     document.getElementById('map-confirm').disabled = false;
@@ -6472,12 +6865,15 @@ function placeMapMarker(latLng) {
 
 function confirmMapPick() {
   if (!mapPick) return;
+  const isGoogle = mapPick.provider === 'google';
+  const mapUrl = isGoogle
+    ? `https://www.google.com/maps/search/?api=1&query=${mapPick.lat},${mapPick.lng}`
+    : `https://map.kakao.com/link/map/${encodeURIComponent(mapPick.name)},${mapPick.lat},${mapPick.lng}`;
   document.getElementById('loc-search').value = mapPick.addr || mapPick.name;
   document.getElementById('prev-pname').textContent = mapPick.name;
   document.getElementById('prev-paddr').textContent = mapPick.addr || '(주소 정보 없음, 좌표 사용)';
   document.getElementById('prev-pcoord').textContent = `위도 ${mapPick.lat} · 경도 ${mapPick.lng}`;
-  document.getElementById('prev-link').href =
-    `https://map.kakao.com/link/map/${encodeURIComponent(mapPick.name)},${mapPick.lat},${mapPick.lng}`;
+  document.getElementById('prev-link').href = mapUrl;
   document.getElementById('place-prev').style.display = 'block';
   document.getElementById('loc-name').value = mapPick.name;
   document.getElementById('loc-lat').value = mapPick.lat;
@@ -6513,6 +6909,7 @@ async function addLocation() {
     fd.append('location_desc', location_desc);
     fd.append('kakao_lat', kakao_lat);
     fd.append('kakao_lng', kakao_lng);
+    fd.append('map_provider', mapProvider);
   } else {
     const exhibit_name = document.getElementById('exh-name').value.trim();
     const exhibit_desc = document.getElementById('exh-desc').value.trim();
@@ -9997,6 +10394,445 @@ function tplLabel(k) { return MAIL_TPL[k] || k || '-'; }
 // 메일양식 (시스템 발송 메일 제목·본문 관리)
 // ════════════════════════════════════════════════════════
 let mailTplData = [];
+// ════════════════════════════════════════════════════════
+// 참여기관등록 폼 (관리자가 사용 필드 선택)
+// ════════════════════════════════════════════════════════
+const PFORM_COMPANY_FIELDS = [
+  { key:'use_company_name_ko',  label:'회사명(국문)' },
+  { key:'use_company_name_en',  label:'회사명(영문)' },
+  { key:'use_ceo_name',         label:'대표자성명' },
+  { key:'use_ceo_email',        label:'대표자이메일' },
+  { key:'use_ceo_mobile',       label:'대표자모바일' },
+  { key:'use_biz_cert_file',    label:'사업자등록증(파일)' },
+  { key:'use_company_phone',    label:'전화번호' },
+  { key:'use_company_fax',      label:'팩스' },
+  { key:'use_company_address',  label:'주소' },
+  { key:'use_company_homepage', label:'홈페이지' },
+  { key:'use_company_logo',     label:'참가기업 로고 (140×40)' },
+  { key:'use_company_fields',   label:'참가분야(다중선택)' },
+];
+const PFORM_CONTACT_FIELDS = [
+  { key:'use_contact_name',     label:'담당자성명' },
+  { key:'use_contact_dept',     label:'부서' },
+  { key:'use_contact_position', label:'직위' },
+  { key:'use_contact_phone',    label:'전화번호' },
+  { key:'use_contact_email',    label:'이메일' },
+  { key:'use_booth_type',       label:'부스타입(단일)' },
+  { key:'use_booth_count',      label:'부스개수' },
+  { key:'use_facility',         label:'부대시설(다중)' },
+  { key:'use_extra_request',    label:'기타요청 사항' },
+];
+async function loadPartnerFormProjects() {
+  const sel = document.getElementById('pform-project');
+  if (!sel) return;
+  if (sel.options.length > 1) return;   // 이미 로드
+  try {
+    const r = await fetch('/api/host/projects?page=1&size=100');
+    const d = await r.json();
+    (d.data || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = `${p.project_name} (${p.project_serial})`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+async function loadPartnerFormConfig() {
+  const pid = document.getElementById('pform-project').value;
+  const body = document.getElementById('pform-body');
+  if (!pid) { body.style.display = 'none'; return; }
+  body.style.display = '';
+  // 폼 URL 표시
+  const sel = document.getElementById('pform-project');
+  const opt = sel.options[sel.selectedIndex];
+  const serialMatch = opt.textContent.match(/\(([^)]+)\)\s*$/);
+  const serial = serialMatch ? serialMatch[1] : '';
+  const url = `${location.origin}/partner/${serial}`;
+  document.getElementById('pform-url').textContent = url;
+  // 체크박스 그리드 렌더 — 설정값 우선, 신규(cfg=null) 시 모든 항목 기본 체크
+  const renderGrid = (containerId, fields, cfg) => {
+    document.getElementById(containerId).innerHTML = fields.map(f => {
+      const checked = cfg ? Number(cfg[f.key]) === 1 : true;
+      return `<label><input type="checkbox" id="${f.key}" ${checked ? 'checked' : ''}>${esc(f.label)}</label>`;
+    }).join('');
+  };
+  // 설정 fetch
+  try {
+    const r = await fetch(`/api/partner/host/projects/${pid}/partner-form`);
+    const d = await r.json();
+    const cfg = d.config;
+    renderGrid('pform-grid-company', PFORM_COMPANY_FIELDS, cfg);
+    renderGrid('pform-grid-contact', PFORM_CONTACT_FIELDS, cfg);
+    // 참가분야 — 단순 배열
+    document.getElementById('pform-field-opts').value = cfg && Array.isArray(cfg.field_options) ? cfg.field_options.join(', ') : '';
+    // 부스타입 / 부대시설 — 객체 배열({name,cost,desc}) 또는 레거시 문자열 배열 모두 처리
+    const stringifyItems = arr => (arr || []).map(it => {
+      if (typeof it === 'string') return it;
+      const parts = [it.name || ''];
+      if (it.cost != null && it.cost !== '') parts.push(String(it.cost));
+      if (it.desc) parts.push(it.desc);
+      return parts.join(', ');
+    }).join('\n');
+    document.getElementById('pform-booth-opts').value = cfg && Array.isArray(cfg.booth_type_options) ? stringifyItems(cfg.booth_type_options) : '';
+    document.getElementById('pform-facility-opts').value = cfg && Array.isArray(cfg.facility_options) ? stringifyItems(cfg.facility_options) : '';
+    // 근무시간 (기본 10:00 ~ 18:00)
+    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+    document.getElementById('pform-work-from').value = cfg && hhmm.test(cfg.work_hours_from || '') ? cfg.work_hours_from : '10:00';
+    document.getElementById('pform-work-to').value   = cfg && hhmm.test(cfg.work_hours_to   || '') ? cfg.work_hours_to   : '18:00';
+    // 섹션 사용 여부 — 신규(cfg=null)는 모두 true 기본, 기존 cfg 는 저장값
+    const secOn = (key, dflt) => cfg ? Number(cfg[key]) === 1 : dflt;
+    document.getElementById('sec-use-fields').checked   = secOn('use_company_fields', true);
+    document.getElementById('sec-use-booth').checked    = secOn('use_booth_type', true);
+    document.getElementById('sec-use-facility').checked = secOn('use_facility', true);
+    document.getElementById('sec-show-work').checked    = secOn('show_work_hours', true);
+    // 시각 효과 반영
+    ['fields','booth','facility','work'].forEach(onSecToggle);
+    document.getElementById('pform-terms').value = (cfg && cfg.terms_text) || '본 약관에 동의함으로써 참여기관 신청 절차를 진행하는 데 동의합니다. 신청 정보는 행사 운영 목적으로만 사용됩니다.';
+    document.getElementById('pform-privacy').value = (cfg && cfg.privacy_text) || '신청서에 입력된 개인정보(이메일·연락처 등)는 참여기관 등록·심사·연락 목적으로 수집·이용되며, 보유 기간은 행사 종료 후 1년입니다.';
+    document.getElementById('pform-active').checked = cfg ? Number(cfg.is_active) === 1 : true;
+  } catch (e) {
+    renderGrid('pform-grid-company', PFORM_COMPANY_FIELDS, null);
+    renderGrid('pform-grid-contact', PFORM_CONTACT_FIELDS, null);
+  }
+}
+// 섹션 사용 여부 토글 — UI 시각 효과 + 동기화
+//   fields  → use_company_fields
+//   booth   → use_booth_type
+//   facility→ use_facility
+//   work    → show_work_hours
+const PFORM_SEC_MAP = {
+  fields:   { secId:'sec-fields',   secChk:'sec-use-fields',    gridChk:'use_company_fields' },
+  booth:    { secId:'sec-booth',    secChk:'sec-use-booth',     gridChk:'use_booth_type' },
+  facility: { secId:'sec-facility', secChk:'sec-use-facility',  gridChk:'use_facility' },
+  work:     { secId:'sec-work',     secChk:'sec-show-work',     gridChk:null /* 그리드 없음 */ },
+};
+function onSecToggle(key) {
+  const m = PFORM_SEC_MAP[key]; if (!m) return;
+  const on = document.getElementById(m.secChk).checked;
+  const sec = document.getElementById(m.secId);
+  if (sec) sec.classList.toggle('off', !on);
+  // 필드 그리드에 대응되는 체크박스가 있으면 동기화
+  if (m.gridChk) {
+    const gc = document.getElementById(m.gridChk);
+    if (gc) gc.checked = on;
+  }
+}
+function copyPformUrl() {
+  const url = document.getElementById('pform-url').textContent;
+  navigator.clipboard.writeText(url).then(() => uiAlert('URL 이 복사되었습니다.'));
+}
+async function savePartnerFormConfig() {
+  const pid = document.getElementById('pform-project').value;
+  if (!pid) return;
+  const msg = document.getElementById('pform-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  const body = {};
+  [...PFORM_COMPANY_FIELDS, ...PFORM_CONTACT_FIELDS].forEach(f => {
+    body[f.key] = document.getElementById(f.key).checked;
+  });
+  // 참가분야: 콤마 또는 줄바꿈 으로 구분 (단순 문자열 배열)
+  const splitFlat = s => String(s||'').split(/[,\n]+/).map(x => x.trim()).filter(Boolean);
+  // 부스/시설: 줄바꿈으로 행 분리, 각 행은 콤마로 [이름, 비용, 설명] — JSON 객체 배열로 저장
+  const splitItems = s => String(s||'').split(/\n+/).map(line => {
+    const parts = line.split(',').map(p => p.trim()).filter((p, i) => i === 0 ? p : true);
+    if (!parts[0]) return null;
+    return { name: parts[0], cost: Number(String(parts[1]||'').replace(/[^0-9]/g, '')) || 0, desc: parts.slice(2).join(', ').trim() || '' };
+  }).filter(Boolean);
+  body.field_options = splitFlat(document.getElementById('pform-field-opts').value);
+  body.booth_type_options = splitItems(document.getElementById('pform-booth-opts').value);
+  body.facility_options = splitItems(document.getElementById('pform-facility-opts').value);
+  body.work_hours_from = document.getElementById('pform-work-from').value || '10:00';
+  body.work_hours_to   = document.getElementById('pform-work-to').value   || '18:00';
+  // 섹션 사용 여부 → DB 필드 매핑 (그리드 체크박스도 함께 강제)
+  body.use_company_fields = document.getElementById('sec-use-fields').checked;
+  body.use_booth_type     = document.getElementById('sec-use-booth').checked;
+  body.use_facility       = document.getElementById('sec-use-facility').checked;
+  body.show_work_hours    = document.getElementById('sec-show-work').checked;
+  body.terms_text = document.getElementById('pform-terms').value;
+  body.privacy_text = document.getElementById('pform-privacy').value;
+  body.is_active = document.getElementById('pform-active').checked;
+
+  // 저장 확인 다이얼로그
+  const ok = await uiConfirm('저장하시겠습니까?', { title: '저장 확인', okText: '저장', cancelText: '취소' });
+  if (!ok) return;
+
+  try {
+    const r = await fetch(`/api/partner/host/projects/${pid}/partner-form`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { msg.className = 'msg e'; msg.textContent = d.error || '저장 실패'; return; }
+    msg.className = 'msg g'; msg.textContent = '✓ 저장되었습니다.';
+  } catch (e) { msg.className = 'msg e'; msg.textContent = '네트워크 오류'; }
+}
+
+// ════════════════════════════════════════════════════════
+// 참여기관관리 — 신청 목록 + 승인/거절
+// ════════════════════════════════════════════════════════
+let partnerListCache = [];
+async function loadPartnerListProjects() {
+  // 탭 진입 시 자동 로드 (프로젝트 목록 캐시 → 신청 전체 표시)
+  await loadPartnerList();
+}
+// 호스트의 모든 프로젝트 신청을 한 번에 로드 (필터링은 클라이언트에서)
+let _partnerProjectsCache = [];
+async function loadPartnerList() {
+  const wrap = document.getElementById('partner-list-wrap');
+  wrap.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;">불러오는 중...</div>';
+  try {
+    // 프로젝트 목록 캐시 (탭 진입 시 1회)
+    if (!_partnerProjectsCache.length) {
+      const pr = await fetch('/api/host/projects?page=1&size=100');
+      const pd = await pr.json();
+      _partnerProjectsCache = (pd.data || []).map(p => ({ id: p.id, name: p.project_name, serial: p.project_serial }));
+    }
+    const all = [];
+    for (const pr of _partnerProjectsCache) {
+      try {
+        const r = await fetch(`/api/partner/host/projects/${pr.id}/partners`);
+        const d = await r.json();
+        (d.data || []).forEach(p => all.push({ ...p, _project_name: pr.name, _project_serial: pr.serial }));
+      } catch {}
+    }
+    partnerListCache = all;
+    renderPartnerList();
+  } catch (e) {
+    wrap.innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px;">불러오기 실패</div>';
+  }
+}
+
+function resetPartnerFilters() {
+  document.getElementById('partner-filter-project').value = '';
+  document.getElementById('partner-filter-status').value = '';
+  document.getElementById('partner-filter-name').value = '';
+  renderPartnerList();
+}
+
+function renderPartnerList() {
+  const wrap = document.getElementById('partner-list-wrap');
+  if (!partnerListCache || !partnerListCache.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;">접수된 신청이 없습니다.</div>';
+    return;
+  }
+  // 필터 적용
+  const sf = document.getElementById('partner-filter-status').value;
+  const nf = (document.getElementById('partner-filter-name').value || '').trim().toLowerCase();
+  const pf = (document.getElementById('partner-filter-project').value || '').trim().toLowerCase();
+  const filtered = partnerListCache.filter(p => {
+    // 프로젝트명 필터 (프로젝트명 또는 일련번호 포함 매치)
+    if (pf) {
+      const pn = (p._project_name || '').toLowerCase();
+      const ps = (p._project_serial || '').toLowerCase();
+      if (!pn.includes(pf) && !ps.includes(pf)) return false;
+    }
+    // 상태 필터
+    if (sf === 'pending'   && p.status !== 'pending')  return false;
+    if (sf === 'approved'  && !(p.status === 'approved' && !p.deposit_confirmed_at)) return false;
+    if (sf === 'deposit'   && !p.deposit_confirmed_at) return false;
+    if (sf === 'rejected'  && p.status !== 'rejected') return false;
+    // 회사명 필터
+    if (nf) {
+      const k = (p.company_name_ko || '').toLowerCase();
+      const e = (p.company_name_en || '').toLowerCase();
+      if (!k.includes(nf) && !e.includes(nf)) return false;
+    }
+    return true;
+  });
+  if (!filtered.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;">조건에 맞는 신청이 없습니다.</div>';
+    return;
+  }
+  const statusBadge = (s, dep) => {
+    if (s === 'rejected') return '<span class="badge bc">✗ 거절</span>';
+    if (s === 'approved' && dep) return '<span class="badge" style="background:#dbeafe;color:#1e40af;">💰 입금확인</span>';
+    if (s === 'approved') return '<span class="badge bs">✓ 승인</span>';
+    return '<span class="badge bp">⌛ 대기</span>';
+  };
+  const fmtDT = s => { if (!s) return '-'; const d = new Date(s); if (isNaN(d)) return '-'; const z = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+
+  // partnerListCache 의 원래 index 를 추적 (필터링 후 클릭 → 원본 인덱스 사용)
+  const trunc = (s, n) => { s = String(s||''); return s.length > n ? s.slice(0, n) + '…' : s; };
+  // 상태별 개수 집계
+  const stats = { total: filtered.length, pending: 0, approved: 0, deposit: 0, rejected: 0 };
+  filtered.forEach(p => {
+    if (p.status === 'rejected') stats.rejected++;
+    else if (p.status === 'approved' && p.deposit_confirmed_at) stats.deposit++;
+    else if (p.status === 'approved') stats.approved++;
+    else stats.pending++;
+  });
+  const summary = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;margin-bottom:10px;font-size:13px;font-weight:600;">
+    <span style="color:#1e293b;">총 <b style="color:#1d4ed8;font-size:15px;">${stats.total}</b>건</span>
+    <span style="color:#cbd5e1;">|</span>
+    <span style="color:#92400e;">⌛ 대기 <b>${stats.pending}</b></span>
+    <span style="color:#065f46;">✓ 승인 <b>${stats.approved}</b></span>
+    <span style="color:#1e40af;">💰 입금 <b>${stats.deposit}</b></span>
+    <span style="color:#991b1b;">✗ 거절 <b>${stats.rejected}</b></span>
+  </div>`;
+  wrap.innerHTML = summary + `<div class="tbl-wrap"><table style="width:100%;font-size:12px;">
+    <thead><tr>
+      <th>프로젝트</th><th>회사명</th><th>대표자</th><th>사업자등록증</th><th>로고</th>
+      <th>상태</th><th>담당자</th><th>직위</th><th>이메일</th><th>연락처</th>
+      <th>접수일시</th><th>승인일시</th><th>입금확인일시</th><th>관리</th>
+    </tr></thead>
+    <tbody>${filtered.map(p => {
+      const origIdx = partnerListCache.indexOf(p);
+      const companyName = p.company_name_ko || p.company_name_en || '';
+      const projName = p._project_name || '-';
+      const bizBtn = p.biz_cert_url
+        ? `<button class="btn btn-o btn-sm" style="padding:3px 9px;font-size:11px;" onclick="openBizCertPreview('${esc(p.biz_cert_url)}','${esc(companyName)}')">👁 보기</button>`
+        : '<span style="color:#cbd5e1;font-size:11px;">-</span>';
+      const logoBtn = p.company_logo_url
+        ? `<button class="btn btn-o btn-sm" style="padding:3px 9px;font-size:11px;" onclick="openLogoPreview('${esc(p.company_logo_url)}','${esc(companyName)}')">👁 보기</button>`
+        : '<span style="color:#cbd5e1;font-size:11px;">-</span>';
+      return `<tr>
+        <td style="font-size:11px;text-align:left;" title="${esc(projName)}">${esc(trunc(projName, 10))}</td>
+        <td style="text-align:left;" title="${esc(companyName)}"><b>${esc(trunc(companyName || '-', 10))}</b></td>
+        <td>${esc(p.ceo_name || '-')}</td>
+        <td style="text-align:center;">${bizBtn}</td>
+        <td style="text-align:center;">${logoBtn}</td>
+        <td style="text-align:center;">${statusBadge(p.status, p.deposit_confirmed_at)}</td>
+        <td>${esc(p.contact_name || '-')}</td>
+        <td>${esc(p.contact_position || '-')}</td>
+        <td style="font-size:11px;">${esc(p.contact_email || '-')}</td>
+        <td style="font-size:11px;">${esc(p.contact_phone || '-')}</td>
+        <td style="font-size:11px;color:#64748b;white-space:nowrap;">${esc(fmtDT(p.created_at))}</td>
+        <td style="font-size:11px;color:${p.approved_at?'#15803d':'#94a3b8'};white-space:nowrap;">${esc(fmtDT(p.approved_at))}</td>
+        <td style="font-size:11px;color:${p.deposit_confirmed_at?'#1d4ed8':'#94a3b8'};white-space:nowrap;">${esc(fmtDT(p.deposit_confirmed_at))}</td>
+        <td style="text-align:center;white-space:nowrap;">
+          <button class="btn btn-o btn-sm" onclick="openPartnerDetail(${origIdx})">상세</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>
+  <div style="text-align:right;font-size:11px;color:#94a3b8;margin-top:6px;">총 ${filtered.length}건 / 전체 ${partnerListCache.length}건</div>`;
+}
+
+// 사업자등록증 미리보기 모달
+function openBizCertPreview(url, companyName) {
+  if (!url) return;
+  document.getElementById('bp-title').textContent = `📋 사업자등록증 — ${companyName || ''}`;
+  document.getElementById('bp-download').href = url;
+  const body = document.getElementById('bp-body');
+  const ext = (url.split('.').pop() || '').toLowerCase().split('?')[0];
+  if (ext === 'pdf') {
+    body.innerHTML = `<iframe src="${esc(url)}" style="width:100%;height:75vh;border:none;background:#fff;"></iframe>`;
+  } else if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) {
+    body.innerHTML = `<img src="${esc(url)}" alt="사업자등록증" style="max-width:100%;max-height:75vh;background:#fff;padding:10px;">`;
+  } else {
+    body.innerHTML = `<div style="padding:40px 20px;color:#64748b;text-align:center;">미리보기 미지원 — <a href="${esc(url)}" target="_blank" style="color:#1d4ed8;">새 탭에서 열기</a></div>`;
+  }
+  document.getElementById('modal-bizcert-preview').classList.add('open');
+}
+function closeBizCertPreview() {
+  document.getElementById('modal-bizcert-preview').classList.remove('open');
+  document.getElementById('bp-body').innerHTML = '';
+}
+
+// 로고 미리보기 — bizcert 모달 재활용
+function openLogoPreview(url, companyName) {
+  if (!url) return;
+  document.getElementById('bp-title').textContent = `🖼 회사 로고 — ${companyName || ''}`;
+  document.getElementById('bp-download').href = url;
+  const body = document.getElementById('bp-body');
+  body.innerHTML = `<img src="${esc(url)}" alt="회사 로고" style="max-width:100%;max-height:75vh;background:#fff;padding:20px;border:1px solid #e2e8f0;">`;
+  document.getElementById('modal-bizcert-preview').classList.add('open');
+}
+function openPartnerDetail(i) {
+  const p = partnerListCache[i];
+  if (!p) return;
+  const won = n => Number(n || 0).toLocaleString('ko-KR') + '원';
+  const fmt = s => { if (!s) return ''; const d = new Date(s); if (isNaN(d)) return ''; const z = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const row = (k, v) => `<div style="display:flex;padding:6px 0;border-bottom:1px solid #f1f5f9;"><div style="width:140px;color:#64748b;font-weight:600;font-size:13px;">${esc(k)}</div><div style="flex:1;font-size:13px;color:#1e293b;">${v||'-'}</div></div>`;
+  const fileLink = url => url ? `<a href="${esc(url)}" target="_blank" style="color:#1d4ed8;">📎 파일 보기</a>` : '-';
+  const logoImg = url => url ? `<img src="${esc(url)}" alt="로고" style="max-width:140px;max-height:60px;">` : '-';
+  const fields = Array.isArray(p.company_fields) ? p.company_fields.join(', ') : '-';
+  let html = `<h3 style="margin:0 0 10px;font-size:15px;color:#1e293b;">🏢 기관정보</h3>
+    ${row('회사명(국문)', esc(p.company_name_ko || '-'))}
+    ${row('회사명(영문)', esc(p.company_name_en || '-'))}
+    ${row('대표자성명', esc(p.ceo_name || '-'))}
+    ${row('대표자이메일', esc(p.ceo_email || '-'))}
+    ${row('대표자모바일', esc(p.ceo_mobile || '-'))}
+    ${row('사업자등록증', fileLink(p.biz_cert_url))}
+    ${row('전화번호', esc(p.company_phone || '-'))}
+    ${row('팩스', esc(p.company_fax || '-'))}
+    ${row('주소', esc(p.company_address || '-'))}
+    ${row('홈페이지', p.company_homepage ? `<a href="${esc(p.company_homepage)}" target="_blank" style="color:#1d4ed8;">${esc(p.company_homepage)}</a>` : '-')}
+    ${row('로고', logoImg(p.company_logo_url))}
+    ${row('참가분야', esc(fields))}
+    <h3 style="margin:18px 0 10px;font-size:15px;color:#1e293b;">👤 담당자정보</h3>
+    ${row('담당자성명', esc(p.contact_name || '-'))}
+    ${row('부서', esc(p.contact_dept || '-'))}
+    ${row('직위', esc(p.contact_position || '-'))}
+    ${row('전화번호', esc(p.contact_phone || '-'))}
+    ${row('이메일', esc(p.contact_email || '-'))}
+    ${row('부스타입', p.booth_type ? `${esc(p.booth_type)} ${p.booth_unit_cost ? `<span style="color:#94a3b8;font-size:11px;">(단가 ${won(p.booth_unit_cost)})</span>` : ''}` : '-')}
+    ${row('부스개수', p.booth_count != null ? esc(String(p.booth_count)) : '-')}
+    ${row('부대시설', Array.isArray(p.facility_json) && p.facility_json.length
+        ? p.facility_json.map(f => `${esc(f.name)} × ${f.count} <span style="color:#94a3b8;font-size:11px;">(${won((f.unit_cost||0)*f.count)})</span>`).join('<br>')
+        : esc(p.facility || '-'))}
+    ${row('기타요청', esc(p.extra_request || '-'))}
+    ${p.quote_total ? `<div style="margin-top:12px;padding:12px 14px;background:#f0f9ff;border:2px solid #1d4ed8;border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font-size:13px;font-weight:700;color:#1d4ed8;">📊 신청자 견적 합계</span>
+        <span style="font-size:18px;font-weight:800;color:#dc2626;font-family:Consolas,monospace;">${won(p.quote_total)}</span>
+      </div>
+      ${p.quote_json && Array.isArray(p.quote_json.items) ? `<div style="margin-top:8px;font-size:11px;color:#475569;">${p.quote_json.items.map(it => `${esc(it.category)} · ${esc(it.name)} × ${it.count} = ${won(it.subtotal)}`).join('<br>')}</div>` : ''}
+    </div>` : ''}
+    <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #e2e8f0;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:12px;color:#475569;margin-bottom:10px;line-height:1.7;">
+        <div><b>참여 승인</b> : ${p.status === 'approved' || p.status === 'pending' && p.approved_at ? `<span style="color:#15803d;">✓ ${esc(fmt(p.approved_at) || '완료')}</span>` : p.status === 'rejected' ? `<span style="color:#dc2626;">✗ 거절 (${esc(p.rejected_reason || '사유 미입력')})</span>` : '<span style="color:#94a3b8;">⌛ 미승인</span>'}</div>
+        <div><b>입금 확인</b> : ${p.deposit_confirmed_at ? `<span style="color:#1d4ed8;">💰 ${esc(fmt(p.deposit_confirmed_at))}</span>` : '<span style="color:#94a3b8;">⌛ 미확인</span>'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        ${p.status === 'approved'
+          ? `<button class="btn btn-o" onclick="decidePartner(${p.id}, 'unapprove')">↩ 승인 취소</button>`
+          : `<button class="btn btn-g" onclick="decidePartner(${p.id}, 'approved')">✓ 승인</button>`}
+        ${p.status === 'rejected'
+          ? `<button class="btn btn-o" onclick="decidePartner(${p.id}, 'approved')">↩ 거절 취소 → 승인</button>`
+          : `<button class="btn btn-r" onclick="decidePartner(${p.id}, 'rejected')">✗ 거절</button>`}
+        ${p.deposit_confirmed_at
+          ? `<button class="btn btn-o" style="grid-column:span 2;" onclick="decidePartner(${p.id}, 'undeposit')">↩ 입금확인 취소</button>`
+          : `<button class="btn" style="grid-column:span 2;background:#1d4ed8;color:#fff;${p.status !== 'approved' ? 'opacity:.4;cursor:not-allowed;' : ''}" ${p.status !== 'approved' ? 'disabled' : ''} onclick="decidePartner(${p.id}, 'deposit_confirmed')">💰 입금확인 ${p.status !== 'approved' ? '(승인 후 가능)' : ''}</button>`}
+      </div>
+    </div>`;
+  document.getElementById('ptn-title').textContent = `참여기관 — ${p.company_name_ko || p.company_name_en || '-'}`;
+  document.getElementById('ptn-body').innerHTML = html;
+  document.getElementById('modal-partner-detail').classList.add('open');
+}
+function closePartnerDetail() {
+  document.getElementById('modal-partner-detail').classList.remove('open');
+}
+async function decidePartner(partnerId, decision) {
+  const labels = {
+    approved: { confirm: '이 신청을 승인하시겠습니까?', done: '✓ 승인 처리되었습니다.' },
+    rejected: { confirm: '이 신청을 거절하시겠습니까?', done: '✗ 거절 처리되었습니다.' },
+    deposit_confirmed: { confirm: '입금이 확인되었음으로 처리하시겠습니까?', done: '💰 입금확인 처리되었습니다.' },
+    unapprove: { confirm: '승인을 취소하시겠습니까? (대기 상태로 복귀 — 입금확인도 함께 해제됩니다)', done: '↩ 승인 취소되었습니다.' },
+    undeposit: { confirm: '입금확인을 취소하시겠습니까? (승인 상태는 유지)', done: '↩ 입금확인이 취소되었습니다.' },
+  };
+  const lbl = labels[decision]; if (!lbl) return;
+  const ok = await uiConfirm(lbl.confirm, { title: '처리 확인', okText: '확인', cancelText: '취소' });
+  if (!ok) return;
+  let reason = '';
+  if (decision === 'rejected') {
+    reason = prompt('거절 사유를 입력해 주세요 (선택):') || '';
+  }
+  // 신청 데이터에서 직접 project_id 가져오기 (전체 모드에서는 신청별로 프로젝트가 다름)
+  const partner = (partnerListCache || []).find(x => Number(x.id) === Number(partnerId));
+  const pid = partner ? partner.project_id : null;
+  if (!pid) { await uiAlert('프로젝트 정보를 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.'); return; }
+  try {
+    const r = await fetch(`/api/partner/host/projects/${pid}/partners/${partnerId}/decision`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, reason }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { await uiAlert(d.message || d.error || '처리 실패'); return; }
+    closePartnerDetail();
+    await loadPartnerList();
+    await uiAlert(lbl.done);
+  } catch (e) { await uiAlert('네트워크 오류'); }
+}
+
 async function loadEmailTemplates() {
   const wrap = document.getElementById('mailtpl-list');
   if (!wrap) return;

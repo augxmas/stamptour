@@ -16,6 +16,10 @@ declare module "express-session" {
       name: string;
       email: string;
     };
+    partner?: {
+      id: number;
+      email: string;
+    };
     lastActivity?: number;
     emailVerified?: string;
     merchantEmailVerified?: string;

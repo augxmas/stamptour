@@ -1,0 +1,1496 @@
+-- ============================================================
+-- ROUTINES (functions / procedures / events) — schema.sql 기반
+-- ============================================================
+USE tracker;
+
+DROP FUNCTION IF EXISTS fn_encrypt;
+DELIMITER //
+CREATE FUNCTION fn_encrypt(p_value TEXT, p_key VARCHAR(64))
+  RETURNS VARCHAR(512) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
+  NO SQL DETERMINISTIC
+  RETURN HEX(AES_ENCRYPT(p_value, p_key)) //
+DELIMITER ;
+
+DROP FUNCTION IF EXISTS fn_decrypt;
+DELIMITER //
+CREATE FUNCTION fn_decrypt(p_value VARCHAR(512), p_key VARCHAR(64))
+  RETURNS TEXT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
+  NO SQL DETERMINISTIC
+  RETURN CAST(AES_DECRYPT(UNHEX(p_value), p_key) AS CHAR) //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_update_project_statuses;
+DELIMITER //
+CREATE PROCEDURE sp_update_project_statuses(IN p_source VARCHAR(20))
+BEGIN
+  DECLARE v_started DATETIME DEFAULT NOW();
+  DECLARE v_n1 INT DEFAULT 0;
+  DECLARE v_n2 INT DEFAULT 0;
+  DECLARE v_n3 INT DEFAULT 0;
+
+  UPDATE projects
+  SET status = 'started', started_at = COALESCE(started_at, NOW()), updated_at = NOW()
+  WHERE deposit_confirmed_at IS NOT NULL
+    AND status IN ('deposit_confirmed', 'ready_to_start')
+    AND from_date <= CURDATE();
+  SET v_n1 = ROW_COUNT();
+
+  UPDATE projects
+  SET status = 'ready_to_start', updated_at = NOW()
+  WHERE deposit_confirmed_at IS NOT NULL
+    AND status = 'deposit_confirmed'
+    AND from_date > CURDATE();
+  SET v_n2 = ROW_COUNT();
+
+  UPDATE projects
+  SET status = 'completed', updated_at = NOW()
+  WHERE status = 'started' AND to_date < CURDATE();
+  SET v_n3 = ROW_COUNT();
+
+  INSERT INTO batch_logs (job_key, source, status, result_summary, started_at, finished_at)
+  VALUES (
+    'sp_update_project_statuses',
+    COALESCE(p_source, 'unknown'),
+    'ok',
+    CONCAT('started:', v_n1, ' / ready_to_start:', v_n2, ' / completed:', v_n3),
+    v_started, NOW()
+  );
+END //
+DELIMITER ;
+
+DROP EVENT IF EXISTS ev_daily_project_status_update;
+CREATE EVENT ev_daily_project_status_update
+ON SCHEDULE EVERY 1 DAY
+STARTS TIMESTAMP(CURRENT_DATE + INTERVAL 1 DAY, '00:05:00')
+COMMENT '일일 프로젝트 상태 자동 전이'
+DO CALL sp_update_project_statuses('event');
+
+-- ============================================================
+-- SCHEMA + DATA (mysqldump 결과)
+-- ============================================================
+-- MySQL dump 10.13  Distrib 8.0.44, for Win64 (x86_64)
+--
+-- Host: 127.0.0.1    Database: tracker
+-- ------------------------------------------------------
+-- Server version	8.0.44
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces
+
+--
+-- Current Database: `tracker`
+--
+
+/*!40000 DROP DATABASE IF EXISTS `tracker`*/;
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `tracker` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `tracker`;
+
+--
+-- Table structure for table `batch_logs`
+--
+
+DROP TABLE IF EXISTS `batch_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `batch_logs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `job_key` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unknown',
+  `status` enum('ok','error') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ok',
+  `result_summary` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `started_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `finished_at` datetime DEFAULT NULL,
+  `error_msg` text COLLATE utf8mb4_unicode_ci,
+  `details` text COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  KEY `idx_job_started` (`job_key`,`started_at`),
+  KEY `idx_started` (`started_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=694 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `batch_logs`
+--
+
+LOCK TABLES `batch_logs` WRITE;
+/*!40000 ALTER TABLE `batch_logs` DISABLE KEYS */;
+INSERT INTO `batch_logs` VALUES (1,'sp_update_project_statuses','manual-test','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 08:57:34','2026-06-04 08:57:34',NULL,NULL),(2,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 08:57:59','2026-06-04 08:57:59',NULL,NULL),(3,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 08:58:59','2026-06-04 08:58:59',NULL,NULL),(4,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:28','2026-06-04 09:07:28',NULL,NULL),(5,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:30','2026-06-04 09:07:30',NULL,NULL),(6,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:32','2026-06-04 09:07:32',NULL,NULL),(7,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:34','2026-06-04 09:07:34',NULL,NULL),(8,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:35','2026-06-04 09:07:35',NULL,NULL),(9,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 09:07:37','2026-06-04 09:07:37',NULL,NULL),(10,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 09:08:37','2026-06-04 09:08:37',NULL,NULL),(11,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 10:07:37','2026-06-04 10:07:37',NULL,NULL),(12,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 10:07:37','2026-06-04 10:07:37',NULL,NULL),(13,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 10:17:32','2026-06-04 10:17:32',NULL,NULL),(14,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 10:18:32','2026-06-04 10:18:32',NULL,NULL),(15,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 11:17:32','2026-06-04 11:17:32',NULL,NULL),(16,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 11:17:32','2026-06-04 11:17:32',NULL,NULL),(17,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 12:17:32','2026-06-04 12:17:31',NULL,NULL),(18,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 12:17:31','2026-06-04 12:17:31',NULL,NULL),(19,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 13:17:31','2026-06-04 13:17:31',NULL,NULL),(20,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 13:17:32','2026-06-04 13:17:31',NULL,NULL),(21,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 14:17:31','2026-06-04 14:17:31',NULL,NULL),(22,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 14:17:32','2026-06-04 14:17:31',NULL,NULL),(23,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 14:41:47','2026-06-04 14:41:47',NULL,NULL),(24,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 14:42:07','2026-06-04 14:42:07',NULL,NULL),(25,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 14:43:07','2026-06-04 14:43:07',NULL,NULL),(26,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 20:39:04','2026-06-04 20:39:04',NULL,NULL),(27,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 20:39:04','2026-06-04 20:39:04',NULL,NULL),(28,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 21:31:52','2026-06-04 21:31:52',NULL,NULL),(29,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 21:32:52','2026-06-04 21:32:52',NULL,NULL),(30,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 21:54:19','2026-06-04 21:54:19',NULL,NULL),(31,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 21:54:30','2026-06-04 21:54:30',NULL,NULL),(32,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 21:54:44','2026-06-04 21:54:44',NULL,NULL),(33,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 21:55:14','2026-06-04 21:55:14',NULL,NULL),(34,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 21:56:14','2026-06-04 21:56:14',NULL,NULL),(35,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:05:14','2026-06-04 22:05:14',NULL,NULL),(36,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 22:06:15','2026-06-04 22:06:14',NULL,NULL),(37,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:23:43','2026-06-04 22:23:43',NULL,NULL),(38,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:23:50','2026-06-04 22:23:50',NULL,NULL),(39,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 22:24:50','2026-06-04 22:24:50',NULL,NULL),(40,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:34:05','2026-06-04 22:34:05',NULL,NULL),(41,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 22:35:05','2026-06-04 22:35:05',NULL,NULL),(42,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:48:27','2026-06-04 22:48:27',NULL,NULL),(43,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:48:29','2026-06-04 22:48:29',NULL,NULL),(44,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 22:49:29','2026-06-04 22:49:29',NULL,NULL),(45,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:52:57','2026-06-04 22:52:57',NULL,NULL),(46,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:53:02','2026-06-04 22:53:02',NULL,NULL),(47,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 22:53:48','2026-06-04 22:53:48',NULL,NULL),(48,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 22:54:48','2026-06-04 22:54:48',NULL,NULL),(49,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:07:36','2026-06-04 23:07:36',NULL,NULL),(50,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:07:40','2026-06-04 23:07:40',NULL,NULL),(51,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 23:08:40','2026-06-04 23:08:40',NULL,NULL),(52,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:34:50','2026-06-04 23:34:50',NULL,NULL),(53,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 23:35:51','2026-06-04 23:35:50',NULL,NULL),(54,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:54:28','2026-06-04 23:54:28',NULL,NULL),(55,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:54:32','2026-06-04 23:54:32',NULL,NULL),(56,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:54:52','2026-06-04 23:54:52',NULL,NULL),(57,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-04 23:55:05','2026-06-04 23:55:05',NULL,NULL),(58,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-04 23:56:05','2026-06-04 23:56:05',NULL,NULL),(59,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:04:13','2026-06-05 00:04:13',NULL,NULL),(60,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:04:53','2026-06-05 00:04:53',NULL,NULL),(61,'project_ending_notice','node','ok','projects:1 / sent:1 / skipped:0 / failed:0','2026-06-05 00:05:54','2026-06-05 00:05:54',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"sent\"}]}]}'),(62,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:26:02','2026-06-05 00:26:02',NULL,NULL),(63,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 00:27:02','2026-06-05 00:27:02',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(64,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:37:58','2026-06-05 00:37:58',NULL,NULL),(65,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:38:07','2026-06-05 00:38:07',NULL,NULL),(66,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:38:19','2026-06-05 00:38:19',NULL,NULL),(67,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 00:39:19','2026-06-05 00:39:19',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(68,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:54:42','2026-06-05 00:54:42',NULL,NULL),(69,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 00:54:45','2026-06-05 00:54:45',NULL,NULL),(70,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 00:55:46','2026-06-05 00:55:45',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(71,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 01:08:58','2026-06-05 01:08:58',NULL,NULL),(72,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 01:09:58','2026-06-05 01:09:58',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(73,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 01:12:48','2026-06-05 01:12:48',NULL,NULL),(74,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 01:13:48','2026-06-05 01:13:48',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(75,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 08:37:27','2026-06-05 08:37:27',NULL,NULL),(76,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 08:37:27','2026-06-05 08:37:27',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(77,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 08:58:20','2026-06-05 08:58:20',NULL,NULL),(78,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 08:59:21','2026-06-05 08:59:20',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(79,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 08:59:45','2026-06-05 08:59:45',NULL,NULL),(80,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 09:00:45','2026-06-05 09:00:45',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(81,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 09:07:44','2026-06-05 09:07:44',NULL,NULL),(82,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 09:08:45','2026-06-05 09:08:44',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(83,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 09:51:13','2026-06-05 09:51:13',NULL,NULL),(84,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 09:52:14','2026-06-05 09:52:13',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(85,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:44:33','2026-06-05 10:44:33',NULL,NULL),(86,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:45:14','2026-06-05 10:45:14',NULL,NULL),(87,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:45:44','2026-06-05 10:45:44',NULL,NULL),(88,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 10:46:45','2026-06-05 10:46:44',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(89,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:47:31','2026-06-05 10:47:31',NULL,NULL),(90,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 10:48:32','2026-06-05 10:48:31',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(91,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:51:09','2026-06-05 10:51:09',NULL,NULL),(92,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:51:18','2026-06-05 10:51:18',NULL,NULL),(93,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 10:52:19','2026-06-05 10:52:18',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(94,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:59:02','2026-06-05 10:59:02',NULL,NULL),(95,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:59:18','2026-06-05 10:59:18',NULL,NULL),(96,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 10:59:24','2026-06-05 10:59:24',NULL,NULL),(97,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 11:00:25','2026-06-05 11:00:24',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(98,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 11:59:24','2026-06-05 11:59:24',NULL,NULL),(99,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 11:59:25','2026-06-05 11:59:24',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(100,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 12:59:24','2026-06-05 12:59:24',NULL,NULL),(101,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 12:59:25','2026-06-05 12:59:24',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(102,'sp_update_project_statuses','event','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 13:22:28','2026-06-05 13:22:28',NULL,NULL),(103,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 13:59:24','2026-06-05 13:59:24',NULL,NULL),(104,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 13:59:25','2026-06-05 13:59:24',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(105,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 14:59:24','2026-06-05 14:59:24',NULL,NULL),(106,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 14:59:25','2026-06-05 14:59:24',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(107,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:24:55','2026-06-05 15:24:55',NULL,NULL),(108,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:25:05','2026-06-05 15:25:05',NULL,NULL),(109,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:25:08','2026-06-05 15:25:08',NULL,NULL),(110,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:25:11','2026-06-05 15:25:11',NULL,NULL),(111,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:25:18','2026-06-05 15:25:18',NULL,NULL),(112,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:25:48','2026-06-05 15:25:48',NULL,NULL),(113,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:26:20','2026-06-05 15:26:20',NULL,NULL),(114,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 15:27:21','2026-06-05 15:27:20',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(115,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:28:03','2026-06-05 15:28:03',NULL,NULL),(116,'project_ending_notice','node','ok','projects:1 / sent:0 / skipped:1 / failed:0','2026-06-05 15:29:03','2026-06-05 15:29:03',NULL,'{\"projects\":[{\"project_id\":1,\"project_name\":\"국중박 3종 세트\",\"project_serial\":\"20260604_0001\",\"to_date\":\"2026-06-08\",\"days_left\":3,\"recipients\":[{\"type\":\"host\",\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"status\":\"skipped\"}]}]}'),(117,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:41:13','2026-06-05 15:41:13',NULL,NULL),(118,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 15:42:14','2026-06-05 15:42:13',NULL,NULL),(119,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:58:36','2026-06-05 15:58:36',NULL,NULL),(120,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 15:58:39','2026-06-05 15:58:39',NULL,NULL),(121,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 15:59:40','2026-06-05 15:59:39',NULL,NULL),(122,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 16:02:16','2026-06-05 16:02:16',NULL,NULL),(123,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 16:03:17','2026-06-05 16:03:16',NULL,NULL),(124,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 16:06:59','2026-06-05 16:06:59',NULL,NULL),(125,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 16:07:59','2026-06-05 16:07:59',NULL,NULL),(126,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 16:17:39','2026-06-05 16:17:39',NULL,NULL),(127,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 16:18:40','2026-06-05 16:18:39',NULL,NULL),(128,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 16:31:35','2026-06-05 16:31:35',NULL,NULL),(129,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 16:31:38','2026-06-05 16:31:38',NULL,NULL),(130,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 16:32:39','2026-06-05 16:32:38',NULL,NULL),(131,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 17:31:38','2026-06-05 17:31:38',NULL,NULL),(132,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 17:31:39','2026-06-05 17:31:38',NULL,NULL),(133,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 17:50:16','2026-06-05 17:50:16',NULL,NULL),(134,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 17:51:16','2026-06-05 17:51:16',NULL,NULL),(135,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 17:53:09','2026-06-05 17:53:09',NULL,NULL),(136,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 17:54:10','2026-06-05 17:54:09',NULL,NULL),(137,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 17:59:52','2026-06-05 17:59:52',NULL,NULL),(138,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 18:00:01','2026-06-05 18:00:01',NULL,NULL),(139,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 18:01:01','2026-06-05 18:01:01',NULL,NULL),(140,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 18:05:15','2026-06-05 18:05:15',NULL,NULL),(141,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 18:05:17','2026-06-05 18:05:17',NULL,NULL),(142,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 18:06:17','2026-06-05 18:06:17',NULL,NULL),(143,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 18:52:50','2026-06-05 18:52:50',NULL,NULL),(144,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 18:53:51','2026-06-05 18:53:50',NULL,NULL),(145,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:05:59','2026-06-05 19:05:59',NULL,NULL),(146,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:06:06','2026-06-05 19:06:06',NULL,NULL),(147,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:06:13','2026-06-05 19:06:13',NULL,NULL),(148,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:06:38','2026-06-05 19:06:38',NULL,NULL),(149,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:06:58','2026-06-05 19:06:58',NULL,NULL),(150,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:07:05','2026-06-05 19:07:05',NULL,NULL),(151,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 19:08:05','2026-06-05 19:08:05',NULL,NULL),(152,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 19:13:06','2026-06-05 19:13:06',NULL,NULL),(153,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 19:14:07','2026-06-05 19:14:06',NULL,NULL),(154,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:05:24','2026-06-05 21:05:24',NULL,NULL),(155,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 21:06:24','2026-06-05 21:06:24',NULL,NULL),(156,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:13:27','2026-06-05 21:13:27',NULL,NULL),(157,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:13:47','2026-06-05 21:13:47',NULL,NULL),(158,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 21:14:48','2026-06-05 21:14:47',NULL,NULL),(159,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:30:31','2026-06-05 21:30:31',NULL,NULL),(160,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:30:47','2026-06-05 21:30:47',NULL,NULL),(161,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 21:31:47','2026-06-05 21:31:47',NULL,NULL),(162,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 21:40:04','2026-06-05 21:40:04',NULL,NULL),(163,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 21:41:04','2026-06-05 21:41:04',NULL,NULL),(164,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:05:36','2026-06-05 22:05:36',NULL,NULL),(165,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 22:06:36','2026-06-05 22:06:36',NULL,NULL),(166,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:06:39','2026-06-05 22:06:39',NULL,NULL),(167,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 22:07:39','2026-06-05 22:07:39',NULL,NULL),(168,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:29:36','2026-06-05 22:29:36',NULL,NULL),(169,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:30:13','2026-06-05 22:30:13',NULL,NULL),(170,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:30:35','2026-06-05 22:30:35',NULL,NULL),(171,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:31:13','2026-06-05 22:31:13',NULL,NULL),(172,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 22:32:14','2026-06-05 22:32:13',NULL,NULL),(173,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:35:27','2026-06-05 22:35:27',NULL,NULL),(174,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 22:35:35','2026-06-05 22:35:35',NULL,NULL),(175,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 22:36:36','2026-06-05 22:36:35',NULL,NULL),(176,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 23:35:33','2026-06-05 23:35:33',NULL,NULL),(177,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 23:35:33','2026-06-05 23:35:33',NULL,NULL),(178,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 23:46:29','2026-06-05 23:46:29',NULL,NULL),(179,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 23:47:10','2026-06-05 23:47:10',NULL,NULL),(180,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-05 23:47:17','2026-06-05 23:47:17',NULL,NULL),(181,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-05 23:48:18','2026-06-05 23:48:17',NULL,NULL),(182,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:16:27','2026-06-06 06:16:27',NULL,NULL),(183,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 06:16:27','2026-06-06 06:16:27',NULL,NULL),(184,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:30:20','2026-06-06 06:30:20',NULL,NULL),(185,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 06:31:20','2026-06-06 06:31:20',NULL,NULL),(186,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:38:09','2026-06-06 06:38:09',NULL,NULL),(187,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 06:39:09','2026-06-06 06:39:09',NULL,NULL),(188,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:43:20','2026-06-06 06:43:20',NULL,NULL),(189,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 06:44:20','2026-06-06 06:44:19',NULL,NULL),(190,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:45:45','2026-06-06 06:45:45',NULL,NULL),(191,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:45:53','2026-06-06 06:45:53',NULL,NULL),(192,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 06:46:53','2026-06-06 06:46:53',NULL,NULL),(193,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 06:59:35','2026-06-06 06:59:35',NULL,NULL),(194,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 07:00:36','2026-06-06 07:00:35',NULL,NULL),(195,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:06:33','2026-06-06 07:06:33',NULL,NULL),(196,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:06:42','2026-06-06 07:06:42',NULL,NULL),(197,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:06:58','2026-06-06 07:06:58',NULL,NULL),(198,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:07','2026-06-06 07:07:07',NULL,NULL),(199,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:15','2026-06-06 07:07:15',NULL,NULL),(200,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:24','2026-06-06 07:07:24',NULL,NULL),(201,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:34','2026-06-06 07:07:34',NULL,NULL),(202,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:42','2026-06-06 07:07:42',NULL,NULL),(203,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:07:58','2026-06-06 07:07:58',NULL,NULL),(204,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 07:08:59','2026-06-06 07:08:58',NULL,NULL),(205,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:51:50','2026-06-06 07:51:50',NULL,NULL),(206,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:51:59','2026-06-06 07:51:59',NULL,NULL),(207,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:52:09','2026-06-06 07:52:09',NULL,NULL),(208,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 07:52:25','2026-06-06 07:52:25',NULL,NULL),(209,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 07:53:25','2026-06-06 07:53:25',NULL,NULL),(210,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 08:22:38','2026-06-06 08:22:38',NULL,NULL),(211,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 08:23:38','2026-06-06 08:23:38',NULL,NULL),(212,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 08:38:41','2026-06-06 08:38:41',NULL,NULL),(213,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 08:39:41','2026-06-06 08:39:41',NULL,NULL),(214,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 08:53:16','2026-06-06 08:53:16',NULL,NULL),(215,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 08:53:32','2026-06-06 08:53:32',NULL,NULL),(216,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 08:54:32','2026-06-06 08:54:32',NULL,NULL),(217,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 09:00:22','2026-06-06 09:00:22',NULL,NULL),(218,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 09:00:24','2026-06-06 09:00:24',NULL,NULL),(219,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 09:01:25','2026-06-06 09:01:24',NULL,NULL),(220,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 09:22:33','2026-06-06 09:22:33',NULL,NULL),(221,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 09:23:34','2026-06-06 09:23:33',NULL,NULL),(222,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 09:30:36','2026-06-06 09:30:36',NULL,NULL),(223,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 09:31:36','2026-06-06 09:31:36',NULL,NULL),(224,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:13:44','2026-06-06 10:13:44',NULL,NULL),(225,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:13:46','2026-06-06 10:13:46',NULL,NULL),(226,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:14:46','2026-06-06 10:14:46',NULL,NULL),(227,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:15:19','2026-06-06 10:15:19',NULL,NULL),(228,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:16:19','2026-06-06 10:16:19',NULL,NULL),(229,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:20:44','2026-06-06 10:20:44',NULL,NULL),(230,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:21:45','2026-06-06 10:21:44',NULL,NULL),(231,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:36:04','2026-06-06 10:36:04',NULL,NULL),(232,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:37:04','2026-06-06 10:37:04',NULL,NULL),(233,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:54:54','2026-06-06 10:54:54',NULL,NULL),(234,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:55:02','2026-06-06 10:55:02',NULL,NULL),(235,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:55:28','2026-06-06 10:55:28',NULL,NULL),(236,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:56:29','2026-06-06 10:56:28',NULL,NULL),(237,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:57:16','2026-06-06 10:57:16',NULL,NULL),(238,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 10:57:23','2026-06-06 10:57:23',NULL,NULL),(239,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 10:58:23','2026-06-06 10:58:23',NULL,NULL),(240,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:06:16','2026-06-06 11:06:16',NULL,NULL),(241,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 11:07:16','2026-06-06 11:07:16',NULL,NULL),(242,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:13:31','2026-06-06 11:13:31',NULL,NULL),(243,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:13:39','2026-06-06 11:13:39',NULL,NULL),(244,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:13:56','2026-06-06 11:13:56',NULL,NULL),(245,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:14:07','2026-06-06 11:14:07',NULL,NULL),(246,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:14:35','2026-06-06 11:14:35',NULL,NULL),(247,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:14:48','2026-06-06 11:14:48',NULL,NULL),(248,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:15:11','2026-06-06 11:15:11',NULL,NULL),(249,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 11:16:12','2026-06-06 11:16:11',NULL,NULL),(250,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:20:00','2026-06-06 11:20:00',NULL,NULL),(251,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:20:09','2026-06-06 11:20:09',NULL,NULL),(252,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 11:21:10','2026-06-06 11:21:09',NULL,NULL),(253,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 11:37:40','2026-06-06 11:37:40',NULL,NULL),(254,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 11:38:40','2026-06-06 11:38:39',NULL,NULL),(255,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:09:06','2026-06-06 12:09:06',NULL,NULL),(256,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:09:24','2026-06-06 12:09:24',NULL,NULL),(257,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 12:10:24','2026-06-06 12:10:24',NULL,NULL),(258,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:10:40','2026-06-06 12:10:40',NULL,NULL),(259,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 12:11:40','2026-06-06 12:11:40',NULL,NULL),(260,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:28:52','2026-06-06 12:28:52',NULL,NULL),(261,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:29:10','2026-06-06 12:29:10',NULL,NULL),(262,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:29:23','2026-06-06 12:29:23',NULL,NULL),(263,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 12:30:23','2026-06-06 12:30:23',NULL,NULL),(264,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 12:36:52','2026-06-06 12:36:52',NULL,NULL),(265,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 12:37:53','2026-06-06 12:37:52',NULL,NULL),(266,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 13:36:52','2026-06-06 13:36:52',NULL,NULL),(267,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 13:36:53','2026-06-06 13:36:52',NULL,NULL),(268,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:00:03','2026-06-06 14:00:03',NULL,NULL),(269,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 14:01:04','2026-06-06 14:01:03',NULL,NULL),(270,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:28:05','2026-06-06 14:28:05',NULL,NULL),(271,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:28:21','2026-06-06 14:28:21',NULL,NULL),(272,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:28:47','2026-06-06 14:28:47',NULL,NULL),(273,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:29:05','2026-06-06 14:29:05',NULL,NULL),(274,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:29:18','2026-06-06 14:29:18',NULL,NULL),(275,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:29:34','2026-06-06 14:29:34',NULL,NULL),(276,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:29:52','2026-06-06 14:29:52',NULL,NULL),(277,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 14:30:53','2026-06-06 14:30:52',NULL,NULL),(278,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 14:51:55','2026-06-06 14:51:55',NULL,NULL),(279,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 14:52:56','2026-06-06 14:52:55',NULL,NULL),(280,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:21:53','2026-06-06 15:21:53',NULL,NULL),(281,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:22:04','2026-06-06 15:22:04',NULL,NULL),(282,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:22:17','2026-06-06 15:22:17',NULL,NULL),(283,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:22:31','2026-06-06 15:22:31',NULL,NULL),(284,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:22:44','2026-06-06 15:22:44',NULL,NULL),(285,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:22:53','2026-06-06 15:22:53',NULL,NULL),(286,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:23:01','2026-06-06 15:23:01',NULL,NULL),(287,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:23:08','2026-06-06 15:23:08',NULL,NULL),(288,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 15:24:08','2026-06-06 15:24:08',NULL,NULL),(289,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:46:29','2026-06-06 15:46:29',NULL,NULL),(290,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:46:43','2026-06-06 15:46:43',NULL,NULL),(291,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:47:07','2026-06-06 15:47:07',NULL,NULL),(292,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 15:48:08','2026-06-06 15:48:07',NULL,NULL),(293,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:56:00','2026-06-06 15:56:00',NULL,NULL),(294,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 15:56:22','2026-06-06 15:56:22',NULL,NULL),(295,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 15:57:23','2026-06-06 15:57:22',NULL,NULL),(296,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:10:34','2026-06-06 16:10:34',NULL,NULL),(297,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:10:41','2026-06-06 16:10:41',NULL,NULL),(298,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:10:54','2026-06-06 16:10:54',NULL,NULL),(299,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:11:02','2026-06-06 16:11:02',NULL,NULL),(300,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:11:13','2026-06-06 16:11:13',NULL,NULL),(301,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:11:21','2026-06-06 16:11:21',NULL,NULL),(302,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:11:34','2026-06-06 16:11:34',NULL,NULL),(303,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 16:12:34','2026-06-06 16:12:34',NULL,NULL),(304,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:43:48','2026-06-06 16:43:48',NULL,NULL),(305,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 16:44:49','2026-06-06 16:44:48',NULL,NULL),(306,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:45:05','2026-06-06 16:45:05',NULL,NULL),(307,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:45:12','2026-06-06 16:45:12',NULL,NULL),(308,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 16:45:26','2026-06-06 16:45:26',NULL,NULL),(309,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 16:46:26','2026-06-06 16:46:26',NULL,NULL),(310,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:03:10','2026-06-06 17:03:10',NULL,NULL),(311,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:03:24','2026-06-06 17:03:24',NULL,NULL),(312,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:04:25','2026-06-06 17:04:24',NULL,NULL),(313,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:09:55','2026-06-06 17:09:55',NULL,NULL),(314,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:10:56','2026-06-06 17:10:55',NULL,NULL),(315,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:11:08','2026-06-06 17:11:08',NULL,NULL),(316,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:12:08','2026-06-06 17:12:08',NULL,NULL),(317,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:13:08','2026-06-06 17:13:08',NULL,NULL),(318,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:27:17','2026-06-06 17:27:17',NULL,NULL),(319,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:28:17','2026-06-06 17:28:16',NULL,NULL),(320,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:36:29','2026-06-06 17:36:29',NULL,NULL),(321,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:37:30','2026-06-06 17:37:29',NULL,NULL),(322,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 17:46:08','2026-06-06 17:46:08',NULL,NULL),(323,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 17:47:08','2026-06-06 17:47:08',NULL,NULL),(324,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:01:27','2026-06-06 18:01:27',NULL,NULL),(325,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:01:37','2026-06-06 18:01:37',NULL,NULL),(326,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:02:37','2026-06-06 18:02:37',NULL,NULL),(327,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:14:04','2026-06-06 18:14:04',NULL,NULL),(328,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:14:23','2026-06-06 18:14:23',NULL,NULL),(329,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:15:23','2026-06-06 18:15:23',NULL,NULL),(330,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:26:09','2026-06-06 18:26:09',NULL,NULL),(331,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:26:32','2026-06-06 18:26:32',NULL,NULL),(332,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:27:33','2026-06-06 18:27:32',NULL,NULL),(333,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:33:25','2026-06-06 18:33:25',NULL,NULL),(334,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:34:25','2026-06-06 18:34:25',NULL,NULL),(335,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:36:56','2026-06-06 18:36:56',NULL,NULL),(336,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:37:57','2026-06-06 18:37:56',NULL,NULL),(337,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:44:30','2026-06-06 18:44:30',NULL,NULL),(338,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:44:39','2026-06-06 18:44:39',NULL,NULL),(339,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:44:49','2026-06-06 18:44:49',NULL,NULL),(340,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 18:45:03','2026-06-06 18:45:03',NULL,NULL),(341,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 18:46:04','2026-06-06 18:46:03',NULL,NULL),(342,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:07:55','2026-06-06 19:07:55',NULL,NULL),(343,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:08:04','2026-06-06 19:08:04',NULL,NULL),(344,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:08:16','2026-06-06 19:08:16',NULL,NULL),(345,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:08:49','2026-06-06 19:08:49',NULL,NULL),(346,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:08:58','2026-06-06 19:08:58',NULL,NULL),(347,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:09:03','2026-06-06 19:09:03',NULL,NULL),(348,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:09:09','2026-06-06 19:09:09',NULL,NULL),(349,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:09:20','2026-06-06 19:09:20',NULL,NULL),(350,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 19:10:21','2026-06-06 19:10:20',NULL,NULL),(351,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 19:59:27','2026-06-06 19:59:27',NULL,NULL),(352,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 20:00:27','2026-06-06 20:00:27',NULL,NULL),(353,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 20:26:14','2026-06-06 20:26:14',NULL,NULL),(354,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 20:27:14','2026-06-06 20:27:14',NULL,NULL),(355,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 20:39:00','2026-06-06 20:39:00',NULL,NULL),(356,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 20:40:01','2026-06-06 20:40:00',NULL,NULL),(357,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 20:42:58','2026-06-06 20:42:58',NULL,NULL),(358,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 20:43:59','2026-06-06 20:43:58',NULL,NULL),(359,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 20:44:02','2026-06-06 20:44:02',NULL,NULL),(360,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 20:45:03','2026-06-06 20:45:02',NULL,NULL),(361,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:15:54','2026-06-06 21:15:54',NULL,NULL),(362,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:16:13','2026-06-06 21:16:13',NULL,NULL),(363,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:16:29','2026-06-06 21:16:29',NULL,NULL),(364,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 21:17:30','2026-06-06 21:17:29',NULL,NULL),(365,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:29:19','2026-06-06 21:29:19',NULL,NULL),(366,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:29:32','2026-06-06 21:29:32',NULL,NULL),(367,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:30:01','2026-06-06 21:30:01',NULL,NULL),(368,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:30:13','2026-06-06 21:30:13',NULL,NULL),(369,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 21:31:13','2026-06-06 21:31:13',NULL,NULL),(370,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:31:22','2026-06-06 21:31:22',NULL,NULL),(371,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 21:32:22','2026-06-06 21:32:22',NULL,NULL),(372,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:38:28','2026-06-06 21:38:28',NULL,NULL),(373,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:38:42','2026-06-06 21:38:42',NULL,NULL),(374,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:38:50','2026-06-06 21:38:50',NULL,NULL),(375,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:39:29','2026-06-06 21:39:29',NULL,NULL),(376,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 21:40:30','2026-06-06 21:40:29',NULL,NULL),(377,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 21:53:13','2026-06-06 21:53:13',NULL,NULL),(378,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 21:54:13','2026-06-06 21:54:13',NULL,NULL),(379,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:03:33','2026-06-06 22:03:33',NULL,NULL),(380,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:04:18','2026-06-06 22:04:18',NULL,NULL),(381,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:04:31','2026-06-06 22:04:31',NULL,NULL),(382,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:04:45','2026-06-06 22:04:45',NULL,NULL),(383,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:04:56','2026-06-06 22:04:56',NULL,NULL),(384,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 22:05:57','2026-06-06 22:05:56',NULL,NULL),(385,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:43:41','2026-06-06 22:43:41',NULL,NULL),(386,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:43:56','2026-06-06 22:43:56',NULL,NULL),(387,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 22:44:56','2026-06-06 22:44:56',NULL,NULL),(388,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 22:50:12','2026-06-06 22:50:12',NULL,NULL),(389,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 22:51:12','2026-06-06 22:51:12',NULL,NULL),(390,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-06 23:25:21','2026-06-06 23:25:21',NULL,NULL),(391,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-06 23:26:22','2026-06-06 23:26:21',NULL,NULL),(392,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:07:12','2026-06-07 08:07:12',NULL,NULL),(393,'sp_update_project_statuses','event','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:08:01','2026-06-07 08:08:01',NULL,NULL),(394,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 08:08:13','2026-06-07 08:08:12',NULL,NULL),(395,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:20:59','2026-06-07 08:20:59',NULL,NULL),(396,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 08:22:00','2026-06-07 08:21:59',NULL,NULL),(397,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:31:09','2026-06-07 08:31:09',NULL,NULL),(398,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:31:16','2026-06-07 08:31:16',NULL,NULL),(399,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 08:31:26','2026-06-07 08:31:26',NULL,NULL),(400,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 08:32:26','2026-06-07 08:32:26',NULL,NULL),(401,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:31:26','2026-06-07 09:31:26',NULL,NULL),(402,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 09:31:26','2026-06-07 09:31:26',NULL,NULL),(403,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:39:35','2026-06-07 09:39:35',NULL,NULL),(404,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:39:43','2026-06-07 09:39:43',NULL,NULL),(405,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:39:50','2026-06-07 09:39:50',NULL,NULL),(406,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:39:57','2026-06-07 09:39:57',NULL,NULL),(407,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:40:06','2026-06-07 09:40:06',NULL,NULL),(408,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:40:13','2026-06-07 09:40:13',NULL,NULL),(409,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:40:21','2026-06-07 09:40:21',NULL,NULL),(410,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:40:28','2026-06-07 09:40:28',NULL,NULL),(411,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:40:32','2026-06-07 09:40:32',NULL,NULL),(412,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 09:41:33','2026-06-07 09:41:32',NULL,NULL),(413,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:57:50','2026-06-07 09:57:50',NULL,NULL),(414,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:58:06','2026-06-07 09:58:06',NULL,NULL),(415,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:58:11','2026-06-07 09:58:11',NULL,NULL),(416,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:58:17','2026-06-07 09:58:17',NULL,NULL),(417,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:58:23','2026-06-07 09:58:23',NULL,NULL),(418,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 09:58:32','2026-06-07 09:58:32',NULL,NULL),(419,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 09:59:32','2026-06-07 09:59:32',NULL,NULL),(420,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:06:43','2026-06-07 10:06:43',NULL,NULL),(421,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 10:07:43','2026-06-07 10:07:43',NULL,NULL),(422,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:12:33','2026-06-07 10:12:33',NULL,NULL),(423,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:12:40','2026-06-07 10:12:40',NULL,NULL),(424,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:12:53','2026-06-07 10:12:53',NULL,NULL),(425,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:13:00','2026-06-07 10:13:00',NULL,NULL),(426,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:13:08','2026-06-07 10:13:08',NULL,NULL),(427,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:13:16','2026-06-07 10:13:16',NULL,NULL),(428,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:13:37','2026-06-07 10:13:37',NULL,NULL),(429,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 10:14:38','2026-06-07 10:14:37',NULL,NULL),(430,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:26:42','2026-06-07 10:26:42',NULL,NULL),(431,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 10:27:43','2026-06-07 10:27:42',NULL,NULL),(432,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:33:23','2026-06-07 10:33:23',NULL,NULL),(433,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:33:32','2026-06-07 10:33:32',NULL,NULL),(434,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:33:40','2026-06-07 10:33:40',NULL,NULL),(435,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:33:59','2026-06-07 10:33:59',NULL,NULL),(436,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:07','2026-06-07 10:34:07',NULL,NULL),(437,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:20','2026-06-07 10:34:20',NULL,NULL),(438,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:27','2026-06-07 10:34:27',NULL,NULL),(439,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:34','2026-06-07 10:34:34',NULL,NULL),(440,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:41','2026-06-07 10:34:41',NULL,NULL),(441,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:47','2026-06-07 10:34:47',NULL,NULL),(442,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:34:54','2026-06-07 10:34:54',NULL,NULL),(443,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:35:01','2026-06-07 10:35:01',NULL,NULL),(444,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 10:36:02','2026-06-07 10:36:01',NULL,NULL),(445,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:42:21','2026-06-07 10:42:21',NULL,NULL),(446,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:43:05','2026-06-07 10:43:05',NULL,NULL),(447,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:43:17','2026-06-07 10:43:17',NULL,NULL),(448,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:43:27','2026-06-07 10:43:27',NULL,NULL),(449,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 10:44:27','2026-06-07 10:44:27',NULL,NULL),(450,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 10:59:32','2026-06-07 10:59:32',NULL,NULL),(451,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:00:32','2026-06-07 11:00:32',NULL,NULL),(452,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:14:11','2026-06-07 11:14:11',NULL,NULL),(453,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:15:12','2026-06-07 11:15:11',NULL,NULL),(454,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:30:35','2026-06-07 11:30:35',NULL,NULL),(455,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:30:43','2026-06-07 11:30:43',NULL,NULL),(456,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:31:44','2026-06-07 11:31:43',NULL,NULL),(457,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:33:56','2026-06-07 11:33:56',NULL,NULL),(458,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:34:10','2026-06-07 11:34:10',NULL,NULL),(459,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:35:10','2026-06-07 11:35:10',NULL,NULL),(460,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:45:16','2026-06-07 11:45:16',NULL,NULL),(461,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:45:28','2026-06-07 11:45:28',NULL,NULL),(462,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:45:46','2026-06-07 11:45:46',NULL,NULL),(463,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:46:47','2026-06-07 11:46:46',NULL,NULL),(464,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:54:48','2026-06-07 11:54:48',NULL,NULL),(465,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:55:00','2026-06-07 11:55:00',NULL,NULL),(466,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 11:55:19','2026-06-07 11:55:19',NULL,NULL),(467,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 11:56:19','2026-06-07 11:56:19',NULL,NULL),(468,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 12:08:42','2026-06-07 12:08:42',NULL,NULL),(469,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 12:09:42','2026-06-07 12:09:42',NULL,NULL),(470,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 12:30:03','2026-06-07 12:30:03',NULL,NULL),(471,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 12:31:03','2026-06-07 12:31:03',NULL,NULL),(472,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 12:35:23','2026-06-07 12:35:23',NULL,NULL),(473,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 12:36:23','2026-06-07 12:36:23',NULL,NULL),(474,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 12:51:56','2026-06-07 12:51:56',NULL,NULL),(475,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 12:52:08','2026-06-07 12:52:08',NULL,NULL),(476,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 12:53:09','2026-06-07 12:53:08',NULL,NULL),(477,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 13:35:43','2026-06-07 13:35:43',NULL,NULL),(478,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 13:36:44','2026-06-07 13:36:43',NULL,NULL),(479,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:35:43','2026-06-07 14:35:43',NULL,NULL),(480,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 14:35:44','2026-06-07 14:35:43',NULL,NULL),(481,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:39:33','2026-06-07 14:39:33',NULL,NULL),(482,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:40:05','2026-06-07 14:40:05',NULL,NULL),(483,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:40:30','2026-06-07 14:40:30',NULL,NULL),(484,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:40:49','2026-06-07 14:40:49',NULL,NULL),(485,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 14:41:50','2026-06-07 14:41:49',NULL,NULL),(486,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:48:32','2026-06-07 14:48:32',NULL,NULL),(487,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 14:49:32','2026-06-07 14:49:32',NULL,NULL),(488,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:59:24','2026-06-07 14:59:24',NULL,NULL),(489,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 14:59:40','2026-06-07 14:59:40',NULL,NULL),(490,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 15:00:40','2026-06-07 15:00:40',NULL,NULL),(491,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 15:30:10','2026-06-07 15:30:10',NULL,NULL),(492,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 15:31:10','2026-06-07 15:31:10',NULL,NULL),(493,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:20:39','2026-06-07 16:20:39',NULL,NULL),(494,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:21:13','2026-06-07 16:21:13',NULL,NULL),(495,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:21:31','2026-06-07 16:21:31',NULL,NULL),(496,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:22:03','2026-06-07 16:22:03',NULL,NULL),(497,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:22:33','2026-06-07 16:22:33',NULL,NULL),(498,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:23:02','2026-06-07 16:23:02',NULL,NULL),(499,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 16:23:46','2026-06-07 16:23:46',NULL,NULL),(500,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 16:24:46','2026-06-07 16:24:46',NULL,NULL),(501,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:14','2026-06-07 17:13:14',NULL,NULL),(502,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:20','2026-06-07 17:13:20',NULL,NULL),(503,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:28','2026-06-07 17:13:28',NULL,NULL),(504,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:36','2026-06-07 17:13:36',NULL,NULL),(505,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:45','2026-06-07 17:13:45',NULL,NULL),(506,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:13:52','2026-06-07 17:13:52',NULL,NULL),(507,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:14:00','2026-06-07 17:14:00',NULL,NULL),(508,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:14:09','2026-06-07 17:14:09',NULL,NULL),(509,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:14:20','2026-06-07 17:14:20',NULL,NULL),(510,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:14:34','2026-06-07 17:14:34',NULL,NULL),(511,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:14:49','2026-06-07 17:14:49',NULL,NULL),(512,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:15:17','2026-06-07 17:15:17',NULL,NULL),(513,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 17:16:17','2026-06-07 17:16:17',NULL,NULL),(514,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:31:06','2026-06-07 17:31:06',NULL,NULL),(515,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:31:16','2026-06-07 17:31:16',NULL,NULL),(516,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:31:26','2026-06-07 17:31:26',NULL,NULL),(517,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:31:41','2026-06-07 17:31:41',NULL,NULL),(518,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:31:50','2026-06-07 17:31:50',NULL,NULL),(519,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:32:28','2026-06-07 17:32:28',NULL,NULL),(520,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 17:33:29','2026-06-07 17:33:28',NULL,NULL),(521,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 17:38:03','2026-06-07 17:38:03',NULL,NULL),(522,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 17:39:04','2026-06-07 17:39:03',NULL,NULL),(523,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 18:38:03','2026-06-07 18:38:03',NULL,NULL),(524,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 18:38:04','2026-06-07 18:38:03',NULL,NULL),(525,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 18:53:59','2026-06-07 18:53:59',NULL,NULL),(526,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 18:54:59','2026-06-07 18:54:59',NULL,NULL),(527,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:18:52','2026-06-07 19:18:52',NULL,NULL),(528,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 19:19:53','2026-06-07 19:19:52',NULL,NULL),(529,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:28:51','2026-06-07 19:28:51',NULL,NULL),(530,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 19:29:52','2026-06-07 19:29:51',NULL,NULL),(531,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:36:57','2026-06-07 19:36:57',NULL,NULL),(532,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 19:37:58','2026-06-07 19:37:57',NULL,NULL),(533,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:54:15','2026-06-07 19:54:15',NULL,NULL),(534,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:54:34','2026-06-07 19:54:34',NULL,NULL),(535,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 19:54:45','2026-06-07 19:54:45',NULL,NULL),(536,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 19:55:46','2026-06-07 19:55:45',NULL,NULL),(537,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:20:00','2026-06-07 20:20:00',NULL,NULL),(538,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:20:10','2026-06-07 20:20:10',NULL,NULL),(539,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:20:23','2026-06-07 20:20:23',NULL,NULL),(540,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 20:21:23','2026-06-07 20:21:23',NULL,NULL),(541,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:26:28','2026-06-07 20:26:28',NULL,NULL),(542,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 20:27:29','2026-06-07 20:27:28',NULL,NULL),(543,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:32:21','2026-06-07 20:32:21',NULL,NULL),(544,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 20:32:33','2026-06-07 20:32:33',NULL,NULL),(545,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 20:33:34','2026-06-07 20:33:33',NULL,NULL),(546,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 21:23:39','2026-06-07 21:23:39',NULL,NULL),(547,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 21:24:39','2026-06-07 21:24:39',NULL,NULL),(548,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 21:38:06','2026-06-07 21:38:06',NULL,NULL),(549,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 21:38:30','2026-06-07 21:38:30',NULL,NULL),(550,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 21:39:31','2026-06-07 21:39:30',NULL,NULL),(551,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:00:53','2026-06-07 22:00:53',NULL,NULL),(552,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 22:01:54','2026-06-07 22:01:53',NULL,NULL),(553,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:16:02','2026-06-07 22:16:02',NULL,NULL),(554,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 22:17:03','2026-06-07 22:17:02',NULL,NULL),(555,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:27:04','2026-06-07 22:27:04',NULL,NULL),(556,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 22:28:04','2026-06-07 22:28:04',NULL,NULL),(557,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:49:22','2026-06-07 22:49:22',NULL,NULL),(558,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 22:50:23','2026-06-07 22:50:22',NULL,NULL),(559,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:58:13','2026-06-07 22:58:13',NULL,NULL),(560,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 22:59:13','2026-06-07 22:59:13',NULL,NULL),(561,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 22:59:58','2026-06-07 22:59:58',NULL,NULL),(562,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 23:00:14','2026-06-07 23:00:14',NULL,NULL),(563,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 23:01:14','2026-06-07 23:01:14',NULL,NULL),(564,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 23:17:34','2026-06-07 23:17:34',NULL,NULL),(565,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 23:18:35','2026-06-07 23:18:34',NULL,NULL),(566,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 23:21:52','2026-06-07 23:21:52',NULL,NULL),(567,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 23:22:52','2026-06-07 23:22:52',NULL,NULL),(568,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 23:26:47','2026-06-07 23:26:47',NULL,NULL),(569,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 23:27:48','2026-06-07 23:27:47',NULL,NULL),(570,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-07 23:36:26','2026-06-07 23:36:26',NULL,NULL),(571,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-07 23:37:27','2026-06-07 23:37:26',NULL,NULL),(572,'sp_update_project_statuses','event','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 00:05:00','2026-06-08 00:05:00',NULL,NULL),(573,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 14:14:07','2026-06-08 14:14:07',NULL,NULL),(574,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 14:15:07','2026-06-08 14:15:07',NULL,NULL),(575,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 14:35:08','2026-06-08 14:35:08',NULL,NULL),(576,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 14:35:29','2026-06-08 14:35:29',NULL,NULL),(577,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 14:36:30','2026-06-08 14:36:29',NULL,NULL),(578,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 15:09:19','2026-06-08 15:09:19',NULL,NULL),(579,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 15:10:19','2026-06-08 15:10:19',NULL,NULL),(580,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 15:19:52','2026-06-08 15:19:52',NULL,NULL),(581,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 15:20:52','2026-06-08 15:20:51',NULL,NULL),(582,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 15:42:05','2026-06-08 15:42:05',NULL,NULL),(583,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 15:42:17','2026-06-08 15:42:17',NULL,NULL),(584,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 15:43:17','2026-06-08 15:43:17',NULL,NULL),(585,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 17:19:47','2026-06-08 17:19:47',NULL,NULL),(586,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 17:19:47','2026-06-08 17:19:47',NULL,NULL),(587,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 18:19:47','2026-06-08 18:19:47',NULL,NULL),(588,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 18:19:47','2026-06-08 18:19:47',NULL,NULL),(589,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 19:19:47','2026-06-08 19:19:47',NULL,NULL),(590,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 19:19:47','2026-06-08 19:19:47',NULL,NULL),(591,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 20:59:03','2026-06-08 20:59:03',NULL,NULL),(592,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 21:00:04','2026-06-08 21:00:03',NULL,NULL),(593,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 21:59:03','2026-06-08 21:59:03',NULL,NULL),(594,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 21:59:04','2026-06-08 21:59:03',NULL,NULL),(595,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 21:59:47','2026-06-08 21:59:47',NULL,NULL),(596,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 22:00:48','2026-06-08 22:00:47',NULL,NULL),(597,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 22:01:44','2026-06-08 22:01:44',NULL,NULL),(598,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 22:02:12','2026-06-08 22:02:12',NULL,NULL),(599,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 22:03:12','2026-06-08 22:03:12',NULL,NULL),(600,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 22:15:15','2026-06-08 22:15:15',NULL,NULL),(601,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 22:16:16','2026-06-08 22:16:15',NULL,NULL),(602,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 22:38:45','2026-06-08 22:38:45',NULL,NULL),(603,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 22:39:46','2026-06-08 22:39:45',NULL,NULL),(604,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 22:55:11','2026-06-08 22:55:11',NULL,NULL),(605,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 22:56:11','2026-06-08 22:56:11',NULL,NULL),(606,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:13:45','2026-06-08 23:13:45',NULL,NULL),(607,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:13:52','2026-06-08 23:13:52',NULL,NULL),(608,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:13:59','2026-06-08 23:13:59',NULL,NULL),(609,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:14:08','2026-06-08 23:14:08',NULL,NULL),(610,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:14:19','2026-06-08 23:14:19',NULL,NULL),(611,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:14:27','2026-06-08 23:14:27',NULL,NULL),(612,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:14:35','2026-06-08 23:14:35',NULL,NULL),(613,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:15:02','2026-06-08 23:15:02',NULL,NULL),(614,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:15:22','2026-06-08 23:15:22',NULL,NULL),(615,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:15:39','2026-06-08 23:15:39',NULL,NULL),(616,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:15:45','2026-06-08 23:15:45',NULL,NULL),(617,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:15:51','2026-06-08 23:15:51',NULL,NULL),(618,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:16:03','2026-06-08 23:16:03',NULL,NULL),(619,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 23:17:04','2026-06-08 23:17:03',NULL,NULL),(620,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:29:36','2026-06-08 23:29:36',NULL,NULL),(621,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 23:30:37','2026-06-08 23:30:36',NULL,NULL),(622,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-08 23:33:37','2026-06-08 23:33:37',NULL,NULL),(623,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-08 23:34:37','2026-06-08 23:34:37',NULL,NULL),(624,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 08:47:37','2026-06-09 08:47:37',NULL,NULL),(625,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 08:48:37','2026-06-09 08:48:37',NULL,NULL),(626,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 08:52:33','2026-06-09 08:52:33',NULL,NULL),(627,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 08:53:34','2026-06-09 08:53:33',NULL,NULL),(628,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 09:17:48','2026-06-09 09:17:48',NULL,NULL),(629,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 09:18:48','2026-06-09 09:18:48',NULL,NULL),(630,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 09:40:14','2026-06-09 09:40:14',NULL,NULL),(631,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 09:40:24','2026-06-09 09:40:24',NULL,NULL),(632,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 09:40:39','2026-06-09 09:40:39',NULL,NULL),(633,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 09:40:48','2026-06-09 09:40:48',NULL,NULL),(634,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 09:41:48','2026-06-09 09:41:48',NULL,NULL),(635,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 10:40:48','2026-06-09 10:40:48',NULL,NULL),(636,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 10:40:48','2026-06-09 10:40:48',NULL,NULL),(637,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 11:40:48','2026-06-09 11:40:48',NULL,NULL),(638,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 11:40:48','2026-06-09 11:40:48',NULL,NULL),(639,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 12:40:48','2026-06-09 12:40:48',NULL,NULL),(640,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 12:40:48','2026-06-09 12:40:48',NULL,NULL),(641,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 13:40:48','2026-06-09 13:40:48',NULL,NULL),(642,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 13:40:48','2026-06-09 13:40:48',NULL,NULL),(643,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 14:40:48','2026-06-09 14:40:48',NULL,NULL),(644,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 14:40:48','2026-06-09 14:40:48',NULL,NULL),(645,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 15:40:48','2026-06-09 15:40:48',NULL,NULL),(646,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 15:40:48','2026-06-09 15:40:48',NULL,NULL),(647,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 16:38:55','2026-06-09 16:38:55',NULL,NULL),(648,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 16:39:56','2026-06-09 16:39:55',NULL,NULL),(649,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 18:31:58','2026-06-09 18:31:58',NULL,NULL),(650,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 18:32:58','2026-06-09 18:32:58',NULL,NULL),(651,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 18:38:08','2026-06-09 18:38:08',NULL,NULL),(652,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 18:39:08','2026-06-09 18:39:08',NULL,NULL),(653,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 19:01:15','2026-06-09 19:01:15',NULL,NULL),(654,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 19:06:14','2026-06-09 19:06:14',NULL,NULL),(655,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 19:07:14','2026-06-09 19:07:14',NULL,NULL),(656,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 19:42:15','2026-06-09 19:42:15',NULL,NULL),(657,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 19:43:15','2026-06-09 19:43:15',NULL,NULL),(658,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:00:07','2026-06-09 20:00:07',NULL,NULL),(659,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:00:16','2026-06-09 20:00:16',NULL,NULL),(660,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:00:36','2026-06-09 20:00:36',NULL,NULL),(661,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 20:01:36','2026-06-09 20:01:36',NULL,NULL),(662,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:06:40','2026-06-09 20:06:40',NULL,NULL),(663,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:06:55','2026-06-09 20:06:55',NULL,NULL),(664,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 20:07:55','2026-06-09 20:07:55',NULL,NULL),(665,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:17:31','2026-06-09 20:17:31',NULL,NULL),(666,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:17:37','2026-06-09 20:17:37',NULL,NULL),(667,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 20:18:37','2026-06-09 20:18:36',NULL,NULL),(668,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:49:31','2026-06-09 20:49:31',NULL,NULL),(669,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:49:43','2026-06-09 20:49:43',NULL,NULL),(670,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:50:20','2026-06-09 20:50:20',NULL,NULL),(671,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:50:46','2026-06-09 20:50:46',NULL,NULL),(672,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 20:51:47','2026-06-09 20:51:46',NULL,NULL),(673,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 20:57:09','2026-06-09 20:57:09',NULL,NULL),(674,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 20:58:09','2026-06-09 20:58:09',NULL,NULL),(675,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:02:07','2026-06-09 21:02:07',NULL,NULL),(676,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:03:08','2026-06-09 21:03:07',NULL,NULL),(677,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:05:53','2026-06-09 21:05:53',NULL,NULL),(678,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:06:54','2026-06-09 21:06:53',NULL,NULL),(679,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:14:20','2026-06-09 21:14:20',NULL,NULL),(680,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:15:21','2026-06-09 21:15:20',NULL,NULL),(681,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:19:43','2026-06-09 21:19:43',NULL,NULL),(682,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:20:00','2026-06-09 21:20:00',NULL,NULL),(683,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:21:00','2026-06-09 21:21:00',NULL,NULL),(684,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:27:19','2026-06-09 21:27:19',NULL,NULL),(685,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:28:20','2026-06-09 21:28:19',NULL,NULL),(686,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:53:49','2026-06-09 21:53:49',NULL,NULL),(687,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:54:49','2026-06-09 21:54:49',NULL,NULL),(688,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:56:04','2026-06-09 21:56:04',NULL,NULL),(689,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:56:20','2026-06-09 21:56:20',NULL,NULL),(690,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 21:56:29','2026-06-09 21:56:29',NULL,NULL),(691,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 21:57:29','2026-06-09 21:57:29',NULL,NULL),(692,'sp_update_project_statuses','node','ok','started:0 / ready_to_start:0 / completed:0','2026-06-09 22:04:33','2026-06-09 22:04:33',NULL,NULL),(693,'project_ending_notice','node','ok','projects:0 / sent:0 / skipped:0 / failed:0','2026-06-09 22:05:34','2026-06-09 22:05:33',NULL,NULL);
+/*!40000 ALTER TABLE `batch_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `email_logs`
+--
+
+DROP TABLE IF EXISTS `email_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `email_logs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `template_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `to_email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `project_id` bigint DEFAULT NULL,
+  `host_id` bigint DEFAULT NULL,
+  `status` enum('sent','failed') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `trigger_type` enum('auto','manual') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'auto',
+  `error_msg` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=111 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `email_logs`
+--
+
+LOCK TABLES `email_logs` WRITE;
+/*!40000 ALTER TABLE `email_logs` DISABLE KEYS */;
+INSERT INTO `email_logs` VALUES (1,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-04 09:00:50'),(5,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-04 09:20:11'),(6,'host_registration_submitted','kimch@mono-rama.com','[모노라마] 회원가입 신청이 완료되었습니다',NULL,2,'sent','auto',NULL,'2026-06-04 09:22:37'),(7,'supervisor_new_host','kimch@mono-rama.com','[모노라마 트래커] 신규 Host 가입 신청 확인 요청',NULL,2,'sent','auto',NULL,'2026-06-04 09:22:38'),(8,'host_status_approved','kimch@mono-rama.com','[모노라마] 회원가입이 승인되었습니다',NULL,2,'sent','auto',NULL,'2026-06-04 09:22:59'),(9,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 09:31:11'),(10,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 09:40:08'),(11,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 09:49:02'),(12,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 09:54:56'),(13,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 09:55:56'),(14,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:00:32'),(15,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:01:54'),(16,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:08:34'),(17,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:13:27'),(18,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:21:24'),(19,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:29:43'),(20,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:35:15'),(21,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-04 10:47:51'),(22,'project_quote','kimch@mono-rama.com','[모노라마] 견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-04 10:48:53'),(23,'supervisor_quote_sent','kimch@mono-rama.com','[모노라마 트래커] 견적서 발송 알림 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-04 10:48:53'),(24,'project_ending_notice','kimch@mono-rama.com','[모노라마] 프로젝트 종료 안내 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 00:05:54'),(25,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-05 11:36:16'),(26,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:00:41'),(27,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:03:47'),(28,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:04:38'),(29,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:05:16'),(30,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:08:42'),(31,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 국중박 3종 세트',1,2,'sent','auto',NULL,'2026-06-05 16:14:47'),(32,'email_verify','augxmas@gmail.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:22:37'),(33,'email_verify','augxmas@gmail.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:30:17'),(34,'merchant_registration_submitted','augxmas@gmail.com','[모노라마] 가맹점 가입 신청이 완료되었습니다',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:31:23'),(35,'supervisor_new_merchant','kimch@mono-rama.com','[모노라마 트래커] 신규 가맹점 가입 신청 확인 요청',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:31:23'),(36,'merchant_status_approved','augxmas@gmail.com','[모노라마] 가맹점 가입이 승인되었습니다',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:37:06'),(37,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:37:19'),(38,'merchant_application_approved','augxmas@gmail.com','[모노라마] 프로젝트 참여가 승인되었습니다 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-05 18:50:02'),(39,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-06 10:43:17'),(40,'project_quote','kimch@mono-rama.com','[모노라마] 견적서 - 대전 드림아레나 26',2,2,'sent','auto',NULL,'2026-06-06 10:47:19'),(41,'supervisor_quote_sent','kimch@mono-rama.com','[모노라마 트래커] 견적서 발송 알림 - 대전 드림아레나 26',2,2,'sent','auto',NULL,'2026-06-06 10:47:20'),(42,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 12:31:19'),(43,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 12:35:15'),(44,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 12:39:40'),(45,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 12:42:58'),(46,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 12:46:29'),(47,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:03:04'),(48,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:19:35'),(49,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:44:16'),(50,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:46:29'),(51,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:54:53'),(52,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 14:56:30'),(53,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:00:19'),(54,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:01:37'),(55,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:05:31'),(56,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:07:09'),(57,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:10:57'),(58,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 15:34:10'),(59,'email_verify','bkkim@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 17:16:03'),(60,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 17:17:09'),(61,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 17:42:24'),(62,'agent_qr','kimch@monorama.kr','[모노라마] 국중박 3종 세트 현장요원 출퇴근 QR 코드',1,2,'sent','auto',NULL,'2026-06-06 18:28:00'),(63,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 대전 드림아레나 26',NULL,NULL,'sent','auto',NULL,'2026-06-06 21:45:18'),(64,'merchant_application_approved','augxmas@gmail.com','[모노라마] 프로젝트 참여가 승인되었습니다 - 대전 드림아레나 26',NULL,NULL,'sent','auto',NULL,'2026-06-06 21:55:26'),(65,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:16:07'),(66,'merchant_application_rejected','augxmas@gmail.com','[모노라마] 프로젝트 참여 신청 결과 안내 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:16:56'),(67,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:17:35'),(68,'merchant_application_approved','augxmas@gmail.com','[모노라마] 프로젝트 참여가 승인되었습니다 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:19:31'),(69,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:30:01'),(70,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:45:54'),(71,'merchant_application_approved','augxmas@gmail.com','[모노라마] 프로젝트 참여가 승인되었습니다 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-06 22:46:11'),(72,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-07 10:38:10'),(73,'project_quote','kimch@mono-rama.com','[모노라마] 견적서 - 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 10:40:31'),(74,'supervisor_quote_sent','kimch@mono-rama.com','[모노라마 트래커] 견적서 발송 알림 - 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 10:40:32'),(75,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 11:38:28'),(76,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 11:47:30'),(77,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:02:57'),(78,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:04:56'),(79,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:10:18'),(80,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:11:48'),(81,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:13:01'),(82,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:13:27'),(83,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:14:19'),(84,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:14:31'),(85,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:21:27'),(86,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 12:23:23'),(87,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:24:51'),(88,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:25:55'),(89,'project_quote','kimch@mono-rama.com','[모노라마] 재견적서 - 2026년 조선의 김홍도 전시회',3,2,'sent','auto',NULL,'2026-06-07 12:32:50'),(90,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 12:40:38'),(91,'host_manual_email','kimch@mono-rama.com','잘 보고 가셨나요 ?',NULL,2,'sent','manual',NULL,'2026-06-07 16:03:03'),(92,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-07 17:22:51'),(93,'project_quote','kimch@mono-rama.com','[모노라마] 견적서 - [설문조사]',4,2,'sent','auto',NULL,'2026-06-07 17:24:08'),(94,'supervisor_quote_sent','kimch@mono-rama.com','[모노라마 트래커] 견적서 발송 알림 - [설문조사]',4,2,'sent','auto',NULL,'2026-06-07 17:24:08'),(95,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-07 19:57:47'),(96,'host_new_application','kimch@mono-rama.com','[모노라마 트래커] 가맹점 프로젝트 지원 신청 - 대전 드림아레나 26',NULL,NULL,'sent','auto',NULL,'2026-06-07 20:24:11'),(97,'merchant_application_approved','augxmas@gmail.com','[모노라마] 프로젝트 참여가 승인되었습니다 - 대전 드림아레나 26',NULL,NULL,'sent','auto',NULL,'2026-06-07 20:24:43'),(98,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 21:47:05'),(99,'email_verify','kimch@mono-rama.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 23:02:37'),(100,'email_verify','augxmas@gmail.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 23:03:39'),(101,'email_verify','augxmas@gmail.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-07 23:06:47'),(102,'email_verify','kimch@monorama.kr','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-08 15:43:04'),(103,'project_pin','kimch@mono-rama.com','[모노라마] Gift 승인 비밀번호',NULL,2,'sent','auto',NULL,'2026-06-08 18:50:55'),(104,'project_quote','kimch@mono-rama.com','[모노라마] 견적서 - test',5,2,'sent','auto',NULL,'2026-06-08 18:52:45'),(105,'supervisor_quote_sent','kimch@mono-rama.com','[모노라마 트래커] 견적서 발송 알림 - test',5,2,'sent','auto',NULL,'2026-06-08 18:52:46'),(106,'email_verify','nitsuser@naver.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-08 23:10:53'),(107,'email_verify','nitsuser@naver.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-08 23:17:22'),(108,'email_verify','nitsuser@naver.com','[모노라마] 이메일 인증 코드',NULL,NULL,'sent','auto',NULL,'2026-06-08 23:48:51'),(109,'partner_email_verify','nitsuser@naver.com','[모노라마] 참가기관 등록 인증코드 - 국중박 3종 세트',NULL,NULL,'sent','auto',NULL,'2026-06-09 20:38:08'),(110,'partner_email_verify','nitsuser@naver.com','[모노라마] 참가기관 등록 인증코드',NULL,NULL,'sent','auto',NULL,'2026-06-09 21:16:42');
+/*!40000 ALTER TABLE `email_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `email_templates`
+--
+
+DROP TABLE IF EXISTS `email_templates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `email_templates` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `template_key` varchar(64) NOT NULL,
+  `description` varchar(255) NOT NULL DEFAULT '',
+  `subject` varchar(255) NOT NULL,
+  `body_html` mediumtext NOT NULL,
+  `variables` json DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `template_key` (`template_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `email_templates`
+--
+
+LOCK TABLES `email_templates` WRITE;
+/*!40000 ALTER TABLE `email_templates` DISABLE KEYS */;
+INSERT INTO `email_templates` VALUES (1,'email_verify','회원가입 이메일 인증 코드','[모노라마] 이메일 인증 코드','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">회원가입 이메일 인증 코드</h2>\n  <p>안녕하세요.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 회원가입 이메일 인증 코드 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{code}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{actionUrl}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"code\", \"actionUrl\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(2,'project_pin','Gift 승인 비밀번호 안내','[모노라마] Gift 승인 비밀번호','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Gift 승인 비밀번호 안내</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Gift 승인 비밀번호 안내 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{pin}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"pin\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(3,'supervisor_new_host','신규 Host 가입 확인 (관리자)','[모노라마 트래커] 신규 Host 가입 신청 확인 요청','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">신규 Host 가입 확인 (관리자)</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 신규 Host 가입 확인 (관리자) 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostEmail}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{organizationName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"hostEmail\", \"organizationName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(4,'host_registration_submitted','Host 가입 신청 완료','[모노라마] 회원가입 신청이 완료되었습니다','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 가입 신청 완료</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 가입 신청 완료 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(5,'host_status_approved','Host 승인 알림','[모노라마] 회원가입 승인 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 승인 알림</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 승인 알림 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(6,'host_status_rejected','Host 거절 알림','[모노라마] 회원가입 거절 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 거절 알림</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 거절 알림 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(7,'host_status_locked','Host 계정 잠금 알림','[모노라마] 계정 잠금 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 계정 잠금 알림</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 계정 잠금 알림 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(8,'host_status_terminated','Host 계정 종료 알림','[모노라마] 계정 종료 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 계정 종료 알림</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 계정 종료 알림 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(9,'host_temp_password','Host 임시 비밀번호 발급','[모노라마] 임시 비밀번호 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">Host 임시 비밀번호 발급</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 Host 임시 비밀번호 발급 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{tempPassword}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"tempPassword\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(10,'supervisor_quote_sent','견적서 발송 알림 (관리자)','[모노라마 트래커] 견적서 발송 알림','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">견적서 발송 알림 (관리자)</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 견적서 발송 알림 (관리자) 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectSerial}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{total}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"projectName\", \"projectSerial\", \"total\", \"hostName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(11,'project_quote','프로젝트 견적서','[모노라마] 프로젝트 견적서','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">프로젝트 견적서</h2>\n  <p>안녕하세요.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 프로젝트 견적서 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectSerial}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{total}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{days}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{fromDate}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{toDate}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"projectName\", \"projectSerial\", \"total\", \"days\", \"fromDate\", \"toDate\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(12,'merchant_registration_submitted','가맹점 가입 신청 완료','[모노라마] 가맹점 가입 신청이 접수되었습니다','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 가입 신청 완료</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 가입 신청 완료 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{contactName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"contactName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(13,'merchant_temp_password','가맹점 임시 비밀번호 발급','[모노라마] 가맹점 임시 비밀번호','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 임시 비밀번호 발급</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 임시 비밀번호 발급 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{tempPassword}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"tempPassword\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(14,'supervisor_new_merchant','신규 가맹점 가입 확인 (관리자)','[모노라마 트래커] 신규 가맹점 가입 신청','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">신규 가맹점 가입 확인 (관리자)</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 신규 가맹점 가입 확인 (관리자) 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{bizNo}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{contactName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"bizNo\", \"contactName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(15,'project_support_request','프로젝트 지원 요청 (관리자→호스트)','[모노라마 트래커] 프로젝트 지원 검토 요청','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">프로젝트 지원 요청 (관리자→호스트)</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 프로젝트 지원 요청 (관리자→호스트) 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"projectName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(16,'merchant_application_approved','가맹점 지원 승인','[모노라마] 프로젝트 지원이 승인되었습니다','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 지원 승인</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 지원 승인 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{supportType}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{pin}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"projectName\", \"supportType\", \"pin\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(17,'merchant_application_rejected','가맹점 지원 거절','[모노라마] 프로젝트 지원이 거절되었습니다','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 지원 거절</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 지원 거절 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"projectName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(18,'host_new_application','신규 가맹점 지원 알림 (호스트)','[모노라마] 신규 가맹점 지원 알림','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">신규 가맹점 지원 알림 (호스트)</h2>\n  <p>안녕하세요, {hostName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 신규 가맹점 지원 알림 (호스트) 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{hostName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{projectName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"hostName\", \"merchantName\", \"projectName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(19,'merchant_status_approved','가맹점 계정 승인','[모노라마] 가맹점 계정 승인 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 계정 승인</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 계정 승인 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(20,'merchant_status_rejected','가맹점 계정 거절','[모노라마] 가맹점 계정 거절 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 계정 거절</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 계정 거절 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(21,'merchant_status_locked','가맹점 계정 잠금','[모노라마] 가맹점 계정 잠금 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 계정 잠금</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 계정 잠금 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(22,'merchant_status_terminated','가맹점 계정 종료','[모노라마] 가맹점 계정 종료 안내','<div style=\"font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;max-width:520px;margin:0 auto;padding:20px;\">\n  <h2 style=\"color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;\">가맹점 계정 종료</h2>\n  <p>안녕하세요, {merchantName} 님.</p>\n  <p>본 메일은 모노라마 트래커 시스템에서 자동 발송되는 가맹점 계정 종료 안내 메일입니다.</p>\n  <div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:14px 0;font-size:13px;\">\n    <b style=\"color:#475569;\">사용 가능한 변수</b><br>\n    <code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{merchantName}</code><code style=\"background:#e2e8f0;padding:2px 6px;border-radius:4px;margin-right:6px;\">{reason}</code>\n  </div>\n  <p style=\"color:#64748b;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;\">\n    ※ 이 메일은 자동 발송되므로 회신할 수 없습니다.<br>\n    (주)모노라마 · tracker.mono-rama.com\n  </p>\n</div>','[\"merchantName\", \"reason\"]',0,'2026-06-08 21:59:05','2026-06-08 23:16:35'),(23,'partner_email_verify','참가기관 등록 인증코드 (비밀번호 안내 포함)','[모노라마] 참가기관 등록 인증코드','<div>placeholder — 코드 내장 양식 사용</div>','[\"code\", \"projectName\"]',0,'2026-06-09 20:00:50','2026-06-09 20:00:50');
+/*!40000 ALTER TABLE `email_templates` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `field_agent_attendance`
+--
+
+DROP TABLE IF EXISTS `field_agent_attendance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `field_agent_attendance` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `agent_id` bigint NOT NULL,
+  `project_id` bigint NOT NULL,
+  `attended_date` date NOT NULL,
+  `checked_in_at` datetime NOT NULL,
+  `attendance_type` enum('on_time','late') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_attendance_day` (`agent_id`,`attended_date`),
+  KEY `idx_attendance_proj_date` (`project_id`,`attended_date`),
+  CONSTRAINT `field_agent_attendance_ibfk_1` FOREIGN KEY (`agent_id`) REFERENCES `field_agents` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `field_agent_attendance_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `field_agent_attendance`
+--
+
+LOCK TABLES `field_agent_attendance` WRITE;
+/*!40000 ALTER TABLE `field_agent_attendance` DISABLE KEYS */;
+INSERT INTO `field_agent_attendance` VALUES (1,2,1,'2026-06-06','2026-06-06 17:50:37','late',NULL,'2026-06-06 17:50:37'),(2,2,1,'2026-06-07','2026-06-07 12:55:40','on_time',NULL,'2026-06-07 12:55:40'),(3,2,1,'2026-06-08','2026-06-08 14:59:21','late',NULL,'2026-06-08 14:59:21');
+/*!40000 ALTER TABLE `field_agent_attendance` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `field_agents`
+--
+
+DROP TABLE IF EXISTS `field_agents`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `field_agents` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `name` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mobile` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_lower` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `address` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id_card_image_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bankbook_image_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `terms_accepted` tinyint(1) NOT NULL DEFAULT '0',
+  `privacy_accepted` tinyint(1) NOT NULL DEFAULT '0',
+  `email_optin` tinyint(1) NOT NULL DEFAULT '0',
+  `push_optin` tinyint(1) NOT NULL DEFAULT '0',
+  `qr_token` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `qr_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `qr_token` (`qr_token`),
+  UNIQUE KEY `uq_agent_project_email` (`project_id`,`email_lower`),
+  KEY `idx_agent_project` (`project_id`),
+  CONSTRAINT `field_agents_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `field_agents`
+--
+
+LOCK TABLES `field_agents` WRITE;
+/*!40000 ALTER TABLE `field_agents` DISABLE KEYS */;
+INSERT INTO `field_agents` VALUES (1,2,'홍길동','01025031014','kimch@monorama.kr','kimch@monorama.kr','34672 / 대전 동구 판교2길 7 / 1307호','C:\\proj\\tracker\\uploads\\field-agents\\1780733899608_5dec87a3a99d535edbb2741e.jpg','C:\\proj\\tracker\\uploads\\field-agents\\1780733901562_54412999bea1fe06ee1ebb50.jpg',1,1,1,1,'7a488b8a7a91f54f6bd3073ce89e16b7bf0211bc','C:\\proj\\tracker\\uploads\\field-agent-qr\\7a488b8a7a91f54f6bd3073ce89e16b7bf0211bc.png','active','2026-06-06 17:18:23'),(2,1,'홍길동','01026854082','kimch@monorama.kr','kimch@monorama.kr','34672 / 대전 동구 판교1길 3 / 1307호','C:\\proj\\tracker\\uploads\\field-agents\\1780735438725_667cd04cf29f5c733586ab3a.png','C:\\proj\\tracker\\uploads\\field-agents\\1780735438726_ff826a4e0beab440088af4c7.jpg',1,1,1,1,'3ecabf02b545d97ab5e4abd2a5ef07dfb6b0e7de','C:\\proj\\tracker\\uploads\\field-agent-qr\\3ecabf02b545d97ab5e4abd2a5ef07dfb6b0e7de.png','active','2026-06-06 17:43:59'),(3,3,'김문상','01043214321','kimch@monorama.kr','kimch@monorama.kr','34672 / 대전 동구 판교2길 7 / 1동','C:\\proj\\tracker\\uploads\\field-agents\\1780803722462_e1c2e9632e6ca97875ae1b51.png','C:\\proj\\tracker\\uploads\\field-agents\\1780803722462_010aa7e0d23cd82fa5c67369.jpg',1,1,1,1,'2330c59c7bdd5a10ce02f4fb05a3b5d296fb66ad','C:\\proj\\tracker\\uploads\\field-agent-qr\\2330c59c7bdd5a10ce02f4fb05a3b5d296fb66ad.png','active','2026-06-07 12:42:03');
+/*!40000 ALTER TABLE `field_agents` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `field_definitions`
+--
+
+DROP TABLE IF EXISTS `field_definitions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `field_definitions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `field_key` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `label_ko` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `input_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `choice_type` enum('single','multi') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `choice_type_locked` tinyint(1) NOT NULL DEFAULT '0',
+  `options_json` text COLLATE utf8mb4_unicode_ci,
+  `validation_regex` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `placeholder` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sort_order` int NOT NULL DEFAULT '0',
+  `is_system` tinyint(1) NOT NULL DEFAULT '0',
+  `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `field_key` (`field_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `field_definitions`
+--
+
+LOCK TABLES `field_definitions` WRITE;
+/*!40000 ALTER TABLE `field_definitions` DISABLE KEYS */;
+INSERT INTO `field_definitions` VALUES (1,'name','이름','text',NULL,0,NULL,NULL,'홍길동',10,1,0,'2026-06-05 23:44:45'),(2,'birth_date','생년월일','date',NULL,0,NULL,NULL,NULL,20,1,0,'2026-06-05 23:44:45'),(3,'mobile','모바일 전화','phone',NULL,0,NULL,NULL,'010-1234-5678',30,1,0,'2026-06-05 23:44:45'),(4,'email','이메일','email',NULL,0,NULL,NULL,'user@example.com',40,1,0,'2026-06-05 23:44:45'),(5,'address','주소','address',NULL,0,NULL,NULL,NULL,50,1,0,'2026-06-05 23:44:45'),(6,'gender','성별','select','single',1,'[\"남\",\"여\",\"기타\"]',NULL,NULL,60,1,0,'2026-06-05 23:44:45'),(7,'age_group','연령대','select','single',1,'[\"10대\",\"20대\",\"30대\",\"40대\",\"50대\",\"60대\",\"70대 이상\"]',NULL,NULL,70,1,0,'2026-06-05 23:44:45'),(8,'nationality','국적','text',NULL,0,NULL,NULL,'대한민국',80,1,0,'2026-06-05 23:44:45'),(9,'emergency_contact','비상연락처','phone',NULL,0,NULL,NULL,'010-1234-5678',90,1,0,'2026-06-05 23:44:45'),(10,'party_size','동반 인원','number',NULL,0,NULL,NULL,'1',100,1,0,'2026-06-05 23:44:45'),(11,'visit_purpose','방문 목적','text',NULL,0,NULL,NULL,NULL,110,1,0,'2026-06-05 23:44:45'),(12,'car_number','차량번호','text',NULL,0,NULL,NULL,'12가3456',120,1,0,'2026-06-05 23:44:45'),(13,'preferred_time','방문 희망 시간','time',NULL,0,NULL,NULL,NULL,130,1,0,'2026-06-05 23:44:45'),(14,'company','소속/회사','text',NULL,0,NULL,NULL,NULL,140,1,0,'2026-06-05 23:44:45'),(15,'newsletter_optin','소식지 수신 동의','select','multi',0,'[\"이메일\",\"문자\"]',NULL,NULL,150,1,0,'2026-06-05 23:44:45'),(16,'referral_source','알게된 경로','select','multi',0,'[\"SNS\",\"지인 소개\",\"뉴스/광고\",\"인터넷 검색\",\"포스터/현수막\",\"라디오/TV\",\"기타\"]',NULL,NULL,145,1,0,'2026-06-06 06:56:08');
+/*!40000 ALTER TABLE `field_definitions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `gift_redemptions`
+--
+
+DROP TABLE IF EXISTS `gift_redemptions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `gift_redemptions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `visitor_id` bigint NOT NULL,
+  `merchant_id` bigint DEFAULT NULL,
+  `redemption_type` enum('normal','grant') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount` bigint NOT NULL,
+  `eligible` tinyint(1) NOT NULL DEFAULT '0',
+  `redeemed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `project_id` (`project_id`),
+  KEY `visitor_id` (`visitor_id`),
+  KEY `idx_gr_merchant` (`merchant_id`),
+  CONSTRAINT `fk_gr_merchant` FOREIGN KEY (`merchant_id`) REFERENCES `merchants` (`id`),
+  CONSTRAINT `gift_redemptions_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`),
+  CONSTRAINT `gift_redemptions_ibfk_2` FOREIGN KEY (`visitor_id`) REFERENCES `visitors` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `gift_redemptions`
+--
+
+LOCK TABLES `gift_redemptions` WRITE;
+/*!40000 ALTER TABLE `gift_redemptions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `gift_redemptions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `gifts`
+--
+
+DROP TABLE IF EXISTS `gifts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `gifts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `visitor_id` bigint NOT NULL,
+  `token` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount` bigint NOT NULL,
+  `threshold_pct` int NOT NULL DEFAULT '100',
+  `status` enum('issued','used') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'issued',
+  `qr_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `qr_view_pin_hash` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `qr_view_pin_set_at` datetime DEFAULT NULL,
+  `issued_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_gift_token` (`token`),
+  UNIQUE KEY `uq_gift_visitor_tier` (`project_id`,`visitor_id`,`threshold_pct`),
+  KEY `visitor_id` (`visitor_id`),
+  CONSTRAINT `gifts_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`),
+  CONSTRAINT `gifts_ibfk_2` FOREIGN KEY (`visitor_id`) REFERENCES `visitors` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `gifts`
+--
+
+LOCK TABLES `gifts` WRITE;
+/*!40000 ALTER TABLE `gifts` DISABLE KEYS */;
+INSERT INTO `gifts` VALUES (19,3,65,'9be194bcdcbcaa9a34d9e5b28a1df0a581a7ac7d',1000,33,'issued','C:\\proj\\tracker\\uploads\\gift-qr\\9be194bcdcbcaa9a34d9e5b28a1df0a581a7ac7d.png',NULL,NULL,'2026-06-07 15:38:15',NULL);
+/*!40000 ALTER TABLE `gifts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `host_email_verify_codes`
+--
+
+DROP TABLE IF EXISTS `host_email_verify_codes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `host_email_verify_codes` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `used` tinyint(1) NOT NULL DEFAULT '0',
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_hvc_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `host_email_verify_codes`
+--
+
+LOCK TABLES `host_email_verify_codes` WRITE;
+/*!40000 ALTER TABLE `host_email_verify_codes` DISABLE KEYS */;
+INSERT INTO `host_email_verify_codes` VALUES (3,'kimch@monorama.kr','968443',1,'2026-06-06 12:41:19','2026-06-06 12:31:19'),(19,'kimch@mono-rama.com','429255',1,'2026-06-06 15:44:10','2026-06-06 15:34:09'),(21,'kimch@monorama.kr','259652',1,'2026-06-06 17:27:09','2026-06-06 17:17:08'),(22,'kimch@monorama.kr','703925',1,'2026-06-06 17:52:24','2026-06-06 17:42:24'),(23,'kimch@mono-rama.com','949673',1,'2026-06-06 22:40:01','2026-06-06 22:30:01'),(25,'kimch@monorama.kr','737029',1,'2026-06-07 12:50:38','2026-06-07 12:40:38'),(28,'augxmas@gmail.com','958381',1,'2026-06-07 23:13:39','2026-06-07 23:03:38'),(32,'nitsuser@naver.com','316956',1,'2026-06-08 23:27:22','2026-06-08 23:17:21'),(33,'nitsuser@naver.com','136236',1,'2026-06-08 23:58:51','2026-06-08 23:48:50'),(34,'nitsuser@naver.com','575862',0,'2026-06-09 20:48:08','2026-06-09 20:38:07'),(35,'nitsuser@naver.com','955979',1,'2026-06-09 21:26:42','2026-06-09 21:16:42');
+/*!40000 ALTER TABLE `host_email_verify_codes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `host_project_pin_codes`
+--
+
+DROP TABLE IF EXISTS `host_project_pin_codes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `host_project_pin_codes` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `host_id` bigint NOT NULL,
+  `pin_code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `host_id` (`host_id`),
+  CONSTRAINT `host_project_pin_codes_ibfk_1` FOREIGN KEY (`host_id`) REFERENCES `hosts` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `host_project_pin_codes`
+--
+
+LOCK TABLES `host_project_pin_codes` WRITE;
+/*!40000 ALTER TABLE `host_project_pin_codes` DISABLE KEYS */;
+INSERT INTO `host_project_pin_codes` VALUES (1,2,'414187','2026-06-04 09:41:11',0,'2026-06-04 09:31:10'),(2,2,'576658','2026-06-04 09:50:08',0,'2026-06-04 09:40:08'),(3,2,'792096','2026-06-04 09:59:02',0,'2026-06-04 09:49:01'),(4,2,'802393','2026-06-04 10:04:56',0,'2026-06-04 09:54:56'),(5,2,'838478','2026-06-04 10:05:57',0,'2026-06-04 09:55:56'),(6,2,'377610','2026-06-04 10:10:32',0,'2026-06-04 10:00:32'),(7,2,'907653','2026-06-04 10:11:54',0,'2026-06-04 10:01:54'),(8,2,'151477','2026-06-04 10:18:34',0,'2026-06-04 10:08:34'),(9,2,'527006','2026-06-04 10:23:27',0,'2026-06-04 10:13:26'),(10,2,'846934','2026-06-04 10:31:24',0,'2026-06-04 10:21:24'),(11,2,'684225','2026-06-04 10:39:43',0,'2026-06-04 10:29:43'),(12,2,'712160','2026-06-04 10:45:15',0,'2026-06-04 10:35:14'),(13,2,'501735','2026-06-04 10:57:51',1,'2026-06-04 10:47:50'),(14,2,'666419','2026-06-05 11:46:16',0,'2026-06-05 11:36:15'),(15,2,'878561','2026-06-06 10:53:17',1,'2026-06-06 10:43:16'),(16,2,'646661','2026-06-07 10:48:10',1,'2026-06-07 10:38:09'),(17,2,'755639','2026-06-07 17:32:51',1,'2026-06-07 17:22:51'),(18,2,'373826','2026-06-08 19:00:54',1,'2026-06-08 18:50:54');
+/*!40000 ALTER TABLE `host_project_pin_codes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `hosts`
+--
+
+DROP TABLE IF EXISTS `hosts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `hosts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `host_name` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `host_email` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mobile_phone` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `phone` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `organization_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_no` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_cert_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_cert_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address_zip` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address1` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address2` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `password_hash` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','approved','cancelled','terminated','locked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `status_reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `project_pin_fail_count` int NOT NULL DEFAULT '0',
+  `project_locked` tinyint(1) NOT NULL DEFAULT '0',
+  `last_login_ip` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_login_at` datetime DEFAULT NULL,
+  `last_logout_at` datetime DEFAULT NULL,
+  `password_reset_required` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `host_email` (`host_email`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hosts`
+--
+
+LOCK TABLES `hosts` WRITE;
+/*!40000 ALTER TABLE `hosts` DISABLE KEYS */;
+INSERT INTO `hosts` VALUES (2,'CDD6E8CFE84DA96614FAAB8BE3C5929E','A234C7E2ABCD7B4928419EB4B1B3C9A50FF30DBE1D39AAF31BF51FC75B232AF1','574A9B3489B1C0FAB682C4301822FAA1','5F0A01C0E185A06FDCEDBD1BC0CE6BF2','국립중앙박물관','1048300984','C:\\proj\\tracker\\uploads\\biz-certs\\1780532557049_êµ­ë¦½ì¤ìë°ë¬¼ê´_ì¬ììë±ë¡ì¦.pdf','êµ­ë¦½ì¤ìë°ë¬¼ê´_ì¬ììë±ë¡ì¦.pdf','04383','서울 용산구 서빙고로 137','본관','$2b$12$.cJPPSqZFj0RDUTPVkdlLe84xK3lD37zSsheCS8hn5jUWfIWVg7ey','approved',NULL,0,0,'112.172.235.81','2026-06-09 22:58:47','2026-06-08 21:37:17',0,'2026-06-04 09:22:37','2026-06-09 22:58:47');
+/*!40000 ALTER TABLE `hosts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `login_histories`
+--
+
+DROP TABLE IF EXISTS `login_histories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `login_histories` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_type` enum('host','supervisor','merchant') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `login_ip` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `login_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `logout_at` datetime DEFAULT NULL,
+  `session_id` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=245 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `login_histories`
+--
+
+LOCK TABLES `login_histories` WRITE;
+/*!40000 ALTER TABLE `login_histories` DISABLE KEYS */;
+INSERT INTO `login_histories` VALUES (1,'supervisor','supervisor','::1','2026-06-04 08:59:25','2026-06-04 09:02:53','yrTOE39igk28L6bXb-xD0KxaFJSiyBSL'),(2,'supervisor','supervisor','::1','2026-06-04 09:03:03','2026-06-04 09:08:31','oDVSTZ3NNPLmcOdyItZGuD7SiG4Etya2'),(3,'supervisor','supervisor','::1','2026-06-04 09:08:32','2026-06-04 09:13:06','f53QYbg_fj63FJGTBoWQjt5L0xHANlWW'),(5,'supervisor','supervisor','::1','2026-06-04 09:13:54','2026-06-04 09:20:16','s23XtJM2YDz5FinpxlN9ukIMWQY23FYs'),(6,'supervisor','supervisor','::1','2026-06-04 09:22:44','2026-06-04 09:31:17','cLhuYXHAtLeol4L1jOBYjMJ2U0i2-YfD'),(7,'host','2','::1','2026-06-04 09:23:13','2026-06-04 09:28:09','jQxmHBdyASPlKyLa5ofW_xM9d_M_YT2W'),(8,'host','2','::1','2026-06-04 09:28:11','2026-06-04 09:54:20','AOyd9mhn_qe51PA7wrZ93ZxDU8pr51lo'),(9,'host','2','::1','2026-06-04 09:54:36','2026-06-04 10:08:02','wSJcBcRw-JlfNXfCwOHmlzzvh1LFr3AI'),(10,'host','2','::1','2026-06-04 10:08:17','2026-06-04 10:21:06','eZBMvvt7N0AsidvTOez3d9kq1Z4HVtpl'),(11,'host','2','::1','2026-06-04 10:21:18','2026-06-04 10:28:21','nu7rNRmG9Kc3ee1Kq6Pg5HslOPYmqaBi'),(12,'host','2','::ffff:127.0.0.1','2026-06-04 10:29:38',NULL,'gdRbKe1S94duxlZFPzSuKloGmIVfutvQ'),(13,'host','2','::1','2026-06-04 10:35:10','2026-06-04 10:41:32','BMl4Rv2uZYW0S3f_mf2YJBh3LUvZsgfw'),(14,'host','2','::1','2026-06-04 10:47:45','2026-06-04 10:57:39','WFR9a00K6SOk1nSP20im1VEtAah360zQ'),(15,'supervisor','supervisor','::1','2026-06-04 10:49:10','2026-06-04 11:16:30','7S5OMvXN2pNq110ZVrutHb_rj9WExHtn'),(16,'host','2','::1','2026-06-04 10:57:47','2026-06-04 11:05:49','51bx15pToxQbuC1vvAKXAjd2vQVLt4ki'),(17,'host','2','::1','2026-06-04 11:07:22','2026-06-04 11:13:06','Tps6TPXV7HN-NFvqaw7l-tqZZ5isYaYn'),(18,'host','2','::1','2026-06-04 11:13:42','2026-06-04 11:19:10','PHE23FLA_4i2b0JsCQ8Q6uSRYGSW72MT'),(19,'host','2','::1','2026-06-04 11:21:04',NULL,'EleDIb5Shx5aKYQ0xKstA5-AanJkxnGL'),(20,'host','2','::1','2026-06-04 13:30:18','2026-06-04 14:05:37','SsMQ0a85Py-4NURPlqK_xqa7saDzP-b1'),(21,'host','2','::1','2026-06-04 14:36:56','2026-06-04 15:01:30','8DaQR_GlnB8gu05JH1-8GiVrTs1g8_UR'),(22,'host','2','::1','2026-06-04 20:57:44','2026-06-04 21:06:43','VoorJB6R3E6H-D9waVifg8vwASUl7mH8'),(23,'host','2','::1','2026-06-04 21:06:45','2026-06-04 21:21:33','bmSkLGi5B94kpYnpBjS46HqhmVQXnh6-'),(24,'supervisor','supervisor','::1','2026-06-04 21:11:53','2026-06-04 21:16:32','_RttWJBYWG-C3O5Ltt0zwjmCvdsCeZGQ'),(25,'host','2','112.172.235.81','2026-06-04 21:22:04','2026-06-04 21:40:27','qa8xou4jJGp6bDGmPzprfhNVG9b_mHzA'),(26,'host','2','112.172.235.81','2026-06-04 21:49:40','2026-06-04 21:55:58','G2Tt4Cd69HYBJayNiPcN_ZiHplmBtIqG'),(27,'host','2','112.172.235.81','2026-06-04 21:57:07','2026-06-05 00:11:18','EDjm5Ec29kCGJZnTcK4_gh1rWwC_ODTS'),(28,'supervisor','supervisor','::1','2026-06-04 23:01:07','2026-06-04 23:35:58','qxCYhM574EoGi9oILbogRHKHxZ4Czo49'),(29,'supervisor','supervisor','::1','2026-06-04 23:35:59','2026-06-05 00:01:30','3uDdDDsVjzT1xb4c-ejUF6aItIi8-m77'),(30,'supervisor','supervisor','::1','2026-06-05 00:05:50','2026-06-05 00:29:30','CsQIL-Zj1J7j-bh7_e_gCKqAHpYyJt78'),(31,'host','2','112.172.235.81','2026-06-05 00:20:29','2026-06-05 00:24:35','99ZXhHUnCU0Y70k5y3WPr4zrmovrFiGd'),(32,'host','2','112.172.235.81','2026-06-05 00:24:44','2026-06-05 00:55:57','MZoD57O7EDpgF97eacw2YCkI6vOnI1Et'),(33,'host','2','112.172.235.81','2026-06-05 00:56:03',NULL,'m5Idj_lWfj2L1tGc5ICjY81P8kWuseUZ'),(34,'host','2','112.221.246.133','2026-06-05 08:40:23','2026-06-05 08:44:38','fG08EOErvFm30OkRwPnW7dgwqH20Jmv_'),(35,'host','2','112.221.246.133','2026-06-05 08:44:47','2026-06-05 08:48:06','PjvUKVG1To1XuQOSh-TneFwhmOC9-Yfb'),(36,'host','2','112.221.246.133','2026-06-05 08:48:20','2026-06-05 09:02:35','IZsRNYODbFlN4aQac-k47tsZ7PmOI_B2'),(37,'host','2','112.221.246.133','2026-06-05 09:02:40','2026-06-05 09:09:19','gLFZkPyC6iQGfIH9-kx1UXTXTWRVTjL1'),(38,'host','2','112.221.246.133','2026-06-05 09:12:53','2026-06-05 09:32:12','UK-SGgMxg-ZqaU3VCrzD7L8Dq43vwUze'),(39,'host','2','112.221.246.133','2026-06-05 09:32:21','2026-06-05 10:06:23','nBuh7HSF3gqnMU-vrINdATZE56n4srOF'),(40,'host','2','112.221.246.133','2026-06-05 11:34:44','2026-06-05 12:14:30','wa9ydNz-NOHf5odBJg4UtX0Teqo7_VJn'),(41,'host','2','112.221.246.133','2026-06-05 15:16:59','2026-06-05 15:21:26','DxBRlH_VCD3GgVKzEQIiFSr5fzYLMcIQ'),(42,'host','2','112.221.246.133','2026-06-05 15:21:57','2026-06-05 15:42:06','U2ZgZ-Xe-ixHqz1abqS839U9vhO9Splh'),(43,'host','2','112.221.246.133','2026-06-05 15:42:12','2026-06-05 15:51:42','5sA8dNn85GOL95Hnw9NTiR3suutVRF1O'),(44,'host','2','112.221.246.133','2026-06-05 15:51:52','2026-06-05 15:58:51','mHk65CPf1319J7oJfwYgF8UGtlNsusK5'),(45,'host','2','112.221.246.133','2026-06-05 15:59:17','2026-06-05 16:30:32','AON7gKUMmNudWluseixRMZkzfaNeEWjy'),(46,'supervisor','supervisor','112.221.246.133','2026-06-05 16:02:11','2026-06-05 16:16:13','TGsbXSOGa3P3iXCMnhal3ugLxEkmJpXn'),(47,'host','2','112.221.246.133','2026-06-05 16:32:57','2026-06-05 17:01:45','BncLBPTrSttDt0tgd2jsvuMkWkxmIZI7'),(48,'supervisor','supervisor','112.221.246.133','2026-06-05 16:33:17','2026-06-05 16:37:32','FGb8UxCpujXMjPFRiuGwhy5BghbLexK8'),(49,'host','2','112.221.246.133','2026-06-05 17:46:23','2026-06-05 17:54:08','3jQZNE770rMDyMDDszvD8gTEwM52QcqU'),(50,'host','2','112.221.246.133','2026-06-05 17:54:13','2026-06-05 18:01:33','BktUK2SyzMwH02F6R4gn4fBRHPw18bQJ'),(51,'host','2','112.221.246.133','2026-06-05 18:15:01',NULL,'KVH1DDR_qFFZcPhMdmb2ezFqD6DRrgDB'),(52,'host','2','112.221.246.133','2026-06-05 18:31:52','2026-06-05 18:49:02','LNbeIeyAr9zK-5i0Z9jPhumlaPNJoIDT'),(53,'supervisor','supervisor','112.221.246.133','2026-06-05 18:36:42','2026-06-05 18:41:30','EfkSYgqQmwDNA9iBK_lvTMB-vEaE7t1P'),(54,'merchant','1','112.221.246.133','2026-06-05 18:37:11','2026-06-05 18:44:29','uwQWKME-2xzsG2fjRZnIGIG8yxMvvgik'),(55,'merchant','1','112.221.246.133','2026-06-05 18:48:39','2026-06-05 18:57:59','J_EVhlynVozV1_CIZzgEskA6jx15524Q'),(56,'host','2','112.221.246.133','2026-06-05 18:49:10','2026-06-05 18:58:35','AWZHzEVZYX1CYTwbW9NnUqPutbZMP1Gn'),(57,'supervisor','supervisor','112.221.246.133','2026-06-05 18:49:28','2026-06-05 18:53:36','SUrX49kSr87sZxyQY46b9CwiAUr630eN'),(58,'merchant','2','112.221.246.133','2026-06-05 18:56:07','2026-06-05 19:02:36','FbRnYR3lW_1Pp94KOMKQCoPZQOaAXB9z'),(59,'merchant','2','112.221.246.133','2026-06-05 18:57:18','2026-06-05 19:04:39','OJIM4Xi1oKpYYZ2U3gJd5IINb4LwApar'),(60,'host','2','112.221.246.133','2026-06-05 18:58:40','2026-06-05 19:07:36','Z35qW9jJm0-_da5cmHeCt7QE9pi51aBD'),(61,'merchant','1','112.221.246.133','2026-06-05 18:59:41','2026-06-05 19:00:09','BXxnlA-6bgr64ztDV6lMeO9dFsXelsUI'),(62,'merchant','2','112.221.246.133','2026-06-05 19:00:20','2026-06-05 19:00:47','6MUUQyudpSHqDw_X_8l0p3ZJh1LvPevx'),(63,'merchant','1','112.221.246.133','2026-06-05 19:00:58','2026-06-05 19:01:06','bnELnUpeqyTnCYIfD8-BwL92tuYLyzQA'),(64,'merchant','2','112.221.246.133','2026-06-05 19:01:16','2026-06-05 19:05:28','3zo7IoxbPR29klthlU-wsXTuVrUd4wOs'),(65,'merchant','2','112.221.246.133','2026-06-05 19:02:38',NULL,'LtDoaRDJFujztzqdwWc_crj4p1zxakxT'),(66,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:56','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(67,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:56','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(68,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:56','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(69,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:57','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(70,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(71,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(72,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(73,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(74,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(75,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(76,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(77,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(78,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(79,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:04:58','2026-06-05 19:06:07','snNPs3rrJH8vSMhMn7D6UuwjlGjWdJOc'),(80,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:06:35',NULL,'g5xvkb2nhC3XCYZ6e6Ja-LJqLqDLziA3'),(81,'host','2','112.221.246.133','2026-06-05 19:07:38','2026-06-05 19:14:08','YCFHK1707mUiQeKZXcjlGU1nBfq8lRdU'),(82,'merchant','1','112.221.246.133','2026-06-05 19:08:15','2026-06-05 19:13:42','-XOKMaSEXX-t8dHxck14HjORnrLd2RyN'),(83,'merchant','1','2001:2d8:e1b3:9a73:e932:aa07:f5ad:95ae','2026-06-05 19:08:18',NULL,'FP-WFBqaDb-_xIiD4nCKMr5GaUqF7rYm'),(84,'host','2','112.221.246.133','2026-06-05 19:16:01',NULL,'yfxFAt9ZDpSorEr7PqM4KJkMgNz4dXWj'),(85,'supervisor','supervisor','115.143.121.175','2026-06-05 21:09:03','2026-06-05 21:21:22','vO8CWkiwTrH6ManIbNc0B2b54DDejBfS'),(86,'supervisor','supervisor','115.143.121.175','2026-06-05 21:22:01','2026-06-05 22:14:42','IxZ9yXQQxoyQv18tI6Le3krQ2uik6VIt'),(87,'host','2','115.143.121.175','2026-06-05 21:37:12','2026-06-05 22:42:04','slmMgkOWMZHaj9ErQHxciAZkskkq-A7K'),(88,'supervisor','supervisor','115.143.121.175','2026-06-05 22:17:52','2026-06-05 22:44:03','OEfMGpuOl-WuyX6tknQBfH9z0d-Qlpza'),(89,'host','2','115.143.121.175','2026-06-05 22:49:56','2026-06-05 22:54:44','CLkTazKm9dxjxktOveZSzFFh3Cq9sQbs'),(90,'host','2','115.143.121.175','2026-06-05 23:04:59','2026-06-05 23:23:47','CUs8l-vYSfrkgF16LnNNUQYHtP3vw-bN'),(91,'host','2','115.143.121.175','2026-06-05 23:53:33',NULL,'bi9SML4MQo3VFUX-n8Hjv9EfWIy44vGS'),(92,'host','2','115.143.121.175','2026-06-06 06:31:01','2026-06-06 06:35:02','jiiCpc1KNcE-crVi3un-gEu11EPd5bRt'),(93,'host','2','115.143.121.175','2026-06-06 06:42:04','2026-06-06 07:27:02','tQYEjIgosWb6KCZCTHpX1CEt3-SMjjUf'),(94,'host','2','115.143.121.175','2026-06-06 06:48:20','2026-06-06 07:27:02','tQYEjIgosWb6KCZCTHpX1CEt3-SMjjUf'),(95,'host','2','115.143.121.175','2026-06-06 07:45:09',NULL,'mTrwFDdHrt_WvY6kZ7652qfhtT1WjR2-'),(96,'host','2','115.143.121.175','2026-06-06 08:23:35','2026-06-06 08:27:44','W0fsGPipLykObRpF5IMRSC8Zv2h9_elC'),(97,'host','2','115.143.121.175','2026-06-06 08:27:45','2026-06-06 08:31:47','fnOJ_VMlU5rqA_JWKCwLQIxhb1ssz5G0'),(98,'host','2','115.143.121.175','2026-06-06 08:32:26','2026-06-06 08:50:57','QPKbSvhtdiLz2njdJCXfARcjKAZ0TbTh'),(99,'host','2','115.143.121.175','2026-06-06 08:54:32','2026-06-06 09:24:34','MgWG-slNrN20cw8NMl5UFIT7G3cU5-IA'),(100,'host','2','115.143.121.175','2026-06-06 09:25:32','2026-06-06 09:38:10','vWRXydqMGqGV2PDTEobl3km-dXtVPrU1'),(101,'host','2','115.143.121.175','2026-06-06 10:05:21','2026-06-06 10:13:25','PswrKKc4U0mxM8sHCfMj2kp-c0qFGp7B'),(102,'host','2','115.143.121.175','2026-06-06 10:16:19','2026-06-06 10:21:06','z7b9-rpXE77PtPSd6IgHICw90sdNx8in'),(103,'host','2','115.143.121.175','2026-06-06 10:25:49','2026-06-06 10:51:42','90Kjq0VLn44X2g4EsgiyiAQWyaxU2krb'),(104,'supervisor','supervisor','115.143.121.175','2026-06-06 10:48:26','2026-06-06 11:11:46','Hs4AC9tY_pCxFGzw5H6SpF2A_txqdhW-'),(105,'host','2','115.143.121.175','2026-06-06 10:54:32','2026-06-06 11:02:16','8ZaRywnFTq_g1h9DLlPbRCMxoAyNaA9d'),(106,'host','2','115.143.121.175','2026-06-06 11:08:41','2026-06-06 11:34:55','l5gJiEaAU_B8871LSxqXRf5cysktG8SC'),(107,'host','2','115.143.121.175','2026-06-06 11:36:14','2026-06-06 11:40:15','IhRTxI9HTp2D7-QTqcujk1n-DDnEhZ7W'),(108,'host','2','115.143.121.175','2026-06-06 11:59:19','2026-06-06 12:07:26','EZ5D-8-B5pMZrkyV_F9JAA9fe1e_zTmP'),(109,'host','2','115.143.121.175','2026-06-06 12:12:40','2026-06-06 12:50:17','HJGpgAiaNCn2oo99ww4LZDsraSSRMsVj'),(110,'host','2','115.143.121.175','2026-06-06 14:04:24','2026-06-06 14:08:45','mqsFVBGR_Y3ODUbmej1fYppYLOyAn7LC'),(111,'host','2','115.143.121.175','2026-06-06 14:10:55','2026-06-06 14:31:37','MMR_xVWZ88Hr35hMZiPWhoasEAs5qM6a'),(112,'host','2','115.143.121.175','2026-06-06 14:33:35','2026-06-06 14:38:41','c78f2x7qCCFQlmDFtD2cqahoSkzh1772'),(113,'host','2','115.143.121.175','2026-06-06 14:42:55','2026-06-06 15:03:25','v7oW2enAdgEKK5NxlrayXC9hDt6V7wIm'),(114,'host','2','115.143.121.175','2026-06-06 15:06:39','2026-06-06 15:10:46','gzVmPRLAGN0sThpqfgaag5vnExL_Y_z_'),(115,'host','2','115.143.121.175','2026-06-06 15:13:41','2026-06-06 15:41:05','FtJ48hM9lr1OlmzdeVRWF2CBMyCoKBth'),(116,'host','2','115.143.121.175','2026-06-06 15:41:37','2026-06-06 16:09:15','Cfi5IbqbQx2bwfA5K3sZYBxYPl1_8qkv'),(117,'host','2','115.143.121.175','2026-06-06 16:16:50','2026-06-06 16:21:03','bi9pNXg4e_r3Q-bt_CfFr7mcleknYlLv'),(118,'host','2','115.143.121.175','2026-06-06 16:31:32','2026-06-06 16:35:50','VrVvpl1XWaIpt9p50BDy-0ylJNr0ywRS'),(119,'host','2','115.143.121.175','2026-06-06 16:51:13','2026-06-06 17:16:59','nlakasTJpr6BIXdcbChej_dkufr5d--L'),(120,'host','2','115.143.121.175','2026-06-06 17:19:56','2026-06-06 19:26:28','yDdRKr1ts8O95fIbY37EWOIy2wWeTiPa'),(121,'supervisor','supervisor','115.143.121.175','2026-06-06 18:30:20','2026-06-06 18:49:32','maxLO77VDwQXcJuYtuxLjB9j2fj8dGXr'),(122,'host','2','115.143.121.175','2026-06-06 19:44:54','2026-06-06 22:02:35','BhPQYagxo7C9OG_NM6aX54SKzrdocbZS'),(123,'merchant','1','115.143.121.175','2026-06-06 20:48:44','2026-06-06 20:52:45','yrijJ88b-ftyGVC0C7SjT-k4F6zUqabQ'),(124,'merchant','1','115.143.121.175','2026-06-06 21:42:46','2026-06-06 21:49:22','7QVzqeJ-FEsYSaHB8DxH0EB5GxcxSlf6'),(125,'merchant','1','115.143.121.175','2026-06-06 21:55:15','2026-06-06 22:13:52','uAK2N-0nCukXTtUjkNx-boYMWGSTsb9l'),(126,'merchant','1','115.143.121.175','2026-06-06 22:15:46','2026-06-06 22:21:37','RX-FdFyZJ8Wxpwu_-yIOr9TBQn0VCQ8s'),(127,'host','2','115.143.121.175','2026-06-06 22:16:25','2026-06-06 22:33:22','Yb8uy0ld05DBV_qyFJ7bfxWn08gwgg3F'),(128,'merchant','1','115.143.121.175','2026-06-06 22:24:41','2026-06-06 22:28:50','zxw0_c3DWLDsi9sU6jquTTcT_VZL6tp3'),(129,'host','2','115.143.121.175','2026-06-06 22:40:02','2026-06-06 23:28:34','D1kUEMAgxRKFBZvPrRBd3LcMobeo88al'),(130,'merchant','1','115.143.121.175','2026-06-06 22:41:14',NULL,'GeqrPZN5HLE9DeQOIKJzFd5pBeLAoNPY'),(131,'merchant','1','115.143.121.175','2026-06-06 22:45:32','2026-06-06 22:49:56','KwLPil85CA9nB3an9U8kGmOnGXnZFZMp'),(132,'host','2','115.143.121.175','2026-06-07 08:08:29','2026-06-07 08:12:51','owAEIFRXThyBRcWGqMr5hloGEqWm8XfB'),(133,'host','2','115.143.121.175','2026-06-07 08:21:34','2026-06-07 08:26:06','vvphAzHQkgQxe9vmEBf1lkpFIr0mZ72p'),(134,'host','2','115.143.121.175','2026-06-07 08:31:44','2026-06-07 08:58:08','9Y-NE1BE250eS9qfjrkdVoE6u85qktFs'),(135,'host','2','115.143.121.175','2026-06-07 09:20:55','2026-06-07 09:57:10','IlH99epCVzr8uD2FunHO7ZZ9jSfNFPkH'),(136,'host','2','115.143.121.175','2026-06-07 09:59:47','2026-06-07 10:28:04','V6UFicdtl2PRhLC1Yu4iPWuUDpuBamGf'),(137,'host','2','115.143.121.175','2026-06-07 10:30:34','2026-06-07 11:18:09','alYzK40b0Ij9xlgv36IggO8_9YgCuQev'),(138,'host','2','115.143.121.175','2026-06-07 11:24:32','2026-06-07 11:29:52','IllmVFKXFE6kt8GPSYXXso0ToAcp65qA'),(139,'host','2','115.143.121.175','2026-06-07 11:36:07','2026-06-07 12:09:54','RP2D13fy1z7M4SdT1BZrZ9uwj_-NKu_M'),(140,'host','2','115.143.121.175','2026-06-07 12:10:00','2026-06-07 12:31:33','ahh-1HCm20UZp5HuSgRxbyAFK8f8FYYq'),(141,'host','2','115.143.121.175','2026-06-07 12:19:48','2026-06-07 12:31:33','ahh-1HCm20UZp5HuSgRxbyAFK8f8FYYq'),(142,'host','2','115.143.121.175','2026-06-07 12:31:40','2026-06-07 13:04:35','iF9uvgGz2ognsHJhcbbRiBq479I-WBv4'),(143,'host','2','115.143.121.175','2026-06-07 13:06:39',NULL,'IT4A1Az_L-qGNqeQ0K4oaa_qNgU3pLRm'),(144,'host','2','115.143.121.175','2026-06-07 13:49:27','2026-06-07 14:50:23','GkVAuAEPSb-bBZOavS4FtISL191m48Ur'),(145,'host','2','115.143.121.175','2026-06-07 14:51:17','2026-06-07 14:52:26','iu3KEqw-7hDRCqu-jFxnbMp3TPDsmUHW'),(146,'host','2','115.143.121.175','2026-06-07 14:52:37','2026-06-07 14:52:45','YJYDg0RYP6NZXeNfzGoxnuTLBKOehTjq'),(147,'host','2','115.143.121.175','2026-06-07 14:53:18','2026-06-07 15:33:26','YXtZvU-GsStFtC-31ZEZIFjNpQ4oJbSm'),(148,'supervisor','supervisor','115.143.121.175','2026-06-07 14:53:46','2026-06-07 14:58:07','Q2vdV6g4-HeZSrFhcloFYjz2UjA2fhFW'),(149,'supervisor','supervisor','115.143.121.175','2026-06-07 15:03:09','2026-06-07 15:11:02','2qxK5pTnWXslTfpZCJOFlQ5vAZBBi328'),(150,'host','2','115.143.121.175','2026-06-07 15:35:52','2026-06-07 15:52:06','aD2BaeE2ySbQyx73S1NTM8j0aUcux3zO'),(151,'host','2','115.143.121.175','2026-06-07 15:56:02','2026-06-07 16:26:28','H0p-DZ-HPQoYlAj02ePolWMV_bs6-fJq'),(152,'supervisor','supervisor','115.143.121.175','2026-06-07 15:58:16','2026-06-07 16:07:13','vuT4F3Ptw_i188d7GtjuPio_j86mjGHJ'),(153,'merchant','1','115.143.121.175','2026-06-07 16:06:38','2026-06-07 16:10:39','64g2ohSrwjktUxOnHOf0QzXHSe1A4VI3'),(154,'host','2','115.143.121.175','2026-06-07 16:27:00','2026-06-07 16:31:51','fF9VdzH22m0XznKZUSuqgTIgYayPQROb'),(155,'host','2','115.143.121.175','2026-06-07 17:07:59','2026-06-07 17:28:08','3w2jbcJsMjJjRm-NosJavahD0iImWdrF'),(156,'supervisor','supervisor','115.143.121.175','2026-06-07 17:24:16','2026-06-07 18:05:14','XMizCLnCela71J4LB6Jt14QHVQpWon66'),(157,'host','2','115.143.121.175','2026-06-07 17:24:48','2026-06-07 18:05:14','XMizCLnCela71J4LB6Jt14QHVQpWon66'),(158,'host','2','115.143.121.175','2026-06-07 17:28:20','2026-06-07 18:24:17','dzR_VHd7ihQ3PgPcxXjUfaak6ZgD_4fB'),(159,'supervisor','supervisor','115.143.121.175','2026-06-07 18:09:50','2026-06-07 18:23:58','7ANcXlDpknkk851HwOMJqt9rqF4qLKiL'),(160,'host','2','115.143.121.175','2026-06-07 18:43:55','2026-06-07 18:59:10','l7kF0GIpkcov6r25HX-fOdUIkckoH_1l'),(161,'host','2','115.143.121.175','2026-06-07 18:54:00','2026-06-07 18:59:10','l7kF0GIpkcov6r25HX-fOdUIkckoH_1l'),(162,'host','2','115.143.121.175','2026-06-07 19:00:14','2026-06-07 19:06:06','F-kdTYXksKCoM8SGBqV1ikyD-X9Mr25S'),(163,'host','2','115.143.121.175','2026-06-07 19:07:52','2026-06-07 19:34:29','np3en16RePCdz_V8lUIuKNfpCKz9vBN1'),(164,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 19:33:27','2026-06-07 19:33:44','COgF3EkdaX50uQ1kuw7r-osEmgde4ajL'),(165,'host','2','115.143.121.175','2026-06-07 19:38:39','2026-06-07 19:46:33','cVOu5MS7v3tZYLargX1YAifS6O6CqzMO'),(166,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 19:41:45',NULL,'8uPm8e3vw9Nk8zLMPcQFFLiYtMFoKgud'),(167,'merchant','1','115.143.121.175','2026-06-07 19:43:41','2026-06-07 19:50:57','mRlHMa4-BYvxNDjNgYq4N1cEYZug7exl'),(168,'merchant','1','115.143.121.175','2026-06-07 19:57:06','2026-06-07 20:01:49','OauX2NEOmuBZW8uAc2tjlKpiH_k98RWr'),(169,'host','2','115.143.121.175','2026-06-07 19:57:54','2026-06-07 22:02:08','q6NM3bAc-YoYENxpvowCu1jJhgSefOUD'),(170,'supervisor','supervisor','115.143.121.175','2026-06-07 19:58:49','2026-06-07 20:06:09','R6kXd0Q3u7ckXpZJNDPmsY7Kh_HD_qPL'),(171,'merchant','1','115.143.121.175','2026-06-07 20:23:45','2026-06-07 20:33:32','HGVRT9BSRnikkmB1quX8kbiG2wQBtwCH'),(172,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 21:42:38',NULL,'-m9q6ADXydxZbVi2nSEo4jlW4FSRYvE2'),(173,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 21:52:33',NULL,'gFZ44JNBhR7zGhFR1hZXLHwFU1yDOvwe'),(174,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 22:04:30',NULL,'-ffUJs8P5EyrWwi0tvGOgdu3crPTOjVX'),(175,'host','2','115.143.121.175','2026-06-07 22:04:41','2026-06-07 23:37:36','i662TLHBcUJMV9GjbNYGUInxmw-91jRg'),(176,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 22:19:24',NULL,'TNq9g8_TyMun3_kAzM9_Bkg2bcI2jMvo'),(177,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 22:38:14',NULL,'sqzSvPAnua1V7FxukdwOJ18dbc-SnlbU'),(178,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-07 23:05:24',NULL,'cwI7g0S15v8e_fPqSCt9XmntFhB50PL1'),(179,'host','2','115.143.121.175','2026-06-07 23:47:39','2026-06-07 23:55:06','wn1VD-ax0BgI-Q63ujV_KEcaMLdiFwuV'),(180,'host','2','112.221.246.133','2026-06-08 14:16:02','2026-06-08 14:57:49','xLoOrLWcOTP2REOOkRKOrPsgJqSIr31Y'),(181,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-08 14:29:15',NULL,'gjR7yJfWkeDYz4Zn6LnO3Xxc7Or83IKd'),(182,'host','2','2001:2d8:f10f:6379::3539:5c0e','2026-06-08 14:56:30',NULL,'VgLIAfDPCAzj9rUaP_T-Hqq3IxPuoUZ9'),(183,'host','2','112.221.246.133','2026-06-08 14:57:53','2026-06-08 15:08:43','jDD4fqR-1mnXJQiElODKD2m3rBu-xqNZ'),(184,'merchant','1','112.221.246.133','2026-06-08 15:04:26','2026-06-08 15:11:18','M7X4MpbtvZ9VopoVdPlL9KhBu4zI5GNR'),(185,'host','2','112.221.246.133','2026-06-08 15:08:47','2026-06-08 15:13:08','98iPTfrgQ58YjA0oCBESPjFWjfnPm5QN'),(186,'host','2','112.221.246.133','2026-06-08 15:13:11','2026-06-08 15:15:18','YCdM01OLejGHqtEPv54HJ6xm25crL0kQ'),(187,'merchant','1','112.221.246.133','2026-06-08 15:13:27','2026-06-08 15:18:27','l-n6DV1yVbVMdbSejD5vkpSkqCWk-CXD'),(188,'merchant','1','112.221.246.133','2026-06-08 15:15:33','2026-06-08 15:21:30','fAzRqlqXMbCuFN-j4KMkz80ETEEVjpbL'),(189,'host','2','112.221.246.133','2026-06-08 15:21:43','2026-06-08 15:28:22','MG_h8d7IDYyLMAIGPCiyP5NJ-dwy_85q'),(190,'merchant','1','112.221.246.133','2026-06-08 15:22:40','2026-06-08 15:27:15','wuX2Mm9dcCcwa9F3e4P8Vnfd16h56ksZ'),(191,'merchant','1','112.221.246.133','2026-06-08 15:23:57','2026-06-08 15:28:22','MG_h8d7IDYyLMAIGPCiyP5NJ-dwy_85q'),(192,'merchant','1','112.221.246.133','2026-06-08 15:30:00','2026-06-08 15:38:51','2Zs2p144k9Q5AMQwtJ-Q1rPxXZn3h-0n'),(193,'merchant','1','2001:2d8:f10f:6379::3539:5c0e','2026-06-08 15:38:14',NULL,'DhEruZmUyuDO6NR7LYSIBSz2wwOc-P2J'),(194,'host','2','112.221.246.133','2026-06-08 15:39:02','2026-06-08 15:46:34','HKk-B6Yyd6muRczEjGGNyNa7IxVGWK7X'),(195,'host','2','112.221.246.133','2026-06-08 17:20:09','2026-06-08 17:31:13','J37o7UGMHHDmAK_80e6ekN9w47BuT142'),(196,'merchant','1','112.221.246.133','2026-06-08 17:42:32',NULL,'5Y9KdP-kIj18O36vIXrsf7YJWzk9p0Je'),(197,'merchant','1','112.221.246.133','2026-06-08 17:42:33','2026-06-08 17:42:38','RMlNdmiTFDbiMaABSHM8s9Ok47y6_s2y'),(198,'host','2','112.221.246.133','2026-06-08 17:42:46','2026-06-08 18:17:08','ectdZ9Cljs4FZVHsRzL5W1uvYCuHHhcF'),(199,'host','2','112.221.246.133','2026-06-08 18:26:49','2026-06-08 18:42:23','1spjlcV47EEcJn4yQ7xvvPyAoSeTvNVf'),(200,'merchant','1','2001:2d8:f10f:6379::3539:5c0e','2026-06-08 18:30:35',NULL,'bRuzwJlBx2BJKZi7pMOkdpC_zMAcW7cB'),(201,'host','2','112.221.246.133','2026-06-08 18:49:41','2026-06-08 19:18:11','ecHIbw4byTFTwD7jniASXp7qVdgnkltf'),(202,'host','2','112.221.246.133','2026-06-08 19:18:12',NULL,'hNSt6Yv0mrWRE_fPU0_rRBpYAzPw9O8H'),(203,'host','2','112.172.235.81','2026-06-08 21:00:12','2026-06-08 21:04:50','eOjwTaeAlhkU6YYIg_dezRdapvmJ5-wy'),(204,'supervisor','supervisor','112.172.235.81','2026-06-08 21:07:10','2026-06-08 21:16:23','U9HxPPPIuYUCpV5iCVMZ-MveH82LtZWW'),(205,'host','2','112.172.235.81','2026-06-08 21:12:32','2026-06-08 21:18:49','ezEASgoP_QENKzGEfMSmrGXYNiqlghCj'),(206,'host','2','112.172.235.81','2026-06-08 21:19:02','2026-06-08 21:19:17','4YqC-8nz8xukptFkhbQ5H7a18Ac_VAnL'),(207,'host','2','112.172.235.81','2026-06-08 21:19:25','2026-06-08 21:30:26','eFLzLVv9TeoBdikVyDYdpg04sHI7q5q9'),(208,'supervisor','supervisor','112.172.235.81','2026-06-08 21:25:37','2026-06-08 21:32:51','3WPQ_paajOH0LGXkedOZQ7yHgmCXIBK8'),(209,'host','2','112.172.235.81','2026-06-08 21:31:36','2026-06-08 21:31:43','MuN3jCs6c4MmSb_n33u8gvpeGJG5AG-8'),(210,'host','2','112.172.235.81','2026-06-08 21:31:52','2026-06-08 21:36:51','xPxoBS6kU46uHcVAH7Q1D-WJd5ROnAaB'),(211,'supervisor','supervisor','112.172.235.81','2026-06-08 21:32:52','2026-06-08 22:08:57','gLoy4P28tkUtx3wXH3vBcqH9XI6OzQL0'),(212,'host','2','112.172.235.81','2026-06-08 21:37:02','2026-06-08 21:37:17','IsFJZ7hkVFCW9Zb8z9_l1s-P0Djyg3y3'),(213,'host','2','112.172.235.81','2026-06-08 21:37:28','2026-06-08 21:41:29','78gH3uDqzL3rlx-q7fHQRxMZtku4jI99'),(214,'host','2','112.172.235.81','2026-06-08 21:43:52','2026-06-08 21:47:54','pIi1lm7Z3Z8Ef9GHQNfOAB2aSREf2u7x'),(215,'host','2','112.172.235.81','2026-06-08 21:49:14','2026-06-08 22:01:57','K7NAA6CsQyW3uLqcSOT1r5WFGaAob2ey'),(216,'merchant','1','112.172.235.81','2026-06-08 21:53:58',NULL,'4aKc2bXERBSMSXzrZRC-qi1oPeUfyv-M'),(217,'host','2','112.172.235.81','2026-06-08 22:03:59','2026-06-08 22:13:24','nB6Q__aKW-7KOpGZnnQBGmcwwGX2kFG-'),(218,'host','2','112.172.235.81','2026-06-08 22:13:30','2026-06-08 22:21:27','5tl_Pslo5fCaKwuCn6GBbnHrGxGhIVLf'),(219,'host','2','112.172.235.81','2026-06-08 22:24:50','2026-06-08 22:40:34','xO7ftzvRVeAzd6KaNycAS1176vQIEUB1'),(220,'host','2','112.172.235.81','2026-06-08 22:42:38','2026-06-08 22:48:20','b9zbiNZOjnvd_bKjNC8CbeHNSvpQY_iO'),(221,'host','2','112.172.235.81','2026-06-08 22:59:20','2026-06-08 23:08:50','1ToUNCBgIvjgS0RF0feah-mX6rEaRRNl'),(222,'host','2','112.172.235.81','2026-06-08 23:41:24','2026-06-08 23:56:31','Kp8o3lN8S3czkHltyesLyZyRCpM8xy5D'),(223,'host','2','112.221.246.133','2026-06-09 08:49:53','2026-06-09 09:17:57','2gd_dxu5jn_5RdIo81WNQY_-Rc5gTB-I'),(224,'host','2','112.221.246.133','2026-06-09 09:18:05','2026-06-09 09:27:37','-KLbJFqslCzN3gnPmFYDltbvAuvnS7ZL'),(225,'host','2','112.221.246.133','2026-06-09 09:27:39','2026-06-09 09:32:27','seDtBaE8ulq1yto1bLNfWG3wHhMMqCsL'),(226,'host','2','112.221.246.133','2026-06-09 09:32:28',NULL,'QOdNy1FupLr0Mx0gnOez-kmfkYDlcLg4'),(227,'host','2','112.221.246.133','2026-06-09 09:46:53','2026-06-09 10:00:10','qERilk3RUE7qinRw2igUOvO7R_t9_Dnl'),(228,'host','2','112.221.246.133','2026-06-09 10:14:11','2026-06-09 10:26:17','tjEsRmfxQ8i_FaAs-_CSZFUFhcQGV3X4'),(229,'host','2','112.221.246.133','2026-06-09 10:26:21','2026-06-09 11:02:02','oZrmUXgJqSLt3D4WOlhuIV3LAcf2gZIQ'),(230,'host','2','112.221.246.133','2026-06-09 11:02:06','2026-06-09 11:07:54','zqdimserLdT-YzuvO7cSLbhQvUnqRq-J'),(231,'host','2','112.221.246.133','2026-06-09 16:43:48','2026-06-09 16:47:50','XyNVWRHe5Q-ffY0w0nTL1p74na2yxgr1'),(232,'host','2','112.172.235.81','2026-06-09 18:32:42','2026-06-09 18:47:26','ThzqM9b5kHlF9zJmPXf-OQjYLUhCSm4v'),(233,'host','2','112.172.235.81','2026-06-09 18:47:28','2026-06-09 18:51:31','7ApfgxGp2re64tDc2NhWIRoXSL28jqy6'),(234,'host','2','112.172.235.81','2026-06-09 19:08:50','2026-06-09 19:30:47','Gn8dhQX9FEoBSxB1Q0o97DkBbvlrK9_x'),(235,'host','2','112.172.235.81','2026-06-09 19:18:29','2026-06-09 19:25:58','0HepRSi9e-BvCnS8qtzafe_0qLWE__8r'),(236,'host','2','112.172.235.81','2026-06-09 19:32:46','2026-06-09 20:00:41','2G-yVT7KKF1Ww-OQp0CwZ2I3BaI3eTZr'),(237,'host','2','112.172.235.81','2026-06-09 20:02:57','2026-06-09 20:32:32','E4MFspKmFDnb-0vLlGdNFC6lcEc96mfX'),(238,'host','2','112.172.235.81','2026-06-09 21:18:07','2026-06-09 21:41:47','-rD9PaNOB9ryaVnU2PuFyAFdsuu3aVwY'),(239,'host','2','112.172.235.81','2026-06-09 21:52:49','2026-06-09 22:04:01','8Fi6109TN_ZO9fq5HPPrRbFeC8wf6Hxf'),(240,'host','2','112.172.235.81','2026-06-09 22:04:02','2026-06-09 22:15:47','Q1a9p1g0dIhcX83jYxYLSXezWwOhnAN9'),(241,'host','2','112.172.235.81','2026-06-09 22:16:21','2026-06-09 22:22:39','PK1mV1gsxs0_CrYvVJEMwB0C3PpPicRu'),(242,'host','2','112.172.235.81','2026-06-09 22:22:54','2026-06-09 22:33:53','Flcq6L2VDlY4XvsHbjr4FZlY3bwqIXG4'),(243,'host','2','112.172.235.81','2026-06-09 22:39:09','2026-06-09 22:58:43','lsJrSzJFHKTOe1T3UMh_FwqPMpC9WvJX'),(244,'host','2','112.172.235.81','2026-06-09 22:58:47',NULL,'O8ZX82TK4FXF5A2NbufWYfdnZS8D6YGi');
+/*!40000 ALTER TABLE `login_histories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `merchant_email_verify_codes`
+--
+
+DROP TABLE IF EXISTS `merchant_email_verify_codes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `merchant_email_verify_codes` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `used` tinyint(1) NOT NULL DEFAULT '0',
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_mvc_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `merchant_email_verify_codes`
+--
+
+LOCK TABLES `merchant_email_verify_codes` WRITE;
+/*!40000 ALTER TABLE `merchant_email_verify_codes` DISABLE KEYS */;
+INSERT INTO `merchant_email_verify_codes` VALUES (1,'augxmas@gmail.com','960987',1,'2026-06-05 18:32:37','2026-06-05 18:22:37'),(2,'augxmas@gmail.com','363516',1,'2026-06-05 18:40:17','2026-06-05 18:30:17');
+/*!40000 ALTER TABLE `merchant_email_verify_codes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `merchants`
+--
+
+DROP TABLE IF EXISTS `merchants`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `merchants` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `merchant_name` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contact_name` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_phone` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_mobile` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_no` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_cert_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biz_cert_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bank_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bank_code` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bank_account` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bank_copy_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bank_copy_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address_zip` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address1` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address2` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `password_hash` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','approved','cancelled','terminated','locked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `status_reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_login_ip` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_login_at` datetime DEFAULT NULL,
+  `last_logout_at` datetime DEFAULT NULL,
+  `password_reset_required` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_merchant_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `merchants`
+--
+
+LOCK TABLES `merchants` WRITE;
+/*!40000 ALTER TABLE `merchants` DISABLE KEYS */;
+INSERT INTO `merchants` VALUES (1,'62D38283F62FEF3B4A2F966A2CD53134','56317D6315F0024C9142EC35490CAF28','21A7858DBCEAB64758519F2303727EFF','AD8EC5BD1FE53052F8C87ECAC7ED98A7','4048601054','C:\\proj\\tracker\\uploads\\merchant-docs\\1780651882525_í¬ì¸íë_ì´ì¤_ì¬ììë±ë¡ì¦.pdf','í¬ì¸íë ì´ì¤_ì¬ììë±ë¡ì¦.pdf','C6DBD011970AF33816A9C4D70F1A106A4B74198DAE390FE47256E3D776F9E68B','우리은행','020','6B28F65EF0016384330F382D42AC59E0','C:\\proj\\tracker\\uploads\\merchant-docs\\1780651882685_í¬ì¸íë_ì´ì¤_íµì¥ì¬ë³¸.pdf','í¬ì¸íë ì´ì¤_íµì¥ì¬ë³¸.pdf',NULL,NULL,NULL,'$2b$12$XjD1TVB2dvxwEZa65wx4/uB.61icRDcfc/v7ZHt72NJulPuOosLN6','approved',NULL,'112.172.235.81','2026-06-08 21:53:58','2026-06-08 17:42:38',0,'2026-06-05 18:31:22','2026-06-08 21:53:58'),(2,'696B31EE8BC9452319619D1AB9BB3A6C','56317D6315F0024C9142EC35490CAF28','085EC2506286BB2D4CFA37C48856B31D','F42087AE99D486163452C0BFB996DD24','1234567890',NULL,NULL,'7D182C3353B362DF272655679F4D320E4B74198DAE390FE47256E3D776F9E68B','신한은행','088','E93F6C2DDCD5435888C6861A40D67A9A',NULL,NULL,'04524','서울특별시 중구 세종대로 110','졸리비빌딩 1층','$2b$12$QfcK2qoH4RyKxNKEJYDC6u.77JwJFTUIh.PsKznqTAdmn634imfaO','approved',NULL,'112.221.246.133','2026-06-05 19:02:38','2026-06-05 19:00:47',0,'2026-06-05 18:48:28','2026-06-05 19:02:38');
+/*!40000 ALTER TABLE `merchants` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `partner_accounts`
+--
+
+DROP TABLE IF EXISTS `partner_accounts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `partner_accounts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `last_login_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `partner_accounts`
+--
+
+LOCK TABLES `partner_accounts` WRITE;
+/*!40000 ALTER TABLE `partner_accounts` DISABLE KEYS */;
+INSERT INTO `partner_accounts` VALUES (1,'nitsuser@naver.com','$2b$08$9UWg43qYOtWCfZwY.NleAehWrOa0y3uPFnOn8z0ZPrNZtOnzp2NIq','2026-06-09 22:30:04','2026-06-09 21:16:57','2026-06-09 22:30:04');
+/*!40000 ALTER TABLE `partner_accounts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_applications`
+--
+
+DROP TABLE IF EXISTS `project_applications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_applications` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `merchant_id` bigint NOT NULL,
+  `status` enum('pending','approved','rejected') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `support_type` enum('reservation','entry','tour','quiz','survey_reward') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'tour',
+  `support_types` json DEFAULT NULL COMMENT '吏?썝 ?좏삎 諛곗뿴: ["quest","reservation","entry"]',
+  `decided_at` datetime DEFAULT NULL,
+  `decided_reason` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `applied_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_proj_merch_type` (`project_id`,`merchant_id`,`support_type`),
+  KEY `idx_project` (`project_id`),
+  KEY `idx_merchant` (`merchant_id`),
+  CONSTRAINT `project_applications_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `project_applications_ibfk_2` FOREIGN KEY (`merchant_id`) REFERENCES `merchants` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_applications`
+--
+
+LOCK TABLES `project_applications` WRITE;
+/*!40000 ALTER TABLE `project_applications` DISABLE KEYS */;
+INSERT INTO `project_applications` VALUES (1,1,1,'approved','tour','[\"quest\"]','2026-06-06 22:19:31',NULL,'2026-06-06 22:17:34','2026-06-05 18:37:19','2026-06-07 20:19:24'),(2,1,2,'approved','tour','[\"quest\"]','2026-06-05 18:48:28','테스트 가맹점 자동 승인','2026-06-05 18:48:28','2026-06-05 18:48:28','2026-06-07 20:19:24'),(4,1,1,'pending','reservation',NULL,NULL,NULL,'2026-06-07 19:57:47','2026-06-06 22:16:06','2026-06-07 19:57:47'),(5,1,1,'approved','entry',NULL,'2026-06-06 22:46:10',NULL,'2026-06-06 22:45:53','2026-06-06 22:45:53','2026-06-06 22:46:10'),(6,1,1,'approved','quiz',NULL,'2026-06-06 22:19:31',NULL,'2026-06-06 22:17:34','2026-06-07 20:19:24','2026-06-07 20:19:24'),(7,1,2,'approved','quiz',NULL,'2026-06-05 18:48:28','테스트 가맹점 자동 승인','2026-06-05 18:48:28','2026-06-07 20:19:24','2026-06-07 20:19:24'),(9,2,1,'approved','reservation',NULL,'2026-06-07 20:24:43',NULL,'2026-06-07 20:24:10','2026-06-07 20:24:10','2026-06-07 20:24:43');
+/*!40000 ALTER TABLE `project_applications` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_daily_sequences`
+--
+
+DROP TABLE IF EXISTS `project_daily_sequences`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_daily_sequences` (
+  `seq_date` char(8) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_no` int NOT NULL,
+  PRIMARY KEY (`seq_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_daily_sequences`
+--
+
+LOCK TABLES `project_daily_sequences` WRITE;
+/*!40000 ALTER TABLE `project_daily_sequences` DISABLE KEYS */;
+INSERT INTO `project_daily_sequences` VALUES ('20260604',1),('20260606',1),('20260607',2),('20260608',1);
+/*!40000 ALTER TABLE `project_daily_sequences` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_gift_tiers`
+--
+
+DROP TABLE IF EXISTS `project_gift_tiers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_gift_tiers` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `threshold_pct` int NOT NULL,
+  `amount` bigint NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tier` (`project_id`,`threshold_pct`),
+  KEY `idx_project` (`project_id`),
+  CONSTRAINT `project_gift_tiers_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_gift_tiers`
+--
+
+LOCK TABLES `project_gift_tiers` WRITE;
+/*!40000 ALTER TABLE `project_gift_tiers` DISABLE KEYS */;
+INSERT INTO `project_gift_tiers` VALUES (12,2,25,100,'2026-06-06 10:47:19'),(13,2,50,200,'2026-06-06 10:47:19'),(14,2,75,300,'2026-06-06 10:47:19'),(15,2,100,7000,'2026-06-06 10:47:19'),(34,1,100,10000,'2026-06-07 14:15:47'),(35,3,33,1000,'2026-06-07 14:26:33'),(36,3,67,2000,'2026-06-07 14:26:33'),(37,3,100,10000,'2026-06-07 14:26:33');
+/*!40000 ALTER TABLE `project_gift_tiers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_location_qr`
+--
+
+DROP TABLE IF EXISTS `project_location_qr`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_location_qr` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `location_id` bigint NOT NULL,
+  `qr_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `qr_image_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_location` (`location_id`),
+  KEY `project_id` (`project_id`),
+  CONSTRAINT `project_location_qr_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`),
+  CONSTRAINT `project_location_qr_ibfk_2` FOREIGN KEY (`location_id`) REFERENCES `project_locations` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_location_qr`
+--
+
+LOCK TABLES `project_location_qr` WRITE;
+/*!40000 ALTER TABLE `project_location_qr` DISABLE KEYS */;
+INSERT INTO `project_location_qr` VALUES (1,1,1,'https://tracker.ngrok.dev/v/20260604_0001/01','C:\\proj\\tracker\\uploads\\qr\\1\\qr_20260604_0001_01.png','2026-06-04 21:12:17'),(2,1,2,'https://tracker.ngrok.dev/v/20260604_0001/02','C:\\proj\\tracker\\uploads\\qr\\1\\qr_20260604_0001_02.png','2026-06-04 21:12:17'),(3,1,3,'https://tracker.ngrok.dev/v/20260604_0001/03','C:\\proj\\tracker\\uploads\\qr\\1\\qr_20260604_0001_03.png','2026-06-04 21:12:17'),(10,3,4,'https://tracker.ngrok.dev/v/20260607_0001/01','C:\\proj\\tracker\\uploads\\qr\\3\\qr_20260607_0001_01.png','2026-06-07 14:54:06'),(11,3,5,'https://tracker.ngrok.dev/v/20260607_0001/02','C:\\proj\\tracker\\uploads\\qr\\3\\qr_20260607_0001_02.png','2026-06-07 14:54:06'),(12,3,6,'https://tracker.ngrok.dev/v/20260607_0001/03','C:\\proj\\tracker\\uploads\\qr\\3\\qr_20260607_0001_03.png','2026-06-07 14:54:06'),(13,2,7,'https://tracker.ngrok.dev/v/20260606_0001/01','C:\\proj\\tracker\\uploads\\qr\\2\\qr_20260606_0001_01.png','2026-06-09 09:33:48'),(15,2,8,'https://tracker.ngrok.dev/v/20260606_0001/02','C:\\proj\\tracker\\uploads\\qr\\2\\qr_20260606_0001_02.png','2026-06-09 09:34:59'),(18,2,9,'https://tracker.ngrok.dev/v/20260606_0001/03','C:\\proj\\tracker\\uploads\\qr\\2\\qr_20260606_0001_03.png','2026-06-09 09:35:53');
+/*!40000 ALTER TABLE `project_location_qr` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_locations`
+--
+
+DROP TABLE IF EXISTS `project_locations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_locations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `location_seq` int NOT NULL,
+  `display_seq` int NOT NULL,
+  `dest_type` enum('location','exhibit') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'location',
+  `location_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kakao_lat` decimal(12,8) DEFAULT NULL,
+  `kakao_lng` decimal(12,8) DEFAULT NULL,
+  `map_provider` enum('kakao','google') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `location_desc` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `quiz_required` tinyint(1) NOT NULL DEFAULT '0',
+  `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_project_location_seq` (`project_id`,`location_seq`),
+  UNIQUE KEY `uq_project_display_seq_active` (`project_id`,`display_seq`,`disabled`),
+  CONSTRAINT `project_locations_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_locations`
+--
+
+LOCK TABLES `project_locations` WRITE;
+/*!40000 ALTER TABLE `project_locations` DISABLE KEYS */;
+INSERT INTO `project_locations` VALUES (1,1,1,1,'exhibit','반가사유상, 미소의 의미는 ?',NULL,NULL,NULL,'반가사유상(半跏思惟像)은 왼쪽 다리는 내리고 오른쪽 다리는 그 위에 올려 가부좌를 하는 반가부좌 자세로 대좌 위에 앉아 오른손으로 얼굴을 괸 채 명상하는 보살의 모습을 표현한 불상이다.[1] 국립중앙박물관이 \"사유의 방\"에서 전시하고 있는 삼국시대의 금동미륵보살반가사유상 (국보 제78호)과 금동미륵보살반가상 (국보 83호)이 유명하다','C:\\proj\\tracker\\uploads\\location-icons\\1780539259770_ë°ê°ì¬ì_ì.jpg',0,0,'2026-06-04 11:14:19','2026-06-05 16:19:03'),(2,1,2,2,'exhibit','이것은 말인가? 기린인가?',NULL,NULL,NULL,'2026년 5월 29일 · 경주 천마총 장니 천마도 ... 경주 천마총 장니 천마도 (慶州 天馬塚 障泥 天馬圖)는 말의 안장 양쪽에 달아 늘어뜨리는 장니에 그려진 말 (천마) 그림이다.','C:\\proj\\tracker\\uploads\\location-icons\\1780539274804_ì²ë§ì´.jpg',0,0,'2026-06-04 11:14:34','2026-06-05 16:03:57'),(3,1,3,3,'exhibit','왜 금관이었나 ?',NULL,NULL,NULL,'좁은 의미로는 순금 금관을 말하지만, 편의상 금동관, 은관 등 다른 금속으로 만든 유사한 형식의 관도 같이 금관이라고 통칭하기도 한다. 금으로 도금하거나 금박을 입히기도 한 청동금동관은 특히 한반도 남부 옛 마한 권역, 가야, 신라에서 많이 출토되는데 대체로 금제 관보다는 계급이 낮은 인물이나 지방세력의 지도자급이 사용한 듯하다. 흔히 왕관으로만 알려졌지만, 실제로는 왕뿐만 아니라 고위 귀족층도 착용한 듯하다.','C:\\proj\\tracker\\uploads\\location-icons\\1780574458623_ê¸ê´.jpg',0,0,'2026-06-04 21:00:58','2026-06-05 09:25:43'),(4,3,1,1,'exhibit','맹호',NULL,NULL,NULL,'\'범(호랑이)\' 그림은 조선 후기 회화의 백미로 꼽힙니다. 대표작인 〈송하맹호도(松下猛虎圖)〉는 극사실적인 세밀함과 호랑이의 용맹함을 완벽하게 담아낸 세계적인 명작으로 평가받습니다','C:\\proj\\tracker\\uploads\\location-icons\\1780810353977_ê¹íë_02.jpg',0,0,'2026-06-07 14:30:15','2026-06-07 14:32:34'),(5,3,2,2,'exhibit','씨름도',NULL,NULL,NULL,'씨름은 한국 고유의 문화이자 운동 또는 격투기로, 두 사람이 샅바나 바지 허리춤을 잡고 힘과 기예를 겨루어 상대방을 넘어뜨리는 경기이다. 여러 씨름으로 추정되는 그림들 중에 고고학적으로 씨름에 관한 정확한 기원과 모습은 오직 고구려 벽화에서만 볼 수 있다. 세계 각지에도 씨름과 유사한 운동이 있으나 룰과 형태는 매우 다르다. 씨름과 유사한 격투기로는 일본의 스모, 몽골의 부흐, 터키의 씨름 등이 있다.','C:\\proj\\tracker\\uploads\\location-icons\\1780810278355_ê¹íë_01.jpg',0,0,'2026-06-07 14:31:19','2026-06-07 14:56:38'),(6,3,3,3,'exhibit','인왕제색도',NULL,NULL,NULL,'제목의 제색(霽色)이란 단어는 비 갤 제(霽) 자를 사용해서 비가 갠 뒤 하늘의 빛깔이나 풍경을 가리킨다','C:\\proj\\tracker\\uploads\\location-icons\\1780810479333_ê¹íë_03.jpg',0,0,'2026-06-07 14:34:39','2026-06-07 14:56:02'),(7,2,1,1,'location','성심당 롯데백화점 대전점',36.34036530,127.39017640,'google','성심당 롯데백화점 대전점에서 방문 QR코드를 촬영해 주세요','C:\\proj\\tracker\\uploads\\location-icons\\1780966162733_ì±ì¬ë¹ë³¸ì_.jpg',0,0,'2026-06-09 09:33:48','2026-06-09 10:11:23'),(8,2,2,2,'location','한화생명 이글스파크',36.31707890,127.42913450,'google','숨어있는 QR코드를 찾아보세요.\r\n[hint]정문 앞 가로등','C:\\proj\\tracker\\uploads\\location-icons\\1780967792147_ííì´ê¸ì¤íí¬.jpg',0,0,'2026-06-09 09:34:59','2026-06-09 10:16:32'),(9,2,3,3,'location','대전엑스포 시민광장',36.36823540,127.38801520,'google','숨어있는 QR코드를 찾아요',NULL,0,0,'2026-06-09 09:35:53','2026-06-09 10:11:23');
+/*!40000 ALTER TABLE `project_locations` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_partner_form_config`
+--
+
+DROP TABLE IF EXISTS `project_partner_form_config`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_partner_form_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `use_company_name_ko` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_name_en` tinyint(1) NOT NULL DEFAULT '1',
+  `use_ceo_name` tinyint(1) NOT NULL DEFAULT '1',
+  `use_ceo_email` tinyint(1) NOT NULL DEFAULT '1',
+  `use_ceo_mobile` tinyint(1) NOT NULL DEFAULT '1',
+  `use_biz_cert_file` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_phone` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_fax` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_address` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_homepage` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_logo` tinyint(1) NOT NULL DEFAULT '1',
+  `use_company_fields` tinyint(1) NOT NULL DEFAULT '1',
+  `use_contact_name` tinyint(1) NOT NULL DEFAULT '1',
+  `use_contact_dept` tinyint(1) NOT NULL DEFAULT '1',
+  `use_contact_position` tinyint(1) NOT NULL DEFAULT '1',
+  `use_contact_phone` tinyint(1) NOT NULL DEFAULT '1',
+  `use_contact_email` tinyint(1) NOT NULL DEFAULT '1',
+  `use_booth_type` tinyint(1) NOT NULL DEFAULT '1',
+  `use_booth_count` tinyint(1) NOT NULL DEFAULT '1',
+  `use_facility` tinyint(1) NOT NULL DEFAULT '1',
+  `use_extra_request` tinyint(1) NOT NULL DEFAULT '1',
+  `field_options` text COMMENT 'JSON 배열: 참가분야 선택지',
+  `booth_type_options` text COMMENT 'JSON 배열: 부스타입 선택지',
+  `facility_options` text COMMENT 'JSON 배열: 부대시설 선택지',
+  `work_hours_from` varchar(5) NOT NULL DEFAULT '10:00',
+  `work_hours_to` varchar(5) NOT NULL DEFAULT '18:00',
+  `show_work_hours` tinyint(1) NOT NULL DEFAULT '1',
+  `terms_text` mediumtext COMMENT '약관 동의 본문',
+  `privacy_text` mediumtext COMMENT '개인정보수집 동의 본문',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_id` (`project_id`),
+  CONSTRAINT `fk_ppfc_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_partner_form_config`
+--
+
+LOCK TABLES `project_partner_form_config` WRITE;
+/*!40000 ALTER TABLE `project_partner_form_config` DISABLE KEYS */;
+INSERT INTO `project_partner_form_config` VALUES (1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,'[\"공공캐릭터\",\"캐릭터 및 캐릭터 라이선싱/IP\",\"애니메이션/일러스트\",\"게임(PC\",\"모바일\",\"콘솔)\",\"XR(VR/AR)\",\"메타버스\",\"피규어/캐릭터굿즈\",\"출판/OTT\",\"기타\"]','[{\"name\":\"독립부수(2개이상 신청가능)\",\"cost\":2000000,\"desc\":\"\"},{\"name\":\"조립부스\",\"cost\":3000000,\"desc\":\"\"},{\"name\":\"대한민국 지자체캐릭터 페스티벌 참가부\",\"cost\":5000000,\"desc\":\"\"}]','[{\"name\":\"전기(주간)\",\"cost\":77000,\"desc\":\"\"},{\"name\":\"인터넷\",\"cost\":220000,\"desc\":\"\"}]','10:00','18:00',1,'본 약관에 동의함으로써 참여기관 신청 절차를 진행하는 데 동의합니다. 신청 정보는 행사 운영 목적으로만 사용됩니다.','신청서에 입력된 개인정보(이메일·연락처 등)는 참여기관 등록·심사·연락 목적으로 수집·이용되며, 보유 기간은 행사 종료 후 1년입니다.',1,'2026-06-09 19:21:45','2026-06-09 21:36:24'),(6,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,NULL,NULL,NULL,'10:00','18:00',1,'본 약관에 동의함으로써 참여기관 신청 절차를 진행하는 데 동의합니다.','신청서에 입력된 개인정보는 행사 운영 목적으로만 사용됩니다.',1,'2026-06-09 22:37:00','2026-06-09 22:37:00');
+/*!40000 ALTER TABLE `project_partner_form_config` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_partners`
+--
+
+DROP TABLE IF EXISTS `project_partners`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_partners` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `company_name_ko` varchar(255) DEFAULT NULL,
+  `company_name_en` varchar(255) DEFAULT NULL,
+  `ceo_name` varchar(100) DEFAULT NULL,
+  `ceo_email` varchar(255) DEFAULT NULL,
+  `ceo_mobile` varchar(30) DEFAULT NULL,
+  `biz_cert_path` varchar(500) DEFAULT NULL,
+  `company_phone` varchar(50) DEFAULT NULL,
+  `company_fax` varchar(50) DEFAULT NULL,
+  `company_address` varchar(500) DEFAULT NULL,
+  `company_homepage` varchar(500) DEFAULT NULL,
+  `company_logo_path` varchar(500) DEFAULT NULL,
+  `company_fields` json DEFAULT NULL,
+  `contact_name` varchar(100) DEFAULT NULL,
+  `contact_dept` varchar(100) DEFAULT NULL,
+  `contact_position` varchar(100) DEFAULT NULL,
+  `contact_phone` varchar(50) DEFAULT NULL,
+  `contact_email` varchar(255) DEFAULT NULL,
+  `booth_type` varchar(100) DEFAULT NULL,
+  `booth_unit_cost` int DEFAULT NULL,
+  `booth_count` int DEFAULT NULL,
+  `facility_json` json DEFAULT NULL,
+  `quote_total` int DEFAULT NULL,
+  `quote_json` json DEFAULT NULL,
+  `facility` text,
+  `extra_request` text,
+  `agreed_terms` tinyint(1) NOT NULL DEFAULT '0',
+  `agreed_privacy` tinyint(1) NOT NULL DEFAULT '0',
+  `rejected_reason` varchar(500) DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `deposit_confirmed_at` datetime DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_partner_proj` (`project_id`,`status`),
+  CONSTRAINT `fk_pp_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_partners`
+--
+
+LOCK TABLES `project_partners` WRITE;
+/*!40000 ALTER TABLE `project_partners` DISABLE KEYS */;
+INSERT INTO `project_partners` VALUES (1,1,'approved','북키스','BooKiss','이종훈','ceo@bookiss.kr','011-2341-2340','C:\\proj\\tracker\\uploads\\partner-biz-cert\\1781005148216_a11508391b0ed710.png','02-2685-4082','050-4403-4082','(13524) 경기 성남시 분당구 대왕판교로606번길 45 11','https://bookiss.kr','C:\\proj\\tracker\\uploads\\partner-logo\\1781005148456_960e873361dd7705.jpg','[\"공공캐릭터\", \"콘솔)\"]','강감찬','마케팅팀','과장','02-1234-1234','nitsuser@naver.com','독립부수(2개이상 신청가능)',2000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 2, \"unit_cost\": 220000}]',2517000,'{\"items\": [{\"name\": \"독립부수(2개이상 신청가능)\", \"count\": 1, \"category\": \"부스\", \"subtotal\": 2000000, \"unit_cost\": 2000000}, {\"name\": \"전기(주간)\", \"count\": 1, \"category\": \"부대시설\", \"subtotal\": 77000, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 2, \"category\": \"부대시설\", \"subtotal\": 440000, \"unit_cost\": 220000}], \"total\": 2517000}','전기(주간)×1 (77,000원), 인터넷×2 (440,000원)','새걸로 주세요',1,1,NULL,'2026-06-09 22:29:40','2026-06-09 22:29:52',NULL,'2026-06-09 20:39:08','2026-06-09 22:29:51'),(2,2,'pending','(주)헬로우미스터리',NULL,'대표자_1','dcfair1@example.com','010-1000-5000',NULL,'02-1000-5000',NULL,'서울특별시 강서구 마곡중앙로 100',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_1__주_헬로우미스터리.jpg',NULL,'담당자_1','운영팀','과장','02-1000-5000','dcfair1@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(3,2,'approved','머니드로잉',NULL,'대표자_2','dcfair2@example.com','010-1001-5001',NULL,'02-1001-5000',NULL,'서울특별시 강서구 마곡중앙로 101',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_2_머니드로잉.png',NULL,'담당자_2','운영팀','과장','02-1001-5000','dcfair2@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-20 22:38:25',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(4,2,'approved','(주)엔토닉크리에이티브',NULL,'대표자_3','dcfair3@example.com','010-1002-5002',NULL,'02-1002-5000',NULL,'서울특별시 강서구 마곡중앙로 102',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_3__주_엔토닉크리에이티브.png',NULL,'담당자_3','운영팀','과장','02-1002-5000','dcfair3@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-21 22:38:25','2026-05-22 22:38:25',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(5,2,'pending','한국저작권위원회',NULL,'대표자_4','dcfair4@example.com','010-1003-5003',NULL,'02-1003-5000',NULL,'서울특별시 강서구 마곡중앙로 103',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_4_한국저작권위원회.jpg',NULL,'담당자_4','운영팀','과장','02-1003-5000','dcfair4@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(6,2,'approved','한림사',NULL,'대표자_5','dcfair5@example.com','010-1004-5004',NULL,'02-1004-5000',NULL,'서울특별시 강서구 마곡중앙로 104',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_5_한림사.png',NULL,'담당자_5','운영팀','과장','02-1004-5000','dcfair5@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-23 22:38:25',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(7,2,'approved','소로리네',NULL,'대표자_6','dcfair6@example.com','010-1005-5005',NULL,'02-1005-5000',NULL,'서울특별시 강서구 마곡중앙로 105',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_6_소로리네.png',NULL,'담당자_6','운영팀','과장','02-1005-5000','dcfair6@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-24 22:38:25','2026-05-25 22:38:25',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(8,2,'pending','냥냥몬스터즈',NULL,'대표자_7','dcfair7@example.com','010-1006-5006',NULL,'02-1006-5000',NULL,'서울특별시 강서구 마곡중앙로 106',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_7_냥냥몬스터즈.png',NULL,'담당자_7','운영팀','과장','02-1006-5000','dcfair7@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(9,2,'approved','충청북도 교육청',NULL,'대표자_8','dcfair8@example.com','010-1007-5007',NULL,'02-1007-5000',NULL,'서울특별시 강서구 마곡중앙로 107',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_8_충청북도_교육청.png',NULL,'담당자_8','운영팀','과장','02-1007-5000','dcfair8@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-26 22:38:25',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(10,2,'approved','한국산림복지진흥원',NULL,'대표자_9','dcfair9@example.com','010-1008-5008',NULL,'02-1008-5000',NULL,'서울특별시 강서구 마곡중앙로 108',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_9_한국산림복지진흥원.png',NULL,'담당자_9','운영팀','과장','02-1008-5000','dcfair9@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-27 22:38:25','2026-05-28 22:38:25',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(11,2,'pending','국가철도공단',NULL,'대표자_10','dcfair10@example.com','010-1009-5009',NULL,'02-1009-5000',NULL,'서울특별시 강서구 마곡중앙로 109',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_10_국가철도공단.png',NULL,'담당자_10','운영팀','과장','02-1009-5000','dcfair10@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(12,2,'approved','경기도',NULL,'대표자_11','dcfair11@example.com','010-1010-5010',NULL,'02-1010-5000',NULL,'서울특별시 강서구 마곡중앙로 110',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_11_경기도.png',NULL,'담당자_11','운영팀','과장','02-1010-5000','dcfair11@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-29 22:38:25',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(13,2,'approved','한국중앙자원봉사센터',NULL,'대표자_12','dcfair12@example.com','010-1011-5011',NULL,'02-1011-5000',NULL,'서울특별시 강서구 마곡중앙로 111',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_12_한국중앙자원봉사센터.png',NULL,'담당자_12','운영팀','과장','02-1011-5000','dcfair12@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-05-30 22:38:25','2026-05-31 22:38:25',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(14,2,'pending','안산시정신건강복지센터',NULL,'대표자_13','dcfair13@example.com','010-1012-5012',NULL,'02-1012-5000',NULL,'서울특별시 강서구 마곡중앙로 112',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_13_안산시정신건강복지센터.png',NULL,'담당자_13','운영팀','과장','02-1012-5000','dcfair13@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(15,2,'approved','국립백두대간수목원',NULL,'대표자_14','dcfair14@example.com','010-1013-5013',NULL,'02-1013-5000',NULL,'서울특별시 강서구 마곡중앙로 113',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_14_국립백두대간수목원.png',NULL,'담당자_14','운영팀','과장','02-1013-5000','dcfair14@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-01 22:38:25',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(16,2,'approved','한국장애인고용공단',NULL,'대표자_15','dcfair15@example.com','010-1014-5014',NULL,'02-1014-5000',NULL,'서울특별시 강서구 마곡중앙로 114',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_15_한국장애인고용공단.png',NULL,'담당자_15','운영팀','과장','02-1014-5000','dcfair15@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-02 22:38:25','2026-06-03 22:38:25',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(17,2,'pending','한국문화정보원',NULL,'대표자_16','dcfair16@example.com','010-1015-5015',NULL,'02-1015-5000',NULL,'서울특별시 강서구 마곡중앙로 115',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_16_한국문화정보원.png',NULL,'담당자_16','운영팀','과장','02-1015-5000','dcfair16@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(18,2,'approved','부산항만공사',NULL,'대표자_17','dcfair17@example.com','010-1016-5016',NULL,'02-1016-5000',NULL,'서울특별시 강서구 마곡중앙로 116',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_17_부산항만공사.png',NULL,'담당자_17','운영팀','과장','02-1016-5000','dcfair17@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-04 22:38:26',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(19,2,'approved','에버파인',NULL,'대표자_18','dcfair18@example.com','010-1017-5017',NULL,'02-1017-5000',NULL,'서울특별시 강서구 마곡중앙로 117',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_18_에버파인.png',NULL,'담당자_18','운영팀','과장','02-1017-5000','dcfair18@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-05 22:38:26','2026-06-06 22:38:26',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(20,2,'pending','애니토마토 만화전문미술학원',NULL,'대표자_19','dcfair19@example.com','010-1018-5018',NULL,'02-1018-5000',NULL,'서울특별시 강서구 마곡중앙로 118',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_19_애니토마토_만화전문미술학원.png',NULL,'담당자_19','운영팀','과장','02-1018-5000','dcfair19@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,NULL,NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(21,2,'approved','한국국제협력단',NULL,'대표자_20','dcfair20@example.com','010-1019-5019',NULL,'02-1019-5000',NULL,'서울특별시 강서구 마곡중앙로 119',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_20_한국국제협력단.png',NULL,'담당자_20','운영팀','과장','02-1019-5000','dcfair20@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-07 22:38:26',NULL,NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25'),(22,2,'approved','한국도자재단',NULL,'대표자_21','dcfair21@example.com','010-1020-5020',NULL,'02-1020-5000',NULL,'서울특별시 강서구 마곡중앙로 120',NULL,'C:\\proj\\tracker\\uploads\\partner-logo\\dcfair_21_한국도자재단.png',NULL,'담당자_21','운영팀','과장','02-1020-5000','dcfair21@example.com','일반부스',1000000,1,'[{\"name\": \"전기(주간)\", \"count\": 1, \"unit_cost\": 77000}, {\"name\": \"인터넷\", \"count\": 1, \"unit_cost\": 220000}]',1297000,NULL,'전기×1, 인터넷×1',NULL,1,1,NULL,'2026-06-08 22:38:26','2026-06-09 22:38:26',NULL,'2026-06-09 22:38:25','2026-06-09 22:38:25');
+/*!40000 ALTER TABLE `project_partners` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_quiz_choices`
+--
+
+DROP TABLE IF EXISTS `project_quiz_choices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_quiz_choices` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `quiz_id` bigint NOT NULL,
+  `choice_text` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `choice_image_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_correct` tinyint(1) NOT NULL DEFAULT '0',
+  `display_seq` int NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_quiz` (`quiz_id`),
+  CONSTRAINT `project_quiz_choices_ibfk_1` FOREIGN KEY (`quiz_id`) REFERENCES `project_quizzes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_quiz_choices`
+--
+
+LOCK TABLES `project_quiz_choices` WRITE;
+/*!40000 ALTER TABLE `project_quiz_choices` DISABLE KEYS */;
+INSERT INTO `project_quiz_choices` VALUES (4,2,'말',NULL,1,1,'2026-06-04 21:08:06'),(5,2,'기린',NULL,1,2,'2026-06-04 21:08:06'),(6,2,'아직모름',NULL,0,3,'2026-06-04 21:08:06'),(7,3,'1호',NULL,0,1,'2026-06-04 21:10:42'),(8,3,'2호',NULL,0,2,'2026-06-04 21:10:42'),(9,3,'188호',NULL,1,3,'2026-06-04 21:10:42'),(13,1,'고구려','uploads\\quiz-images\\1780577997498_ê³_êµ¬ë_¤.png',0,1,'2026-06-04 21:59:58'),(14,1,'백제','uploads\\quiz-images\\1780577997816_ë°±ì_.png',0,2,'2026-06-04 21:59:58'),(15,1,'신라','uploads\\quiz-images\\1780577998044_ì_ë¼.png',1,3,'2026-06-04 21:59:58'),(16,4,'이중섭','uploads\\quiz-images\\1780814668071_ì´ì¤ì­.png',1,1,'2026-06-07 15:44:29'),(17,4,'장승업','uploads\\quiz-images\\1780814668071_ì¥ì¹ì.jpg',0,2,'2026-06-07 15:44:29'),(18,4,'윤두섭','uploads\\quiz-images\\1780814669580_ì¤ëì.jpg',0,3,'2026-06-07 15:44:29');
+/*!40000 ALTER TABLE `project_quiz_choices` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_quizzes`
+--
+
+DROP TABLE IF EXISTS `project_quizzes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_quizzes` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `location_id` bigint DEFAULT NULL,
+  `question` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `question_image_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `choice_type` enum('single','multi') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'single',
+  `correct_image_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `correct_sound_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `wrong_image_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `wrong_sound_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `display_seq` int NOT NULL,
+  `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_project` (`project_id`),
+  KEY `idx_location` (`location_id`),
+  CONSTRAINT `fk_quiz_location` FOREIGN KEY (`location_id`) REFERENCES `project_locations` (`id`),
+  CONSTRAINT `project_quizzes_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_quizzes`
+--
+
+LOCK TABLES `project_quizzes` WRITE;
+/*!40000 ALTER TABLE `project_quizzes` DISABLE KEYS */;
+INSERT INTO `project_quizzes` VALUES (1,1,1,'반가사유상을 만든 나라는 ?','uploads\\quiz-images\\1780577517447_ì¼êµ­ìë.png','single',NULL,NULL,NULL,NULL,1,0,'2026-06-04 21:02:23','2026-06-05 16:19:03'),(2,1,2,'천마도에 나오는 동물의 형상은 말인가? 기린인가?',NULL,'multi',NULL,NULL,NULL,NULL,2,0,'2026-06-04 21:08:06','2026-06-05 16:03:57'),(3,1,3,'신라 금관은 국보 몇 호인가?',NULL,'single',NULL,NULL,NULL,NULL,3,0,'2026-06-04 21:10:42','2026-06-04 21:10:42'),(4,3,NULL,'다음 중 조선시대의 화가가 아닌 사람은 ?',NULL,'single',NULL,NULL,NULL,NULL,1,0,'2026-06-07 15:44:29','2026-06-07 15:44:29');
+/*!40000 ALTER TABLE `project_quizzes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_reservation_fields`
+--
+
+DROP TABLE IF EXISTS `project_reservation_fields`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_reservation_fields` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `field_id` bigint NOT NULL,
+  `is_required` tinyint(1) NOT NULL DEFAULT '0',
+  `choice_type_override` enum('single','multi') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_proj_field` (`project_id`,`field_id`),
+  KEY `field_id` (`field_id`),
+  CONSTRAINT `project_reservation_fields_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `project_reservation_fields_ibfk_2` FOREIGN KEY (`field_id`) REFERENCES `field_definitions` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_reservation_fields`
+--
+
+LOCK TABLES `project_reservation_fields` WRITE;
+/*!40000 ALTER TABLE `project_reservation_fields` DISABLE KEYS */;
+INSERT INTO `project_reservation_fields` VALUES (42,2,1,1,NULL,0,'2026-06-06 12:34:20'),(43,2,2,0,NULL,10,'2026-06-06 12:34:20'),(44,2,3,1,NULL,20,'2026-06-06 12:34:20'),(45,2,4,1,NULL,30,'2026-06-06 12:34:20'),(46,2,5,0,NULL,40,'2026-06-06 12:34:20'),(47,2,16,0,NULL,50,'2026-06-06 12:34:20'),(48,2,15,0,NULL,60,'2026-06-06 12:34:20'),(55,1,1,1,NULL,0,'2026-06-06 14:46:11'),(56,1,4,1,NULL,10,'2026-06-06 14:46:11'),(57,1,5,1,NULL,20,'2026-06-06 14:46:11'),(58,1,6,0,NULL,30,'2026-06-06 14:46:11'),(59,1,7,0,NULL,40,'2026-06-06 14:46:11'),(60,1,16,0,NULL,50,'2026-06-06 14:46:11');
+/*!40000 ALTER TABLE `project_reservation_fields` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_survey_questions`
+--
+
+DROP TABLE IF EXISTS `project_survey_questions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_survey_questions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `question_def_id` bigint DEFAULT NULL COMMENT '카탈로그 참조 시 사용, 커스텀이면 NULL',
+  `custom_label` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `custom_input_type` enum('text','textarea','choice','rating','yesno') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `custom_choice_type` enum('single','multi') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `custom_options_json` text COLLATE utf8mb4_unicode_ci,
+  `is_required` tinyint(1) NOT NULL DEFAULT '0',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_psq_project` (`project_id`),
+  KEY `question_def_id` (`question_def_id`),
+  CONSTRAINT `project_survey_questions_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `project_survey_questions_ibfk_2` FOREIGN KEY (`question_def_id`) REFERENCES `survey_question_definitions` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_survey_questions`
+--
+
+LOCK TABLES `project_survey_questions` WRITE;
+/*!40000 ALTER TABLE `project_survey_questions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `project_survey_questions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_survey_respondent_fields`
+--
+
+DROP TABLE IF EXISTS `project_survey_respondent_fields`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_survey_respondent_fields` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `field_id` bigint NOT NULL,
+  `is_required` tinyint(1) NOT NULL DEFAULT '0',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_psrf` (`project_id`,`field_id`),
+  KEY `field_id` (`field_id`),
+  CONSTRAINT `project_survey_respondent_fields_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `project_survey_respondent_fields_ibfk_2` FOREIGN KEY (`field_id`) REFERENCES `field_definitions` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_survey_respondent_fields`
+--
+
+LOCK TABLES `project_survey_respondent_fields` WRITE;
+/*!40000 ALTER TABLE `project_survey_respondent_fields` DISABLE KEYS */;
+/*!40000 ALTER TABLE `project_survey_respondent_fields` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `project_surveys`
+--
+
+DROP TABLE IF EXISTS `project_surveys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `project_surveys` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('draft','published','closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'draft',
+  `allow_anonymous` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=등록자 외 직접 응답 허용',
+  `require_pre_registration` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1=사전·현장등록자만 응답 가능',
+  `thank_you_message` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `reward_label` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '경품 설명',
+  `reward_amount` bigint NOT NULL DEFAULT '0' COMMENT '경품 단가 금액',
+  `reward_qty` int NOT NULL DEFAULT '0' COMMENT '경품 발급 수량 (0=무제한)',
+  `reward_message` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '혜택 메시지 (QR 수령 안내)',
+  `reward_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '경품 이미지 경로',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_id` (`project_id`),
+  CONSTRAINT `project_surveys_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `project_surveys`
+--
+
+LOCK TABLES `project_surveys` WRITE;
+/*!40000 ALTER TABLE `project_surveys` DISABLE KEYS */;
+INSERT INTO `project_surveys` VALUES (1,1,'',NULL,'C:\\proj\\tracker\\uploads\\survey-images\\1780816572394_df485f95e01c1e68.jpg','draft',1,0,NULL,'2026-06-07 16:16:12','2026-06-07 16:16:12',NULL,0,0,NULL,NULL);
+/*!40000 ALTER TABLE `project_surveys` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `projects`
+--
+
+DROP TABLE IF EXISTS `projects`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `projects` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `host_id` bigint NOT NULL,
+  `project_name` varchar(160) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `project_serial` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `from_date` date NOT NULL,
+  `to_date` date NOT NULL,
+  `gift_amount` bigint NOT NULL,
+  `gift_qty` int NOT NULL DEFAULT '0',
+  `prize_amount` bigint NOT NULL DEFAULT '0',
+  `prize_qty` int NOT NULL DEFAULT '0',
+  `quiz_bonus_per_correct` int NOT NULL DEFAULT '0',
+  `stop_on_budget_exceed` tinyint(1) NOT NULL DEFAULT '0',
+  `budget_amount` bigint NOT NULL,
+  `pin_hash` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `pin_enc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('draft','quoted','deposit_wait','deposit_confirmed','ready_to_start','started','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'quoted',
+  `quote_days` int NOT NULL,
+  `quote_amount` bigint NOT NULL,
+  `quote_sent_at` datetime DEFAULT NULL,
+  `quote_read_at` datetime DEFAULT NULL,
+  `quote_read` tinyint(1) NOT NULL DEFAULT '0',
+  `deposit_confirmed_at` datetime DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
+  `supervisor_mobile_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `supervisor_favicon_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `locations_submitted` tinyint(1) NOT NULL DEFAULT '0',
+  `locations_submitted_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `reservation_enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `reservation_use` tinyint(1) NOT NULL DEFAULT '0',
+  `reservation_benefit_amount` bigint NOT NULL DEFAULT '0',
+  `reservation_benefit_label` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reservation_benefit_message` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reservation_benefit_max_count` int NOT NULL DEFAULT '0',
+  `reservation_stop_on_limit` tinyint(1) NOT NULL DEFAULT '0',
+  `reservation_benefit_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reservation_start_at` datetime DEFAULT NULL,
+  `entry_benefit_enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `entry_use` tinyint(1) NOT NULL DEFAULT '0',
+  `entry_benefit_amount` bigint NOT NULL DEFAULT '0',
+  `entry_benefit_label` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `entry_benefit_message` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `entry_benefit_max_count` int NOT NULL DEFAULT '0',
+  `entry_stop_on_limit` tinyint(1) NOT NULL DEFAULT '0',
+  `entry_benefit_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `field_agent_use` tinyint(1) NOT NULL DEFAULT '0',
+  `survey_use` tinyint(1) NOT NULL DEFAULT '0' COMMENT '?ㅻЦ議곗궗 湲곕뒫 ?ъ슜 (?꾨줈?앺듃???뺤븸)',
+  `tour_use` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Tour(목적지/스탬프) 사용 여부',
+  `quiz_use` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Quiz 사용 여부',
+  `mobile_design_use` tinyint(1) NOT NULL DEFAULT '1' COMMENT '랜딩페이지 디자인 N안 사용 여부',
+  `favicon_use` tinyint(1) NOT NULL DEFAULT '1' COMMENT '모바일앱 아이콘 사용 여부',
+  `tour_title` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Tour 제목',
+  `tour_description` text COLLATE utf8mb4_unicode_ci COMMENT 'Tour 설명',
+  `tour_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Tour 대표 이미지',
+  `survey_reward_use` tinyint(1) NOT NULL DEFAULT '0' COMMENT '설문 응답자 경품 지급 사용 (별도 비용 없음)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_serial` (`project_serial`),
+  KEY `host_id` (`host_id`),
+  CONSTRAINT `projects_ibfk_1` FOREIGN KEY (`host_id`) REFERENCES `hosts` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `projects`
+--
+
+LOCK TABLES `projects` WRITE;
+/*!40000 ALTER TABLE `projects` DISABLE KEYS */;
+INSERT INTO `projects` VALUES (1,2,'국중박 3종 세트','20260604_0001','반가사유상,금관,천마도 전시공간에서 QR코드로 모든 방문을 인증받으시면 10,000원 상당의 Gift를 증정해 드립니다. 본 Gift는 투썸에서 사용하실 수 있습니다.','2026-06-05','2026-06-15',10000,3,1000,9,0,0,30000,'$2b$10$fz8nvZDUQNZGBSbyPQzts.vIV0UZuWtENFtWuaIdjo.MEuDgZI6zS','73524719ED8EEBAFDF105BAF74DC422E','started',11,1150000,'2026-06-05 16:14:46','2026-06-05 16:33:30',1,'2026-06-05 16:33:30',NULL,'2026-06-05 16:33:30',NULL,'C:\\proj\\tracker\\uploads\\supervisor-assets\\1780585592593_ê³_êµ¬ë_¤.png',1,'2026-06-04 11:15:00','2026-06-04 10:48:52','2026-06-08 21:38:25',1,1,5000,'사전등록을 하시고 현장방문을 하시면 이미지에 나와 있는 투썸플레이스의 케익을 경품으로 드립니다.',NULL,3,1,'C:\\proj\\tracker\\uploads\\benefit-images\\1780702930494_í¬ì¸ê¸°íí¸.jpg',NULL,1,1,2000,'현장등록을 하시면 첨부된 이미지의 상품을 경품으로 드립니다.','QR찍고 상품교환',3,0,'C:\\proj\\tracker\\uploads\\benefit-images\\1780702987742_ë³¼íê¸°íí¸.jpg',1,1,1,1,1,1,NULL,NULL,NULL,0),(2,2,'대전 컨텐츠 페어','20260606_0001','매년 8월에 열리는 대전 0시 축제 기간에 다양한 게임 문화 행사와 야간 콘텐츠가 진행','2026-10-16','2026-10-18',7000,3,500,3,0,1,21000,'$2b$10$eNMaLypJtGAN0h.2i60eUe.q2TBlUNBjndl39S2HJrF9IHH/0eKdi','B9ED2F2E376B70BADCDFE5D4C1D43524','started',12,850000,'2026-06-06 10:47:19','2026-06-06 10:49:34',1,'2026-06-06 10:52:57',NULL,'2026-06-09 22:58:25',NULL,NULL,0,NULL,'2026-06-06 10:47:19','2026-06-09 22:58:25',1,1,10000,'사전등록을 하시고 현장방문을 하시면 이미지에 나와 있는 성심당 빵을 경품으로 드립니다.',NULL,3,1,'C:\\proj\\tracker\\uploads\\benefit-images\\1780715698489_ì±ì¬ë¹ë¹µê²½í.jpg','2026-06-09 22:54:13',0,1,0,NULL,NULL,0,0,NULL,1,1,1,1,1,1,'대전 주요 명소를 방문해 봐요',NULL,'C:\\proj\\tracker\\uploads\\tour-images\\1780964345948_ììíì±ì½ë.jpg',1),(3,2,'2026년 조선의 김홍도 전시회','20260607_0001','조선의 천재 화가 김홍도의 작품을 관란하신 분들에게 소정의 상품을 드리려고 합니다.','2026-06-09','2026-06-13',10000,3,0,0,0,0,30000,'$2b$10$zEQBo6x57z/mN6GJj/ziy.5W6yd7TSl0wrt.f171AQWMPUJ2ZU3lO','4E6991D8E161D0C71F80BFB9AEE7B47C','deposit_wait',5,1080000,'2026-06-07 12:32:49','2026-06-07 14:54:06',1,'2026-06-07 14:54:06',NULL,NULL,NULL,NULL,1,'2026-06-07 14:32:58','2026-06-07 10:40:31','2026-06-08 21:12:09',1,1,5000,'입장 시 음료 한잔',NULL,3,0,'C:\\proj\\tracker\\uploads\\benefit-images\\1780814003000_4shot.jpg','2026-05-25 00:00:00',1,1,2000,'QR스캔 후 상품 교환',NULL,3,0,'C:\\proj\\tracker\\uploads\\benefit-images\\1780814014000_USB.jpg',1,1,1,1,1,1,'김홍도 작품 감사',NULL,'C:\\proj\\tracker\\uploads\\tour-images\\1780811509560_ê¹íë.jpg',0);
+/*!40000 ALTER TABLE `projects` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `reservations`
+--
+
+DROP TABLE IF EXISTS `reservations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `reservations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `mode` enum('reservation','entry') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'reservation',
+  `email_lower` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `token` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `pin_hash` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fields_json` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount` bigint NOT NULL,
+  `status` enum('pending','activated','used','cancelled','expired') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `qr_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `activated_at` datetime DEFAULT NULL,
+  `activated_by_host_id` bigint DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `used_by_merchant_id` bigint DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token` (`token`),
+  UNIQUE KEY `uq_resv_project_email` (`project_id`,`email_lower`),
+  KEY `idx_resv_project_status` (`project_id`,`status`),
+  KEY `idx_resv_project_mode` (`project_id`,`mode`),
+  CONSTRAINT `reservations_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `reservations`
+--
+
+LOCK TABLES `reservations` WRITE;
+/*!40000 ALTER TABLE `reservations` DISABLE KEYS */;
+INSERT INTO `reservations` VALUES (4,2,'reservation','kimch@monorama.kr','629dccd4a09f5761f269e08cd130d8a76773e2e6',NULL,'{\"email\":\"kimch@monorama.kr\",\"name\":\"김창호\",\"birth_date\":\"1974-10-18\",\"mobile\":\"01026854082\",\"address\":\"동대구로 432 (신천동, 국제오피스텔건물)\",\"referral_source\":[\"SNS\"],\"newsletter_optin\":[\"이메일\",\"문자\"]}',10000,'pending','C:\\proj\\tracker\\uploads\\reservation-qr\\629dccd4a09f5761f269e08cd130d8a76773e2e6.png',NULL,NULL,NULL,NULL,'2026-06-06 12:32:48'),(10,1,'entry','nitsuser@naver.com','6191d2f4448b7f62eea5da34a2d4e56d6ffd343f',NULL,'{\"email\":\"nitsuser@naver.com\",\"name\":\"홍길동\",\"address\":\"32604 / 충남 공주시 남공주산단길 176-15 / 1\",\"gender\":\"남\",\"age_group\":\"20대\",\"referral_source\":[\"SNS\",\"뉴스/광고\"]}',2000,'pending','C:\\proj\\tracker\\uploads\\reservation-qr\\6191d2f4448b7f62eea5da34a2d4e56d6ffd343f.png',NULL,NULL,NULL,NULL,'2026-06-08 23:50:00');
+/*!40000 ALTER TABLE `reservations` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sessions`
+--
+
+DROP TABLE IF EXISTS `sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sessions` (
+  `session_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `expires` int unsigned NOT NULL,
+  `data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  PRIMARY KEY (`session_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sessions`
+--
+
+LOCK TABLES `sessions` WRITE;
+/*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
+INSERT INTO `sessions` VALUES ('O8ZX82TK4FXF5A2NbufWYfdnZS8D6YGi',1781013947,'{\"cookie\":{\"originalMaxAge\":240000,\"expires\":\"2026-06-09T14:02:59.524Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\"},\"lastActivity\":1781013539522,\"host\":{\"id\":2,\"name\":\"유홍준\",\"email\":\"kimch@mono-rama.com\",\"organization_name\":\"국립중앙박물관\"}}');
+/*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `survey_question_definitions`
+--
+
+DROP TABLE IF EXISTS `survey_question_definitions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `survey_question_definitions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `question_key` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `label_ko` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `input_type` enum('text','textarea','choice','rating','yesno') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `choice_type` enum('single','multi') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `options_json` text COLLATE utf8mb4_unicode_ci COMMENT '["옵션1","옵션2",...]',
+  `category` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '만족도/구성/홍보/재방문/개선',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `is_system` tinyint(1) NOT NULL DEFAULT '1',
+  `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `question_key` (`question_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `survey_question_definitions`
+--
+
+LOCK TABLES `survey_question_definitions` WRITE;
+/*!40000 ALTER TABLE `survey_question_definitions` DISABLE KEYS */;
+INSERT INTO `survey_question_definitions` VALUES (1,'overall_satisfaction','전반적인 만족도는 어떠셨나요?','rating',NULL,NULL,'만족도',10,1,0,'2026-06-07 08:29:40'),(2,'content_satisfaction','행사 콘텐츠에 대한 만족도는?','rating',NULL,NULL,'만족도',20,1,0,'2026-06-07 08:29:40'),(3,'venue_satisfaction','행사장 시설/환경에 대한 만족도는?','rating',NULL,NULL,'만족도',30,1,0,'2026-06-07 08:29:40'),(4,'staff_satisfaction','운영진/스태프 응대에 대한 만족도는?','rating',NULL,NULL,'만족도',40,1,0,'2026-06-07 08:29:40'),(5,'liked_program','가장 인상 깊었던 프로그램/코너는?','textarea',NULL,NULL,'구성',50,1,0,'2026-06-07 08:29:40'),(6,'improvement_point','개선이 필요하다고 생각되는 부분은?','textarea',NULL,NULL,'개선',60,1,0,'2026-06-07 08:29:40'),(7,'referral_channel','본 행사를 어떻게 알게 되셨나요?','choice','multi','[\"SNS\",\"지인 추천\",\"뉴스/광고\",\"포스터/현수막\",\"공식 홈페이지\",\"검색 엔진\",\"기타\"]','홍보',70,1,0,'2026-06-07 08:29:40'),(8,'revisit_intention','다음 행사에 재방문 의향이 있으신가요?','choice','single','[\"매우 그렇다\",\"그렇다\",\"보통\",\"그렇지 않다\",\"전혀 그렇지 않다\"]','재방문',80,1,0,'2026-06-07 08:29:40'),(9,'recommend_intention','주변에 추천하실 의향이 있으신가요?','yesno',NULL,NULL,'재방문',90,1,0,'2026-06-07 08:29:40'),(10,'preferred_program','다음에 원하시는 프로그램/콘텐츠는?','textarea',NULL,NULL,'구성',100,1,0,'2026-06-07 08:29:40'),(11,'visit_purpose','방문하신 주된 목적은 무엇인가요?','choice','multi','[\"여가/관광\",\"가족 동반\",\"학습/체험\",\"비즈니스\",\"SNS 콘텐츠\",\"기타\"]','구성',110,1,0,'2026-06-07 08:29:40'),(12,'visit_with','누구와 함께 방문하셨나요?','choice','single','[\"혼자\",\"가족\",\"연인/배우자\",\"친구\",\"동료\",\"단체\",\"기타\"]','구성',120,1,0,'2026-06-07 08:29:40'),(13,'budget_spent','행사 중 지출하신 금액은?','choice','single','[\"1만원 미만\",\"1~3만원\",\"3~5만원\",\"5~10만원\",\"10만원 이상\",\"지출 없음\"]','구성',130,1,0,'2026-06-07 08:29:40'),(14,'venue_access','행사장까지의 접근성은 어떠셨나요?','choice','single','[\"매우 편리\",\"편리\",\"보통\",\"불편\",\"매우 불편\"]','만족도',140,1,0,'2026-06-07 08:29:40'),(15,'info_clarity','행사 정보(안내·표지판 등)는 충분했나요?','choice','single','[\"매우 충분\",\"충분\",\"보통\",\"부족\",\"매우 부족\"]','구성',150,1,0,'2026-06-07 08:29:40'),(16,'free_comment','자유 의견을 남겨주세요','textarea',NULL,NULL,'개선',900,1,0,'2026-06-07 08:29:40'),(17,'price_satisfaction','입장료/이용료에 대한 만족도는?','rating',NULL,NULL,'만족도',35,1,0,'2026-06-07 08:54:58'),(18,'cleanliness','행사장 청결 상태에 대한 만족도는?','rating',NULL,NULL,'만족도',45,1,0,'2026-06-07 08:54:58'),(19,'safety_satisfaction','행사 안전 관리에 대한 만족도는?','rating',NULL,NULL,'만족도',55,1,0,'2026-06-07 08:54:58'),(20,'facility_satisfaction','편의시설(화장실·휴식공간 등) 만족도는?','rating',NULL,NULL,'만족도',56,1,0,'2026-06-07 08:54:58'),(21,'food_satisfaction','식음료 서비스에 대한 만족도는?','rating',NULL,NULL,'만족도',57,1,0,'2026-06-07 08:54:58'),(22,'stay_duration','행사장에 머무신 시간은 얼마나 되시나요?','choice','single','[\"30분 미만\",\"30분~1시간\",\"1~2시간\",\"2~3시간\",\"3~4시간\",\"4시간 이상\"]','구성',115,1,0,'2026-06-07 08:54:58'),(23,'visit_frequency','본 행사에 몇 번째 방문이신가요?','choice','single','[\"처음 방문\",\"2회\",\"3~5회\",\"6회 이상\"]','구성',116,1,0,'2026-06-07 08:54:58'),(24,'scale_appropriateness','행사 규모는 적절했나요?','choice','single','[\"너무 크다\",\"적절하다\",\"너무 작다\"]','구성',117,1,0,'2026-06-07 08:54:58'),(25,'time_appropriateness','행사 시작·종료 시간은 적절했나요?','choice','single','[\"매우 적절\",\"적절\",\"보통\",\"부적절\",\"매우 부적절\"]','구성',118,1,0,'2026-06-07 08:54:58'),(26,'crowd_density','행사장 혼잡도는 어떠셨나요?','choice','single','[\"매우 한산\",\"적당\",\"약간 혼잡\",\"매우 혼잡\"]','구성',119,1,0,'2026-06-07 08:54:58'),(27,'signage_quality','행사장 표지판·동선 안내는 어떠셨나요?','choice','single','[\"매우 잘 되어 있음\",\"잘 되어 있음\",\"보통\",\"아쉬움\",\"매우 아쉬움\"]','구성',121,1,0,'2026-06-07 08:54:58'),(28,'info_sufficiency','사전에 제공된 행사 정보는 충분했나요?','choice','single','[\"매우 충분\",\"충분\",\"보통\",\"부족\",\"매우 부족\"]','홍보',75,1,0,'2026-06-07 08:54:58'),(29,'sns_channel','주로 어떤 SNS·플랫폼에서 정보를 얻으셨나요?','choice','multi','[\"인스타그램\",\"페이스북\",\"유튜브\",\"트위터/X\",\"네이버 블로그\",\"카카오톡\",\"틱톡\",\"기타\"]','홍보',76,1,0,'2026-06-07 08:54:58'),(30,'extension_desire','행사가 더 길게 진행되기를 바라시나요?','yesno',NULL,NULL,'재방문',95,1,0,'2026-06-07 08:54:58'),(31,'family_recommend','가족·지인과 함께 다시 방문할 의향은?','rating',NULL,NULL,'재방문',96,1,0,'2026-06-07 08:54:58'),(32,'best_point','특별히 좋았던 점은?','textarea',NULL,NULL,'개선',65,1,0,'2026-06-07 08:54:58'),(33,'staff_appreciation','인상 깊었던 운영진·스태프가 있다면?','textarea',NULL,NULL,'개선',66,1,0,'2026-06-07 08:54:58'),(34,'uncomfortable_point','불편했던 점은 무엇이었나요?','textarea',NULL,NULL,'개선',67,1,0,'2026-06-07 08:54:58'),(35,'photo_frequency','행사 중 사진을 얼마나 찍으셨나요?','choice','single','[\"0장\",\"1~5장\",\"6~20장\",\"21~50장\",\"50장 이상\"]','체험',200,1,0,'2026-06-07 08:54:58'),(36,'souvenir_purchase','기념품·굿즈를 구매하셨나요?','yesno',NULL,NULL,'체험',210,1,0,'2026-06-07 08:54:58'),(37,'experience_count','몇 가지 체험·프로그램에 참여하셨나요?','choice','single','[\"없음\",\"1~2개\",\"3~5개\",\"6~10개\",\"10개 이상\"]','체험',220,1,0,'2026-06-07 08:54:58'),(38,'sns_share','본 행사 사진을 SNS 에 공유하셨나요?','yesno',NULL,NULL,'체험',230,1,0,'2026-06-07 08:54:58'),(39,'app_usage','본 행사 앱(스탬프 투어)을 사용해 보셨나요?','yesno',NULL,NULL,'체험',240,1,0,'2026-06-07 08:54:58'),(40,'next_event_idea','다음 행사에 추가되면 좋을 프로그램 아이디어는?','textarea',NULL,NULL,'기타',800,1,0,'2026-06-07 08:54:58'),(41,'partner_brand','함께하면 좋을 브랜드·기관은?','text',NULL,NULL,'기타',810,1,0,'2026-06-07 08:54:58'),(42,'overall_summary','본 행사를 한 단어로 요약한다면?','text',NULL,NULL,'기타',820,1,0,'2026-06-07 08:54:58');
+/*!40000 ALTER TABLE `survey_question_definitions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `survey_responses`
+--
+
+DROP TABLE IF EXISTS `survey_responses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `survey_responses` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `reservation_id` bigint DEFAULT NULL COMMENT 'visitor 사전·현장등록과 연결 (있을 때)',
+  `respondent_email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `respondent_fields_json` text COLLATE utf8mb4_unicode_ci COMMENT '익명 응답 시 수집된 개인정보',
+  `answers_json` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `submitted_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `qr_token` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '응답 완료 후 발급되는 QR 토큰',
+  `qr_image_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '경품 수령 QR 이미지 파일 경로',
+  `reward_used_at` datetime DEFAULT NULL COMMENT '경품 수령 완료 시각',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sr_qr_token` (`qr_token`),
+  KEY `idx_sr_project` (`project_id`,`submitted_at`),
+  KEY `idx_sr_resv` (`reservation_id`),
+  CONSTRAINT `survey_responses_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `survey_responses_ibfk_2` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `survey_responses`
+--
+
+LOCK TABLES `survey_responses` WRITE;
+/*!40000 ALTER TABLE `survey_responses` DISABLE KEYS */;
+/*!40000 ALTER TABLE `survey_responses` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `visitor_push_subscriptions`
+--
+
+DROP TABLE IF EXISTS `visitor_push_subscriptions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `visitor_push_subscriptions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `visitor_id` bigint NOT NULL,
+  `endpoint` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `endpoint_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `p256dh` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `auth` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_endpoint_hash` (`endpoint_hash`),
+  KEY `idx_visitor` (`visitor_id`),
+  CONSTRAINT `visitor_push_subscriptions_ibfk_1` FOREIGN KEY (`visitor_id`) REFERENCES `visitors` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `visitor_push_subscriptions`
+--
+
+LOCK TABLES `visitor_push_subscriptions` WRITE;
+/*!40000 ALTER TABLE `visitor_push_subscriptions` DISABLE KEYS */;
+INSERT INTO `visitor_push_subscriptions` VALUES (25,61,'https://fcm.googleapis.com/fcm/send/e-Zy41ZVq9s:APA91bGzvqEPL0JcwUOntgPrbdRLH3qPKKN7AxVee-odJmSmMU_L3rOB1oHqCcJI2DXdCvESXcEfN_YVfNzcl7SujuEE8jRwjBN-7pkK-uJOYVXouZFDKelw0hxtSXG2QAeAgsCe1Wv4','8c4ec356629c64ecde71773c6a0c885eb61db84bbed517ac0d2ebd36fd29c9ab','BE0PiVSDyU2CyNKcS6j8fXJ0Z71XaB9CyP4EQsTvZ0EPCJc0HQVfdchB4qHwpgI0c6VzXEJXX-smrqfWdZBxn9E','OWB1YR874UaTlH5I_QQWfg','2026-06-06 12:33:07','2026-06-06 12:33:07'),(28,65,'https://fcm.googleapis.com/fcm/send/cC2kPDZpSSg:APA91bHccWeZKgBrkoWm8Qf7p95DSVVld1hji5qW10_SY46tCwAgO-ePohkaccVky9dBymbfpYnu9-UQWrYGuUL1YzNicnToJSuriTgp4A43-Ypp6xGD7V2jd_tOtaxSWEEM5xqeor5O','024804bc5c163faf6468da0d7d736e821569742e8af161951702b57794d4c14c','BFbi2VPgHQfXM_CGf6R1VexmUu55j46uaTgqUFRWL8Q7iKB3FRBfL2bJ6JZIzkQJ-QSnGUam0-29TTxLJUCDxs4','hZX2_cEFi4WMuxqlYeCZSg','2026-06-07 14:55:14','2026-06-07 14:55:14'),(58,112,'https://fcm.googleapis.com/fcm/send/emFgp3rgtw0:APA91bHE-R7H98TqQ73n0XrUFLGCwLZYsXWxW7y3jl_vYVVSNKsIbaxGTVO5C20_kL5_NyRThWq6MpsX4LUM7qUMAsxgdD8416AmTG584RooPyws-yo-iGV2YEgZI0a10KXjO3-w1Dq-','5d66047f4402786362c4be9b874cbaf7ac7997337e8cbe393dd8f714010cd5e5','BPGKVyuTCwrCQ7sluHhakdGSJPyYZhWzgy-X-EtWrF9pN8xbJM6odWr57vEKWmvvPwPsG9bXp90sVgXNjj60R8g','YqUCA4HtWzSBXsPAekgNxg','2026-06-08 23:55:26','2026-06-08 23:55:26');
+/*!40000 ALTER TABLE `visitor_push_subscriptions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `visitor_quiz_attempts`
+--
+
+DROP TABLE IF EXISTS `visitor_quiz_attempts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `visitor_quiz_attempts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `visitor_id` bigint NOT NULL,
+  `quiz_id` bigint NOT NULL,
+  `is_correct` tinyint(1) NOT NULL DEFAULT '0',
+  `selected_choice_ids` json DEFAULT NULL,
+  `attempted_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_attempt` (`visitor_id`,`quiz_id`),
+  KEY `idx_quiz` (`quiz_id`),
+  CONSTRAINT `visitor_quiz_attempts_ibfk_1` FOREIGN KEY (`visitor_id`) REFERENCES `visitors` (`id`),
+  CONSTRAINT `visitor_quiz_attempts_ibfk_2` FOREIGN KEY (`quiz_id`) REFERENCES `project_quizzes` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `visitor_quiz_attempts`
+--
+
+LOCK TABLES `visitor_quiz_attempts` WRITE;
+/*!40000 ALTER TABLE `visitor_quiz_attempts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `visitor_quiz_attempts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `visitor_visits`
+--
+
+DROP TABLE IF EXISTS `visitor_visits`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `visitor_visits` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `visitor_id` bigint NOT NULL,
+  `location_id` bigint NOT NULL,
+  `visited_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_visit` (`visitor_id`,`location_id`),
+  KEY `project_id` (`project_id`),
+  KEY `location_id` (`location_id`),
+  CONSTRAINT `visitor_visits_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`),
+  CONSTRAINT `visitor_visits_ibfk_2` FOREIGN KEY (`visitor_id`) REFERENCES `visitors` (`id`),
+  CONSTRAINT `visitor_visits_ibfk_3` FOREIGN KEY (`location_id`) REFERENCES `project_locations` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `visitor_visits`
+--
+
+LOCK TABLES `visitor_visits` WRITE;
+/*!40000 ALTER TABLE `visitor_visits` DISABLE KEYS */;
+INSERT INTO `visitor_visits` VALUES (24,3,65,4,'2026-06-07 15:38:15'),(37,1,112,1,'2026-06-08 23:52:37');
+/*!40000 ALTER TABLE `visitor_visits` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `visitors`
+--
+
+DROP TABLE IF EXISTS `visitors`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `visitors` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `project_id` bigint NOT NULL,
+  `phone` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `consent_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_project_phone` (`project_id`,`phone`),
+  CONSTRAINT `visitors_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=117 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `visitors`
+--
+
+LOCK TABLES `visitors` WRITE;
+/*!40000 ALTER TABLE `visitors` DISABLE KEYS */;
+INSERT INTO `visitors` VALUES (61,2,'01026854082','2026-06-06 12:33:05','2026-06-06 12:33:05'),(65,3,'01026854082','2026-06-07 14:55:12','2026-06-07 14:55:12'),(112,1,'01026854052','2026-06-08 23:52:22','2026-06-08 23:52:22');
+/*!40000 ALTER TABLE `visitors` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping events for database 'tracker'
+--
+/*!50106 SET @save_time_zone= @@TIME_ZONE */ ;
+/*!50106 DROP EVENT IF EXISTS `ev_daily_project_status_update` */;
+DELIMITER ;;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;;
+/*!50003 SET character_set_client  = utf8mb4 */ ;;
+/*!50003 SET character_set_results = utf8mb4 */ ;;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;;
+/*!50003 SET @saved_time_zone      = @@time_zone */ ;;
+/*!50003 SET time_zone             = 'SYSTEM' */ ;;
+/*!50106 CREATE*/ /*!50117 DEFINER=`root`@`localhost`*/ /*!50106 EVENT `ev_daily_project_status_update` ON SCHEDULE EVERY 1 DAY STARTS '2026-06-05 00:05:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT '일일 프로젝트 상태 자동 전이' DO CALL sp_update_project_statuses('event') */ ;;
+/*!50003 SET time_zone             = @saved_time_zone */ ;;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;;
+/*!50003 SET character_set_results = @saved_cs_results */ ;;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;;
+DELIMITER ;
+/*!50106 SET TIME_ZONE= @save_time_zone */ ;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-06-09 23:01:52

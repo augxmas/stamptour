@@ -124,6 +124,37 @@ export async function sendEmailVerifyCode(email: string, code: string, actionUrl
   });
 }
 
+// 참가기관 등록용 인증 코드 — 비밀번호 저장 안내 포함
+export async function sendPartnerVerifyCode(email: string, code: string, projectName?: string): Promise<void> {
+  await sendEmail({
+    templateKey: "partner_email_verify",
+    to: email,
+    subject: `[모노라마] 참가기관 등록 인증코드${projectName ? ` - ${projectName}` : ""}`,
+    html: `<div style="font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;max-width:520px;">
+      <h3 style="color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:8px;">📋 참가기관 등록 — 이메일 인증</h3>
+      ${projectName ? `<p style="margin:14px 0 8px;color:#475569;">프로젝트: <b>${projectName}</b></p>` : ""}
+      <p style="color:#475569;line-height:1.7;">아래 6자리 코드를 인증코드 입력란에 입력해 주세요.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <div style="display:inline-block;background:#f1f5f9;border:2px dashed #cbd5e1;border-radius:12px;padding:18px 32px;">
+          <div style="font-size:34px;font-weight:700;letter-spacing:14px;color:#1e293b;font-family:'Courier New',monospace;user-select:all;-webkit-user-select:all;-moz-user-select:all;">${code}</div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:#94a3b8;">위 코드를 길게 누르거나 드래그하여 선택한 뒤 복사할 수 있습니다.</div>
+      </div>
+      <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:12px;padding:14px 18px;margin:20px 0;">
+        <div style="font-size:14px;font-weight:800;color:#92400e;margin-bottom:8px;">🔐 중요 — 별도 저장 안내</div>
+        <div style="font-size:13px;color:#78350f;line-height:1.7;">
+          위 <b>6자리 인증코드</b>는 본 등록에서 인증 용도로 사용된 후,<br>
+          <b>귀 기관의 로그인 비밀번호</b>로 그대로 활용됩니다.<br>
+          <span style="color:#dc2626;font-weight:700;">반드시 별도로 안전한 곳에 메모/저장</span>해 두시기 바랍니다.<br>
+          <span style="font-size:12px;color:#9a3412;">※ 분실 시 본인 확인 절차를 통해 재발급해 드립니다.</span>
+        </div>
+      </div>
+      <p style="color:#64748b;font-size:13px;margin-top:18px;">유효시간은 10분입니다. 본인이 요청하지 않았다면 이 메일을 무시하세요.</p>
+    </div>`,
+    vars: { code, projectName: projectName || "" },
+  });
+}
+
 export async function sendProjectPinEmail(hostEmail: string, hostName: string, pin: string, hostId: number): Promise<void> {
   await sendEmail({
     templateKey: "project_pin",

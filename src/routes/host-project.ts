@@ -109,6 +109,15 @@ router.get("/kakao/js-key", requireHost, (_req, res) => {
   res.json({ key });
 });
 
+// Google Maps JavaScript API 키 (Tour 위치 선택용)
+//   .env 에 GOOGLE_MAPS_JS_KEY=AIzaSy... 추가 필요
+//   Google Cloud Console → Maps JavaScript API + Places API 활성화 + HTTP referrer 제한 권장
+router.get("/google/js-key", requireHost, (_req, res) => {
+  const key = process.env.GOOGLE_MAPS_JS_KEY ?? "";
+  if (!key) { res.status(500).json({ error: "GOOGLE_MAPS_JS_KEY not configured" }); return; }
+  res.json({ key });
+});
+
 // ── 발송이력 (이메일 로그) — 현재 host_id 기준 ──
 // ── 이메일 양식 (관리자 편집용) ──
 //  ※ 시스템에서 발송되는 메일의 제목·본문 양식을 조회/수정.
@@ -1343,6 +1352,7 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   const locationDesc = String(req.body.location_desc ?? "").trim();
   const kakaoLat = req.body.kakao_lat;
   const kakaoLng = req.body.kakao_lng;
+  const mapProvider = (req.body.map_provider === "google") ? "google" : (req.body.map_provider === "kakao" ? "kakao" : null);
   const imagePath = req.file ? req.file.path : null;
 
   if (destType === "location") {
@@ -1398,8 +1408,8 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   const isLocation = destType === "location";
   await pool.execute(
     `INSERT INTO project_locations
-     (project_id, location_seq, display_seq, dest_type, location_name, kakao_lat, kakao_lng, location_desc, image_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (project_id, location_seq, display_seq, dest_type, location_name, kakao_lat, kakao_lng, map_provider, location_desc, image_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       projectId,
       numbers.locationSeq,
@@ -1408,6 +1418,7 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
       locationName,
       isLocation ? Number(kakaoLat) : null,
       isLocation ? Number(kakaoLng) : null,
+      isLocation ? mapProvider : null,
       isLocation ? locationDesc : null,
       imagePath,
     ],
@@ -1427,6 +1438,7 @@ router.put("/projects/:projectId/locations/:locationId", requireHost, iconUpload
   const location_desc = String(req.body.location_desc ?? "").trim();
   const kakao_lat = req.body.kakao_lat;
   const kakao_lng = req.body.kakao_lng;
+  const map_provider = (req.body.map_provider === "google") ? "google" : (req.body.map_provider === "kakao" ? "kakao" : null);
   const removeImage = String(req.body.remove_image ?? "") === "1";
 
   const [projectRows] = await pool.execute("SELECT id FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
@@ -1465,11 +1477,12 @@ router.put("/projects/:projectId/locations/:locationId", requireHost, iconUpload
 
   await pool.execute(
     `UPDATE project_locations
-     SET location_name = ?, kakao_lat = ?, kakao_lng = ?, location_desc = ?, image_path = ?, updated_at = NOW()
+     SET location_name = ?, kakao_lat = ?, kakao_lng = ?, map_provider = ?, location_desc = ?, image_path = ?, updated_at = NOW()
      WHERE id = ? AND project_id = ?`,
     [location_name,
      kakao_lat !== undefined && kakao_lat !== null && kakao_lat !== "" ? Number(kakao_lat) : null,
      kakao_lng !== undefined && kakao_lng !== null && kakao_lng !== "" ? Number(kakao_lng) : null,
+     map_provider,
      location_desc, imagePath, locationId, projectId],
   );
 
