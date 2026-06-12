@@ -44,6 +44,26 @@
   .sec-title h2{font-size:38px;font-weight:900;color:#0c4a6e;letter-spacing:-1px;margin-bottom:8px;}
   .sec-title p{color:#64748b;font-size:15px;}
 
+  /* WHY 섹션 */
+  .why-section{background:linear-gradient(180deg,#fff 0%,#f0f9ff 100%);}
+  .why-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-bottom:64px;}
+  .why-row:last-child{margin-bottom:0;}
+  .why-row.reverse .why-visual{order:2;}
+  .why-visual{position:relative;min-height:300px;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0c4a6e,#0284c7);box-shadow:0 16px 40px rgba(2,132,199,.22);}
+  .why-row.reverse .why-visual{background:linear-gradient(135deg,#92400e,#f59e0b);box-shadow:0 16px 40px rgba(245,158,11,.25);}
+  .why-visual::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 25% 25%,rgba(255,255,255,.18),transparent 55%),radial-gradient(circle at 80% 80%,rgba(255,255,255,.12),transparent 50%);}
+  .why-visual .big-ic{position:relative;font-size:96px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.25));}
+  .why-text .head{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
+  .why-text .head .ic{font-size:30px;}
+  .why-text .head h3{font-size:26px;font-weight:900;color:#0c4a6e;letter-spacing:-.5px;line-height:1.3;}
+  .why-row.reverse .why-text .head h3{color:#92400e;}
+  .why-list{display:flex;flex-direction:column;gap:18px;}
+  .why-item{display:flex;gap:14px;}
+  .why-item .dot{flex:none;width:10px;height:10px;border-radius:50%;background:#0284c7;margin-top:7px;}
+  .why-row.reverse .why-item .dot{background:#f59e0b;}
+  .why-item .body strong{display:block;font-size:16px;font-weight:800;color:#1e293b;margin-bottom:3px;}
+  .why-item .body span{font-size:14px;color:#64748b;line-height:1.65;}
+
   /* 메뉴 카드 */
   .menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
   .menu-card{background:#fff;border:2px solid #e2e8f0;border-radius:18px;padding:30px 22px;text-align:center;transition:all .2s;display:block;}
@@ -74,6 +94,22 @@
   .info-card p{font-size:14px;line-height:1.7;color:#e0f2fe;}
   .info-card p b{color:#fff;}
 
+  /* 기능 모달 (iframe) — 참여 안내 기능을 페이지 내에서 표시 */
+  .feat-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(15,23,42,.6);backdrop-filter:blur(3px);align-items:center;justify-content:center;}
+  .feat-modal.open{display:flex;}
+  .feat-box{background:#fff;width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .feat-bar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#0c4a6e,#0284c7);color:#fff;}
+  .feat-title{font-size:15px;font-weight:800;}
+  .feat-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;transition:background .15s;}
+  .feat-close:hover{background:rgba(255,255,255,.38);}
+  .feat-frame-wrap{position:relative;flex:1;min-height:0;background:#f8fafc;}
+  .feat-frame{width:100%;height:100%;border:0;display:block;}
+  .feat-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;pointer-events:none;}
+  @media (min-width:560px){
+    .feat-modal{padding:20px;}
+    .feat-box{height:92vh;max-height:880px;border-radius:18px;}
+  }
+
   /* Footer */
   footer{background:#0f172a;color:#94a3b8;padding:40px 24px;text-align:center;font-size:13px;}
   footer .ft-logo{font-size:16px;font-weight:800;color:#fff;margin-bottom:8px;}
@@ -87,6 +123,12 @@
     .hero-meta{font-size:13px;gap:14px;padding:12px 18px;}
     .sec-title h2{font-size:28px;}
     section{padding:54px 18px;}
+    .why-row,.why-row.reverse .why-visual{grid-template-columns:1fr;gap:24px;}
+    .why-row{grid-template-columns:1fr;margin-bottom:40px;}
+    .why-row.reverse .why-visual{order:0;}
+    .why-visual{min-height:200px;}
+    .why-visual .big-ic{font-size:72px;}
+    .why-text .head h3{font-size:21px;}
     .menu-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
     .menu-card{padding:24px 14px;}
     .menu-card .ic{font-size:38px;}
@@ -121,10 +163,12 @@
     </a>
     <nav class="nav">
       <a href="#about">소개</a>
+      <a href="#why">왜?</a>
       <a href="#menu">참여 안내</a>
+      <a href="#notice">공지사항</a>
       <a href="#partners">참여 기업</a>
       <a href="#info">행사 정보</a>
-      <a href="/reserve/20260606_0001?from=landing" class="cta">📋 사전예약하기</a>
+      <a href="/reserve/20260606_0001?from=landing" onclick="return featReserve(event)" class="cta">📋 사전예약하기</a>
     </nav>
     <button class="menu-toggle" onclick="document.getElementById('mnav').classList.add('open')" aria-label="메뉴">☰</button>
   </div>
@@ -132,10 +176,12 @@
 <div class="mobile-nav" id="mnav">
   <button class="close" onclick="document.getElementById('mnav').classList.remove('open')">×</button>
   <a href="#about" onclick="document.getElementById('mnav').classList.remove('open')">소개</a>
+  <a href="#why" onclick="document.getElementById('mnav').classList.remove('open')">왜?</a>
   <a href="#menu" onclick="document.getElementById('mnav').classList.remove('open')">참여 안내</a>
+  <a href="#notice" onclick="document.getElementById('mnav').classList.remove('open')">공지사항</a>
   <a href="#partners" onclick="document.getElementById('mnav').classList.remove('open')">참여 기업</a>
   <a href="#info" onclick="document.getElementById('mnav').classList.remove('open')">행사 정보</a>
-  <a href="/reserve/20260606_0001?from=landing" class="cta">📋 사전예약하기</a>
+  <a href="/reserve/20260606_0001?from=landing" onclick="return featReserve(event)" class="cta">📋 사전예약하기</a>
 </div>
 
 <!-- Hero -->
@@ -150,8 +196,8 @@
       <span><span class="icon">🕐</span>10:00 ~ 18:00</span>
     </div>
     <div class="hero-cta">
-      <a href="/reserve/20260606_0001?from=landing" class="alt">📋 사전예약하기</a>
-      <a href="#partners">참여 기업 보기 →</a>
+      <a href="/reserve/20260606_0001?from=landing" onclick="return featReserve(event)" class="alt">📋 사전예약하기</a>
+      <a href="/partner/20260606_0001?from=landing&embed=1" onclick="return featPartner(event)">참여기업 신청 →</a>
     </div>
   </div>
 </section>
@@ -172,6 +218,65 @@
   </div>
 </section>
 
+<!-- Why -->
+<section id="why" class="why-section">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">WHY</div>
+      <h2>Why 대전 컨텐츠 페어?</h2>
+      <p>독특한 콘텐츠 경험과 실질적인 비즈니스 기회를 한자리에서</p>
+    </div>
+
+    <div class="why-row">
+      <div class="why-visual"><span class="big-ic">🎮</span></div>
+      <div class="why-text">
+        <div class="head">
+          <span class="ic">✨</span>
+          <h3>독특한 콘텐츠 발굴과<br>몰입감 있는 경험</h3>
+        </div>
+        <div class="why-list">
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>다채로운 콘텐츠</strong><span>다양한 서브컬쳐 콘텐츠를 탐험하여 전문성을 강화하고 독특한 콘텐츠 발굴 기회를 제공합니다.</span></div>
+          </div>
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>디지털 체험</strong><span>게임·메타버스·디지털 콘텐츠로 현업 동향을 선도하는 체험적 환경을 제공합니다.</span></div>
+          </div>
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>혁신적 전략</strong><span>고유의 캐릭터와 독특한 전략을 활용하여 참가자들에게 새로운 경험을 제공합니다.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="why-row reverse">
+      <div class="why-visual"><span class="big-ic">🤝</span></div>
+      <div class="why-text">
+        <div class="head">
+          <span class="ic">💎</span>
+          <h3>협력과 시너지로 이루어지는<br>경제적 효과 창출</h3>
+        </div>
+        <div class="why-list">
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>비즈니스 간담회</strong><span>콘텐츠 제작사와 플랫폼 간 협력을 강화하는 간담회를 통해 실질적인 비즈니스 협업 기회를 제공합니다.</span></div>
+          </div>
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>빅 바이어 초청</strong><span>분야별 빅 바이어 초청과 네트워킹 행사를 통해 온·오프라인 비즈니스 네트워킹을 강화합니다.</span></div>
+          </div>
+          <div class="why-item">
+            <span class="dot"></span>
+            <div class="body"><strong>라이선싱 상담회</strong><span>협력기관과의 제휴를 통한 라이선싱 상담회와 제품 판매의 장을 마련합니다.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Menu -->
 <section id="menu" style="background:#f8fafc;">
   <div class="wrap">
@@ -181,22 +286,22 @@
       <p>아래 프로그램에 참여하시고 다양한 혜택을 받으세요</p>
     </div>
     <div class="menu-grid">
-      <a href="/reserve/20260606_0001?from=landing" class="menu-card featured">
+      <a href="/reserve/20260606_0001?from=landing" onclick="return featReserve(event)" class="menu-card featured">
         <div class="ic">📋</div>
         <h3>사전예약</h3>
         <p>미리 등록하고<br>입장 혜택 받기</p>
       </a>
-      <a href="/v/20260606_0001?from=landing" class="menu-card">
+      <a href="/v/20260606_0001?from=landing" onclick="return featTour(event)" class="menu-card">
         <div class="ic">🎯</div>
         <h3>Tour · Quiz</h3>
         <p>QR 스캔하고<br>퀴즈 풀어 경품 획득</p>
       </a>
-      <a href="/survey/20260606_0001?from=landing" class="menu-card">
+      <a href="/survey/20260606_0001?from=landing" onclick="return featSurvey(event)" class="menu-card">
         <div class="ic">📝</div>
         <h3>설문조사</h3>
         <p>의견을 들려주시고<br>설문 경품 받기</p>
       </a>
-      <a href="/vote/20260606_0001?from=landing" class="menu-card">
+      <a href="/vote/20260606_0001?from=landing" onclick="return featVote(event)" class="menu-card">
         <div class="ic">🏆</div>
         <h3>인기 기업 투표</h3>
         <p>최고의 참여 기업에게<br>투표하기</p>
@@ -206,6 +311,18 @@
 </section>
 
 <!-- 참여 기업 -->
+<!-- 공지사항 -->
+<section id="notice" style="display:none;">
+  <div class="wrap">
+    <div class="sec-title">
+      <div class="label">NOTICE</div>
+      <h2>공지사항</h2>
+      <p>행사 관련 안내사항을 확인하세요</p>
+    </div>
+    <div id="notice-board" style="max-width:760px;margin:0 auto;"></div>
+  </div>
+</section>
+
 <section id="partners" class="partner-section">
   <div class="wrap">
     <div class="sec-title">
@@ -241,23 +358,89 @@
       <div class="info-card">
         <div class="ic">💌</div>
         <h3>문의</h3>
-        <p><b>(주)모노라마</b><br>tracker.monorama.kr<br>02-6925-4083</p>
+        <p><b>마음이앤에이(주)</b><br>대전시 중구 유등천동로 762(충촌동)</p>
       </div>
     </div>
   </div>
 </section>
 
+<!-- 기능 모달 (iframe) — 참여 안내 기능을 visitor 앱 별도 창 없이 페이지 내에서 표시 -->
+<div class="feat-modal" id="feat-modal" role="dialog" aria-modal="true">
+  <div class="feat-box">
+    <div class="feat-bar">
+      <span class="feat-title" id="feat-title">기능</span>
+      <button class="feat-close" onclick="closeFeature()" aria-label="닫기">×</button>
+    </div>
+    <div class="feat-frame-wrap">
+      <div class="feat-loading" id="feat-loading">불러오는 중…</div>
+      <iframe id="feat-frame" class="feat-frame" title="기능"
+        allow="camera; microphone; clipboard-write; geolocation"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+</div>
+
 <!-- Footer -->
 <footer>
   <div class="ft-logo">대전 컨텐츠 페어 2026</div>
-  <div>© 2026 (주)모노라마. All rights reserved.</div>
+  <div>© 2026 마음이앤에이(주). All rights reserved.</div>
   <div style="margin-top:12px;">
-    <a href="/reserve/20260606_0001?from=landing" style="color:#fde68a;font-weight:700;">📋 사전예약하기</a>
+    <a href="/reserve/20260606_0001?from=landing" onclick="return featReserve(event)" style="color:#fde68a;font-weight:700;">📋 사전예약하기</a>
   </div>
 </footer>
 
+<script src="/assets/notif-popup.js"></script>
+<script src="/assets/notice-board.js"></script>
 <script>
 const SERIAL = '20260606_0001';
+
+// ── 참여 안내 기능 — 페이지 내 모달(iframe)로 표시 ──
+// visitor 앱/등록폼/설문/투표를 별도 창 없이 랜딩 위에 띄워 각 기능에 바로 접근.
+// (iframe 은 동일 출처라 localStorage·로그인 상태를 그대로 공유)
+function openFeature(url, title) {
+  const modal = document.getElementById('feat-modal');
+  const frame = document.getElementById('feat-frame');
+  const loading = document.getElementById('feat-loading');
+  if (!modal || !frame) { location.href = url; return false; }   // 폴백
+  document.getElementById('feat-title').textContent = title || '기능';
+  if (loading) loading.style.display = 'flex';
+  frame.onload = () => { if (loading) loading.style.display = 'none'; };
+  frame.src = url;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  return false;
+}
+function closeFeature() {
+  const modal = document.getElementById('feat-modal');
+  const frame = document.getElementById('feat-frame');
+  if (modal) modal.classList.remove('open');
+  if (frame) frame.src = 'about:blank';   // 카메라 등 리소스 즉시 해제
+  document.body.style.overflow = '';
+}
+// 임베드된 앱(visitor 등)이 닫기를 요청하면 모달 닫기
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'feat-close') closeFeature();
+});
+// ESC 로 닫기
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFeature(); });
+
+// 사전예약 — 공유 localStorage 로 등록 여부 판단:
+//  · 이미 등록 → visitor 앱(QR 자동 표시)  · 미등록 → 사전등록 폼
+function featReserve(e) {
+  if (e) e.preventDefault();
+  let url = `/reserve/${SERIAL}?from=landing&embed=1`;
+  try {
+    const raw = localStorage.getItem(`visitor_save_${SERIAL}`);
+    const d = raw ? JSON.parse(raw) : null;
+    if (d && d.email) url = `/v/${SERIAL}?from=landing&embed=1&show=qr`;
+  } catch (_) {}
+  return openFeature(url, '📋 사전예약');
+}
+function featTour(e)   { if (e) e.preventDefault(); return openFeature(`/v/${SERIAL}?from=landing&embed=1`, '🎯 Tour · Quiz'); }
+function featSurvey(e) { if (e) e.preventDefault(); return openFeature(`/survey/${SERIAL}?from=landing&embed=1`, '📝 설문조사'); }
+function featVote(e)   { if (e) e.preventDefault(); return openFeature(`/vote/${SERIAL}?from=landing&embed=1`, '🏆 인기 기업 투표'); }
+// 참여기업 신청 — 참여기관 신청 폼을 모달로 표시
+function featPartner(e){ if (e) e.preventDefault(); return openFeature(`/partner/${SERIAL}?from=landing&embed=1`, '🤝 참여기업 신청'); }
 
 // 참여기업 fetch + 렌더
 (async function loadPartners() {
@@ -274,8 +457,13 @@ const SERIAL = '20260606_0001';
     document.getElementById('partner-count').textContent = `총 ${list.length}개 기업이 참여합니다`;
     grid.innerHTML = list.map(p => {
       const safe = String(p.name || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const hp = p.homepage ? String(p.homepage).replace(/'/g,'') : '';
+      // 홈페이지가 있으면 로고/셀 클릭 시 새 창으로 이동 (없으면 클릭 불가)
+      const clickAttr = hp
+        ? `onclick="window.open('${hp}','_blank','noopener')" style="cursor:pointer;" title="${safe} 홈페이지 새 창으로 열기"`
+        : 'style="cursor:default;" title="홈페이지주소가 없습니다."';
       const cell = `
-        <div class="partner-cell" ${p.homepage ? `onclick="window.open('${String(p.homepage).replace(/'/g,'')}','_blank')"` : ''}>
+        <div class="partner-cell" ${clickAttr}>
           ${p.logo_url
             ? `<img src="${p.logo_url}" alt="${safe}">`
             : `<div style="font-size:32px;color:#cbd5e1;">🏢</div>`}
@@ -296,6 +484,12 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   });
 });
+
+// 활성 알림 팝업 (노출기간 내 + '오늘 하루 안 보기' 미체크 시)
+if (window.NotifPopup) NotifPopup.auto(SERIAL);
+
+// 공지사항 목록 (공지 없으면 섹션 숨김)
+if (window.NoticeBoard) NoticeBoard.render(SERIAL, document.getElementById('notice-board'), { section: document.getElementById('notice') });
 </script>
 
 </body>

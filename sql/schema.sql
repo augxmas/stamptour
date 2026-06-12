@@ -539,6 +539,51 @@ CREATE TABLE IF NOT EXISTS batch_logs (
   KEY idx_started (started_at)
 );
 
+-- 랜딩페이지 팝업 알림 (제목/내용/이미지 + 노출기간)
+CREATE TABLE IF NOT EXISTS project_notifications (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  image_path VARCHAR(500) DEFAULT NULL,
+  from_date DATE NOT NULL,
+  to_date DATE NOT NULL,
+  status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_notif_project (project_id),
+  CONSTRAINT fk_notif_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 공지사항 (일반 게시 — 제목/내용/중요고정/노출여부)
+CREATE TABLE IF NOT EXISTS project_notices (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  pinned TINYINT(1) NOT NULL DEFAULT 0,          -- 상단고정 (정렬과 무관하게 목록 앞단)
+  show_as_popup TINYINT(1) NOT NULL DEFAULT 0,   -- 알림으로 보이기 (랜딩 팝업, 작성일~프로젝트 종료)
+  status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_notice_project (project_id),
+  CONSTRAINT fk_notice_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 사용자별 그리드 컬럼 설정 (표시/숨김 + 순서) — 로그인 사용자(host/supervisor/merchant/partner)별 저장
+CREATE TABLE IF NOT EXISTS user_grid_prefs (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  user_type VARCHAR(20) NOT NULL,
+  user_id VARCHAR(100) NOT NULL,
+  grid_key VARCHAR(191) NOT NULL,
+  prefs_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_user_grid (user_type, user_id, grid_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DELIMITER //
 
 DROP PROCEDURE IF EXISTS sp_update_project_statuses //

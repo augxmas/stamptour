@@ -370,7 +370,7 @@
     /* Chrome 스타일 탭 버튼 — 사다리꼴 + 상단 둥글림 */
     .tab-btn {
       position: relative;
-      padding: 10px 22px 9px;
+      padding: 10px 13px 9px;
       border: 1px solid #cbd5e1;
       border-bottom: none;
       background: linear-gradient(to bottom, #f1f5f9, #e2e8f0);
@@ -413,6 +413,18 @@
       background: #1d4ed8;
       border-radius: 10px 10px 0 0;
     }
+    /* 우측 정렬 그룹(설정·등록·이력 성격) — 좌측 운영/관리 탭과 목적 구분용 앰버 바탕 */
+    .tab-btn.tab-cfg {
+      background: linear-gradient(to bottom, #fffbeb, #fde9b8);
+      border-color: #fcd34d;
+      color: #92400e;
+    }
+    .tab-btn.tab-cfg:hover {
+      background: linear-gradient(to bottom, #fffdf5, #fef3c7);
+      color: #78350f;
+    }
+    .tab-btn.tab-cfg.act { color: #b45309; }       /* 활성 시 흰 바탕 + 앰버 글자 */
+    .tab-btn.tab-cfg.act::before { background: #d97706; }  /* 강조선도 앰버 */
     .tab-btn:focus { outline: none; }
     /* 정산 sub 탭 */
     /* 정산 그리드 — 색상 없이 구분선으로만 영역 분리 */
@@ -847,20 +859,25 @@
 <!-- ── 대시보드 ── -->
 <section id="sec-dashboard">
   <div class="tabs">
-    <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">내 프로젝트</button>
-    <button class="tab-btn" id="tb-agent" onclick="switchTab('agent')">현장요원관리</button>
-    <button class="tab-btn" id="tb-entry" onclick="switchTab('entry')">입장관리</button>
-    <button class="tab-btn" id="tb-tour" onclick="switchTab('tour')">Tour관리</button>
-    <button class="tab-btn" id="tb-quiz" onclick="switchTab('quiz')">Quiz관리</button>
-    <button class="tab-btn" id="tb-survey" onclick="switchTab('survey')">설문조사</button>
-    <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">가맹점관리</button>
-    <button class="tab-btn" id="tb-partner" onclick="switchTab('partner')">참여기관관리</button>
-    <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">정산</button>
-    <button class="tab-btn" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">발송이력</button>
-    <button class="tab-btn" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
-    <button class="tab-btn" id="tb-pform" onclick="switchTab('pform')">📋 참여기관등록 폼</button>
-    <button class="tab-btn" id="tb-vote" onclick="switchTab('vote')">🏆 투표등록</button>
-    <button class="tab-btn" id="tb-new"  onclick="switchTab('new')">프로젝트 등록</button>
+    <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">📁 내 프로젝트</button>
+    <button class="tab-btn" id="tb-partner" onclick="switchTab('partner')">🤝 참여기관관리</button>
+    <button class="tab-btn" id="tb-agent" onclick="switchTab('agent')">🦺 현장요원관리</button>
+    <button class="tab-btn" id="tb-entry" onclick="switchTab('entry')">🎫 입장관리</button>
+    <button class="tab-btn" id="tb-tour" onclick="switchTab('tour')">🎯 Tour관리</button>
+    <button class="tab-btn" id="tb-quiz" onclick="switchTab('quiz')">🧩 Quiz관리</button>
+    <button class="tab-btn" id="tb-survey" onclick="switchTab('survey')">📝 설문조사</button>
+    <button class="tab-btn" id="tb-votemgr" onclick="switchTab('votemgr')">🏆 투표관리</button>
+    <button class="tab-btn" id="tb-notifmng" onclick="switchTab('notifmng')">🔔 알림관리</button>
+    <button class="tab-btn" id="tb-noticemng" onclick="switchTab('noticemng')">📢 공지사항관리</button>
+    <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">🏪 가맹점관리</button>
+    <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">💰 정산</button>
+    <button class="tab-btn tab-cfg" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">📨 발송이력</button>
+    <button class="tab-btn tab-cfg" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
+    <button class="tab-btn tab-cfg" id="tb-pform" onclick="switchTab('pform')">📋 참여기관등록 폼</button>
+    <button class="tab-btn tab-cfg" id="tb-vote" onclick="switchTab('vote')">🏆 투표등록</button>
+    <button class="tab-btn tab-cfg" id="tb-notifreg" onclick="switchTab('notifreg')">🔔 알림등록</button>
+    <button class="tab-btn tab-cfg" id="tb-noticereg" onclick="switchTab('noticereg')">📢 공지사항등록</button>
+    <button class="tab-btn tab-cfg" id="tb-new"  onclick="switchTab('new')">➕ 프로젝트 등록</button>
   </div>
 
   <!-- ─ 내 프로젝트 탭 ─ -->
@@ -2466,6 +2483,186 @@
     </div>
   </div>
 
+  <!-- 투표관리 탭 — 실시간 집계 / 순위 / 상태 제어 -->
+  <div class="tab-panel" id="tab-votemgr">
+    <div class="panel-card">
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택</label>
+        <select id="votemgr-project" onchange="loadVoteResults()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <div id="votemgr-empty" style="display:none;color:#94a3b8;font-size:13px;padding:24px;text-align:center;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;">
+        아직 투표가 설정되지 않았습니다. <b>🏆 투표등록</b> 탭에서 먼저 투표를 만들어 주세요.
+      </div>
+      <div id="votemgr-body" style="display:none;">
+        <div id="votemgr-head" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;"></div>
+        <div id="votemgr-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 알림등록 탭 — 랜딩 팝업 알림 작성/수정 -->
+  <div class="tab-panel" id="tab-notifreg">
+    <div class="panel-card">
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택 <span class="req">*</span></label>
+        <select id="notif-project" onchange="onNotifProjectChange()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <input type="hidden" id="notif-edit-id" value="">
+      <input type="hidden" id="notif-image-path" value="">
+      <div style="max-width:640px;">
+        <div class="fg"><label>제목 <span class="req">*</span></label>
+          <input id="notif-title" type="text" maxlength="255" placeholder="팝업 제목" oninput="onNotifDirty()">
+        </div>
+        <div class="fg"><label>내용 <span class="hint">(선택)</span></label>
+          <textarea id="notif-content" rows="3" oninput="onNotifDirty()" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;" placeholder="팝업에 표시할 안내 문구"></textarea>
+        </div>
+        <div class="fg" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+          <div><label>노출 시작 <span class="req">*</span></label><br>
+            <input id="notif-from" type="date" onchange="onNotifDirty()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;"></div>
+          <div><label>노출 종료 <span class="req">*</span></label><br>
+            <input id="notif-to" type="date" onchange="onNotifDirty()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;"></div>
+          <div><label>상태</label><br>
+            <select id="notif-status" onchange="onNotifDirty()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;">
+              <option value="active">✓ 노출</option><option value="inactive">🔒 숨김</option></select></div>
+          <span class="hint" style="color:#94a3b8;">기본 노출기간 = 등록 당일 ~ 프로젝트 종료일</span>
+        </div>
+        <div class="fg"><label>이미지 <span class="hint">(업로드 시 팝업에 표시 — 권장)</span></label>
+          <input id="notif-image-file" type="file" accept="image/*" onchange="uploadNotifImage(this)" style="font-size:13px;">
+          <div id="notif-image-preview" style="margin-top:10px;"></div>
+        </div>
+        <div id="notif-msg" class="msg" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
+          <button class="btn btn-o" onclick="previewNotif()">👁 미리보기</button>
+          <button class="btn btn-p" id="notif-save-btn" style="flex:1;" onclick="saveNotif()" disabled>💾 저장</button>
+          <button class="btn btn-o" id="notif-new-btn" onclick="resetNotifForm(true)">＋ 새로 작성</button>
+          <button class="btn btn-o" id="notif-del-btn" onclick="deleteNotif()" style="display:none;color:#dc2626;border-color:#fca5a5;">🗑 삭제</button>
+        </div>
+        <div id="notif-edit-note" style="display:none;font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 알림관리 탭 — 등록된 팝업 알림 목록 -->
+  <div class="tab-panel" id="tab-notifmng">
+    <div class="panel-card">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <input id="nm-name" type="text" placeholder="프로젝트명 또는 일련번호로 검색"
+          onkeydown="if(event.key==='Enter')loadNotifList()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:300px;">
+        <select id="nm-status" onchange="loadNotifList()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;">
+          <option value="">전체 상태</option>
+          <option value="active">노출</option>
+          <option value="inactive">숨김</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadNotifList()">검색</button>
+        <button class="btn btn-p btn-sm" onclick="switchTab('notifreg'); resetNotifForm(true);" style="margin-left:auto;">＋ 알림 등록</button>
+      </div>
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table style="min-width:920px;">
+          <thead><tr>
+            <th>프로젝트</th>
+            <th>제목</th>
+            <th style="text-align:center;white-space:nowrap;">노출기간</th>
+            <th style="text-align:center;">이미지</th>
+            <th style="text-align:center;">상태</th>
+            <th style="text-align:center;">미리보기</th>
+            <th style="text-align:center;">수정</th>
+          </tr></thead>
+          <tbody id="nm-tbody">
+            <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공지사항등록 탭 -->
+  <div class="tab-panel" id="tab-noticereg">
+    <div class="panel-card">
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택 <span class="req">*</span></label>
+        <select id="notice-project" onchange="onNoticeDirty()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <input type="hidden" id="notice-edit-id" value="">
+      <div style="max-width:680px;">
+        <div class="fg"><label>제목 <span class="req">*</span></label>
+          <input id="notice-title" type="text" maxlength="255" placeholder="공지 제목" oninput="onNoticeDirty()">
+        </div>
+        <div class="fg"><label>내용</label>
+          <textarea id="notice-content" rows="8" oninput="onNoticeDirty()" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;" placeholder="공지 내용을 입력하세요."></textarea>
+        </div>
+        <div class="fg" style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;margin:0;">
+            <input type="checkbox" id="notice-pinned" onchange="onNoticeDirty()" style="width:16px;height:16px;cursor:pointer;">
+            <span>📌 <b>상단고정</b> <span class="hint" style="color:#94a3b8;">(정렬과 무관하게 목록 앞단 노출)</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;margin:0;">
+            <input type="checkbox" id="notice-popup" onchange="onNoticePopupChange()" style="width:16px;height:16px;cursor:pointer;">
+            <span>🔔 <b>알림으로 보이기</b> <span class="hint" style="color:#94a3b8;">(랜딩 팝업으로 노출)</span></span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="margin:0;">상태</label>
+            <select id="notice-status" onchange="onNoticeDirty()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;">
+              <option value="active">✓ 노출</option><option value="inactive">🔒 숨김</option>
+            </select>
+          </div>
+        </div>
+        <div id="notice-popup-note" style="display:none;font-size:12px;color:#0c4a6e;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 12px;margin:-2px 0 4px;">
+          🔔 노출기간은 <b>작성일(저장 시점)부터 프로젝트 종료일까지</b>로 자동 설정되며, 팝업에는 <b>'오늘 하루 안 보기'</b>가 포함됩니다.
+        </div>
+        <div id="notice-msg" class="msg" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
+          <button class="btn btn-o" onclick="previewNotice()">👁 미리보기</button>
+          <button class="btn btn-p" id="notice-save-btn" style="flex:1;" onclick="saveNotice()" disabled>💾 저장</button>
+          <button class="btn btn-o" id="notice-new-btn" onclick="resetNoticeForm(true)">＋ 새로 작성</button>
+          <button class="btn btn-o" id="notice-del-btn" onclick="deleteNotice()" style="display:none;color:#dc2626;border-color:#fca5a5;">🗑 삭제</button>
+        </div>
+        <div id="notice-edit-note" style="display:none;font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공지사항관리 탭 -->
+  <div class="tab-panel" id="tab-noticemng">
+    <div class="panel-card">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <input id="ntm-name" type="text" placeholder="프로젝트명 또는 일련번호로 검색"
+          onkeydown="if(event.key==='Enter')loadNoticeList()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:300px;">
+        <select id="ntm-status" onchange="loadNoticeList()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;">
+          <option value="">전체 상태</option>
+          <option value="active">노출</option>
+          <option value="inactive">숨김</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadNoticeList()">검색</button>
+        <button class="btn btn-p btn-sm" onclick="switchTab('noticereg'); resetNoticeForm(true);" style="margin-left:auto;">＋ 공지 등록</button>
+      </div>
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table style="min-width:880px;">
+          <thead><tr>
+            <th>프로젝트</th>
+            <th>제목</th>
+            <th style="text-align:center;">상단고정</th>
+            <th style="text-align:center;">알림</th>
+            <th style="text-align:center;white-space:nowrap;">게시일</th>
+            <th style="text-align:center;">상태</th>
+            <th style="text-align:center;">미리보기</th>
+            <th style="text-align:center;">수정</th>
+          </tr></thead>
+          <tbody id="ntm-tbody">
+            <tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 견적 상세 모달 -->
   <div class="modal-ov" id="modal-quote-detail">
     <div class="modal" style="width:90vw;max-width:560px;max-height:88vh;display:flex;flex-direction:column;">
@@ -3590,7 +3787,7 @@ function switchTab(name) {
     if (btn.title) uiAlert(btn.title);
     return;
   }
-  ['proj','new','entry','agent','tour','quiz','survey','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
+  ['proj','new','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
     document.getElementById('tb-'+t).classList.toggle('act', t===name);
     document.getElementById('tab-'+t).classList.toggle('act', t===name);
   });
@@ -3603,6 +3800,11 @@ function switchTab(name) {
   if (name === 'pform') loadPartnerFormProjects();
   if (name === 'partner') loadPartnerListProjects();
   if (name === 'vote') loadVoteProjects();
+  if (name === 'votemgr') { loadVoteMgrProjects(); if (document.getElementById('votemgr-project').value) loadVoteResults(); }
+  if (name === 'notifreg') loadNotifProjects();
+  if (name === 'notifmng') loadNotifList();
+  if (name === 'noticereg') loadNoticeProjects();
+  if (name === 'noticemng') loadNoticeList();
   if (name === 'tour') loadTourProjects();
   if (name === 'quiz') loadQuizProjects();
   if (name === 'survey') loadSurveyProjects();
@@ -4001,12 +4203,14 @@ const PROJ_COLS = [
   { key:'from_date',         label:'기간' },
   { key:'reward_overage',    label:'보상액<br>초과허용', cls:'col-center' },
   { key:'pin',               label:'승인<br>비밀번호', cls:'col-center' },
+  { key:'partner_count',     label:'참여<br>기관', num:true, cls:'col-center' },
   { key:'field_agent_count', label:'현장요원<br>관리', num:true, cls:'col-center' },
   { key:'rsv_applied_count', label:'사전등록<br><span style="font-size:11px;font-weight:500;color:#94a3b8;">(방문자/신청자)</span>', cls:'col-center' },
   { key:'entry_count',       label:'현장<br>등록', cls:'col-center' },
   { key:'active_locations',  label:'Tour', num:true, cls:'col-center' },
   { key:'quiz_count',        label:'Quiz', num:true, cls:'col-center' },
   { key:'survey',            label:'설문<br>조사', cls:'col-center' },
+  { key:'vote_voter_count',  label:'투표', num:true, cls:'col-center' },
   { key:'applied_count',     label:'가맹점<br>지원현황', num:true, cls:'col-center' },
   { key:'preview',           label:'미리<br>보기', cls:'col-center' },
 ];
@@ -4036,7 +4240,7 @@ async function loadProjects(page) {
     if (!r.ok) {
       console.error('[loadProjects] HTTP', r.status);
       const tbody = document.getElementById('proj-tbody');
-      if (tbody) tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#dc2626;padding:20px;">프로젝트 조회 실패 (HTTP ${r.status}) — 페이지를 새로고침해 주세요.</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">프로젝트 조회 실패 (HTTP ${r.status}) — 페이지를 새로고침해 주세요.</td></tr>`;
       return;
     }
     const d = await r.json();
@@ -4046,13 +4250,13 @@ async function loadProjects(page) {
     catch (e) {
       console.error('[loadProjects] renderProjectsTable 오류:', e);
       const tbody = document.getElementById('proj-tbody');
-      if (tbody) tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#dc2626;padding:20px;">렌더 오류: ${esc(String(e?.message || e))}</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">렌더 오류: ${esc(String(e?.message || e))}</td></tr>`;
     }
     try { applyHostFeatureFlags(); } catch (e) { console.warn('[loadProjects] applyHostFeatureFlags 오류:', e); }
   } catch (e) {
     console.error('[loadProjects] 예외:', e);
     const tbody = document.getElementById('proj-tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#dc2626;padding:20px;">조회 실패: ${esc(String(e?.message || e))}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#dc2626;padding:20px;">조회 실패: ${esc(String(e?.message || e))}</td></tr>`;
   }
 }
 
@@ -4279,16 +4483,18 @@ function renderProjectsTable() {
           : '<span class="badge bs" title="발급액이 예산을 초과해도 신규 보상이 계속됩니다.">✓ 허용</span>'
       }</td>
       <td style="text-align:center;">${pinCell}</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPartnersPopup(${p.id},'${(p.project_name||'').replace(/'/g,"\\'")}')" title="참여기관 목록 보기">${Number(p.partner_count||0)}</button></td>
       <td style="text-align:center;">${faBtn}</td>
       <td style="text-align:center;">${rsvBtn}</td>
       <td style="text-align:center;">${entryBtn}</td>
       <td style="text-align:center;">${tourBtn}</td>
       <td style="text-align:center;">${quizBtn}</td>
       <td style="text-align:center;">${Number(p.survey_use)===1 ? `<button class="btn btn-o btn-sm" onclick="openSurveyPreviewFromList(${p.id},'${p.project_name.replace(/'/g,"\\'")}','${p.project_serial}')">보기</button>` : '<span style="color:#cbd5e1;">미사용</span>'}</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openVoteVotersPopup(${p.id},'${(p.project_name||'').replace(/'/g,"\\'")}')" title="투표 참여자 (개인정보 마스킹)">${Number(p.vote_voter_count||0)}명</button></td>
       <td style="text-align:center;"><button class="btn ${Number(p.applied_count)>Number(p.approved_count)?'btn-p':'btn-o'} btn-sm" onclick="goToAppsTab(${p.id})">지원 ${p.applied_count??0} · 승인 ${p.approved_count??0}</button></td>
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">보기</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
   renderProjPager(totalPages, list.length);
 }
 
@@ -7539,11 +7745,11 @@ async function openPeoplePopup(projectId, projectName, mode) {
     document.getElementById('ql-summary').innerHTML = summary;
     document.getElementById('ql-tbody').innerHTML = list.length
       ? list.map(r => {
-          let fields = {};
-          try { fields = JSON.parse(r.fields_json || '{}'); } catch (e) {}
+          // API(/api/host/reservations)는 fields_json 을 이미 파싱한 fields 객체로 내려줌
+          const fields = r.fields || {};
           const name = fields.name || fields.이름 || '-';
           const phone = fields.mobile || fields.phone || fields.휴대폰 || '-';
-          const email = r.email_lower || fields.email || '-';
+          const email = fields.email || fields.이메일 || '-';
           const statusBadge = r.activated_at
             ? '<span class="badge bg">방문완료</span>'
             : '<span class="badge bn">대기</span>';
@@ -7558,6 +7764,75 @@ async function openPeoplePopup(projectId, projectName, mode) {
       : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">등록 내역이 없습니다.</td></tr>';
   } catch (e) {
     document.getElementById('ql-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+  }
+}
+
+// 참여기관 — popup (회사·담당자·부스·상태)
+async function openPartnersPopup(projectId, projectName) {
+  openQuickList(`참여기관 — ${projectName}`,
+    '<tr><th>회사명</th><th>담당자</th><th>연락처</th><th style="text-align:center;">부스</th><th style="text-align:center;">상태</th><th style="text-align:center;">신청일</th></tr>',
+    '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>', '');
+  try {
+    const r = await fetch(`/api/partner/host/projects/${projectId}/partners`);
+    const d = await r.json();
+    if (!r.ok) throw 0;
+    const list = Array.isArray(d.data) ? d.data : [];
+    const approved = list.filter(x => x.status === 'approved').length;
+    const pending  = list.filter(x => x.status === 'pending').length;
+    document.getElementById('ql-summary').style.display = '';
+    document.getElementById('ql-summary').innerHTML =
+      `전체 ${list.length}곳 · 승인 ${approved}곳 · 대기 ${pending}곳`;
+    const stMeta = {
+      approved: { cls: 'bg', label: '승인' },
+      pending:  { cls: 'bn', label: '대기' },
+      rejected: { cls: 'bc', label: '거절' },
+    };
+    document.getElementById('ql-tbody').innerHTML = list.length
+      ? list.map(c => {
+          const company = c.company_name_ko || c.company_name_en || '-';
+          const contact = c.contact_name || c.ceo_name || '-';
+          const dept = [c.contact_dept, c.contact_position].filter(Boolean).join(' · ');
+          const phone = c.contact_phone || c.ceo_mobile || '';
+          const email = c.contact_email || c.ceo_email || '';
+          const booth = [c.booth_type, c.booth_count ? `${c.booth_count}개` : ''].filter(Boolean).join(' ') || '-';
+          const st = stMeta[c.status] || { cls: 'bn', label: c.status || '-' };
+          return `<tr>
+            <td><b>${esc(company)}</b></td>
+            <td style="font-size:12px;">${esc(contact)}${dept ? `<br><span style="color:#94a3b8;font-size:11px;">${esc(dept)}</span>` : ''}</td>
+            <td style="font-size:12px;color:#64748b;">${esc(phone || '-')}${email ? `<br><span style="font-size:11px;">${esc(email)}</span>` : ''}</td>
+            <td style="text-align:center;font-size:12px;">${esc(booth)}</td>
+            <td style="text-align:center;"><span class="badge ${st.cls}">${esc(st.label)}</span></td>
+            <td style="text-align:center;font-size:11px;color:#94a3b8;">${(c.created_at||'').slice(0,10)}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">신청한 참여기관이 없습니다.</td></tr>';
+  } catch (e) {
+    document.getElementById('ql-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+  }
+}
+
+// 투표 참여자 — popup (개인정보 마스킹 · 투표 대상 비공개)
+async function openVoteVotersPopup(projectId, projectName) {
+  openQuickList(`투표 참여자 — ${projectName}`,
+    '<tr><th style="width:60px;text-align:center;">번호</th><th>참여자</th><th style="text-align:center;">투표 시각</th></tr>',
+    '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>', '');
+  try {
+    const r = await fetch(`/api/vote/host/projects/${projectId}/vote/voters`);
+    const d = await r.json();
+    if (!r.ok) throw 0;
+    const list = Array.isArray(d.voters) ? d.voters : [];
+    document.getElementById('ql-summary').style.display = '';
+    document.getElementById('ql-summary').innerHTML =
+      `🔒 투표 참여 <b>${d.total || 0}명</b> · 개인정보 보호를 위해 이메일은 마스킹되며, <b>어느 기업에 투표했는지는 표시되지 않습니다.</b>`;
+    document.getElementById('ql-tbody').innerHTML = list.length
+      ? list.map((v, i) => `<tr>
+          <td style="text-align:center;color:#94a3b8;">${i + 1}</td>
+          <td style="font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px;">${esc(v.email_masked || '****')}</td>
+          <td style="text-align:center;font-size:11px;color:#94a3b8;">${(v.voted_at||'').slice(0,16).replace('T',' ')}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">아직 투표 참여자가 없습니다.</td></tr>';
+  } catch (e) {
+    document.getElementById('ql-tbody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
   }
 }
 
@@ -11139,6 +11414,616 @@ async function deleteVoteImage(rank) {
   } catch (e) { alert('네트워크 오류'); }
 }
 
+// ════════════════════════════════════════════════════════
+// 🏆 투표관리 — 실시간 집계 / 순위 / 상태 제어
+// ════════════════════════════════════════════════════════
+const VOTE_STATUS_META = {
+  draft:     { label: '📝 작성중',  color: '#92400e', bg: '#fef3c7' },
+  published: { label: '✓ 공개중',   color: '#166534', bg: '#dcfce7' },
+  closed:    { label: '🔒 마감',     color: '#991b1b', bg: '#fee2e2' },
+};
+let voteMgrTimer = null;
+
+async function loadVoteMgrProjects() {
+  const sel = document.getElementById('votemgr-project');
+  if (!sel || sel.options.length > 1) return;
+  try {
+    const r = await fetch('/api/host/projects?page=1&size=100');
+    const d = await r.json();
+    (d.data || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = `${p.project_name} (${p.project_serial})`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+async function loadVoteResults() {
+  if (voteMgrTimer) { clearInterval(voteMgrTimer); voteMgrTimer = null; }
+  const pid = document.getElementById('votemgr-project').value;
+  if (!pid) {
+    document.getElementById('votemgr-body').style.display = 'none';
+    document.getElementById('votemgr-empty').style.display = 'none';
+    return;
+  }
+  await refreshVoteResults();
+  // 진행 상황 자동 갱신 (10초) — 다른 탭으로 나가면 멈춤
+  voteMgrTimer = setInterval(() => {
+    const onTab = document.getElementById('tab-votemgr').classList.contains('act');
+    if (!onTab) { clearInterval(voteMgrTimer); voteMgrTimer = null; return; }
+    refreshVoteResults(true);
+  }, 10000);
+}
+
+async function refreshVoteResults(silent) {
+  const pid = document.getElementById('votemgr-project').value;
+  const body = document.getElementById('votemgr-body');
+  const empty = document.getElementById('votemgr-empty');
+  if (!pid) return;
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote/results`);
+    const d = await r.json();
+    if (!d.ok) throw 0;
+    if (!d.vote) { body.style.display = 'none'; empty.style.display = ''; return; }
+    empty.style.display = 'none'; body.style.display = '';
+    renderVoteMgr(d);
+  } catch (e) {
+    if (!silent) { body.style.display = 'none'; empty.style.display = 'none'; }
+  }
+}
+
+function voteStatCard(label, value) {
+  return `<div style="flex:1;min-width:120px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+    <div style="font-size:11px;color:#64748b;font-weight:600;">${label}</div>
+    <div style="font-size:18px;font-weight:800;color:#0f172a;margin-top:2px;">${value}</div>
+  </div>`;
+}
+
+function renderVoteMgr(d) {
+  const v = d.vote;
+  const cands = d.candidates || [];
+  const tiers = d.tiers || [];
+  const maxVotes = cands.reduce((m, c) => Math.max(m, c.votes), 0) || 1;
+
+  // 수상권 배정 — 등급 순서대로 상위 후보에 (0표 후보는 제외)
+  const winnerByIndex = {};
+  let cursor = 0;
+  tiers.forEach(t => {
+    const cnt = Math.max(1, Number(t.winner_count) || 1);
+    for (let k = 0; k < cnt && cursor < cands.length; k++, cursor++) {
+      if (cands[cursor].votes > 0) winnerByIndex[cursor] = t.award_title || `${t.tier_rank}위`;
+    }
+  });
+
+  // 헤더 — 제목 + 상태 배지 + 상태 제어 버튼
+  const st = VOTE_STATUS_META[v.status] || VOTE_STATUS_META.draft;
+  document.getElementById('votemgr-head').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:15px;font-weight:800;color:#0f172a;">${esc(v.vote_title || '(제목 없음)')}</span>
+      <span style="display:inline-block;padding:3px 12px;border-radius:999px;font-size:12px;font-weight:800;color:${st.color};background:${st.bg};">${st.label}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <button class="btn ${v.status === 'published' ? 'btn-p' : 'btn-o'}" style="padding:6px 14px;font-size:12px;" onclick="setVoteStatus('published')">공개</button>
+      <button class="btn ${v.status === 'closed' ? 'btn-p' : 'btn-o'}" style="padding:6px 14px;font-size:12px;" onclick="setVoteStatus('closed')">마감</button>
+      <button class="btn ${v.status === 'draft' ? 'btn-p' : 'btn-o'}" style="padding:6px 14px;font-size:12px;" onclick="setVoteStatus('draft')">작성중</button>
+      <button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="refreshVoteResults()">↻ 새로고침</button>
+    </div>`;
+
+  // 요약 카드
+  const summary = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      ${voteStatCard('참여 인원', d.total_voters + '명')}
+      ${voteStatCard('총 투표수', d.total_ballots + '표')}
+      ${voteStatCard('후보(참여기업)', cands.length + '개')}
+      ${voteStatCard('1인 투표 가능', (v.votes_per_visitor || 1) + '개')}
+    </div>`;
+
+  // 순위 테이블
+  let rows;
+  if (!cands.length) {
+    rows = `<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">승인된 참여기업(후보)이 없습니다.</td></tr>`;
+  } else {
+    rows = cands.map((c, i) => {
+      const pct = Math.round((c.votes / maxVotes) * 100);
+      const win = winnerByIndex[i];
+      const rankNum = i + 1;
+      const medal = rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : String(rankNum);
+      return `<tr>
+        <td style="text-align:center;font-weight:800;width:48px;font-size:15px;">${medal}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            ${c.logo_url ? `<img src="${c.logo_url}" style="width:28px;height:28px;object-fit:contain;border:1px solid #e2e8f0;border-radius:6px;background:#fff;">` : ''}
+            <span style="font-weight:600;">${esc(c.name)}</span>
+            ${win ? `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;color:#92400e;background:#fef3c7;">🏆 ${esc(win)}</span>` : ''}
+          </div>
+          <div style="margin-top:5px;height:7px;background:#f1f5f9;border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f59e0b,#ea580c);border-radius:999px;transition:width .3s;"></div>
+          </div>
+        </td>
+        <td style="text-align:right;font-weight:800;font-size:15px;color:#0f172a;width:84px;white-space:nowrap;">${c.votes}<span style="font-size:11px;color:#94a3b8;font-weight:600;"> 표</span></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('votemgr-results').innerHTML = summary + `
+    <div class="tbl-wrap" style="overflow-x:auto;">
+      <table style="min-width:520px;">
+        <thead><tr>
+          <th style="width:48px;text-align:center;">순위</th>
+          <th>참여기업</th>
+          <th style="text-align:right;">득표</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function setVoteStatus(status) {
+  const pid = document.getElementById('votemgr-project').value;
+  if (!pid) return;
+  const labelMap = { published: '공개', closed: '마감', draft: '작성중' };
+  const ok = await uiConfirm(`투표를 '${labelMap[status]}' 상태로 변경하시겠습니까?`,
+    { title: '투표 상태 변경', okText: '변경', cancelText: '취소' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/vote/host/projects/${pid}/vote/status`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert(d.message || '상태 변경에 실패했습니다.'); return; }
+    refreshVoteResults();
+  } catch (e) { uiAlert('네트워크 오류로 변경하지 못했습니다.'); }
+}
+
+// ════════════════════════════════════════════════════════
+// 🔔 알림등록 / 알림관리 — 랜딩 팝업 알림
+// ════════════════════════════════════════════════════════
+let notifProjects = [];     // {id, project_name, project_serial, to_date}
+let notifListData = [];     // 알림관리 그리드 데이터
+let notifOriginal = null;   // 변경감지용 폼 스냅샷
+
+function notifTodayStr() {
+  const d = new Date(), z = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+// DATE/ISO 값을 로컬(KST) 기준 YYYY-MM-DD 로 — 프로젝트 to_date 의 UTC 밀림 보정
+function notifYmd(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return String(v).slice(0,10);
+  const z = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+function toNotifUrl(p) {
+  if (!p) return '';
+  const n = String(p).replace(/\\/g,'/');
+  const i = n.lastIndexOf('/uploads/');
+  return i >= 0 ? n.slice(i) : n;
+}
+
+let notifProjectsPromise = null;
+function loadNotifProjects() {
+  const sel = document.getElementById('notif-project');
+  if (!sel) return Promise.resolve();
+  if (sel.options.length > 1) return Promise.resolve();
+  if (notifProjectsPromise) return notifProjectsPromise;   // 동시호출 레이스 방지
+  notifProjectsPromise = (async () => {
+    try {
+      const r = await fetch('/api/host/projects?page=1&size=100');
+      const d = await r.json();
+      notifProjects = d.data || [];
+      notifProjects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.project_name} (${p.project_serial})`;
+        opt.dataset.to = notifYmd(p.to_date);
+        sel.appendChild(opt);
+      });
+    } catch (e) {}
+  })();
+  return notifProjectsPromise;
+}
+
+function getNotifForm() {
+  return {
+    project: document.getElementById('notif-project').value,
+    title: document.getElementById('notif-title').value.trim(),
+    content: document.getElementById('notif-content').value,
+    from: document.getElementById('notif-from').value,
+    to: document.getElementById('notif-to').value,
+    status: document.getElementById('notif-status').value,
+    image_path: document.getElementById('notif-image-path').value,
+  };
+}
+
+function onNotifDirty() {
+  const f = getNotifForm();
+  const dirty = !notifOriginal || JSON.stringify(f) !== JSON.stringify(notifOriginal);
+  const valid = !!(f.project && f.title && f.from && f.to);
+  const btn = document.getElementById('notif-save-btn');
+  btn.disabled = !(dirty && valid);
+  btn.style.opacity = btn.disabled ? '.5' : '1';
+}
+
+function onNotifProjectChange() {
+  const editing = !!document.getElementById('notif-edit-id').value;
+  if (!editing) {
+    // 신규 — 기본 노출기간(오늘 ~ 프로젝트 종료일) 자동 채움 후 baseline 갱신
+    const sel = document.getElementById('notif-project');
+    const to = (sel.selectedOptions[0] && sel.selectedOptions[0].dataset.to) || '';
+    document.getElementById('notif-from').value = notifTodayStr();
+    if (to) document.getElementById('notif-to').value = to;
+    notifOriginal = getNotifForm();
+  }
+  onNotifDirty();
+}
+
+async function uploadNotifImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('image', file);
+  const msg = document.getElementById('notif-msg');
+  msg.style.color = '#64748b'; msg.textContent = '이미지 업로드 중…';
+  try {
+    const r = await fetch('/api/notification/host/image', { method:'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { msg.style.color='#dc2626'; msg.textContent='이미지 업로드 실패'; return; }
+    document.getElementById('notif-image-path').value = d.image_path;
+    renderNotifImagePreview(d.image_url);
+    msg.textContent = '';
+    onNotifDirty();
+  } catch (e) { msg.style.color='#dc2626'; msg.textContent='네트워크 오류'; }
+}
+function renderNotifImagePreview(url) {
+  const wrap = document.getElementById('notif-image-preview');
+  if (!url) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div style="display:inline-block;position:relative;">
+    <img src="${esc(url)}" style="max-width:280px;max-height:200px;border:1px solid #e2e8f0;border-radius:8px;display:block;">
+    <button type="button" onclick="removeNotifImage()" title="이미지 제거" style="position:absolute;top:6px;right:6px;background:rgba(220,38,38,.9);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1;">×</button>
+  </div>`;
+}
+function removeNotifImage() {
+  document.getElementById('notif-image-path').value = '';
+  document.getElementById('notif-image-file').value = '';
+  renderNotifImagePreview('');
+  onNotifDirty();
+}
+
+function previewNotif() {
+  const f = getNotifForm();
+  if (!f.title && !f.image_path) { uiAlert('제목 또는 이미지를 입력해 주세요.'); return; }
+  const url = f.image_path ? toNotifUrl(f.image_path) : '';
+  if (window.NotifPopup) NotifPopup.show({ title:f.title, content:f.content, image_url:url }, { preview:true });
+  else uiAlert('미리보기 모듈을 불러오지 못했습니다.');
+}
+
+function setNotifEditNote(isEdit) {
+  const note = document.getElementById('notif-edit-note');
+  const del = document.getElementById('notif-del-btn');
+  if (isEdit && document.getElementById('notif-edit-id').value) {
+    note.style.display = '';
+    note.textContent = '✏ 수정 모드 — 변경 후 저장하면 기존 알림이 갱신됩니다.';
+    del.style.display = '';
+  } else {
+    note.style.display = 'none';
+    del.style.display = 'none';
+  }
+}
+
+async function saveNotif() {
+  const f = getNotifForm();
+  if (!f.project) { uiAlert('프로젝트를 선택해 주세요.'); return; }
+  if (!f.title) { uiAlert('제목을 입력해 주세요.'); return; }
+  if (!f.from || !f.to) { uiAlert('노출기간을 입력해 주세요.'); return; }
+  if (f.to < f.from) { uiAlert('노출 종료일이 시작일보다 빠릅니다.'); return; }
+  const ok = await uiConfirm('저장하시겠습니까?', { title:'알림 저장', okText:'저장', cancelText:'취소' });
+  if (!ok) return;
+  const editId = document.getElementById('notif-edit-id').value;
+  const body = { title:f.title, content:f.content, from_date:f.from, to_date:f.to, status:f.status, image_path: f.image_path || null };
+  const url = editId
+    ? `/api/notification/host/projects/${f.project}/notifications/${editId}`
+    : `/api/notification/host/projects/${f.project}/notifications`;
+  try {
+    const r = await fetch(url, { method: editId ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert(d.message || '저장에 실패했습니다.'); return; }
+    if (!editId && d.id) {
+      document.getElementById('notif-edit-id').value = d.id;
+      document.getElementById('notif-project').disabled = true;
+    }
+    notifOriginal = getNotifForm();
+    setNotifEditNote(true);
+    onNotifDirty();
+    uiAlert('저장되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류로 저장하지 못했습니다.'); }
+}
+
+async function deleteNotif() {
+  const editId = document.getElementById('notif-edit-id').value;
+  const pid = document.getElementById('notif-project').value;
+  if (!editId || !pid) return;
+  const ok = await uiConfirm('이 알림을 삭제하시겠습니까?', { title:'알림 삭제', okText:'삭제', cancelText:'취소' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/notification/host/projects/${pid}/notifications/${editId}`, { method:'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert('삭제에 실패했습니다.'); return; }
+    resetNotifForm(false);
+    uiAlert('삭제되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류'); }
+}
+
+function resetNotifForm(keepProject) {
+  const projVal = document.getElementById('notif-project').value;
+  document.getElementById('notif-edit-id').value = '';
+  document.getElementById('notif-project').disabled = false;
+  if (!keepProject) document.getElementById('notif-project').value = '';
+  else document.getElementById('notif-project').value = projVal;
+  document.getElementById('notif-title').value = '';
+  document.getElementById('notif-content').value = '';
+  document.getElementById('notif-from').value = '';
+  document.getElementById('notif-to').value = '';
+  document.getElementById('notif-status').value = 'active';
+  document.getElementById('notif-image-path').value = '';
+  document.getElementById('notif-image-file').value = '';
+  renderNotifImagePreview('');
+  document.getElementById('notif-msg').textContent = '';
+  setNotifEditNote(false);
+  if (document.getElementById('notif-project').value) {
+    onNotifProjectChange();   // 기본 날짜 + baseline
+  } else {
+    notifOriginal = getNotifForm();
+    onNotifDirty();
+  }
+}
+
+function editNotif(id) {
+  const n = notifListData.find(x => Number(x.id) === Number(id));
+  if (!n) return;
+  switchTab('notifreg');
+  Promise.resolve(loadNotifProjects()).then(() => {
+    const sel = document.getElementById('notif-project');
+    sel.value = n.project_id;
+    sel.disabled = true;
+    document.getElementById('notif-edit-id').value = n.id;
+    document.getElementById('notif-title').value = n.title || '';
+    document.getElementById('notif-content').value = n.content || '';
+    document.getElementById('notif-from').value = String(n.from_date||'').slice(0,10);
+    document.getElementById('notif-to').value = String(n.to_date||'').slice(0,10);
+    document.getElementById('notif-status').value = n.status || 'active';
+    document.getElementById('notif-image-path').value = n.image_path || '';
+    renderNotifImagePreview(n.image_url || '');
+    document.getElementById('notif-msg').textContent = '';
+    setNotifEditNote(true);
+    notifOriginal = getNotifForm();   // baseline = 로드값 → 변경 전까지 저장 비활성
+    onNotifDirty();
+  });
+}
+
+async function loadNotifList() {
+  const tbody = document.getElementById('nm-tbody');
+  if (!tbody) return;
+  const name = document.getElementById('nm-name').value.trim();
+  const status = document.getElementById('nm-status').value;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  try {
+    const qs = new URLSearchParams({ project_name:name, status }).toString();
+    const r = await fetch('/api/notification/host/notifications?' + qs);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    notifListData = d.data || [];
+    if (!notifListData.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">등록된 알림이 없습니다.</td></tr>';
+      return;
+    }
+    const stBadge = s => s==='active'
+      ? '<span class="badge bg">노출</span>'
+      : '<span class="badge bn">숨김</span>';
+    tbody.innerHTML = notifListData.map(n => `<tr>
+      <td>${esc(n.project_name||'')}<br><span style="color:#94a3b8;font-size:11px;">${esc(n.project_serial||'')}</span></td>
+      <td>${esc(n.title||'')}</td>
+      <td style="text-align:center;font-size:12px;white-space:nowrap;">${String(n.from_date||'').slice(0,10)} ~ ${String(n.to_date||'').slice(0,10)}</td>
+      <td style="text-align:center;">${n.image_url ? `<img src="${esc(n.image_url)}" style="width:40px;height:30px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;">` : '<span style="color:#cbd5e1;">-</span>'}</td>
+      <td style="text-align:center;">${stBadge(n.status)}</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="previewNotifRow(${n.id})">👁 보기</button></td>
+      <td style="text-align:center;"><button class="btn btn-p btn-sm" onclick="editNotif(${n.id})">✏ 수정</button></td>
+    </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+  }
+}
+
+function previewNotifRow(id) {
+  const n = notifListData.find(x => Number(x.id) === Number(id));
+  if (!n) return;
+  if (window.NotifPopup) NotifPopup.show({ title:n.title, content:n.content, image_url:n.image_url }, { preview:true });
+}
+
+// ════════════════════════════════════════════════════════
+// 📢 공지사항등록 / 공지사항관리
+// ════════════════════════════════════════════════════════
+let noticeListData = [];
+let noticeOriginal = null;
+let noticeProjectsPromise = null;
+
+function loadNoticeProjects() {
+  const sel = document.getElementById('notice-project');
+  if (!sel) return Promise.resolve();
+  if (sel.options.length > 1) return Promise.resolve();
+  if (noticeProjectsPromise) return noticeProjectsPromise;
+  noticeProjectsPromise = (async () => {
+    try {
+      const r = await fetch('/api/host/projects?page=1&size=100');
+      const d = await r.json();
+      (d.data || []).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.project_name} (${p.project_serial})`;
+        sel.appendChild(opt);
+      });
+    } catch (e) {}
+  })();
+  return noticeProjectsPromise;
+}
+
+function getNoticeForm() {
+  return {
+    project: document.getElementById('notice-project').value,
+    title: document.getElementById('notice-title').value.trim(),
+    content: document.getElementById('notice-content').value,
+    pinned: document.getElementById('notice-pinned').checked,
+    popup: document.getElementById('notice-popup').checked,
+    status: document.getElementById('notice-status').value,
+  };
+}
+function onNoticePopupChange() {
+  document.getElementById('notice-popup-note').style.display =
+    document.getElementById('notice-popup').checked ? '' : 'none';
+  onNoticeDirty();
+}
+function onNoticeDirty() {
+  const f = getNoticeForm();
+  const dirty = !noticeOriginal || JSON.stringify(f) !== JSON.stringify(noticeOriginal);
+  const valid = !!(f.project && f.title);
+  const btn = document.getElementById('notice-save-btn');
+  btn.disabled = !(dirty && valid);
+  btn.style.opacity = btn.disabled ? '.5' : '1';
+}
+
+function previewNotice() {
+  const f = getNoticeForm();
+  if (!f.title) { uiAlert('제목을 입력해 주세요.'); return; }
+  if (window.NoticeBoard) NoticeBoard.preview({ title:f.title, content:f.content, pinned:f.pinned, created_date: notifTodayStr() });
+  else uiAlert('미리보기 모듈을 불러오지 못했습니다.');
+}
+
+function setNoticeEditNote(isEdit) {
+  const note = document.getElementById('notice-edit-note');
+  const del = document.getElementById('notice-del-btn');
+  if (isEdit && document.getElementById('notice-edit-id').value) {
+    note.style.display = ''; note.textContent = '✏ 수정 모드 — 변경 후 저장하면 기존 공지가 갱신됩니다.';
+    del.style.display = '';
+  } else { note.style.display = 'none'; del.style.display = 'none'; }
+}
+
+async function saveNotice() {
+  const f = getNoticeForm();
+  if (!f.project) { uiAlert('프로젝트를 선택해 주세요.'); return; }
+  if (!f.title) { uiAlert('제목을 입력해 주세요.'); return; }
+  const ok = await uiConfirm('저장하시겠습니까?', { title:'공지 저장', okText:'저장', cancelText:'취소' });
+  if (!ok) return;
+  const editId = document.getElementById('notice-edit-id').value;
+  const body = { title:f.title, content:f.content, pinned:f.pinned, show_as_popup:f.popup, status:f.status };
+  const url = editId
+    ? `/api/notice/host/projects/${f.project}/notices/${editId}`
+    : `/api/notice/host/projects/${f.project}/notices`;
+  try {
+    const r = await fetch(url, { method: editId ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert(d.message || '저장에 실패했습니다.'); return; }
+    if (!editId && d.id) {
+      document.getElementById('notice-edit-id').value = d.id;
+      document.getElementById('notice-project').disabled = true;
+    }
+    noticeOriginal = getNoticeForm();
+    setNoticeEditNote(true);
+    onNoticeDirty();
+    uiAlert('저장되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류로 저장하지 못했습니다.'); }
+}
+
+async function deleteNotice() {
+  const editId = document.getElementById('notice-edit-id').value;
+  const pid = document.getElementById('notice-project').value;
+  if (!editId || !pid) return;
+  const ok = await uiConfirm('이 공지를 삭제하시겠습니까?', { title:'공지 삭제', okText:'삭제', cancelText:'취소' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/notice/host/projects/${pid}/notices/${editId}`, { method:'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert('삭제에 실패했습니다.'); return; }
+    resetNoticeForm(false);
+    uiAlert('삭제되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류'); }
+}
+
+function resetNoticeForm(keepProject) {
+  const projVal = document.getElementById('notice-project').value;
+  document.getElementById('notice-edit-id').value = '';
+  document.getElementById('notice-project').disabled = false;
+  document.getElementById('notice-project').value = keepProject ? projVal : '';
+  document.getElementById('notice-title').value = '';
+  document.getElementById('notice-content').value = '';
+  document.getElementById('notice-pinned').checked = false;
+  document.getElementById('notice-popup').checked = false;
+  document.getElementById('notice-popup-note').style.display = 'none';
+  document.getElementById('notice-status').value = 'active';
+  document.getElementById('notice-msg').textContent = '';
+  setNoticeEditNote(false);
+  noticeOriginal = getNoticeForm();
+  onNoticeDirty();
+}
+
+function editNotice(id) {
+  const n = noticeListData.find(x => Number(x.id) === Number(id));
+  if (!n) return;
+  switchTab('noticereg');
+  Promise.resolve(loadNoticeProjects()).then(() => {
+    const sel = document.getElementById('notice-project');
+    sel.value = n.project_id;
+    sel.disabled = true;
+    document.getElementById('notice-edit-id').value = n.id;
+    document.getElementById('notice-title').value = n.title || '';
+    document.getElementById('notice-content').value = n.content || '';
+    document.getElementById('notice-pinned').checked = !!n.pinned;
+    document.getElementById('notice-popup').checked = !!n.show_as_popup;
+    document.getElementById('notice-popup-note').style.display = n.show_as_popup ? '' : 'none';
+    document.getElementById('notice-status').value = n.status || 'active';
+    document.getElementById('notice-msg').textContent = '';
+    setNoticeEditNote(true);
+    noticeOriginal = getNoticeForm();
+    onNoticeDirty();
+  });
+}
+
+async function loadNoticeList() {
+  const tbody = document.getElementById('ntm-tbody');
+  if (!tbody) return;
+  const name = document.getElementById('ntm-name').value.trim();
+  const status = document.getElementById('ntm-status').value;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  try {
+    const qs = new URLSearchParams({ project_name:name, status }).toString();
+    const r = await fetch('/api/notice/host/notices?' + qs);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    noticeListData = d.data || [];
+    if (!noticeListData.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">등록된 공지사항이 없습니다.</td></tr>';
+      return;
+    }
+    const stBadge = s => s==='active' ? '<span class="badge bg">노출</span>' : '<span class="badge bn">숨김</span>';
+    tbody.innerHTML = noticeListData.map(n => `<tr${n.pinned ? ' data-pin="1"' : ''}>
+      <td>${esc(n.project_name||'')}<br><span style="color:#94a3b8;font-size:11px;">${esc(n.project_serial||'')}</span></td>
+      <td>${n.pinned ? '📌 ' : ''}${esc(n.title||'')}</td>
+      <td style="text-align:center;">${n.pinned ? '<span style="color:#b91c1c;font-weight:800;" title="상단고정">📌</span>' : '<span style="color:#cbd5e1;">-</span>'}</td>
+      <td style="text-align:center;">${n.show_as_popup ? '<span style="color:#1d4ed8;font-weight:800;" title="알림으로 보이기">🔔</span>' : '<span style="color:#cbd5e1;">-</span>'}</td>
+      <td style="text-align:center;font-size:12px;white-space:nowrap;">${String(n.created_at||'').slice(0,10)}</td>
+      <td style="text-align:center;">${stBadge(n.status)}</td>
+      <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="previewNoticeRow(${n.id})">👁 보기</button></td>
+      <td style="text-align:center;"><button class="btn btn-p btn-sm" onclick="editNotice(${n.id})">✏ 수정</button></td>
+    </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+  }
+}
+
+function previewNoticeRow(id) {
+  const n = noticeListData.find(x => Number(x.id) === Number(id));
+  if (!n) return;
+  if (window.NoticeBoard) NoticeBoard.preview({ title:n.title, content:n.content, pinned:n.pinned, created_date: String(n.created_at||'').slice(0,10) });
+}
+
 async function loadEmailTemplates() {
   const wrap = document.getElementById('mailtpl-list');
   if (!wrap) return;
@@ -13151,7 +14036,7 @@ function isMobileDevice() {
     show('sec-dashboard');
     // 로딩 placeholder 즉시 표시 — 빈 화면 방지
     const tbody = document.getElementById('proj-tbody');
-    if (tbody && !tbody.innerHTML.trim()) tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+    if (tbody && !tbody.innerHTML.trim()) tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
     try { startSessionWatch(); } catch (e) { console.warn('startSessionWatch:', e); }
     try { loadQuoteConfig(); } catch (e) { console.warn('loadQuoteConfig:', e); }
     // '내 프로젝트' 자동 조회 (페이지 새로고침/세션 복원 시)
@@ -13161,5 +14046,9 @@ function isMobileDevice() {
   }
 })();
 </script>
+<script src="/assets/notif-popup.js"></script>
+<script src="/assets/notice-board.js"></script>
+<script src="/assets/grid-sort.js"></script>
+<script src="/assets/grid-columns.js"></script>
 </body>
 </html>

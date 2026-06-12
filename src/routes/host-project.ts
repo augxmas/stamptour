@@ -554,7 +554,12 @@ router.get("/projects", requireHost, async (req, res) => {
             (SELECT COUNT(*) FROM field_agents fa WHERE fa.project_id = p.id AND fa.status = 'active') AS field_agent_count,
             (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation') AS rsv_applied_count,
             (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'reservation' AND rv.activated_at IS NOT NULL) AS rsv_visited_count,
-            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'entry') AS entry_count
+            (SELECT COUNT(*) FROM reservations rv WHERE rv.project_id = p.id AND rv.mode = 'entry') AS entry_count,
+            (SELECT COUNT(*) FROM project_partners pp WHERE pp.project_id = p.id) AS partner_count,
+            (SELECT COUNT(DISTINCT vb.voter_email)
+               FROM project_vote_ballots vb
+               JOIN project_votes pv ON pv.id = vb.vote_id
+              WHERE pv.project_id = p.id) AS vote_voter_count
      FROM projects p ${where}
      ORDER BY p.created_at DESC
      LIMIT ${pageSize} OFFSET ${offset}`,

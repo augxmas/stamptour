@@ -166,6 +166,137 @@ router.delete("/host/projects/:id/vote/tiers/:rank/image", requireHost, async (r
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  투표 관리 — 실시간 집계 / 순위 / 상태 제어
+// ═══════════════════════════════════════════════════════════════
+
+// 투표 결과/현황 조회 (후보별 득표, 참여 인원, 등급)
+router.get("/host/projects/:id/vote/results", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const pid = Number(req.params.id);
+  if (!(await ensureOwnership(pid, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  const [voteRows] = await pool.execute(
+    "SELECT * FROM project_votes WHERE project_id = ?", [pid],
+  );
+  const vote = (Array.isArray(voteRows) ? voteRows[0] : null) as any;
+  if (!vote) {
+    res.json({ ok: true, vote: null, tiers: [], candidates: [], total_voters: 0, total_ballots: 0 });
+    return;
+  }
+  // 수상 등급
+  const [tierRows] = await pool.execute(
+    `SELECT tier_rank, award_title, winner_count, prize_title
+       FROM project_vote_tiers WHERE vote_id = ? ORDER BY tier_rank ASC`,
+    [vote.id],
+  );
+  const tiers = Array.isArray(tierRows) ? tierRows : [];
+  // 후보(승인된 참여기업)별 득표 — 득표 내림차순
+  const [candRows] = await pool.execute(
+    `SELECT p.id, p.company_name_ko, p.company_name_en, p.company_logo_path,
+            COUNT(b.id) AS votes
+       FROM project_partners p
+       LEFT JOIN project_vote_ballots b ON b.partner_id = p.id AND b.vote_id = ?
+      WHERE p.project_id = ? AND p.status = 'approved'
+      GROUP BY p.id
+      ORDER BY votes DESC, p.company_name_ko ASC, p.id ASC`,
+    [vote.id, pid],
+  );
+  const candidates = (Array.isArray(candRows) ? candRows : []).map((c: any) => ({
+    id: c.id,
+    name: c.company_name_ko || c.company_name_en || "",
+    logo_url: toUploadUrl(c.company_logo_path),
+    votes: Number(c.votes || 0),
+  }));
+  // 참여 인원(고유 이메일) + 총 투표수
+  const [cntRows] = await pool.execute(
+    `SELECT COUNT(DISTINCT voter_email) AS voters, COUNT(*) AS ballots
+       FROM project_vote_ballots WHERE vote_id = ?`,
+    [vote.id],
+  );
+  const counts = (Array.isArray(cntRows) ? cntRows[0] : {}) as any;
+  res.json({
+    ok: true,
+    vote: {
+      id: vote.id, vote_title: vote.vote_title, description: vote.description,
+      status: vote.status, votes_per_visitor: vote.votes_per_visitor, tier_count: vote.tier_count,
+    },
+    tiers,
+    candidates,
+    total_voters: Number(counts.voters || 0),
+    total_ballots: Number(counts.ballots || 0),
+  });
+});
+
+// 이메일 마스킹 — 앞 2자만 남기고 나머지/도메인 일부를 * 처리 (누가 투표했는지 식별 방지)
+function maskEmail(email: string): string {
+  const raw = String(email || "");
+  const at = raw.indexOf("@");
+  if (at < 0) {
+    return raw.length <= 2 ? raw.charAt(0) + "*" : raw.slice(0, 2) + "*".repeat(raw.length - 2);
+  }
+  const user = raw.slice(0, at);
+  const domain = raw.slice(at + 1);
+  const mUser = user.length <= 2 ? user.charAt(0) + "*" : user.slice(0, 2) + "*".repeat(Math.max(1, user.length - 2));
+  const dot = domain.lastIndexOf(".");
+  const namePart = dot > 0 ? domain.slice(0, dot) : domain;
+  const tld = dot > 0 ? domain.slice(dot) : "";
+  const mName = namePart.length <= 1 ? "*" : namePart.charAt(0) + "*".repeat(Math.max(1, namePart.length - 1));
+  return `${mUser}@${mName}${tld}`;
+}
+
+// 투표 참여자 목록 — 개인정보 보호: 이메일 마스킹 + 투표 대상(후보) 미포함
+//   "누가, 어디에 투표했는지" 를 화면상 확인 불가하도록 서버에서 마스킹/제외 처리
+router.get("/host/projects/:id/vote/voters", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const pid = Number(req.params.id);
+  if (!(await ensureOwnership(pid, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  const [voteRows] = await pool.execute(
+    "SELECT id FROM project_votes WHERE project_id = ?", [pid],
+  );
+  const vote = (Array.isArray(voteRows) ? voteRows[0] : null) as any;
+  if (!vote) { res.json({ ok: true, total: 0, voters: [] }); return; }
+  // 고유 투표자 — 후보(partner_id)는 노출하지 않고, 가장 최근 투표시각만
+  const [rows] = await pool.execute(
+    `SELECT voter_email, MAX(voted_at) AS voted_at
+       FROM project_vote_ballots
+      WHERE vote_id = ?
+      GROUP BY voter_email
+      ORDER BY voted_at DESC`,
+    [vote.id],
+  );
+  const voters = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+    email_masked: maskEmail(String(r.voter_email || "")),
+    voted_at: r.voted_at,
+  }));
+  res.json({ ok: true, total: voters.length, voters });
+});
+
+// 투표 상태만 빠르게 변경 (공개/마감/작성중)
+router.post("/host/projects/:id/vote/status", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const pid = Number(req.params.id);
+  if (!(await ensureOwnership(pid, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" }); return;
+  }
+  const status = String((req.body || {}).status || "");
+  if (!["draft", "published", "closed"].includes(status)) {
+    res.status(400).json({ ok: false, error: "invalid_status" }); return;
+  }
+  const [r] = await pool.execute(
+    "UPDATE project_votes SET status = ?, updated_at = NOW() WHERE project_id = ?",
+    [status, pid],
+  );
+  if (!((r as any).affectedRows > 0)) {
+    res.status(404).json({ ok: false, error: "vote_not_configured",
+      message: "먼저 '투표등록' 탭에서 투표를 설정해 주세요." }); return;
+  }
+  res.json({ ok: true, status });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Public (visitor) — 투표 조회 / 투표 / 본인 투표 내역
 // ═══════════════════════════════════════════════════════════════
 

@@ -475,6 +475,8 @@
     const reservationToken = new URLSearchParams(location.search).get('resv') || null;
     // 호스트 미리보기 모드 — ?preview=1 진입 시 시간 윈도우/상태 검사 우회 (메뉴 노출만 영향, 실제 기능은 백엔드 검증)
     const previewMode = new URLSearchParams(location.search).get('preview') === '1';
+    // 랜딩페이지 '사전예약' 으로 진입 시 → 자동 로그인 후 QR 자동 표시 (show=qr)
+    const showParam = new URLSearchParams(location.search).get('show');
 
     // ── 방문자 자동 로그인 (이메일 기반 localStorage) ──
     const VISITOR_SAVE_KEY = `visitor_save_${projectSerial}`;
@@ -537,15 +539,27 @@
       const saved = loadSavedVisitor();
       if (!saved || !saved.email) return false;
       const profile = await fetchVisitorProfile(saved.email);
-      if (!profile) return false;
-      const fields = profile.fields || {};
+      // 라이브 프로필 조회가 실패해도, 자동저장(인증 완료) 기록이 있으면
+      // 저장된 정보만으로 세션을 복원 → 인증 절차 없이 바로 이용 가능
+      if (!profile && !saved.verified) return false;
+      const fields = (profile && profile.fields) || {};
+      const mobile = fields.mobile || fields.휴대폰 || saved.mobile || '';
       currentVisitor = {
         email: saved.email,
         name: fields.name || fields.이름 || saved.name || '',
-        profile,
+        profile: profile || {
+          mode: 'identity', status: 'active',
+          fields: { name: saved.name || '', email: saved.email, mobile },
+        },
       };
-      // localStorage 에 name 갱신 (이번 fetch 결과로 보정)
-      if (currentVisitor.name) saveVisitor({ email: currentVisitor.email, name: currentVisitor.name, verified: true });
+      // localStorage 갱신 — 인증코드·휴대폰 등 자동저장 정보는 유지한 채 최신값 보정
+      saveVisitor({
+        email: currentVisitor.email,
+        name: currentVisitor.name || saved.name || '',
+        mobile,
+        code: saved.code,
+        verified: true,
+      });
       updateTopRight();
       return true;
     }
@@ -657,11 +671,21 @@
     // 우상단 × 닫기 버튼 — 메뉴 외 화면에서는 메뉴로 복귀, 메뉴에서 누르면 앱 종료
     // 출처 — landing 에서 왔으면 닫기/메뉴 시 랜딩 #menu 로 이동
     const FROM_LANDING_V = new URLSearchParams(location.search).get('from') === 'landing';
+    // 랜딩페이지 iframe 모달로 임베드되어 동작하는지 (embed=1)
+    const EMBED_V = new URLSearchParams(location.search).get('embed') === '1';
     function closeApp() {
       const menu = document.getElementById('screen-menu');
       const onMenu = menu && !menu.classList.contains('hidden');
-      // landing 에서 진입한 경우 — 어떤 화면이든 랜딩 #menu 로 복귀
-      if (FROM_LANDING_V && projectSerial) {
+      // 랜딩 iframe 모달로 임베드된 경우 — 메뉴 화면에서 닫기는 부모 모달 닫기,
+      // 서브 화면(스캐너·진행 등)에서는 아래 일반 로직으로 메뉴 복귀
+      if (EMBED_V) {
+        if (onMenu) {
+          try { if (typeof closeScanner === 'function') closeScanner(); } catch (e) {}
+          try { window.parent.postMessage({ type: 'feat-close' }, '*'); } catch (e) {}
+          return;
+        }
+      } else if (FROM_LANDING_V && projectSerial) {
+        // landing 에서 진입한 경우 — 어떤 화면이든 랜딩 #menu 로 복귀
         try { if (typeof closeScanner === 'function') closeScanner(); } catch (e) {}
         location.href = `/landing/${projectSerial}#menu`;
         return;
@@ -1354,6 +1378,17 @@
         lsSet(KP, phone);
         lsSet(`tracker_resv_${projectSerial}`, reservationToken);  // 향후 참조
         const { ok } = await identify(phone);
+        // 사전등록(reservation) 으로 식별된 방문자도 자동저장 → 이후 재방문·랜딩에서 인증 없이 QR 이용
+        if (ok && d.email) {
+          const email = String(d.email).trim().toLowerCase();
+          saveVisitor({ email, name: d.name || '', mobile: phone, verified: true });
+          currentVisitor = {
+            email, name: d.name || '',
+            profile: { mode: d.mode || 'reservation', status: d.status,
+                       fields: { name: d.name || '', email, mobile: phone } },
+          };
+          updateTopRight();
+        }
         return ok;
       } catch (e) { return false; }
     }
@@ -1392,6 +1427,11 @@
 
       // 홈 진입 (/v/{serial}) → 통합 메뉴 표시
       renderProjectMenu();
+      // 랜딩 '사전예약'(&show=qr) + 이미 등록(QR 보유) → QR 모달 자동 표시 (인증 불필요)
+      if (showParam === 'qr' && currentVisitor && currentVisitor.profile
+          && currentVisitor.profile.qr_image_url) {
+        openMyQR();
+      }
       return;
       // 아래는 기존 로직 보존 (현재 도달 불가)
       if (!hasConsent()) { show('screen-consent'); return; }
@@ -1410,6 +1450,7 @@
     const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone === true);
 
     function showInstallBar() {
+      if (EMBED_V) return;        // 랜딩 iframe 모달 안에서는 설치바 숨김
       if (isStandalone()) return; // 이미 PWA 로 실행 중
       $('install-bar').style.display = 'block';
       const btn = $('btn-install');
@@ -1758,9 +1799,14 @@
           return;
         }
         // 자동 저장 옵션에 따라 localStorage 갱신
+        //  — 이메일·이름·휴대폰·인증코드·verified 를 함께 저장하여
+        //    다음 방문 시 인증 절차 없이 바로 자동 로그인되도록 함
         const remember = document.getElementById('vr-remember');
         if (remember && remember.checked) {
-          saveVisitor({ email, name, verified: true });
+          saveVisitor({ email, name, mobile, code: vrVerifiedCode, verified: true });
+        } else {
+          // 자동저장 미선택 → 이전에 저장된 정보가 있으면 제거 (이번 세션만 유지)
+          clearSavedVisitor();
         }
         currentVisitor = { email, name, profile: { mode: 'identity', status: 'active', fields: { name, email, mobile } } };
         closeVisitorRegister();

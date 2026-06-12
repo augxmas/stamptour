@@ -80,6 +80,9 @@
 const serial = location.pathname.split('/').filter(Boolean)[1] || '';
 const FROM_LANDING = new URLSearchParams(location.search).get('from') === 'landing';
 const MENU_URL = serial ? (FROM_LANDING ? `/landing/${serial}#menu` : `/v/${serial}`) : '/';
+// 랜딩 iframe 모달로 임베드(embed=1)된 경우 — '메뉴로/닫기' 는 부모 모달을 닫는다
+const EMBED = new URLSearchParams(location.search).get('embed') === '1';
+function goMenu(){ if (EMBED){ try{ window.parent.postMessage({type:'feat-close'},'*'); }catch(e){} return; } location.href = MENU_URL; }
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 // localStorage 에서 visitor 정보 (이메일) 가져오기
@@ -111,11 +114,11 @@ let alreadyVoted = false;
 function renderError(msg) {
   document.getElementById('root').innerHTML = `
     <div class="top">
-      <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
-      <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+      <a class="back" href="${MENU_URL}" onclick="goMenu();return false">◀ 메뉴로</a>
+      <button class="x" onclick="goMenu();return false">×</button>
     </div>
     <div class="done"><div class="ic">⚠</div><h2 style="color:#dc2626;">${esc(msg)}</h2>
-    <a href="${MENU_URL}" style="display:inline-block;margin-top:16px;background:#0284c7;color:#fff;text-decoration:none;padding:11px 28px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a></div>`;
+    <a href="${MENU_URL}" onclick="goMenu();return false" style="display:inline-block;margin-top:16px;background:#0284c7;color:#fff;text-decoration:none;padding:11px 28px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a></div>`;
 }
 
 function render() {
@@ -124,8 +127,8 @@ function render() {
   if (!candidates.length) {
     document.getElementById('root').innerHTML = `
       <div class="top">
-        <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
-        <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+        <a class="back" href="${MENU_URL}" onclick="goMenu();return false">◀ 메뉴로</a>
+        <button class="x" onclick="goMenu();return false">×</button>
       </div>
       <div class="title">🏆 ${esc(data.vote.title || '참여기업 투표')}</div>
       <div class="sub">${esc(data.project.name)}</div>
@@ -140,8 +143,8 @@ function render() {
     }).filter(Boolean);
     document.getElementById('root').innerHTML = `
       <div class="top">
-        <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
-        <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+        <a class="back" href="${MENU_URL}" onclick="goMenu();return false">◀ 메뉴로</a>
+        <button class="x" onclick="goMenu();return false">×</button>
       </div>
       <div class="done">
         <div class="ic">✅</div>
@@ -151,15 +154,15 @@ function render() {
           <b style="color:#15803d;font-size:15px;">${votedCompanies.join(', ')}</b>
         </p>
         <p style="color:#94a3b8;font-size:12px;margin-top:14px;">결과는 행사 종료 후 발표됩니다.</p>
-        <a href="${MENU_URL}" style="display:inline-block;margin-top:20px;background:#f59e0b;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a>
+        <a href="${MENU_URL}" onclick="goMenu();return false" style="display:inline-block;margin-top:20px;background:#f59e0b;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:700;">◀ 메뉴로 돌아가기</a>
       </div>`;
     return;
   }
 
   document.getElementById('root').innerHTML = `
     <div class="top">
-      <a class="back" href="${MENU_URL}">◀ 메뉴로</a>
-      <button class="x" onclick="location.href='${MENU_URL}'">×</button>
+      <a class="back" href="${MENU_URL}" onclick="goMenu();return false">◀ 메뉴로</a>
+      <button class="x" onclick="goMenu();return false">×</button>
     </div>
     <div class="title">🏆 ${esc(data.vote.title || '참여기업 투표')}</div>
     <div class="sub">${esc(data.project.name)}</div>
@@ -241,7 +244,7 @@ async function submitVote() {
   const email = getVoterEmail();
   if (!email) {
     if (!confirm('투표하려면 먼저 등록(이메일 인증)이 필요합니다.\n등록 페이지로 이동하시겠습니까?')) return;
-    location.href = MENU_URL;
+    goMenu();
     return;
   }
   const ok = confirm(`선택하신 ${selected.size}개 참여기업에 투표를 제출하시겠습니까?\n\n⚠ 제출 후에는 수정/재투표가 불가능합니다.`);

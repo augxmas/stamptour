@@ -17,6 +17,9 @@ import fieldAgentRouter from "./routes/field-agent";
 import surveyRouter from "./routes/survey";
 import partnerRouter from "./routes/partner";
 import voteRouter from "./routes/vote";
+import notificationRouter from "./routes/notification";
+import noticeRouter from "./routes/notice";
+import gridPrefsRouter from "./routes/grid-prefs";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
@@ -82,6 +85,9 @@ app.use("/api/field-agent", fieldAgentRouter);   // 공개 등록 + 근태 PWA +
 app.use("/api/survey", surveyRouter);             // host 설문 설정 + 공개 응답
 app.use("/api/partner", partnerRouter);           // 참여기관 폼 설정 + 신청/관리
 app.use("/api/vote", voteRouter);                 // 투표/수상 등급 설정
+app.use("/api/notification", notificationRouter); // 랜딩 팝업 알림 등록/관리 + 공개 조회
+app.use("/api/notice", noticeRouter);             // 공지사항 등록/관리 + 공개 조회
+app.use("/api/grid-prefs", gridPrefsRouter);      // 사용자별 그리드 컬럼 설정(표시/순서)
 
 // 참가기관 로그인 — 정적 미들웨어보다 먼저 처리 (public/partner/index.html 자동 서빙 차단)
 app.get(["/partner", "/partner/"], (_req, res) => {
@@ -281,8 +287,9 @@ app.get("/survey/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "survey", "index.html"));
 });
 
+// 루트 접근 → 대표 랜딩 페이지로 리다이렉트
 app.get("/", (_req, res) => {
-  res.json({ ok: true, service: "tracker", time: new Date().toISOString() });
+  res.redirect("/landing/20260606_0001/");
 });
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
