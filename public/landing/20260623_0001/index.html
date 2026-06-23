@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2026 제3회 영주시장배 아마추어 e스포츠 대회</title>
+<style>
+  :root{--bg:#0a0e27;--bg2:#111634;--card:#161c3f;--line:#27306b;--cyan:#22d3ee;--blue:#3b82f6;--mag:#e0218a;--green:#16a34a;--red:#ef4444;--txt:#e6e9f5;--mut:#9aa3c7;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 18px;}
+  /* header */
+  .hd{position:sticky;top:0;z-index:50;background:rgba(10,14,39,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  .hd-in{max-width:1080px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:14px;}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;}
+  .brand .ci{width:30px;height:30px;flex:none;}
+  .brand small{display:block;font-size:10px;color:var(--mut);font-weight:600;letter-spacing:1px;}
+  .nav{display:flex;gap:4px;margin-left:auto;align-items:center;}
+  .nav a{padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--mut);border-radius:8px;}
+  .nav a:hover{color:#fff;background:rgba(255,255,255,.06);}
+  .apply{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#04122a !important;font-weight:800 !important;padding:9px 16px !important;border-radius:10px !important;box-shadow:0 4px 16px rgba(34,211,238,.3);}
+  .menu-tg{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;margin-left:auto;}
+  /* hero */
+  .hero{position:relative;padding:64px 18px 56px;text-align:center;overflow:hidden;background:radial-gradient(circle at 50% -10%,rgba(59,130,246,.32),transparent 55%),radial-gradient(circle at 85% 30%,rgba(224,33,138,.18),transparent 45%);}
+  .hero .badge{display:inline-block;border:1px solid var(--cyan);color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:2px;padding:6px 16px;border-radius:999px;margin-bottom:18px;}
+  .hero h1{font-size:clamp(30px,6vw,54px);font-weight:900;line-height:1.12;letter-spacing:-1px;}
+  .hero h1 .gr{background:linear-gradient(135deg,var(--cyan),var(--blue) 60%,var(--mag));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero .sub{color:var(--mut);font-size:16px;margin-top:14px;}
+  .meta-bar{display:inline-flex;flex-wrap:wrap;gap:10px 22px;justify-content:center;margin-top:26px;background:rgba(22,28,63,.7);border:1px solid var(--line);border-radius:14px;padding:14px 26px;font-size:14px;}
+  .meta-bar b{color:#fff;}
+  .meta-bar .ic{color:var(--cyan);margin-right:5px;}
+  .hero-cta{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .hero-cta a{padding:14px 30px;border-radius:12px;font-weight:800;font-size:15px;}
+  .hero-cta .pri{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#04122a;box-shadow:0 8px 26px rgba(34,211,238,.35);}
+  .hero-cta .sec{background:rgba(255,255,255,.07);border:1px solid var(--line);color:#fff;}
+  .deadline{margin-top:18px;font-size:13px;color:#fca5a5;}
+  /* sections */
+  section.sec{padding:56px 18px;}
+  .sec-h{text-align:center;margin-bottom:34px;}
+  .sec-h .lab{display:inline-block;color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:8px;}
+  .sec-h h2{font-size:30px;font-weight:900;letter-spacing:-.5px;}
+  .sec-h p{color:var(--mut);font-size:14px;margin-top:6px;}
+  /* 대회안내 */
+  .info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:880px;margin:0 auto;}
+  .info-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;}
+  .info-card .k{font-size:12px;color:var(--cyan);font-weight:800;letter-spacing:1px;margin-bottom:6px;}
+  .info-card .v{font-size:15px;color:#fff;font-weight:600;}
+  .info-card .v small{color:var(--mut);font-weight:500;}
+  /* 상금 */
+  .prize{max-width:820px;margin:30px auto 0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+  .prize table{width:100%;border-collapse:collapse;font-size:14px;}
+  .prize th,.prize td{padding:13px 10px;text-align:center;border-bottom:1px solid var(--line);}
+  .prize thead th{background:rgba(59,130,246,.16);color:#fff;font-size:13px;font-weight:800;}
+  .prize tbody th{color:var(--cyan);font-weight:800;text-align:left;padding-left:20px;}
+  .prize .g1{color:#fde047;font-weight:800;} .prize .g2{color:#e2e8f0;} .prize .g3{color:#fdba74;}
+  .prize td:first-child{font-weight:700;}
+  /* 일정 timeline */
+  .tl{display:flex;gap:0;max-width:960px;margin:0 auto;overflow-x:auto;padding-bottom:6px;}
+  .tl-item{flex:1;min-width:150px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 6px;}
+  .tl-mark{position:relative;width:100%;display:flex;justify-content:center;margin-bottom:16px;height:16px;}
+  .tl-mark span{width:16px;height:16px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,.18);position:relative;z-index:2;}
+  .tl-item:not(:last-child) .tl-mark::after{content:'';position:absolute;top:50%;left:50%;width:100%;height:2px;background:var(--line);transform:translateY(-50%);z-index:1;}
+  .tl-body .d{font-size:12.5px;color:var(--cyan);font-weight:800;}
+  .tl-body .t{font-size:15px;font-weight:700;color:#fff;margin-top:3px;}
+  .tl-body .s{font-size:12.5px;color:var(--mut);margin-top:3px;}
+  /* 부대행사 */
+  .side-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;max-width:920px;margin:0 auto;}
+  .side-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 16px;text-align:center;transition:transform .15s,border-color .15s;}
+  .side-card:hover{transform:translateY(-3px);border-color:var(--cyan);}
+  .side-card .em{font-size:34px;}
+  .side-card .nm{font-size:14px;font-weight:700;color:#fff;margin-top:10px;}
+  /* 동영상 */
+  .vid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
+  .vcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;}
+  .vcard:hover{transform:translateY(-3px);border-color:var(--cyan);}
+  .vthumb{position:relative;aspect-ratio:16/9;background:#000;}
+  .vthumb img{width:100%;height:100%;object-fit:cover;}
+  .vthumb .pl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .vthumb .pl span{width:50px;height:50px;border-radius:50%;background:rgba(239,68,68,.92);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;padding-left:4px;}
+  .vinfo{padding:11px 13px;}
+  .vinfo .vt{font-size:13px;font-weight:700;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .vinfo .va{font-size:11px;color:var(--mut);margin-top:5px;}
+  .muted-box{text-align:center;color:var(--mut);padding:40px;border:1px dashed var(--line);border-radius:14px;}
+  /* 문의 */
+  .qna{max-width:720px;margin:0 auto;text-align:center;}
+  .qna p{color:var(--mut);margin-bottom:20px;}
+  .qbtn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#04122a;font-weight:800;padding:14px 30px;border-radius:12px;font-size:15px;box-shadow:0 8px 24px rgba(34,211,238,.3);}
+  .qrecent{margin-top:24px;display:flex;flex-direction:column;gap:8px;text-align:left;}
+  .qitem{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:flex;gap:10px;align-items:center;}
+  .qitem .qb{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;}
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:30px 18px;text-align:center;color:var(--mut);font-size:13px;background:var(--bg2);}
+  footer b{color:#fff;}
+  /* player modal */
+  .pov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:16px;}
+  .pov.open{display:flex;}
+  .pbox{width:100%;max-width:880px;}
+  .pframe{position:relative;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;}
+  .pframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .pclose{display:flex;justify-content:flex-end;margin-bottom:8px;}
+  .pclose button{background:rgba(255,255,255,.15);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;}
+  /* mobile nav */
+  .mnav{display:none;position:fixed;inset:0;background:rgba(8,11,30,.97);z-index:60;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+  .mnav.open{display:flex;}
+  .mnav a{font-size:20px;font-weight:700;color:#fff;}
+  .mnav .cl{position:absolute;top:18px;right:20px;background:none;border:none;color:#fff;font-size:32px;}
+  @media(max-width:840px){.nav{display:none;}.menu-tg{display:block;}.info-grid{grid-template-columns:1fr;}.brand small{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="hd">
+  <div class="hd-in">
+    <a href="#top" class="brand">
+      <svg class="ci" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M50 14 C24 14 8 32 8 52 C20 47 34 47 42 54 C36 60 38 70 48 70 C44 62 52 56 58 60 C66 52 80 50 92 54 C92 33 76 14 50 14 Z" fill="#16a34a"/>
+        <rect x="46" y="58" width="8" height="30" fill="#16a34a"/>
+        <circle cx="44" cy="62" r="11" fill="#fff"/><circle cx="58" cy="48" r="11" fill="#fff"/>
+        <circle cx="55" cy="72" r="10" fill="#16a34a"/><circle cx="74" cy="62" r="11" fill="#ef4444"/>
+      </svg>
+      <span>영주시<small>YEONGJU CITY</small></span>
+    </a>
+    <nav class="nav">
+      <a href="#info">대회안내</a>
+      <a href="#side">부대행사</a>
+      <a href="#video">동영상</a>
+      <a href="#qna">문의하기</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSfL2_gf0HYYb2k1lxB_ViEfak4_jMBTnkhy0OENScoF01fN_A/viewform?pli=1" target="_blank" rel="noopener" class="apply">🎮 참가신청</a>
+    </nav>
+    <button class="menu-tg" onclick="document.getElementById('mnav').classList.add('open')">☰</button>
+  </div>
+</header>
+<div class="mnav" id="mnav">
+  <button class="cl" onclick="document.getElementById('mnav').classList.remove('open')">×</button>
+  <a href="#info" onclick="mclose()">대회안내</a>
+  <a href="#side" onclick="mclose()">부대행사</a>
+  <a href="#video" onclick="mclose()">동영상</a>
+  <a href="#qna" onclick="mclose()">문의하기</a>
+  <a href="https://docs.google.com/forms/d/e/1FAIpQLSfL2_gf0HYYb2k1lxB_ViEfak4_jMBTnkhy0OENScoF01fN_A/viewform?pli=1" target="_blank" rel="noopener" class="apply" style="padding:12px 24px !important;">🎮 참가신청</a>
+</div>
+
+<!-- 히어로 -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="badge">YEONGJU CITY e-SPORTS 2026</div>
+    <h1>제3회 <span class="gr">영주시장배</span><br>아마추어 e스포츠 대회</h1>
+    <p class="sub">전국 아마추어 게이머 누구나 — 리그 오브 레전드 · 발로란트 · 브롤스타즈</p>
+    <div class="meta-bar">
+      <span><span class="ic">🗓</span>본선·결승 <b>2026.08.01(토)</b></span>
+      <span><span class="ic">🖥</span>예선 <b>07.13~07.26 온라인</b></span>
+      <span><span class="ic">📍</span><b>영주 국민체육센터</b></span>
+    </div>
+    <div class="hero-cta">
+      <a class="pri" href="https://docs.google.com/forms/d/e/1FAIpQLSfL2_gf0HYYb2k1lxB_ViEfak4_jMBTnkhy0OENScoF01fN_A/viewform?pli=1" target="_blank" rel="noopener">🎮 참가신청 하기</a>
+      <a class="sec" href="#info">대회 안내 보기 →</a>
+    </div>
+    <div class="deadline">⏰ 접수 마감 — 2026년 7월 10일(금) 23:59</div>
+  </div>
+</section>
+
+<!-- 대회안내 -->
+<section class="sec" id="info" style="background:var(--bg2);">
+  <div class="wrap">
+    <div class="sec-h"><div class="lab">ABOUT</div><h2>대회 안내</h2></div>
+    <div class="info-grid">
+      <div class="info-card"><div class="k">대회명</div><div class="v">2026 제3회 영주시장배 아마추어 e스포츠 대회</div></div>
+      <div class="info-card"><div class="k">종목</div><div class="v">리그 오브 레전드 · 발로란트 · 브롤스타즈</div></div>
+      <div class="info-card"><div class="k">접수기간</div><div class="v">~ 2026년 7월 10일(금) 23:59</div></div>
+      <div class="info-card"><div class="k">일시</div><div class="v">결선 2026.08.01(토)<br><small>예선 2026.07.13(월) ~ 07.26(일)</small></div></div>
+      <div class="info-card"><div class="k">장소</div><div class="v">영주시 국민체육센터<br><small>경북 영주시 가흥로 109</small></div></div>
+      <div class="info-card"><div class="k">참가대상</div><div class="v">전국 아마추어 선수 누구나<br><small>※ 본인 명의의 계정으로만 참여 가능</small></div></div>
+    </div>
+
+    <!-- 상금 -->
+    <div class="prize">
+      <table>
+        <thead><tr><th style="text-align:left;padding-left:20px;">종목 / 순위</th><th>🥇 1위</th><th>🥈 2위</th><th>🥉 3위</th></tr></thead>
+        <tbody>
+          <tr><th>리그 오브 레전드</th><td class="g1">3,000,000원</td><td class="g2">1,500,000원</td><td class="g3">1,000,000원</td></tr>
+          <tr><th>발로란트</th><td class="g1">1,500,000원</td><td class="g2">1,000,000원</td><td class="g3">500,000원</td></tr>
+          <tr><th>브롤스타즈</th><td class="g1">1,000,000원</td><td class="g2">500,000원</td><td class="g3">300,000원</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="text-align:center;color:var(--mut);font-size:12px;margin-top:12px;">※ 상금은 제세금(4.4%)을 제외한 금액으로만 지급될 예정입니다.</p>
+
+    <!-- 일정 -->
+    <div class="sec-h" style="margin-top:50px;"><div class="lab">SCHEDULE</div><h2>대회 일정</h2></div>
+    <div class="tl">
+      <div class="tl-item"><div class="tl-mark"><span></span></div><div class="tl-body"><div class="d">~ 07.10(금) 23:59</div><div class="t">참가 접수</div><div class="s">온라인 신청서 제출</div></div></div>
+      <div class="tl-item"><div class="tl-mark"><span></span></div><div class="tl-body"><div class="d">07.13(월) ~ 07.26(일)</div><div class="t">예선 (온라인)</div><div class="s">종목별 온라인 예선 진행</div></div></div>
+      <div class="tl-item"><div class="tl-mark"><span></span></div><div class="tl-body"><div class="d">2026.08.01(토)</div><div class="t">본선 · 결승</div><div class="s">영주 국민체육센터 (오프라인)</div></div></div>
+      <div class="tl-item"><div class="tl-mark"><span></span></div><div class="tl-body"><div class="d">모집 종료 후</div><div class="t">세부 일정 안내 예정</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 부대행사 -->
+<section class="sec" id="side">
+  <div class="wrap">
+    <div class="sec-h"><div class="lab">EVENTS</div><h2>부대행사</h2><p>대회 현장에서 즐기는 다양한 체험 프로그램</p></div>
+    <div class="side-grid">
+      <div class="side-card"><div class="em">👕</div><div class="nm">티셔츠 만들기</div></div>
+      <div class="side-card"><div class="em">🎓</div><div class="nm">스포츠 학과<br>진학 상담</div></div>
+      <div class="side-card"><div class="em">🕹️</div><div class="nm">게임 체험존</div></div>
+      <div class="side-card"><div class="em">🚁</div><div class="nm">드론 체험</div></div>
+      <div class="side-card"><div class="em">🎁</div><div class="nm">플리마켓 · 포토존<br>럭키드로우 등</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 동영상 -->
+<section class="sec" id="video" style="background:var(--bg2);">
+  <div class="wrap">
+    <div class="sec-h"><div class="lab">VIDEO</div><h2>동영상</h2><p>지난 대회 영상과 하이라이트</p></div>
+    <div class="vid-grid" id="vid-grid"><div class="muted-box" style="grid-column:1/-1;">불러오는 중…</div></div>
+    <div style="text-align:center;margin-top:18px;"><a href="/video/20260623_0001" style="color:var(--cyan);font-size:14px;font-weight:700;">전체 동영상 보기 →</a></div>
+  </div>
+</section>
+
+<!-- 문의하기 -->
+<section class="sec" id="qna">
+  <div class="wrap qna">
+    <div class="sec-h"><div class="lab">Q&amp;A</div><h2>문의하기</h2></div>
+    <p>대회 관련 궁금한 점은 문의 게시판에 남겨주세요.<br>답변이 등록되면 이메일·푸시로 알려드립니다.</p>
+    <a class="qbtn" href="/inquiry/20260623_0001">💬 문의 게시판 바로가기</a>
+    <div class="qrecent" id="q-recent"></div>
+  </div>
+</section>
+
+<footer>
+  <div style="font-weight:800;color:#fff;font-size:15px;margin-bottom:8px;">2026 제3회 영주시장배 아마추어 e스포츠 대회</div>
+  <div>주최 · 주관 : <b>영주시</b> · 영주시 국민체육센터 (경북 영주시 가흥로 109)</div>
+  <div style="margin-top:12px;"><a href="https://docs.google.com/forms/d/e/1FAIpQLSfL2_gf0HYYb2k1lxB_ViEfak4_jMBTnkhy0OENScoF01fN_A/viewform?pli=1" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:700;">🎮 참가신청 하기</a></div>
+  <div style="margin-top:14px;font-size:11px;color:#5b647f;">© 2026 YEONGJU CITY. All rights reserved.</div>
+</footer>
+
+<!-- 비디오 플레이어 -->
+<div class="pov" id="pov">
+  <div class="pbox">
+    <div class="pclose"><button onclick="closeP()">×</button></div>
+    <div class="pframe" id="pframe"></div>
+  </div>
+</div>
+
+<script src="/assets/notif-popup.js"></script>
+<script>
+const SERIAL = '20260623_0001';
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function mclose(){document.getElementById('mnav').classList.remove('open');}
+
+// 동영상
+let VIDS=[];
+fetch(`/api/video/public/projects/${SERIAL}/videos`).then(r=>r.json()).then(d=>{
+  const g=document.getElementById('vid-grid');
+  VIDS=(d&&d.videos)||[];
+  if(!VIDS.length){g.innerHTML='<div class="muted-box" style="grid-column:1/-1;">등록된 동영상이 없습니다.</div>';return;}
+  g.innerHTML=VIDS.map((v,i)=>`<div class="vcard" onclick="playV(${i})">
+    <div class="vthumb"><img src="${esc(v.thumbnail_url)}" alt="" loading="lazy"><div class="pl"><span>▶</span></div></div>
+    <div class="vinfo"><div class="vt">${esc(v.title||'')}</div><div class="va">${esc(v.author||'')}</div></div></div>`).join('');
+}).catch(()=>{document.getElementById('vid-grid').innerHTML='<div class="muted-box" style="grid-column:1/-1;">동영상을 불러오지 못했습니다.</div>';});
+function playV(i){const v=VIDS[i];if(!v)return;document.getElementById('pframe').innerHTML=`<iframe src="${esc(v.embed_url)}?autoplay=1&rel=0" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>`;document.getElementById('pov').classList.add('open');}
+function closeP(){document.getElementById('pframe').innerHTML='';document.getElementById('pov').classList.remove('open');}
+document.getElementById('pov').addEventListener('click',e=>{if(e.target.id==='pov')closeP();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeP();});
+
+// 최근 공개 문의
+fetch(`/api/inquiry/public/projects/${SERIAL}/inquiries`).then(r=>r.json()).then(d=>{
+  const wrap=document.getElementById('q-recent');
+  const pub=((d&&d.inquiries)||[]).filter(q=>q.is_public).slice(0,5);
+  if(!pub.length){wrap.innerHTML='';return;}
+  wrap.innerHTML='<div style="font-size:13px;color:var(--mut);margin-top:8px;">최근 공개 문의</div>'+pub.map(q=>`
+    <a class="qitem" href="/inquiry/${SERIAL}?id=${q.id}">
+      <span class="qb" style="${q.answered?'background:#064e3b;color:#6ee7b7;':'background:#3b2f0b;color:#fcd34d;'}">${q.answered?'답변완료':'접수'}</span>
+      <span style="flex:1;color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(q.title)}</span>
+      <span style="font-size:11px;color:var(--mut);">${esc(q.created_date||'')}</span></a>`).join('');
+}).catch(()=>{});
+
+// 활성 알림 팝업 (등록된 알림/공지)
+if(window.NotifPopup) NotifPopup.auto(SERIAL);
+
+// 스무스 스크롤
+document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{const id=a.getAttribute('href').slice(1);const el=document.getElementById(id);if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});}}));
+</script>
+</body>
+</html>

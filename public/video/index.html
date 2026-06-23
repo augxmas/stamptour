@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>동영상</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.5;}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 16px 60px;}
+  h1{font-size:22px;color:#fff;}
+  .pname{font-size:13px;color:#94a3b8;margin:4px 0 20px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;}
+  .card:hover{transform:translateY(-3px);border-color:#64748b;}
+  .thumb{position:relative;width:100%;aspect-ratio:16/9;background:#0b1220;overflow:hidden;}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .play span{width:54px;height:54px;border-radius:50%;background:rgba(220,38,38,.92);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:4px;box-shadow:0 4px 14px rgba(0,0,0,.4);}
+  .info{padding:12px 14px;}
+  .vt{font-size:14px;font-weight:700;color:#f1f5f9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .va{font-size:12px;color:#94a3b8;margin-top:6px;}
+  .empty{text-align:center;color:#94a3b8;padding:60px 20px;background:#1e293b;border:1px dashed #334155;border-radius:14px;}
+  /* player modal */
+  .ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;}
+  .ov.open{display:flex;}
+  .player{width:100%;max-width:900px;}
+  .pbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+  .pbar .pt{font-size:15px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .x{flex:none;width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:20px;cursor:pointer;}
+  .frame{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;}
+  .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎬 동영상</h1>
+  <div class="pname" id="pname"></div>
+  <div class="grid" id="grid"><div class="empty">불러오는 중…</div></div>
+</div>
+
+<div class="ov" id="ov">
+  <div class="player">
+    <div class="pbar"><span class="pt" id="pt"></span><button class="x" onclick="closePlayer()">&times;</button></div>
+    <div class="frame" id="frame"></div>
+    <div style="margin-top:8px;text-align:right;"><a id="ytlink" href="#" target="_blank" rel="noopener" style="color:#93c5fd;font-size:13px;text-decoration:none;">YouTube에서 보기 ↗</a></div>
+  </div>
+</div>
+
+<script>
+const SERIAL = location.pathname.split('/').filter(Boolean)[1] || '';
+let VIDS = [];
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function load() {
+  try {
+    const r = await fetch(`/api/video/public/projects/${encodeURIComponent(SERIAL)}/videos`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    document.getElementById('pname').textContent = d.project ? d.project.name : '';
+    VIDS = d.videos || [];
+    render();
+  } catch(e) {
+    document.getElementById('grid').innerHTML = '<div class="empty">동영상을 불러오지 못했습니다.</div>';
+  }
+}
+function render() {
+  const g = document.getElementById('grid');
+  if (!VIDS.length) { g.innerHTML = '<div class="empty">등록된 동영상이 없습니다.</div>'; return; }
+  g.innerHTML = VIDS.map((v,i) => `
+    <div class="card" onclick="play(${i})">
+      <div class="thumb"><img src="${esc(v.thumbnail_url)}" alt="" loading="lazy"><div class="play"><span>▶</span></div></div>
+      <div class="info"><div class="vt">${esc(v.title||'(제목 없음)')}</div><div class="va">${esc(v.author||'')}</div></div>
+    </div>`).join('');
+}
+function play(i) {
+  const v = VIDS[i]; if (!v) return;
+  document.getElementById('pt').textContent = v.title || '';
+  document.getElementById('frame').innerHTML = `<iframe src="${esc(v.embed_url)}?autoplay=1&rel=0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+  document.getElementById('ytlink').href = v.watch_url;
+  document.getElementById('ov').classList.add('open');
+}
+function closePlayer(){ document.getElementById('frame').innerHTML=''; document.getElementById('ov').classList.remove('open'); }
+document.getElementById('ov').addEventListener('click', e=>{ if(e.target.id==='ov') closePlayer(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePlayer(); });
+load();
+</script>
+</body>
+</html>

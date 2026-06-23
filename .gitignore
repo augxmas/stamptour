@@ -15,3 +15,5 @@ sql/backups/
 *.log
 _tmp_*.js
 .DS_Store
+_ngrok.*
+_app.*

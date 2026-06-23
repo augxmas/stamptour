@@ -646,7 +646,7 @@
 <div class="topbar" id="topbar">
   <div class="brand" id="topbar-brand">모노라마 트래커 · 주관기관</div>
   <div class="user">
-    <span class="name"><span id="d-name"></span>님</span>
+    <span class="name"><span id="d-org" style="color:#64748b;font-weight:600;"></span><span id="d-name"></span>님</span>
     <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
     <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
   </div>
@@ -869,6 +869,8 @@
     <button class="tab-btn" id="tb-votemgr" onclick="switchTab('votemgr')">🏆 투표관리</button>
     <button class="tab-btn" id="tb-notifmng" onclick="switchTab('notifmng')">🔔 알림관리</button>
     <button class="tab-btn" id="tb-noticemng" onclick="switchTab('noticemng')">📢 공지사항관리</button>
+    <button class="tab-btn" id="tb-inquiry" onclick="switchTab('inquiry')">💬 문의사항</button>
+    <button class="tab-btn" id="tb-video" onclick="switchTab('video')">🎬 동영상</button>
     <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">🏪 가맹점관리</button>
     <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">💰 정산</button>
     <button class="tab-btn tab-cfg" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">📨 발송이력</button>
@@ -2066,6 +2068,7 @@
       <!-- 설문조사등록 sub (기존 내용) -->
       <div id="sv-sub-register" class="sv-sub-pane" style="display:none;">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-o btn-sm" onclick="backFromSurveyRegister()" title="설문조사현황으로 돌아가기">← 뒤로 돌아가기</button>
         <select id="sv-project" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;min-width:280px;" onchange="onSurveyProjectChange()">
           <option value="">— 프로젝트 선택 —</option>
         </select>
@@ -2659,6 +2662,102 @@
             <tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 문의사항 탭 -->
+  <div class="tab-panel" id="tab-inquiry">
+    <div class="panel-card">
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:13px;font-weight:700;color:#0c4a6e;white-space:nowrap;">🔗 문의사항 게시판 URL</span>
+        <select id="iq-url-project" onchange="onInquiryUrlProject()" style="border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;font-size:13px;min-width:240px;">
+          <option value="">- 프로젝트 선택 -</option>
+        </select>
+        <input id="iq-url-box" type="text" readonly placeholder="프로젝트를 선택하면 공유 URL이 표시됩니다"
+          style="flex:1;min-width:220px;border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;font-size:12px;background:#fff;color:#0f172a;">
+        <button class="btn btn-o btn-sm" id="iq-url-copy" onclick="copyInquiryBoardUrl()" disabled>📋 복사</button>
+        <a id="iq-url-open" href="#" target="_blank" rel="noopener" class="btn btn-o btn-sm" style="pointer-events:none;opacity:.5;">↗ 열기</a>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <input id="iq-name" type="text" placeholder="프로젝트명 또는 일련번호로 검색"
+          onkeydown="if(event.key==='Enter')loadInquiryList()"
+          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:300px;">
+        <select id="iq-status" onchange="loadInquiryList()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;">
+          <option value="">전체 상태</option>
+          <option value="open">미답변</option>
+          <option value="answered">답변완료</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadInquiryList()">검색</button>
+        <span id="iq-summary" style="font-size:12px;color:#64748b;margin-left:auto;"></span>
+      </div>
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table style="min-width:940px;">
+          <thead><tr>
+            <th>프로젝트</th>
+            <th>작성자</th>
+            <th style="text-align:center;">구분</th>
+            <th>제목</th>
+            <th style="text-align:center;">공개</th>
+            <th style="text-align:center;">상태</th>
+            <th style="text-align:center;white-space:nowrap;">작성일</th>
+            <th style="text-align:center;">답변</th>
+          </tr></thead>
+          <tbody id="iq-tbody">
+            <tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 동영상 탭 -->
+  <div class="tab-panel" id="tab-video">
+    <div class="panel-card">
+      <div class="fg" style="max-width:520px;">
+        <label>프로젝트 선택 <span class="req">*</span></label>
+        <select id="vid-project" onchange="onVideoProjectChange()">
+          <option value="">- 프로젝트를 선택하세요 -</option>
+        </select>
+      </div>
+      <div id="vid-body" style="display:none;">
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:700;color:#0c4a6e;white-space:nowrap;">🔗 동영상 게시판 URL</span>
+          <input id="vid-url-box" type="text" readonly style="flex:1;min-width:240px;border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;font-size:12px;background:#fff;color:#0f172a;">
+          <button class="btn btn-o btn-sm" onclick="copyVideoBoardUrl()">📋 복사</button>
+          <a id="vid-open" href="#" target="_blank" rel="noopener" class="btn btn-o btn-sm">↗ 열기</a>
+        </div>
+        <label style="display:block;font-size:13px;font-weight:700;color:#475569;margin-bottom:6px;">YouTube 주소 등록</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+          <input id="vid-input" type="text" placeholder="https://youtu.be/... 또는 watch / shorts 주소 붙여넣기"
+            style="flex:1;min-width:300px;border:1.5px solid #cbd5e1;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();previewVideo();}">
+          <button class="btn btn-o btn-sm" onclick="previewVideo()">🔍 메타데이터 확인</button>
+        </div>
+        <div id="vid-preview" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;"></div>
+        <div id="vid-msg" class="msg" style="font-size:12px;margin-bottom:6px;"></div>
+        <div style="border-top:1px solid #e2e8f0;padding-top:14px;">
+          <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:10px;">등록된 동영상 <span id="vid-count" style="color:#94a3b8;font-weight:500;"></span></div>
+          <div id="vid-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+            <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 문의 답변 모달 -->
+  <div class="modal-ov" id="modal-inquiry">
+    <div class="modal" style="width:92vw;max-width:580px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="card-header" style="flex-shrink:0;background:linear-gradient(135deg,#0f172a,#334155);">
+        <h2>💬 문의 답변</h2>
+        <button class="modal-close" onclick="closeInquiry()">×</button>
+      </div>
+      <div class="card-body" id="iq-detail" style="overflow-y:auto;flex:1;min-height:0;padding:18px;"></div>
+      <div style="flex-shrink:0;padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-o btn-sm" onclick="deleteInquiry()" style="color:#dc2626;border-color:#fca5a5;">🗑 삭제</button>
+        <button class="btn btn-o" onclick="closeInquiry()" style="margin-left:auto;">닫기</button>
+        <button class="btn btn-p" onclick="saveInquiryReply()">💾 답변 저장 · 알림</button>
       </div>
     </div>
   </div>
@@ -3787,7 +3886,7 @@ function switchTab(name) {
     if (btn.title) uiAlert(btn.title);
     return;
   }
-  ['proj','new','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
+  ['proj','new','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','inquiry','video','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
     document.getElementById('tb-'+t).classList.toggle('act', t===name);
     document.getElementById('tab-'+t).classList.toggle('act', t===name);
   });
@@ -3805,6 +3904,8 @@ function switchTab(name) {
   if (name === 'notifmng') loadNotifList();
   if (name === 'noticereg') loadNoticeProjects();
   if (name === 'noticemng') loadNoticeList();
+  if (name === 'inquiry') { loadInquiryList(); loadInquiryUrlProjects(); }
+  if (name === 'video') loadVideoProjects();
   if (name === 'tour') loadTourProjects();
   if (name === 'quiz') loadQuizProjects();
   if (name === 'survey') loadSurveyProjects();
@@ -4036,8 +4137,7 @@ async function doLogin() {
       if (started.length > 0) startVisitStatsRolling(started);
     } catch (e) { console.warn('[visit-stats rolling] 예외:', e); }
   }, 400);
-  document.getElementById('d-name').textContent = d.host?.name||'';
-  document.getElementById('topbar-brand').textContent = '모노라마 트래커 · 주관기관' + (d.host?.organization_name ? ' · ' + d.host.organization_name : '');
+  setHostTopbar(d.host?.organization_name, d.host?.name);
   show('sec-dashboard');
   startSessionWatch();
   // '내 프로젝트' 첫 진입 시 자동 조회
@@ -4115,6 +4215,13 @@ async function doForgot() {
   const d = await r.json();
   if (!r.ok) { setMsg('fo-msg','e',d.error||'요청에 실패했습니다.'); return; }
   setMsg('fo-msg','s',d.message);
+}
+
+// 상단바 — 조직명 + 담당자명 표시 (우상단)
+function setHostTopbar(org, name) {
+  const oe = document.getElementById('d-org');   if (oe) oe.textContent = org ? org + ' · ' : '';
+  const ne = document.getElementById('d-name');  if (ne) ne.textContent = name || '';
+  const tb = document.getElementById('topbar-brand'); if (tb) tb.textContent = '모노라마 트래커 · 주관기관';
 }
 
 // ── 로그아웃 ──
@@ -5888,8 +5995,7 @@ async function saveProfile() {
   } catch (e) { btn.disabled = false; setMsg('pf-host-msg', 'e', '저장에 실패했습니다.'); return; }
   btn.disabled = false;
   if (!r.ok) { setMsg('pf-host-msg', 'e', d.error || '저장에 실패했습니다.'); return; }
-  document.getElementById('d-name').textContent = v('pf-host-name');
-  document.getElementById('topbar-brand').textContent = '모노라마 트래커 · 주관기관' + (v('pf-host-org') ? ' · ' + v('pf-host-org') : '');
+  setHostTopbar(v('pf-host-org'), v('pf-host-name'));
   closeProfile();
   await uiAlert(d.message || '기본 정보가 저장되었습니다.');
 }
@@ -9279,6 +9385,17 @@ function switchSurveySub(name) {
   if (name === 'respondents') loadSurveyRespondents();
 }
 
+// 설문조사등록 → 뒤로 돌아가기 (미저장 변경 시 확인)
+async function backFromSurveyRegister() {
+  if (svDirty) {
+    const ok = await uiConfirm('저장하지 않은 변경사항이 있습니다.\n저장하지 않고 나가시겠습니까?',
+      { title: '뒤로 돌아가기', okText: '나가기', cancelText: '취소', danger: true });
+    if (!ok) return;
+    svDirty = false;
+  }
+  switchSurveySub('dashboard');
+}
+
 // ════════════════════════════════════════════════════════
 // 응답결과 (sub: results) — 질문별 응답 통계 분석
 // ════════════════════════════════════════════════════════
@@ -12024,6 +12141,261 @@ function previewNoticeRow(id) {
   if (window.NoticeBoard) NoticeBoard.preview({ title:n.title, content:n.content, pinned:n.pinned, created_date: String(n.created_at||'').slice(0,10) });
 }
 
+// ════════════════════════════════════════════════════════
+// 💬 문의사항 관리 (답변 → 이메일·푸시 알림)
+// ════════════════════════════════════════════════════════
+let inquiryListData = [];
+let inquiryCurrentId = null;
+let inquiryUrlProjectsPromise = null;
+
+// 문의사항 게시판 URL — 프로젝트 선택 → /inquiry/{serial}
+function loadInquiryUrlProjects() {
+  const sel = document.getElementById('iq-url-project');
+  if (!sel || sel.options.length > 1) return Promise.resolve();
+  if (inquiryUrlProjectsPromise) return inquiryUrlProjectsPromise;
+  inquiryUrlProjectsPromise = (async () => {
+    try {
+      const r = await fetch('/api/host/projects?page=1&size=100');
+      const d = await r.json();
+      (d.data || []).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = `${p.project_name} (${p.project_serial})`;
+        o.dataset.serial = p.project_serial;
+        sel.appendChild(o);
+      });
+    } catch (e) {}
+  })();
+  return inquiryUrlProjectsPromise;
+}
+function onInquiryUrlProject() {
+  const sel = document.getElementById('iq-url-project');
+  const o = sel.selectedOptions[0];
+  const serial = o ? (o.dataset.serial || '') : '';
+  const box = document.getElementById('iq-url-box');
+  const copy = document.getElementById('iq-url-copy');
+  const open = document.getElementById('iq-url-open');
+  if (!serial) { box.value=''; copy.disabled=true; open.href='#'; open.style.pointerEvents='none'; open.style.opacity='.5'; return; }
+  const url = location.origin + '/inquiry/' + serial;
+  box.value = url; copy.disabled=false; open.href=url; open.style.pointerEvents=''; open.style.opacity='';
+}
+function copyInquiryBoardUrl() {
+  const u = document.getElementById('iq-url-box').value; if (!u) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(u).then(() => uiAlert('문의사항 게시판 URL이 복사되었습니다.\n' + u), () => uiAlert(u));
+  } else uiAlert(u);
+}
+
+async function loadInquiryList() {
+  const tbody = document.getElementById('iq-tbody');
+  if (!tbody) return;
+  const name = document.getElementById('iq-name').value.trim();
+  const status = document.getElementById('iq-status').value;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</td></tr>';
+  try {
+    const qs = new URLSearchParams({ project_name:name, status }).toString();
+    const r = await fetch('/api/inquiry/host/inquiries?' + qs);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    inquiryListData = d.data || [];
+    const open = inquiryListData.filter(x => x.status !== 'answered').length;
+    document.getElementById('iq-summary').textContent = `전체 ${inquiryListData.length}건 · 미답변 ${open}건`;
+    if (!inquiryListData.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">등록된 문의가 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = inquiryListData.map(q => `<tr>
+      <td>${esc(q.project_name||'')}<br><span style="color:#94a3b8;font-size:11px;">${esc(q.project_serial||'')}</span></td>
+      <td style="font-size:12px;color:#475569;">${esc(q.author_email||'')}${q.author_name?`<br><span style="color:#94a3b8;">${esc(q.author_name)}</span>`:''}</td>
+      <td style="text-align:center;">${q.is_member?'<span class="badge bg">회원</span>':'<span class="badge bn">비회원</span>'}</td>
+      <td>${esc(q.title||'')}</td>
+      <td style="text-align:center;">${q.is_public?'<span class="badge" style="background:#dbeafe;color:#1e40af;">공개</span>':'<span class="badge bn">비공개</span>'}</td>
+      <td style="text-align:center;">${q.status==='answered'?'<span class="badge bg">답변완료</span>':'<span class="badge" style="background:#fef3c7;color:#92400e;">미답변</span>'}</td>
+      <td style="text-align:center;font-size:12px;white-space:nowrap;">${String(q.created_at||'').slice(0,10)}</td>
+      <td style="text-align:center;"><button class="btn ${q.status==='answered'?'btn-o':'btn-p'} btn-sm" onclick="openInquiryReply(${q.id})">${q.status==='answered'?'보기/수정':'답변하기'}</button></td>
+    </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</td></tr>';
+  }
+}
+
+function openInquiryReply(id) {
+  const q = inquiryListData.find(x => Number(x.id) === Number(id));
+  if (!q) return;
+  inquiryCurrentId = id;
+  const fmtDT = s => String(s||'').slice(0,16).replace('T',' ');
+  document.getElementById('iq-detail').innerHTML = `
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">${esc(q.project_name||'')} (${esc(q.project_serial||'')})</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      <span style="font-size:16px;font-weight:800;color:#0f172a;">${esc(q.title||'')}</span>
+      ${q.is_public?'<span class="badge" style="background:#dbeafe;color:#1e40af;">공개</span>':'<span class="badge bn">비공개</span>'}
+      ${q.is_member?'<span class="badge bg">회원</span>':'<span class="badge bn">비회원</span>'}
+    </div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">✉ ${esc(q.author_email||'')}${q.author_name?' · '+esc(q.author_name):''} · ${fmtDT(q.created_at)}</div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;white-space:pre-wrap;font-size:14px;color:#334155;margin-bottom:16px;">${esc(q.content||'(내용 없음)')}</div>
+    <label style="display:block;font-size:13px;font-weight:700;color:#166534;margin-bottom:6px;">💬 답변 ${q.status==='answered'?'<span style="font-weight:500;color:#94a3b8;">(저장 시 작성자에게 이메일·푸시 재발송)</span>':''}</label>
+    <textarea id="iq-reply" rows="6" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;resize:vertical;outline:none;" placeholder="답변 내용을 입력하세요.">${esc(q.admin_reply||'')}</textarea>`;
+  document.getElementById('modal-inquiry').classList.add('open');
+}
+function closeInquiry(){ const m=document.getElementById('modal-inquiry'); if(m) m.classList.remove('open'); }
+
+async function saveInquiryReply() {
+  if (!inquiryCurrentId) return;
+  const reply = document.getElementById('iq-reply').value.trim();
+  if (!reply) { uiAlert('답변 내용을 입력해 주세요.'); return; }
+  const ok = await uiConfirm('답변을 저장하고 작성자에게 알림(이메일·푸시)을 발송하시겠습니까?', { title:'답변 저장', okText:'저장·발송', cancelText:'취소' });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/inquiry/host/inquiries/${inquiryCurrentId}/reply`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reply }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert(d.message || '저장에 실패했습니다.'); return; }
+    closeInquiry(); loadInquiryList(); uiAlert('답변이 저장되고 작성자에게 알림이 발송되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류로 저장하지 못했습니다.'); }
+}
+
+async function deleteInquiry() {
+  if (!inquiryCurrentId) return;
+  const ok = await uiConfirm('이 문의를 삭제하시겠습니까?', { title:'문의 삭제', okText:'삭제', cancelText:'취소', danger:true });
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/inquiry/host/inquiries/${inquiryCurrentId}`, { method:'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert('삭제에 실패했습니다.'); return; }
+    closeInquiry(); loadInquiryList(); uiAlert('삭제되었습니다.');
+  } catch (e) { uiAlert('네트워크 오류'); }
+}
+
+// ════════════════════════════════════════════════════════
+// 🎬 동영상 (YouTube) 등록/관리
+// ════════════════════════════════════════════════════════
+let videoProjectsPromise = null;
+let videoPreviewUrl = null;
+
+function loadVideoProjects() {
+  const sel = document.getElementById('vid-project');
+  if (!sel || sel.options.length > 1) return Promise.resolve();
+  if (videoProjectsPromise) return videoProjectsPromise;
+  videoProjectsPromise = (async () => {
+    try {
+      const r = await fetch('/api/host/projects?page=1&size=100');
+      const d = await r.json();
+      (d.data || []).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = `${p.project_name} (${p.project_serial})`;
+        o.dataset.serial = p.project_serial;
+        sel.appendChild(o);
+      });
+    } catch (e) {}
+  })();
+  return videoProjectsPromise;
+}
+function currentVideoSerial() { const o = document.getElementById('vid-project').selectedOptions[0]; return o ? (o.dataset.serial || '') : ''; }
+
+function onVideoProjectChange() {
+  const body = document.getElementById('vid-body');
+  const pid = document.getElementById('vid-project').value;
+  if (!pid) { body.style.display = 'none'; return; }
+  body.style.display = '';
+  const serial = currentVideoSerial();
+  const url = location.origin + '/video/' + serial;
+  document.getElementById('vid-url-box').value = url;
+  document.getElementById('vid-open').href = url;
+  document.getElementById('vid-input').value = '';
+  document.getElementById('vid-preview').style.display = 'none';
+  document.getElementById('vid-msg').textContent = '';
+  videoPreviewUrl = null;
+  loadVideoList();
+}
+
+function copyVideoBoardUrl() {
+  const u = document.getElementById('vid-url-box').value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(u).then(() => uiAlert('게시판 URL이 복사되었습니다.\n' + u), () => uiAlert(u));
+  } else uiAlert(u);
+}
+
+async function previewVideo() {
+  const url = document.getElementById('vid-input').value.trim();
+  const prev = document.getElementById('vid-preview');
+  const msg = document.getElementById('vid-msg');
+  msg.style.color = '#dc2626'; msg.textContent = '';
+  if (!url) { msg.textContent = 'YouTube 주소를 입력해 주세요.'; return; }
+  prev.style.display = ''; prev.innerHTML = '<span style="color:#94a3b8;font-size:13px;">동영상 정보를 가져오는 중…</span>';
+  try {
+    const r = await fetch('/api/video/host/preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { prev.style.display = 'none'; msg.textContent = d.message || '동영상 정보를 가져오지 못했습니다.'; return; }
+    videoPreviewUrl = url;
+    prev.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <img src="${esc(d.thumbnail_url)}" style="width:170px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:14px;font-weight:700;color:#0f172a;">${esc(d.title)}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:4px;">📺 ${esc(d.author)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">video id: ${esc(d.video_id)}</div>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="addVideo()">＋ 이 동영상 등록</button>
+      </div>`;
+  } catch (e) { prev.style.display = 'none'; msg.textContent = '네트워크 오류'; }
+}
+
+async function addVideo() {
+  const pid = document.getElementById('vid-project').value;
+  if (!pid || !videoPreviewUrl) return;
+  try {
+    const r = await fetch(`/api/video/host/projects/${pid}/videos`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: videoPreviewUrl }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { uiAlert(d.message || '등록에 실패했습니다.'); return; }
+    document.getElementById('vid-input').value = '';
+    document.getElementById('vid-preview').style.display = 'none';
+    videoPreviewUrl = null;
+    loadVideoList();
+  } catch (e) { uiAlert('네트워크 오류로 등록하지 못했습니다.'); }
+}
+
+async function loadVideoList() {
+  const pid = document.getElementById('vid-project').value;
+  const serial = currentVideoSerial();
+  const wrap = document.getElementById('vid-list');
+  if (!pid || !wrap) return;
+  wrap.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px;">불러오는 중...</div>';
+  try {
+    const r = await fetch('/api/video/host/videos?project_name=' + encodeURIComponent(serial));
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    const list = (d.data || []).filter(v => String(v.project_id) === String(pid));
+    document.getElementById('vid-count').textContent = `(${list.length}개)`;
+    if (!list.length) { wrap.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:24px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;">등록된 동영상이 없습니다. 위에서 YouTube 주소를 등록해 보세요.</div>'; return; }
+    wrap.innerHTML = list.map(v => `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;${v.status!=='active'?'opacity:.55;':''}">
+        <a href="${esc(v.watch_url)}" target="_blank" rel="noopener" style="display:block;position:relative;aspect-ratio:16/9;background:#000;">
+          <img src="${esc(v.thumbnail_url)}" style="width:100%;height:100%;object-fit:cover;display:block;"></a>
+        <div style="padding:10px 12px;">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px;">${esc(v.title||'(제목 없음)')}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">${esc(v.author||'')}${v.status!=='active'?' · <b style="color:#92400e;">숨김</b>':''}</div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-o btn-sm" style="flex:1;" onclick="toggleVideoStatus(${v.id},'${v.status==='active'?'inactive':'active'}')">${v.status==='active'?'🙈 숨김':'👁 노출'}</button>
+            <button class="btn btn-o btn-sm" style="color:#dc2626;border-color:#fca5a5;" onclick="deleteVideo(${v.id})">🗑</button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (e) { wrap.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;padding:20px;">불러오지 못했습니다.</div>'; }
+}
+
+async function toggleVideoStatus(vid, status) {
+  const pid = document.getElementById('vid-project').value; if (!pid) return;
+  try { await fetch(`/api/video/host/projects/${pid}/videos/${vid}/status`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status }) }); } catch (e) {}
+  loadVideoList();
+}
+async function deleteVideo(vid) {
+  const pid = document.getElementById('vid-project').value; if (!pid) return;
+  const ok = await uiConfirm('이 동영상을 삭제하시겠습니까?', { title:'동영상 삭제', okText:'삭제', cancelText:'취소', danger:true });
+  if (!ok) return;
+  try { await fetch(`/api/video/host/projects/${pid}/videos/${vid}`, { method:'DELETE' }); } catch (e) {}
+  loadVideoList();
+}
+
 async function loadEmailTemplates() {
   const wrap = document.getElementById('mailtpl-list');
   if (!wrap) return;
@@ -14031,8 +14403,7 @@ function isMobileDevice() {
     // 이미 세션 있고 모바일이면 → 관리자 모바일 PWA 로
     if (isMobileDevice()) { location.replace('/admin/m'); return; }
     const d = await r.json();
-    const dn = document.getElementById('d-name'); if (dn) dn.textContent = d.host?.name||'';
-    const tb = document.getElementById('topbar-brand'); if (tb) tb.textContent = '모노라마 트래커 · 주관기관' + (d.host?.organization_name ? ' · ' + d.host.organization_name : '');
+    setHostTopbar(d.host?.organization_name, d.host?.name);
     show('sec-dashboard');
     // 로딩 placeholder 즉시 표시 — 빈 화면 방지
     const tbody = document.getElementById('proj-tbody');
@@ -14050,5 +14421,8 @@ function isMobileDevice() {
 <script src="/assets/notice-board.js"></script>
 <script src="/assets/grid-sort.js"></script>
 <script src="/assets/grid-columns.js"></script>
+<script src="/assets/session-guard.js"></script>
+<script src="/assets/i18n-dict.js"></script>
+<script src="/assets/i18n.js"></script>
 </body>
 </html>

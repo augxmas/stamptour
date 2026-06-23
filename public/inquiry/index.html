@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>문의사항</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;line-height:1.55;}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+  h1{font-size:22px;color:#0f172a;}
+  .pname{font-size:13px;color:#64748b;margin-bottom:18px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;border-radius:10px;padding:10px 16px;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#334155;}
+  .btn.p{background:#0f172a;color:#fff;border-color:#0f172a;}
+  .btn.p:hover{background:#1e293b;}
+  .btn.sm{padding:7px 12px;font-size:13px;}
+  .list{display:flex;flex-direction:column;gap:8px;}
+  .item{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .15s;}
+  .item:hover{border-color:#94a3b8;}
+  .item .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .item .ttl{font-size:15px;font-weight:700;color:#0f172a;}
+  .item .meta{font-size:12px;color:#94a3b8;margin-top:4px;}
+  .badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;}
+  .b-priv{background:#f1f5f9;color:#64748b;} .b-pub{background:#dbeafe;color:#1e40af;}
+  .b-ans{background:#dcfce7;color:#166534;} .b-open{background:#fef3c7;color:#92400e;}
+  .empty{text-align:center;color:#94a3b8;padding:40px;background:#fff;border:1px dashed #e2e8f0;border-radius:12px;}
+  /* modal */
+  .ov{display:none;position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.55);align-items:center;justify-content:center;padding:14px;}
+  .ov.open{display:flex;}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);}
+  .m-head{flex:none;display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid #e2e8f0;}
+  .m-head h2{font-size:16px;color:#0f172a;}
+  .x{width:30px;height:30px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:18px;cursor:pointer;}
+  .m-body{flex:1;min-height:0;overflow-y:auto;padding:18px;}
+  .fg{margin-bottom:14px;}
+  .fg label{display:block;font-size:13px;font-weight:700;color:#475569;margin-bottom:5px;}
+  .fg .req{color:#dc2626;}
+  input[type=text],input[type=email],input[type=password],textarea{width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;}
+  input:focus,textarea:focus{border-color:#0f172a;}
+  textarea{resize:vertical;min-height:120px;}
+  .err{color:#dc2626;font-size:12px;margin-top:5px;display:none;}
+  .err.show{display:block;}
+  input.invalid{border-color:#fca5a5;background:#fef2f2;}
+  .hint{font-size:11px;color:#94a3b8;font-weight:500;}
+  .radios{display:flex;gap:14px;}
+  .radios label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;}
+  .m-foot{flex:none;display:flex;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;}
+  .reply{margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;}
+  .reply .lab{font-size:12px;font-weight:800;color:#166534;margin-bottom:6px;}
+  .content-box{white-space:pre-wrap;color:#334155;font-size:14px;}
+  .pininfo{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400e;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>💬 문의사항</h1>
+    <button class="btn p" onclick="openWrite()">✏ 문의 작성</button>
+  </div>
+  <div class="pname" id="pname"></div>
+  <div class="list" id="list"><div class="empty">불러오는 중…</div></div>
+</div>
+
+<!-- 작성/수정 모달 -->
+<div class="ov" id="ov-write">
+  <div class="modal">
+    <div class="m-head" style="position:relative;justify-content:center;"><h2 id="write-title" style="color:#1d4ed8;text-align:center;">문의 작성</h2><button class="x" onclick="closeWrite()" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);">&times;</button></div>
+    <div class="m-body">
+      <input type="hidden" id="w-edit-id" value="">
+      <div class="fg">
+        <label>이메일 <span class="req">*</span> <span class="hint" id="w-email-hint"></span></label>
+        <input id="w-email" type="email" placeholder="you@example.com" oninput="validateEmail()" onblur="validateEmail()">
+        <div class="err" id="w-email-err">올바른 이메일 형식이 아닙니다.</div>
+      </div>
+      <div class="fg"><label>제목 <span class="req">*</span></label>
+        <input id="w-title" type="text" maxlength="255" placeholder="문의 제목"></div>
+      <div class="fg"><label>내용 <span class="req">*</span></label>
+        <textarea id="w-content" placeholder="문의 내용을 입력하세요."></textarea></div>
+      <div class="fg"><label>공개 설정</label>
+        <div class="radios">
+          <label><input type="radio" name="w-pub" value="0" checked> 🔒 비공개 (기본)</label>
+          <label><input type="radio" name="w-pub" value="1"> 🌐 공개</label>
+        </div>
+      </div>
+      <div class="fg" id="w-pin-fg">
+        <label>비밀번호(4자리) <span class="req">*</span> <span class="hint">내 글 열람·수정 시 사용</span></label>
+        <input id="w-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="letter-spacing:6px;max-width:140px;text-align:center;">
+        <div class="err" id="w-pin-err">숫자 4자리를 입력해 주세요.</div>
+      </div>
+      <div class="err" id="w-msg" style="margin-top:0;"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeWrite()">취소</button>
+      <button class="btn p" style="flex:1;justify-content:center;" id="w-submit" onclick="submitWrite()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 보기 모달 -->
+<div class="ov" id="ov-view">
+  <div class="modal">
+    <div class="m-head"><h2 id="v-title">문의</h2><button class="x" onclick="closeView()">&times;</button></div>
+    <div class="m-body" id="v-body"></div>
+    <div class="m-foot" id="v-foot"></div>
+  </div>
+</div>
+
+<!-- PIN 입력 모달 (비공개/수정 열람) -->
+<div class="ov" id="ov-pin">
+  <div class="modal" style="max-width:380px;">
+    <div class="m-head"><h2>비밀번호 확인</h2><button class="x" onclick="closePin()">&times;</button></div>
+    <div class="m-body">
+      <div class="pininfo">🔒 비공개 글입니다. 작성 시 입력한 <b>비밀번호 4자리</b>를 입력하세요.</div>
+      <input id="p-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="letter-spacing:8px;text-align:center;font-size:18px;">
+      <div class="err" id="p-err"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn" style="flex:1;" onclick="closePin()">취소</button>
+      <button class="btn p" style="flex:1;" onclick="submitPin()">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SERIAL = location.pathname.split('/').filter(Boolean)[1] || '';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let LIST = [];
+let memberEmail = null;       // 회원(사전/현장등록자) 이메일
+let pinContext = null;        // {id, mode:'view'|'edit'}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// 회원 이메일 자동 세팅 (visitor 앱 localStorage 공유)
+try {
+  const raw = localStorage.getItem('visitor_save_' + SERIAL);
+  const d = raw ? JSON.parse(raw) : null;
+  if (d && d.email) memberEmail = String(d.email);
+} catch(e){}
+
+async function loadList() {
+  try {
+    const r = await fetch(`/api/inquiry/public/projects/${encodeURIComponent(SERIAL)}/inquiries`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw 0;
+    document.getElementById('pname').textContent = d.project ? d.project.name : '';
+    LIST = d.inquiries || [];
+    renderList();
+    // 이메일 링크로 특정 글 자동 열기
+    const qid = new URLSearchParams(location.search).get('id');
+    if (qid) openItem(Number(qid));
+  } catch(e) {
+    document.getElementById('list').innerHTML = '<div class="empty">문의 목록을 불러오지 못했습니다.</div>';
+  }
+}
+function renderList() {
+  const el = document.getElementById('list');
+  if (!LIST.length) { el.innerHTML = '<div class="empty">등록된 문의가 없습니다. 첫 문의를 작성해 보세요.</div>'; return; }
+  el.innerHTML = LIST.map(q => `
+    <div class="item" onclick="openItem(${q.id})">
+      <div class="row1">
+        <span class="badge ${q.is_public?'b-pub':'b-priv'}">${q.is_public?'공개':'🔒 비공개'}</span>
+        <span class="badge ${q.answered?'b-ans':'b-open'}">${q.answered?'답변완료':'접수'}</span>
+        <span class="ttl">${esc(q.title)}</span>
+      </div>
+      <div class="meta">${esc(q.author_masked)} · ${esc(q.created_date)}</div>
+    </div>`).join('');
+}
+
+function openItem(id) {
+  const q = LIST.find(x => Number(x.id) === Number(id));
+  if (!q) return;
+  if (q.is_public) { showView({ ...q, content: q.content, admin_reply: q.admin_reply, replied_date: q.replied_date }); }
+  else { pinContext = { id, mode: 'view' }; openPin(); }
+}
+
+// ── 보기 모달 ──
+function showView(q) {
+  document.getElementById('v-title').textContent = q.title || '문의';
+  let html = `<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">${esc(q.author_masked||'')} · ${esc(q.created_date||'')} · ${q.is_public?'공개':'🔒 비공개'}</div>`;
+  html += `<div class="content-box">${esc(q.content||'')}</div>`;
+  if (q.admin_reply) {
+    html += `<div class="reply"><div class="lab">💬 관리자 답변 ${q.replied_date?('· '+esc(q.replied_date)):''}</div><div class="content-box">${esc(q.admin_reply)}</div></div>`;
+  } else {
+    html += `<div style="margin-top:14px;font-size:13px;color:#94a3b8;">아직 답변이 등록되지 않았습니다.</div>`;
+  }
+  document.getElementById('v-body').innerHTML = html;
+  // 비공개 글(=PIN으로 열람한 본인 글)이면 수정 버튼
+  const foot = document.getElementById('v-foot');
+  if (q.__owner) {
+    foot.innerHTML = `<button class="btn" style="flex:1;" onclick="closeView()">닫기</button><button class="btn p" style="flex:1;" onclick="editFromView(${q.id})">✏ 수정</button>`;
+    window.__viewItem = q;
+  } else {
+    foot.innerHTML = `<button class="btn" style="flex:1;" onclick="closeView()">닫기</button>`;
+  }
+  document.getElementById('ov-view').classList.add('open');
+}
+function closeView(){ document.getElementById('ov-view').classList.remove('open'); }
+
+// ── PIN 모달 ──
+function openPin(){ document.getElementById('p-pin').value=''; document.getElementById('p-err').textContent=''; document.getElementById('p-err').classList.remove('show'); document.getElementById('ov-pin').classList.add('open'); setTimeout(()=>document.getElementById('p-pin').focus(),50); }
+function closePin(){ document.getElementById('ov-pin').classList.remove('open'); }
+async function submitPin() {
+  const pin = document.getElementById('p-pin').value.trim();
+  const errEl = document.getElementById('p-err');
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent='숫자 4자리를 입력해 주세요.'; errEl.classList.add('show'); return; }
+  try {
+    const r = await fetch(`/api/inquiry/public/inquiries/${pinContext.id}/verify`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { errEl.textContent = d.message || '비밀번호가 일치하지 않습니다.'; errEl.classList.add('show'); return; }
+    closePin();
+    const q = { ...d.inquiry, __owner: true, __pin: pin };
+    if (pinContext.mode === 'edit') openEditFor(q);
+    else showView(q);
+  } catch(e) { errEl.textContent='네트워크 오류'; errEl.classList.add('show'); }
+}
+
+// ── 작성/수정 모달 ──
+function validateEmail() {
+  const el = document.getElementById('w-email'), err = document.getElementById('w-email-err');
+  const v = el.value.trim();
+  if (v && !EMAIL_RE.test(v)) { el.classList.add('invalid'); err.classList.add('show'); return false; }
+  el.classList.remove('invalid'); err.classList.remove('show'); return true;
+}
+function openWrite() {
+  document.getElementById('write-title').textContent = '문의 작성';
+  document.getElementById('w-edit-id').value = '';
+  document.getElementById('w-title').value = '';
+  document.getElementById('w-content').value = '';
+  document.getElementById('w-pin').value = '';
+  document.querySelector('input[name=w-pub][value="0"]').checked = true;
+  document.getElementById('w-msg').textContent = '';
+  document.getElementById('w-pin-fg').style.display = '';
+  document.getElementById('w-submit').textContent = '등록';
+  const email = document.getElementById('w-email'), hint = document.getElementById('w-email-hint');
+  if (memberEmail) { email.value = memberEmail; email.readOnly = true; email.style.background='#f8fafc'; hint.textContent='(등록회원 — 자동 설정됨)'; }
+  else { email.value=''; email.readOnly=false; email.style.background=''; hint.textContent='(비회원 — 직접 입력)'; }
+  validateEmail();
+  document.getElementById('ov-write').classList.add('open');
+}
+function closeWrite(){ document.getElementById('ov-write').classList.remove('open'); }
+
+function openEditFor(q) {
+  document.getElementById('write-title').textContent = '문의 수정';
+  document.getElementById('w-edit-id').value = q.id;
+  document.getElementById('w-title').value = q.title || '';
+  document.getElementById('w-content').value = q.content || '';
+  document.querySelector(`input[name=w-pub][value="${q.is_public?1:0}"]`).checked = true;
+  document.getElementById('w-pin').value = q.__pin || '';
+  document.getElementById('w-pin-fg').style.display = 'none';   // 수정은 이미 PIN 확인됨
+  document.getElementById('w-msg').textContent = '';
+  document.getElementById('w-submit').textContent = '수정 저장';
+  const email = document.getElementById('w-email'), hint = document.getElementById('w-email-hint');
+  email.value = q.author_masked || ''; email.readOnly = true; email.style.background='#f8fafc'; hint.textContent='(수정 불가)';
+  document.getElementById('ov-write').classList.add('open');
+  window.__editPin = q.__pin;
+}
+function editFromView(id){ closeView(); openEditFor(window.__viewItem); }
+
+async function submitWrite() {
+  const editId = document.getElementById('w-edit-id').value;
+  const title = document.getElementById('w-title').value.trim();
+  const content = document.getElementById('w-content').value;
+  const isPublic = document.querySelector('input[name=w-pub]:checked').value === '1';
+  const msg = document.getElementById('w-msg');
+  msg.textContent='';
+  if (!title) { msg.textContent='제목을 입력해 주세요.'; return; }
+  if (!content.trim()) { msg.textContent='내용을 입력해 주세요.'; return; }
+
+  if (editId) {
+    // 수정 (PIN 이미 확인)
+    try {
+      const r = await fetch(`/api/inquiry/public/inquiries/${editId}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pin: window.__editPin, title, content, is_public: isPublic }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) { msg.textContent = d.message || '수정에 실패했습니다.'; return; }
+      closeWrite(); await loadList(); alert('수정되었습니다.');
+    } catch(e){ msg.textContent='네트워크 오류'; }
+    return;
+  }
+
+  // 신규
+  const email = document.getElementById('w-email').value.trim();
+  const pin = document.getElementById('w-pin').value.trim();
+  if (!EMAIL_RE.test(email)) { validateEmail(); msg.textContent='올바른 이메일을 입력해 주세요.'; return; }
+  if (!/^\d{4}$/.test(pin)) { document.getElementById('w-pin-err').classList.add('show'); msg.textContent='비밀번호 4자리를 입력해 주세요.'; return; }
+  try {
+    const r = await fetch(`/api/inquiry/public/projects/${encodeURIComponent(SERIAL)}/inquiries`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, title, content, is_public: isPublic, pin }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { msg.textContent = d.message || '등록에 실패했습니다.'; return; }
+    closeWrite(); await loadList();
+    alert('문의가 등록되었습니다.' + (isPublic ? '' : '\n비공개 글은 입력한 비밀번호 4자리로 열람할 수 있습니다.'));
+  } catch(e){ msg.textContent='네트워크 오류로 등록하지 못했습니다.'; }
+}
+
+[document.getElementById('ov-write'),document.getElementById('ov-view'),document.getElementById('ov-pin')].forEach(ov=>{
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+loadList();
+</script>
+</body>
+</html>

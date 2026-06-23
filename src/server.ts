@@ -20,6 +20,8 @@ import voteRouter from "./routes/vote";
 import notificationRouter from "./routes/notification";
 import noticeRouter from "./routes/notice";
 import gridPrefsRouter from "./routes/grid-prefs";
+import inquiryRouter from "./routes/inquiry";
+import videoRouter from "./routes/video";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
@@ -88,6 +90,8 @@ app.use("/api/vote", voteRouter);                 // 투표/수상 등급 설정
 app.use("/api/notification", notificationRouter); // 랜딩 팝업 알림 등록/관리 + 공개 조회
 app.use("/api/notice", noticeRouter);             // 공지사항 등록/관리 + 공개 조회
 app.use("/api/grid-prefs", gridPrefsRouter);      // 사용자별 그리드 컬럼 설정(표시/순서)
+app.use("/api/inquiry", inquiryRouter);           // 문의사항 작성/관리 + 공개 게시판
+app.use("/api/video", videoRouter);               // 동영상(YouTube) 등록/관리 + 공개 게시판
 
 // 참가기관 로그인 — 정적 미들웨어보다 먼저 처리 (public/partner/index.html 자동 서빙 차단)
 app.get(["/partner", "/partner/"], (_req, res) => {
@@ -285,6 +289,14 @@ app.get("/partner/:serial", (_req, res) => {
 });
 app.get("/survey/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "survey", "index.html"));
+});
+// 문의사항 공개 게시판 (홈페이지 메뉴 링크용 URL)
+app.get("/inquiry/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "inquiry", "index.html"));
+});
+// 동영상 공개 게시판 (프로젝트별 YouTube 리스트 URL)
+app.get("/video/:serial", (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "video", "index.html"));
 });
 
 // 루트 접근 → 대표 랜딩 페이지로 리다이렉트

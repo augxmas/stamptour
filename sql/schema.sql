@@ -584,6 +584,47 @@ CREATE TABLE IF NOT EXISTS user_grid_prefs (
   UNIQUE KEY uq_user_grid (user_type, user_id, grid_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 문의사항 (회원/비회원 작성 + 관리자 답글, 공개/비공개, 수정용 PIN)
+CREATE TABLE IF NOT EXISTS project_inquiries (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  visitor_id BIGINT NULL,                       -- 회원(방문자) 매칭 시 푸시 발송용
+  author_email VARCHAR(190) NOT NULL,
+  author_name VARCHAR(100) NULL,
+  is_member TINYINT(1) NOT NULL DEFAULT 0,      -- 사전/현장등록자 여부
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  is_public TINYINT(1) NOT NULL DEFAULT 0,      -- 기본 비공개
+  edit_pin CHAR(4) NOT NULL,                    -- 본인 글 수정 확인용 4자리
+  admin_reply TEXT NULL,
+  replied_at DATETIME NULL,
+  status ENUM('open','answered') NOT NULL DEFAULT 'open',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_inq_project (project_id),
+  KEY idx_inq_email (author_email),
+  CONSTRAINT fk_inq_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 동영상 (프로젝트별 YouTube 등록 — oEmbed 메타데이터 + 게시판)
+CREATE TABLE IF NOT EXISTS project_videos (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  video_id VARCHAR(32) NOT NULL,
+  youtube_url VARCHAR(500) NOT NULL,
+  title VARCHAR(300) NULL,
+  author VARCHAR(200) NULL,
+  thumbnail_url VARCHAR(500) NULL,
+  status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_video_project (project_id),
+  CONSTRAINT fk_video_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DELIMITER //
 
 DROP PROCEDURE IF EXISTS sp_update_project_statuses //

@@ -20,29 +20,37 @@
   // 알림 카드 1개 생성 (닫기/오늘안보기 핸들러 포함)
   function buildCard(data, ctx) {
     ctx = ctx || {};
+    var hasImg = !!data.image_url;
     var width = ctx.width || 320;
     var card = document.createElement("div");
     card.className = "notif-pop-card";
+    // 이미지가 있으면 카드를 이미지 크기에 맞춤(뷰포트 내), 없으면 고정폭
     card.style.cssText =
-      "background:#fff;border-radius:14px;width:" + width + "px;max-width:calc(100vw - 32px);" +
-      "max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;" +
-      "box-shadow:0 16px 40px rgba(0,0,0,.3);pointer-events:auto;";
+      "position:relative;background:#fff;border-radius:14px;overflow:hidden;" +
+      "display:flex;flex-direction:column;box-shadow:0 16px 40px rgba(0,0,0,.3);pointer-events:auto;" +
+      "max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);" +
+      (hasImg ? "width:fit-content;width:-moz-fit-content;" : ("width:" + width + "px;"));
 
-    var img = data.image_url
-      ? '<img src="' + esc(data.image_url) + '" alt="" style="display:block;width:100%;border-radius:10px;">'
+    var img = hasImg
+      ? '<img src="' + esc(data.image_url) + '" alt="" style="display:block;width:auto;height:auto;max-width:calc(100vw - 24px);">'
       : "";
-    var title = data.title
-      ? '<div style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:' + (img ? "12px" : "0") + ';padding-right:28px;">' + esc(data.title) + "</div>"
+    // 이미지형 알림은 이미지만 노출 — 제목/내용은 관리용이라 팝업에 표시하지 않음.
+    // 이미지가 없는 경우(예: '알림으로 보이기' 공지)에만 제목/내용을 표시.
+    var title = (!hasImg && data.title)
+      ? '<div style="font-size:16px;font-weight:800;color:#0f172a;padding-right:28px;">' + esc(data.title) + "</div>"
       : "";
-    var content = data.content
-      ? '<div style="font-size:13.5px;color:#475569;line-height:1.6;white-space:pre-wrap;margin-top:' + (img || title ? "12px" : "0") + ';">' + esc(data.content) + "</div>"
+    var content = (!hasImg && data.content)
+      ? '<div style="font-size:13.5px;color:#475569;line-height:1.6;white-space:pre-wrap;' + (title ? "margin-top:8px;" : "") + '">' + esc(data.content) + "</div>"
       : "";
+    var textBlock = (title || content)
+      ? '<div style="padding:18px;">' + title + content + "</div>"
+      : "";
+    var closeBtn =
+      '<button class="np-x" aria-label="닫기" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(15,23,42,.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;z-index:3;">&times;</button>';
 
     card.innerHTML =
-      '<div style="position:relative;flex:1;min-height:0;overflow-y:auto;padding:18px;">' +
-        '<button class="np-x" aria-label="닫기" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;font-size:17px;line-height:1;cursor:pointer;z-index:2;">&times;</button>' +
-        title + img + content +
-      "</div>" +
+      closeBtn +
+      '<div style="flex:1;min-height:0;overflow-y:auto;">' + img + textBlock + "</div>" +
       '<div style="flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:9px 14px;border-top:1px solid #f1f5f9;background:#f8fafc;">' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;cursor:pointer;user-select:none;">' +
           '<input type="checkbox" class="np-today" style="width:15px;height:15px;cursor:pointer;"> 오늘 하루 안 보기</label>' +
