@@ -30,6 +30,28 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+const errorPageDir = path.join(process.cwd(), "public", "errors");
+
+function acceptsHtml(req: express.Request): boolean {
+  return !req.path.startsWith("/api/") && req.accepts(["html", "json"]) === "html";
+}
+
+function sendErrorPage(
+  req: express.Request,
+  res: express.Response,
+  status: 404 | 500,
+  payload: { error: string; message: string },
+): void {
+  if (!acceptsHtml(req)) {
+    res.status(status).json(payload);
+    return;
+  }
+
+  res.status(status).sendFile(path.join(errorPageDir, `${status}.html`), (err) => {
+    if (!err || res.headersSent) return;
+    res.status(status).type("text/plain").send(payload.message);
+  });
+}
 
 const MySQLStore = MySQLStoreFactory(session as any);
 const sessionStore = new MySQLStore(
@@ -273,7 +295,7 @@ app.get("/landing/:serial", (req, res) => {
   const fallback = path.join(process.cwd(), "public", "landing", "index.html");
   if (require("fs").existsSync(specific)) { res.sendFile(specific); return; }
   if (require("fs").existsSync(fallback)) { res.sendFile(fallback); return; }
-  res.status(404).send("Landing page not found");
+  sendErrorPage(req, res, 404, { error: "not_found", message: "Landing page not found" });
 });
 app.get("/vote/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "vote", "index.html"));
@@ -301,13 +323,17 @@ app.get("/video/:serial", (_req, res) => {
 
 // 루트 접근 → 대표 랜딩 페이지로 리다이렉트
 app.get("/", (_req, res) => {
-  res.redirect("/landing/20260606_0001/");
+  res.redirect("/landing/20260623_0001/");
 });
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((req, res) => {
+  sendErrorPage(req, res, 404, { error: "not_found", message: "Not found" });
+});
+
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[server error]", err);
   if (res.headersSent) return;
-  res.status(500).json({ error: "internal_server_error", message: err.message });
+  sendErrorPage(req, res, 500, { error: "internal_server_error", message: err.message });
 });
 
 // 프로젝트 상태 일일 자동 전이.
@@ -326,5 +352,5 @@ setInterval(() => autoUpdateProjectStatuses().catch(console.error), 60 * 60 * 10
 scheduleProjectEndingNotifications();
 
 app.listen(port, () => {
-  console.log(`Tracker server started at http://localhost:${port}`);
+  console.log(`Server started at http://clan.maumena.co.kr`);
 });

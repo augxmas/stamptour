@@ -13,6 +13,7 @@ sql/backups/
 
 # 로그/임시
 *.log
+*.pem
 _tmp_*.js
 .DS_Store
 _ngrok.*
