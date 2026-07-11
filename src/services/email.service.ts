@@ -190,6 +190,7 @@ export async function sendSupervisorNewHostNotification(params: {
   organizationName: string | null;
   bizNo: string | null;
   hostId: number;
+  hostSerial?: string;
 }): Promise<void> {
   const supervisorEmail = process.env.SUPERVISOR_EMAIL ?? "";
   if (!supervisorEmail) return;
@@ -203,11 +204,12 @@ export async function sendSupervisorNewHostNotification(params: {
   await sendEmail({
     templateKey: "supervisor_new_host",
     to: supervisorEmail,
-    subject: "[모노라마 트래커] 신규 Host 가입 신청 확인 요청",
+    subject: "[Tour Tracker] 신규 Host 가입 신청 확인 요청",
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
       <h2 style="color:#2563eb;">신규 Host 가입 신청</h2>
       <p>새로운 Host 가입 신청이 접수되었습니다. 아래 내용을 확인하고 승인 또는 취소 처리해 주세요.</p>
       <table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;width:100%;margin:16px 0;">
+        <tr><td style="background:#f8fafc;font-weight:600;">일련번호</td><td>${params.hostSerial || "-"}</td></tr>
         <tr><td style="background:#f8fafc;font-weight:600;">담당자명</td><td>${params.hostName}</td></tr>
         <tr><td style="background:#f8fafc;font-weight:600;">이메일</td><td>${params.hostEmail}</td></tr>
         <tr><td style="background:#f8fafc;font-weight:600;">소속기관</td><td>${params.organizationName ?? "-"}</td></tr>
@@ -222,6 +224,7 @@ export async function sendSupervisorNewHostNotification(params: {
     vars: {
       hostName: params.hostName,
       hostEmail: params.hostEmail,
+      hostSerial: params.hostSerial || "-",
       organizationName: params.organizationName || "-",
       bizNo: bizNoFormatted,
       reviewLink,
@@ -293,7 +296,7 @@ export async function sendSupervisorQuoteNotification(params: {
   await sendEmail({
     templateKey: "supervisor_quote_sent",
     to: supervisorEmail,
-    subject: `[모노라마 트래커] 견적서 발송 알림 - ${params.projectName}`,
+    subject: `[Tour Tracker] 견적서 발송 알림 - ${params.projectName}`,
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
       <h2 style="color:#2563eb;">견적서 발송 알림</h2>
       <p>아래 프로젝트에 대한 견적서가 담당자에게 발송되었습니다.</p>
@@ -525,7 +528,7 @@ export async function sendSupervisorNewMerchantNotification(params: {
   await sendEmail({
     templateKey: "supervisor_new_merchant",
     to: supervisorEmail,
-    subject: "[모노라마 트래커] 신규 가맹점 가입 신청 확인 요청",
+    subject: "[Tour Tracker] 신규 가맹점 가입 신청 확인 요청",
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
       <h2 style="color:#2563eb;">신규 가맹점 가입 신청</h2>
       <p>새로운 가맹점 가입 신청이 접수되었습니다. 아래 내용을 확인하고 승인 또는 취소 처리해 주세요.</p>
@@ -554,7 +557,7 @@ export async function sendProjectSupportRequestEmail(hostEmail: string, hostName
   await sendEmail({
     templateKey: "project_support_request",
     to: hostEmail,
-    subject: `[모노라마 트래커] 가맹점 프로젝트 지원 요청 - ${projectName}`,
+    subject: `[Tour Tracker] 가맹점 프로젝트 지원 요청 - ${projectName}`,
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
       <h2 style="color:#2563eb;">가맹점 프로젝트 지원 요청</h2>
       <p>${hostName} 담당자님,</p>
@@ -633,7 +636,7 @@ export async function sendHostNewApplicationEmail(params: {
   await sendEmail({
     templateKey: "host_new_application",
     to: params.hostEmail,
-    subject: `[모노라마 트래커] 가맹점 프로젝트 지원 신청 - ${params.projectName}`,
+    subject: `[Tour Tracker] 가맹점 프로젝트 지원 신청 - ${params.projectName}`,
     html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;">
       <h2 style="color:#2563eb;">가맹점 프로젝트 지원 신청</h2>
       <p>${params.hostName} 담당자님,</p>

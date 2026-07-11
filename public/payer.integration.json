@@ -1,0 +1,24 @@
+{
+  "event": "guest.payer.register.requested",
+  "payer": {
+    "host_serial": "20260702_H001",
+    "fields_json": {
+      "guest_serial": "20260705_0001",
+      "guest_name": "Somchai Prasert",
+      "nationality": "Thailand",
+      "mobile_phone": "66874567707",
+      "email": "guest@example.com",
+      "gender": "Male",
+      "birth_date": "19870703",
+      "room_no": "1205",
+      "stay_start": "20260705",
+      "stay_end": "20260708",
+      "stay_period": "3",
+      "card_holder": "Somchai Prasert",
+      "card_brand": "Visa",
+      "card_number": "4111111111111111",
+      "card_expiry": "202812",
+      "card_approval_no": "123"
+    }
+  }
+}

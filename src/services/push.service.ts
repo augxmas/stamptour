@@ -70,7 +70,7 @@ export async function sendVisitorPush(
 // Gift 사용(소진) 완료 알림
 export async function sendGiftUsedPush(visitorId: number, url?: string): Promise<void> {
   await sendVisitorPush(visitorId, {
-    title: "모노라마 트래커",
+    title: "Tour Tracker",
     body: "Gift 사용이 완료되었습니다.",
     url: url || "/",
   });

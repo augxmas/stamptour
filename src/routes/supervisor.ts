@@ -7,6 +7,7 @@ import pool from "../config/database";
 import { requireSupervisor } from "../middleware/auth";
 import { createQrZip, generateProjectQrs } from "../services/qr.service";
 import { sendHostStatusEmail, sendMerchantStatusEmail, sendProjectSupportRequestEmail, sendEmail } from "../services/email.service";
+import { absoluteUploadUrl, sendMerchantApprovalRequest } from "../services/roampay.service";
 import { encKey, dec, ENC } from "../utils/encrypt";
 
 const router = Router();
@@ -103,6 +104,7 @@ router.get("/me", requireSupervisor, (req, res) => {
 
 const HOST_SORT_COLS: Record<string, string> = {
   id: "h.id",
+  host_serial: "h.host_serial",
   organization_name: "h.organization_name",
   biz_no: "h.biz_no",
   status: "h.status",
@@ -147,7 +149,7 @@ router.get("/hosts", requireSupervisor, async (req, res) => {
   for (const r of byStatusRows as any[]) status_counts[String(r.status)] = Number(r.cnt);
 
   const [rows] = await pool.execute(
-    `SELECT h.id,
+    `SELECT h.id, h.host_serial,
             ${dec("h.host_name")}, ${dec("h.host_email")},
             ${dec("h.mobile_phone")}, ${dec("h.phone")},
             h.organization_name, h.biz_no, h.biz_cert_path, h.biz_cert_name,
@@ -175,7 +177,7 @@ router.get("/hosts/export", requireSupervisor, async (req, res) => {
   const { where, params } = buildHostWhere(q, k);
 
   const [rows] = await pool.execute(
-    `SELECT h.id,
+    `SELECT h.id, h.host_serial,
             ${dec("h.host_name")}, ${dec("h.host_email")},
             ${dec("h.mobile_phone")}, ${dec("h.phone")},
             h.organization_name, h.biz_no, h.status, h.status_reason,
@@ -193,6 +195,7 @@ router.get("/hosts/export", requireSupervisor, async (req, res) => {
   const ws = wb.addWorksheet("Host 목록");
   ws.columns = [
     { header: "ID", key: "id", width: 8 },
+    { header: "일련번호", key: "host_serial", width: 16 },
     { header: "담당자명", key: "host_name", width: 16 },
     { header: "소속기관", key: "organization_name", width: 22 },
     { header: "사업자번호", key: "biz_no", width: 16 },
@@ -212,6 +215,7 @@ router.get("/hosts/export", requireSupervisor, async (req, res) => {
     const addr = [h.address_zip ? `[${h.address_zip}]` : "", h.address1, h.address2].filter(Boolean).join(" ");
     ws.addRow({
       id: h.id,
+      host_serial: h.host_serial,
       host_name: h.host_name,
       organization_name: h.organization_name ?? "",
       biz_no: bizFmt,
@@ -405,20 +409,183 @@ router.post("/projects/:id/support-request", requireSupervisor, async (req, res)
 // ───────────────────────── 가맹점(merchant) 관리 ─────────────────────────
 const MERCHANT_SORT_COLS: Record<string, string> = {
   id: "m.id",
+  merchant_serial: "m.merchant_serial",
   biz_no: "m.biz_no",
   bank_name: "m.bank_name",
   status: "m.status",
+  roampay_status: "m.roampay_status",
+  roampay_request_status: "m.roampay_request_status",
   created_at: "m.created_at",
 };
 
-function buildMerchantWhere(q: Record<string, string>, k: string) {
-  const { merchant_name = "", biz_no = "", status = "" } = q;
+function buildMerchantWhere(q: Record<string, string>, k: string, cols?: Set<string>) {
+  const { merchant_name = "", biz_no = "", status = "", roampay_status = "", roampay_request_status = "" } = q;
   let where = "WHERE 1=1";
   const params: Array<string | number> = [];
   if (merchant_name) { where += " AND fn_decrypt(m.merchant_name, ?) LIKE ?"; params.push(k, `%${merchant_name}%`); }
   if (biz_no) { where += " AND m.biz_no LIKE ?"; params.push(`%${biz_no.replace(/-/g, "")}%`); }
   if (status) { where += " AND m.status = ?"; params.push(status); }
+  if (roampay_request_status && cols?.has("roampay_request_status")) { where += " AND m.roampay_request_status = ?"; params.push(roampay_request_status); }
+  if (roampay_status && cols?.has("roampay_status")) { where += " AND m.roampay_status = ?"; params.push(roampay_status); }
   return { where, params };
+}
+
+let merchantColumnCache: Set<string> | null = null;
+
+async function getMerchantColumns(): Promise<Set<string>> {
+  if (merchantColumnCache) return merchantColumnCache;
+  const [rows] = await pool.execute(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'merchants'",
+  );
+  merchantColumnCache = new Set((Array.isArray(rows) ? rows : []).map((r: any) => String(r.COLUMN_NAME)));
+  return merchantColumnCache;
+}
+
+function merchantCol(cols: Set<string>, name: string, fallbackSql: string): string {
+  return cols.has(name) ? `m.${name} AS ${name}` : `${fallbackSql} AS ${name}`;
+}
+
+const ROAMPAY_REQUEST_LABELS: Record<string, string> = {
+  none: "미요청",
+  approval_requested: "승인요청",
+  request_received: "요청접수",
+  request_unavailable: "승인요청불가",
+};
+
+function roampayResponseSummary(result: Awaited<ReturnType<typeof sendMerchantApprovalRequest>>): string {
+  const body = result.responseJson ?? result.responseText;
+  const response = typeof body === "string" ? body : JSON.stringify(body);
+  const parts = [
+    result.ok ? "RoamPay 요청이 접수되었습니다." : "RoamPay 승인요청을 완료하지 못했습니다.",
+    `상태: ${result.ok ? ROAMPAY_REQUEST_LABELS.request_received : ROAMPAY_REQUEST_LABELS.request_unavailable}`,
+    `시도: ${result.attempts}회`,
+  ];
+  if (result.statusCode !== null) parts.push(`HTTP: ${result.statusCode}`);
+  if (result.error && !result.ok) parts.push(`오류: ${result.error}`);
+  if (response) parts.push(`응답: ${response.slice(0, 1000)}`);
+  return parts.join("\n");
+}
+
+async function buildRoampayMerchantPayload(id: number) {
+  const k = encKey();
+  const [rows] = await pool.execute(
+    `SELECT id, merchant_serial, ${dec("merchant_name")}, ${dec("contact_name")}, ${dec("contact_phone")},
+            ${dec("contact_mobile")}, ${dec("email")}, biz_no, biz_cert_path, biz_cert_name,
+            bank_name, bank_code, ${dec("bank_account")}, bank_copy_path, bank_copy_name,
+            profile_image_path, profile_image_name, address_zip, address1, address2,
+            status, status_reason, system_approved_at, roampay_status, roampay_status_reason,
+            created_at, updated_at
+       FROM merchants
+      WHERE id = ?`,
+    [k, k, k, k, k, k, id],
+  );
+  const m = Array.isArray(rows) && rows.length ? (rows as any)[0] : null;
+  if (!m) return null;
+
+  const files = {
+    biz_cert: {
+      name: m.biz_cert_name || null,
+      url: absoluteUploadUrl(m.biz_cert_path),
+    },
+    bank_copy: {
+      name: m.bank_copy_name || null,
+      url: absoluteUploadUrl(m.bank_copy_path),
+    },
+    profile_image: {
+      name: m.profile_image_name || null,
+      url: absoluteUploadUrl(m.profile_image_path),
+    },
+  };
+
+  return {
+    event: "merchant.approval.requested",
+    requestedAt: new Date().toISOString(),
+    merchant: {
+      id: Number(m.id),
+      merchantSerial: m.merchant_serial || null,
+      merchantName: m.merchant_name || null,
+      contactName: m.contact_name || null,
+      contactPhone: m.contact_phone || null,
+      contactMobile: m.contact_mobile || null,
+      email: m.email || null,
+      bizNo: m.biz_no || null,
+      bankName: m.bank_name || null,
+      bankCode: m.bank_code || null,
+      bankAccount: m.bank_account || null,
+      addressZip: m.address_zip || null,
+      address1: m.address1 || null,
+      address2: m.address2 || null,
+      tourStatus: m.status || null,
+      tourStatusReason: m.status_reason || null,
+      systemApprovedAt: m.system_approved_at || null,
+      roampayStatus: m.roampay_status || null,
+      roampayStatusReason: m.roampay_status_reason || null,
+      createdAt: m.created_at || null,
+      updatedAt: m.updated_at || null,
+      files,
+    },
+  };
+}
+
+async function sendAndPersistRoampayMerchantApproval(id: number, colsArg?: Set<string>) {
+  const cols = colsArg ?? await getMerchantColumns();
+  const payload = await buildRoampayMerchantPayload(id);
+  if (!payload) return null;
+
+  if (cols.has("roampay_request_status")) {
+    const startParts = ["roampay_request_status = 'approval_requested'"];
+    if (cols.has("roampay_requested_at")) startParts.push("roampay_requested_at = NOW()");
+    if (cols.has("roampay_request_attempts")) startParts.push("roampay_request_attempts = 0");
+    if (cols.has("roampay_response_status_code")) startParts.push("roampay_response_status_code = NULL");
+    if (cols.has("roampay_response_body")) startParts.push("roampay_response_body = NULL");
+    if (cols.has("roampay_response_at")) startParts.push("roampay_response_at = NULL");
+    startParts.push("updated_at = NOW()");
+    await pool.execute(`UPDATE merchants SET ${startParts.join(", ")} WHERE id = ?`, [id]);
+  }
+
+  try {
+    const result = await sendMerchantApprovalRequest(payload);
+    const requestStatus = result.ok ? "request_received" : "request_unavailable";
+    const responseBody = (result.responseText || result.error || "").slice(0, 60000);
+    if (cols.has("roampay_request_status")) {
+      const requestUpdateParts = ["roampay_request_status = ?"];
+      const requestUpdateParams: Array<string | number | null> = [requestStatus];
+      if (cols.has("roampay_request_attempts")) { requestUpdateParts.push("roampay_request_attempts = ?"); requestUpdateParams.push(result.attempts); }
+      if (cols.has("roampay_response_status_code")) { requestUpdateParts.push("roampay_response_status_code = ?"); requestUpdateParams.push(result.statusCode); }
+      if (cols.has("roampay_response_body")) { requestUpdateParts.push("roampay_response_body = ?"); requestUpdateParams.push(responseBody || null); }
+      if (cols.has("roampay_response_at")) requestUpdateParts.push("roampay_response_at = NOW()");
+      requestUpdateParts.push("updated_at = NOW()");
+      requestUpdateParams.push(id);
+      await pool.execute(`UPDATE merchants SET ${requestUpdateParts.join(", ")} WHERE id = ?`, requestUpdateParams);
+    }
+    return {
+      sent: true,
+      ok: result.ok,
+      status: requestStatus,
+      message: roampayResponseSummary(result),
+      attempts: result.attempts,
+      statusCode: result.statusCode,
+    };
+  } catch (error: any) {
+    const responseBody = String(error?.message || error || "roampay_request_failed").slice(0, 60000);
+    if (cols.has("roampay_request_status")) {
+      const failedUpdateParts = ["roampay_request_status = 'request_unavailable'"];
+      const failedUpdateParams: Array<string | number | null> = [];
+      if (cols.has("roampay_request_attempts")) failedUpdateParts.push("roampay_request_attempts = 0");
+      if (cols.has("roampay_response_status_code")) failedUpdateParts.push("roampay_response_status_code = NULL");
+      if (cols.has("roampay_response_body")) { failedUpdateParts.push("roampay_response_body = ?"); failedUpdateParams.push(responseBody); }
+      if (cols.has("roampay_response_at")) failedUpdateParts.push("roampay_response_at = NOW()");
+      failedUpdateParts.push("updated_at = NOW()");
+      failedUpdateParams.push(id);
+      await pool.execute(`UPDATE merchants SET ${failedUpdateParts.join(", ")} WHERE id = ?`, failedUpdateParams);
+    }
+    return {
+      sent: true,
+      ok: false,
+      status: "request_unavailable",
+      message: `RoamPay 승인요청을 완료하지 못했습니다.\n상태: ${ROAMPAY_REQUEST_LABELS.request_unavailable}\n오류: ${responseBody}`,
+    };
+  }
 }
 
 router.get("/merchants", requireSupervisor, async (req, res) => {
@@ -428,15 +595,20 @@ router.get("/merchants", requireSupervisor, async (req, res) => {
   const pageSize = [10, 25, 50, 100].includes(Number(size)) ? Number(size) : 10;
   const offset = (pageNo - 1) * pageSize;
   const k = encKey();
-  const orderCol = MERCHANT_SORT_COLS[sort_by] ?? "m.created_at";
+  const cols = await getMerchantColumns();
+  const orderCol = ((sort_by === "merchant_serial" && !cols.has("merchant_serial")) ||
+                    (sort_by === "roampay_status" && !cols.has("roampay_status")) ||
+                    (sort_by === "roampay_request_status" && !cols.has("roampay_request_status")))
+    ? "m.created_at"
+    : (MERCHANT_SORT_COLS[sort_by] ?? "m.created_at");
   const orderDir = sort_dir === "asc" ? "ASC" : "DESC";
-  const { where, params } = buildMerchantWhere(q, k);
+  const { where, params } = buildMerchantWhere(q, k, cols);
 
   const [countRows] = await pool.execute(`SELECT COUNT(*) AS total FROM merchants m ${where}`, params);
   const total = Number((countRows as any)[0].total);
 
   // status_counts: 상태 필터를 제외한 나머지 조건만 적용해 전체 분포 표시
-  const { where: summaryWhere, params: summaryParams } = buildMerchantWhere({ ...q, status: "" }, k);
+  const { where: summaryWhere, params: summaryParams } = buildMerchantWhere({ ...q, status: "" }, k, cols);
   const [byStatusRows] = await pool.execute(
     `SELECT m.status, COUNT(*) AS cnt FROM merchants m ${summaryWhere} GROUP BY m.status`,
     summaryParams,
@@ -445,16 +617,366 @@ router.get("/merchants", requireSupervisor, async (req, res) => {
   for (const r of byStatusRows as any[]) status_counts[String(r.status)] = Number(r.cnt);
 
   const [rows] = await pool.execute(
-    `SELECT m.id, ${dec("m.merchant_name")}, ${dec("m.email")}, ${dec("m.bank_account")},
+    `SELECT m.id, ${merchantCol(cols, "merchant_serial", "NULL")}, ${dec("m.merchant_name")}, ${dec("m.contact_name")}, ${dec("m.contact_phone")}, ${dec("m.contact_mobile")}, ${dec("m.email")}, ${dec("m.bank_account")},
             m.biz_no, m.biz_cert_path, m.biz_cert_name, m.bank_name, m.bank_copy_path, m.bank_copy_name,
-            m.status, m.status_reason, m.created_at, m.updated_at
+            m.status, m.status_reason, ${merchantCol(cols, "system_approved_at", "NULL")},
+            ${merchantCol(cols, "roampay_status", "'pending'")},
+            ${merchantCol(cols, "roampay_approved_at", "NULL")},
+            ${merchantCol(cols, "roampay_status_reason", "NULL")},
+            ${merchantCol(cols, "roampay_request_status", "'none'")},
+            ${merchantCol(cols, "roampay_requested_at", "NULL")},
+            ${merchantCol(cols, "roampay_request_attempts", "0")},
+            ${merchantCol(cols, "roampay_response_status_code", "NULL")},
+            ${merchantCol(cols, "roampay_response_body", "NULL")},
+            ${merchantCol(cols, "roampay_response_at", "NULL")},
+            m.created_at, m.updated_at
      FROM merchants m ${where}
      ORDER BY ${orderCol} ${orderDir}
      LIMIT ${pageSize} OFFSET ${offset}`,
-    [k, k, k, ...params],
+    [k, k, k, k, k, k, ...params],
   );
 
   res.json({ ok: true, data: rows, total, status_counts, page: pageNo, size: pageSize });
+});
+
+const THAI_MERCHANT_DUMMIES = [
+  {
+    id: 1001,
+    merchant_serial: "20260704_TH001",
+    business_name: "Bangkok Sky Bistro",
+    legal_name: "Bangkok Sky Bistro Co., Ltd.",
+    business_type: "Company",
+    tax_id: "1-2345-67890-12-3",
+    company_registration_no: "0-1055-67890-12-4",
+    business_phone: "02-234-1101",
+    industry: "food",
+    website: "bangkokskybistro.example",
+    profile_image_url: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png",
+    profile_image_400: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png",
+    statement_descriptor: "BKK SKY BISTRO",
+    support_phone: "02-234-1101",
+    created_at: "2026-07-04T09:00:00.000Z",
+    province: "bangkok",
+    postal_code: "10110",
+    person_first_name: "Anong",
+    person_last_name: "Srisuk",
+    person_email: "kimch@mono-rama.com",
+    person_title: "CEO",
+    person_nationality: "태국",
+    person_date_of_birth: "15 / 04 / 1988",
+    person_address1: "88 Sukhumvit Road",
+    person_address2: "Khlong Toei",
+    person_address3: "Bangkok",
+    person_province: "Bangkok",
+    person_postal_code: "10110",
+    person_phone: "+66 81 234 1101",
+    personal_id_number: "•••••••1234",
+    laser_code: "JT0-1234567-89",
+  },
+  {
+    id: 1002,
+    merchant_serial: "20260704_TH002",
+    business_name: "Chao Phraya Cafe",
+    legal_name: "Chao Phraya Cafe Co., Ltd.",
+    business_type: "Registered partnership",
+    tax_id: "1-2345-67890-12-4",
+    company_registration_no: "0-1055-67890-12-5",
+    business_phone: "02-345-2202",
+    industry: "food",
+    website: "chaophrayacafe.example",
+    profile_image_url: "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+    profile_image_400: "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+    statement_descriptor: "CHAO CAFE",
+    support_phone: "02-345-2202",
+    created_at: "2026-07-04T09:15:00.000Z",
+    province: "bangkok",
+    postal_code: "10110",
+    person_first_name: "Krit",
+    person_last_name: "Wongchai",
+    person_email: "wefuture@nate.com",
+    person_title: "Owner",
+    person_nationality: "태국",
+    person_date_of_birth: "22 / 09 / 1984",
+    person_address1: "15 Rama IV Road",
+    person_address2: "Pathum Wan",
+    person_address3: "Bangkok",
+    person_province: "Bangkok",
+    person_postal_code: "10330",
+    person_phone: "+66 82 345 2202",
+    personal_id_number: "•••••••2234",
+    laser_code: "JT0-2234567-89",
+  },
+  {
+    id: 1003,
+    merchant_serial: "20260704_TH003",
+    business_name: "Siam Artisan Market",
+    legal_name: "Siam Artisan Market Co., Ltd.",
+    business_type: "Sole proprietorship",
+    tax_id: "1-2345-67890-12-5",
+    company_registration_no: "0-1055-67890-12-6",
+    business_phone: "02-456-3303",
+    industry: "retail",
+    website: "siamartisan.example",
+    profile_image_url: "/uploads/merchant-profiles/siam-artisan-market-400.png",
+    profile_image_400: "/uploads/merchant-profiles/siam-artisan-market-400.png",
+    statement_descriptor: "SIAM ARTISAN",
+    support_phone: "02-456-3303",
+    created_at: "2026-07-04T09:30:00.000Z",
+    province: "bangkok",
+    postal_code: "10330",
+    person_first_name: "Narin",
+    person_last_name: "Kamon",
+    person_email: "augxmas@gmail.com",
+    person_title: "Managing Director",
+    person_nationality: "태국",
+    person_date_of_birth: "03 / 12 / 1990",
+    person_address1: "991 Rama I Road",
+    person_address2: "Siam",
+    person_address3: "Bangkok",
+    person_province: "Bangkok",
+    person_postal_code: "10330",
+    person_phone: "+66 83 456 3303",
+    personal_id_number: "•••••••3234",
+    laser_code: "JT0-3234567-89",
+  },
+  {
+    id: 1004,
+    merchant_serial: "20260704_TH004",
+    business_name: "Pattaya Beach Grill",
+    legal_name: "Pattaya Beach Grill Co., Ltd.",
+    business_type: "Company",
+    tax_id: "1-2345-67890-12-6",
+    company_registration_no: "0-1055-67890-12-7",
+    business_phone: "038-123-404",
+    industry: "food",
+    website: "pattayabeachgrill.example",
+    profile_image_url: "/uploads/merchant-profiles/pattaya-beach-grill-400.png",
+    profile_image_400: "/uploads/merchant-profiles/pattaya-beach-grill-400.png",
+    statement_descriptor: "PTY BEACH GRILL",
+    support_phone: "038-123-404",
+    created_at: "2026-07-04T10:00:00.000Z",
+    province: "chonburi",
+    postal_code: "20150",
+    person_first_name: "Malee",
+    person_last_name: "Sangwan",
+    person_email: "nitsuser@naver.com",
+    person_title: "CEO",
+    person_nationality: "태국",
+    person_date_of_birth: "28 / 06 / 1986",
+    person_address1: "219 Beach Road",
+    person_address2: "Nong Prue",
+    person_address3: "Pattaya",
+    person_province: "Chonburi",
+    person_postal_code: "20150",
+    person_phone: "+66 84 123 4404",
+    personal_id_number: "•••••••4234",
+    laser_code: "JT0-4234567-89",
+  },
+  {
+    id: 1005,
+    merchant_serial: "20260704_TH005",
+    business_name: "Jomtien Tour Shop",
+    legal_name: "Jomtien Tour Shop Co., Ltd.",
+    business_type: "Unregistered partnership",
+    tax_id: "1-2345-67890-12-7",
+    company_registration_no: "0-1055-67890-12-8",
+    business_phone: "038-234-505",
+    industry: "travel",
+    website: "jomtientourshop.example",
+    profile_image_url: "/uploads/merchant-profiles/jomtien-tour-shop-400.png",
+    profile_image_400: "/uploads/merchant-profiles/jomtien-tour-shop-400.png",
+    statement_descriptor: "JOMTIEN TOUR",
+    support_phone: "038-234-505",
+    created_at: "2026-07-04T10:15:00.000Z",
+    province: "chonburi",
+    postal_code: "20150",
+    person_first_name: "Somchai",
+    person_last_name: "Phan",
+    person_email: "somchai.phan@example.com",
+    person_title: "Owner",
+    person_nationality: "태국",
+    person_date_of_birth: "11 / 01 / 1982",
+    person_address1: "75 Jomtien Second Road",
+    person_address2: "Nong Prue",
+    person_address3: "Pattaya",
+    person_province: "Chonburi",
+    person_postal_code: "20150",
+    person_phone: "+66 85 234 5505",
+    personal_id_number: "•••••••5234",
+    laser_code: "JT0-5234567-89",
+  },
+  {
+    id: 1006,
+    merchant_serial: "20260704_TH006",
+    business_name: "Pattaya Wellness Spa",
+    legal_name: "Pattaya Wellness Spa Co., Ltd.",
+    business_type: "Company",
+    tax_id: "1-2345-67890-12-8",
+    company_registration_no: "0-1055-67890-12-9",
+    business_phone: "038-345-606",
+    industry: "services",
+    website: "pattayawellness.example",
+    profile_image_url: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png",
+    profile_image_400: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png",
+    statement_descriptor: "PTY WELLNESS",
+    support_phone: "038-345-606",
+    created_at: "2026-07-04T10:30:00.000Z",
+    province: "chonburi",
+    postal_code: "20150",
+    person_first_name: "Darika",
+    person_last_name: "Rattan",
+    person_email: "darika.rattan@example.com",
+    person_title: "Director",
+    person_nationality: "태국",
+    person_date_of_birth: "19 / 08 / 1989",
+    person_address1: "42 Pattaya Klang Road",
+    person_address2: "Nong Prue",
+    person_address3: "Pattaya",
+    person_province: "Chonburi",
+    person_postal_code: "20150",
+    person_phone: "+66 86 345 6606",
+    personal_id_number: "•••••••6234",
+    laser_code: "JT0-6234567-89",
+  },
+  {
+    id: 1007,
+    merchant_serial: "20260705_TH001",
+    business_name: "Bangkok River Dinner Cruise",
+    legal_name: "Bangkok River Dinner Cruise Co., Ltd.",
+    business_type: "Company",
+    tax_id: "1-2345-67890-12-9",
+    company_registration_no: "0-1055-67890-13-0",
+    business_phone: "02-456-7707",
+    industry: "hospitality",
+    website: "bangkokriverdinnercruise.example",
+    profile_image_url: "/uploads/merchant-profiles/bangkok-dinner-cruise-400.png",
+    profile_image_400: "/uploads/merchant-profiles/bangkok-dinner-cruise-400.png",
+    statement_descriptor: "BKK DINNER CRUISE",
+    support_phone: "02-456-7707",
+    created_at: "2026-07-05T10:00:00.000Z",
+    province: "bangkok",
+    postal_code: "10600",
+    person_first_name: "Siriporn",
+    person_last_name: "Nanthakorn",
+    person_email: "siriporn.cruise@example.com",
+    person_title: "General Manager",
+    person_nationality: "태국",
+    person_date_of_birth: "07 / 03 / 1987",
+    person_address1: "219 Charoen Nakhon Road",
+    person_address2: "Khlong San",
+    person_address3: "Bangkok",
+    person_province: "Bangkok",
+    person_postal_code: "10600",
+    person_phone: "+66 87 456 7707",
+    personal_id_number: "•••••••7234",
+    laser_code: "JT0-7234567-89",
+    status: "pending",
+    status_label: "승인대기",
+    tour_status: "pending",
+    tour_status_label: "승인대기",
+    tour_approved_at: null,
+    system_approved_at: null,
+    roampay_status: "pending",
+    roampay_status_label: "대기",
+    roampay_approved_at: null,
+    roampay_request_status: "none",
+    roampay_requested_at: null,
+    roampay_response_at: null,
+  },
+].map((m) => {
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(m, key);
+  return {
+    ...m,
+    google_lat: (m as any).google_lat ?? ({
+      1001: 13.736717,
+      1002: 13.730578,
+      1003: 13.746111,
+      1004: 12.927608,
+      1005: 12.891845,
+      1006: 12.934071,
+      1007: 13.720492,
+    } as Record<number, number>)[Number((m as any).id)],
+    google_lng: (m as any).google_lng ?? ({
+      1001: 100.561050,
+      1002: 100.541766,
+      1003: 100.534722,
+      1004: 100.875778,
+      1005: 100.875167,
+      1006: 100.889267,
+      1007: 100.513707,
+    } as Record<number, number>)[Number((m as any).id)],
+    country: "TH",
+    status: has("status") ? m.status : "approved",
+    status_label: has("status_label") ? m.status_label : "승인",
+    tour_status: has("tour_status") ? m.tour_status : "approved",
+    tour_status_label: has("tour_status_label") ? m.tour_status_label : "승인",
+    tour_approved_at: has("tour_approved_at") ? m.tour_approved_at : "2026-07-04T11:00:00.000Z",
+    system_approved_at: has("system_approved_at") ? m.system_approved_at : "2026-07-04T11:00:00.000Z",
+    roampay_status: has("roampay_status") ? m.roampay_status : "approved",
+    roampay_status_label: has("roampay_status_label") ? m.roampay_status_label : "승인",
+    roampay_approved_at: has("roampay_approved_at") ? m.roampay_approved_at : "2026-07-04T11:10:00.000Z",
+    roampay_request_status: has("roampay_request_status") ? m.roampay_request_status : "request_received",
+    roampay_requested_at: has("roampay_requested_at") ? m.roampay_requested_at : "2026-07-04T11:05:00.000Z",
+    roampay_response_at: has("roampay_response_at") ? m.roampay_response_at : "2026-07-04T11:10:00.000Z",
+  };
+});
+
+router.get("/thai-merchants", requireSupervisor, async (req, res) => {
+  const q = req.query as Record<string, string>;
+  const pageNo = Math.max(1, Number(q.page ?? "1"));
+  const pageSize = [10, 25, 50, 100].includes(Number(q.size)) ? Number(q.size) : 10;
+  const businessName = String(q.business_name ?? "").trim().toLowerCase();
+  const taxId = String(q.tax_id ?? "").replace(/[^0-9]/g, "");
+  const status = String(q.status ?? "").trim();
+  const filtered = THAI_MERCHANT_DUMMIES.filter((m) => {
+    const nameOk = !businessName || `${m.business_name} ${m.legal_name}`.toLowerCase().includes(businessName);
+    const taxOk = !taxId || `${m.tax_id}${m.company_registration_no}`.replace(/[^0-9]/g, "").includes(taxId);
+    const statusOk = !status || m.tour_status === status || m.status === status;
+    return nameOk && taxOk && statusOk;
+  });
+  const status_counts = filtered.reduce<Record<string, number>>((acc, m) => {
+    const key = String(m.status || "pending");
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const offset = (pageNo - 1) * pageSize;
+  res.json({
+    ok: true,
+    data: filtered.slice(offset, offset + pageSize),
+    total: filtered.length,
+    status_counts,
+    page: pageNo,
+    size: pageSize,
+  });
+});
+
+router.put("/thai-merchants/:id/status", requireSupervisor, async (req, res) => {
+  const id = Number(req.params.id);
+  const { tour_status = "", roampay_request_status = "", reason = "" } = req.body as Record<string, string>;
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: "invalid_merchant_id" });
+    return;
+  }
+  if (!["draft", "pending", "approved", "rejected", "cancelled", "terminated", "locked"].includes(tour_status)) {
+    res.status(400).json({ error: "invalid_tour_status" });
+    return;
+  }
+  if (!["none", "approval_requested", "request_received", "request_unavailable"].includes(roampay_request_status)) {
+    res.status(400).json({ error: "invalid_roampay_request_status" });
+    return;
+  }
+  res.json({
+    ok: true,
+    data: {
+      id,
+      tour_status,
+      roampay_request_status,
+      reason: reason || null,
+      tour_approved_at: tour_status === "approved" ? new Date().toISOString() : null,
+      roampay_requested_at: roampay_request_status === "approval_requested" ? new Date().toISOString() : null,
+      roampay_response_at: ["request_received", "request_unavailable"].includes(roampay_request_status) ? new Date().toISOString() : null,
+    },
+  });
 });
 
 router.get("/merchants/:id/biz-cert", requireSupervisor, async (req, res) => {
@@ -477,6 +999,20 @@ router.get("/merchants/:id/bank-copy", requireSupervisor, async (req, res) => {
   else res.download(String(m.bank_copy_path), String(m.bank_copy_name ?? "bank_copy"));
 });
 
+router.post("/merchants/:id/roampay-request", requireSupervisor, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: "invalid_merchant_id" });
+    return;
+  }
+  const roampayRequest = await sendAndPersistRoampayMerchantApproval(id);
+  if (!roampayRequest) {
+    res.status(404).json({ error: "merchant_not_found" });
+    return;
+  }
+  res.json({ ok: true, roampayRequest });
+});
+
 router.put("/merchants/:id/status", requireSupervisor, async (req, res) => {
   const id = Number(req.params.id);
   const { status, reason = "" } = req.body as Record<string, string>;
@@ -486,7 +1022,7 @@ router.put("/merchants/:id/status", requireSupervisor, async (req, res) => {
   }
   const k = encKey();
   const [mRows] = await pool.execute(
-    `SELECT ${dec("merchant_name")}, ${dec("email")} FROM merchants WHERE id = ?`,
+    `SELECT ${dec("merchant_name")}, ${dec("email")}, status, roampay_status FROM merchants WHERE id = ?`,
     [k, k, id],
   );
   if (!Array.isArray(mRows) || mRows.length === 0) {
@@ -494,17 +1030,69 @@ router.put("/merchants/:id/status", requireSupervisor, async (req, res) => {
     return;
   }
   const m = (mRows as any)[0];
+  const cols = await getMerchantColumns();
+  const nextRoampayStatus = String(m.roampay_status || "pending");
+  const wasOperational = m.status === "approved" && m.roampay_status === "approved";
+  const willBeOperational = status === "approved" && nextRoampayStatus === "approved";
+  const shouldRequestRoampayApproval = status === "approved";
+  const updateParts = [
+    "status = ?",
+    "status_reason = ?",
+    `system_approved_at = CASE
+      WHEN ? = 'approved' AND system_approved_at IS NULL THEN NOW()
+      WHEN ? <> 'approved' THEN NULL
+      ELSE system_approved_at
+    END`,
+  ];
+  const updateParams: Array<string | number | boolean | null> = [
+    status,
+    reason || null,
+    status,
+    status,
+  ];
+  if (cols.has("roampay_request_status")) {
+    updateParts.push(`roampay_request_status = CASE WHEN ? THEN 'approval_requested' ELSE roampay_request_status END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  if (cols.has("roampay_requested_at")) {
+    updateParts.push(`roampay_requested_at = CASE WHEN ? THEN NOW() ELSE roampay_requested_at END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  if (cols.has("roampay_request_attempts")) {
+    updateParts.push(`roampay_request_attempts = CASE WHEN ? THEN 0 ELSE roampay_request_attempts END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  if (cols.has("roampay_response_status_code")) {
+    updateParts.push(`roampay_response_status_code = CASE WHEN ? THEN NULL ELSE roampay_response_status_code END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  if (cols.has("roampay_response_body")) {
+    updateParts.push(`roampay_response_body = CASE WHEN ? THEN NULL ELSE roampay_response_body END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  if (cols.has("roampay_response_at")) {
+    updateParts.push(`roampay_response_at = CASE WHEN ? THEN NULL ELSE roampay_response_at END`);
+    updateParams.push(shouldRequestRoampayApproval);
+  }
+  updateParts.push("updated_at = NOW()");
+  updateParams.push(id);
+  await pool.execute(`UPDATE merchants SET ${updateParts.join(", ")} WHERE id = ?`, updateParams);
 
-  await pool.execute(
-    "UPDATE merchants SET status = ?, status_reason = ?, updated_at = NOW() WHERE id = ?",
-    [status, reason || null, id],
-  );
+  let roampayRequest: Awaited<ReturnType<typeof sendAndPersistRoampayMerchantApproval>> | null = null;
 
-  if (["approved", "cancelled", "terminated"].includes(status)) {
+  if (shouldRequestRoampayApproval) {
+    roampayRequest = await sendAndPersistRoampayMerchantApproval(id, cols);
+    if (!roampayRequest) {
+      res.status(404).json({ error: "merchant_not_found" });
+      return;
+    }
+  }
+
+  if ((!wasOperational && willBeOperational) || ["cancelled", "terminated"].includes(status)) {
     try { await sendMerchantStatusEmail(String(m.email), String(m.merchant_name), status, reason); } catch (_) {}
   }
 
-  res.json({ ok: true });
+  res.json({ ok: true, roampayRequest });
 });
 
 router.post(

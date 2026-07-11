@@ -1,6 +1,6 @@
 // @ts-nocheck
 // ============================================================
-// 모노라마 트래커 — 종합 도입 제안서 PPTX (v2)
+// Tour Tracker — 종합 도입 제안서 PPTX (v2)
 //   행사·이벤트 전 과정을 관리하는 통합 운영 솔루션 제안
 //   실행: npx ts-node scripts/generate-tracker-proposal-v2.ts
 //   결과: docs/모노라마_트래커_종합제안서.pptx
@@ -91,7 +91,7 @@ function addTable(s, rows, opts) {
 {
   const s = pres.addSlide();
   addCover(s,
-    "모노라마 트래커",
+    "Tour Tracker",
     "행사·이벤트 전 과정을 하나로 연결하는\n통합 운영 플랫폼 종합 제안서",
     `(주)모노라마 · ${new Date().toLocaleDateString("ko-KR")}`,
   );

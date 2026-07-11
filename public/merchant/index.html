@@ -1,37 +1,37 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>가맹점 · 모노라마 트래커</title>
-  <link rel="icon" href="/favicon.svg">
+  <title>가맹점 · Tour Tracker</title>
+  <link rel="icon" href="/merchant/favicon.svg" type="image/svg+xml">
   <!-- PWA -->
   <link rel="manifest" href="/merchant/manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#16a34a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="가맹점">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/merchant/favicon.svg">
   <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "Malgun Gothic", -apple-system, sans-serif; background: #f0f4f9;
            min-height: 100vh; display: flex; flex-direction: column; }
     .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 16px; }
-    .logo { font-size: 22px; font-weight: 800; color: #2563eb; margin-bottom: 24px; }
+    .logo { font-size: 22px; font-weight: 800; color: #16a34a; margin-bottom: 24px; }
     .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(20,30,60,.1);
             padding: 32px 28px; width: 100%; max-width: 460px; }
     .card h2 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
     /* 로그인 제목 띠: 가운데 정렬 + 색 배경 (카드 상단 폭에 맞춰 꽉 채움) */
     .card h2.login-band { text-align: center; color: #fff;
-      background: linear-gradient(135deg, #2563eb, #0d3b66);
+      background: linear-gradient(135deg, #16a34a, #166534);
       margin: -32px -28px 22px; padding: 16px 28px; border-radius: 16px 16px 0 0; }
     .fg { margin-bottom: 14px; }
     .fg label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; }
     .req { color: #dc2626; font-size: 11px; }
     .fg input[type=text], .fg input[type=email], .fg input[type=password], .fg input[type=file], .fg select {
       width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; background: #fff; }
-    .fg input:focus, .fg select:focus { border-color: #2563eb; }
+    .fg input:focus, .fg select:focus { border-color: #16a34a; }
     .fg select:disabled { background: #f1f5f9; color: #94a3b8; }
     .row2 { display: flex; gap: 8px; }
     .row2 input { flex: 1; }
@@ -42,17 +42,17 @@
     /* 브라우저 기본 비밀번호 표시 아이콘 숨김(눈 아이콘 중복 방지) */
     input[type=password]::-ms-reveal, input[type=password]::-ms-clear { display: none; }
     .btn { padding: 11px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .btn-p { background: #2563eb; color: #fff; }
-    .btn-p:disabled { background: #93b4f0; cursor: not-allowed; }
+    .btn-p { background: #16a34a; color: #fff; }
+    .btn-p:disabled { background: #86efac; cursor: not-allowed; }
     .btn-o:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-o { background: #fff; color: #2563eb; border: 1.5px solid #bfdbfe; }
+    .btn-o { background: #fff; color: #16a34a; border: 1.5px solid #bbf7d0; }
     .btn-full { width: 100%; }
     .btn-sm { padding: 9px 14px; font-size: 13px; }
     .msg { font-size: 13px; min-height: 18px; margin: 8px 0; }
     .msg.e { color: #dc2626; } .msg.s { color: #16a34a; }
     .fm { font-size: 12px; margin-top: 3px; min-height: 16px; }
     .fm.e { color: #dc2626; } .fm.s { color: #16a34a; }
-    .link { font-size: 13px; color: #2563eb; cursor: pointer; }
+    .link { font-size: 13px; color: #16a34a; cursor: pointer; }
     .center { text-align: center; }
     .divider { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0; }
     .hint { font-size: 11px; color: #94a3b8; font-weight: 400; }
@@ -70,8 +70,8 @@
               background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
               padding: 6px 8px 6px 16px; box-shadow: 0 2px 12px rgba(20,30,60,.10); }
     .topbar-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; }
-    .topbar-name span { color: #2563eb; }
-    .topbar-brand { font-size: 13px; font-weight: 800; color: #0d3b66; white-space: nowrap;
+    .topbar-name span { color: #16a34a; }
+    .topbar-brand { font-size: 13px; font-weight: 800; color: #166534; white-space: nowrap;
                     text-align: right; margin-right: 4px; padding-right: 10px; border-right: 1px solid #e2e8f0; }
     .panel-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; }
     .panel-card h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
@@ -84,7 +84,7 @@
     .ptbl th, .ptbl td { padding:11px 13px; border-bottom:1px solid #f1f5f9; text-align:center; }
     .ptbl th { background:#f8fafc; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
     .ptbl th.sortable { cursor:pointer; user-select:none; }
-    .ptbl th.sortable:hover { color:#2563eb; background:#eef2ff; }
+    .ptbl th.sortable:hover { color:#16a34a; background:#f0fdf4; }
     .ptbl tbody tr:last-child td { border-bottom:none; }
     .ptbl tbody tr:hover td { background:#fafbfd; }
     .ptbl td.c, .ptbl th.c { text-align:center; }
@@ -101,11 +101,11 @@
     .tabs { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin:0 0 18px; }
     .tab { background:none; border:none; padding:9px 18px; font-size:14px; font-weight:600; color:#94a3b8;
            cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
-    .tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+    .tab.active { color:#16a34a; border-bottom-color:#16a34a; }
     .stl-sub { padding:7px 14px; border:none; background:none; font-size:13px; font-weight:600;
                color:#94a3b8; border-bottom:2px solid transparent; cursor:pointer; }
-    .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
-    .stl-sub:hover { color:#1d4ed8; }
+    .stl-sub.active { color:#16a34a; border-bottom-color:#16a34a; }
+    .stl-sub:hover { color:#15803d; }
     .ptyp { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
     .ptyp input { width:14px; height:14px; cursor:pointer; }
     .ptyp span { font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; }
@@ -115,7 +115,12 @@
     /* 조회 조건 */
     .pj-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
     .pj-filters input, .pj-filters select { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 11px; font-size:13px; outline:none; background:#fff; }
-    .pj-filters input { width:150px; } .pj-filters input:focus, .pj-filters select:focus { border-color:#2563eb; }
+    .pj-filters input { width:150px; } .pj-filters input:focus, .pj-filters select:focus { border-color:#16a34a; }
+    .grid-size-select { border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 9px; font-size:13px; outline:none; background:#fff; }
+    .grid-toolbar-push { margin-left:auto; }
+    .pj-filters .gc-btn { margin-left:0 !important; }
+    .grid-pager { display:flex; gap:6px; justify-content:flex-end; align-items:center; margin-top:12px; flex-wrap:wrap; font-size:13px; }
+    .grid-pager-count { color:#64748b; margin-right:6px; }
     /* 공통 확인/알림 모달 */
     .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none;
                 align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
@@ -128,6 +133,33 @@
     .modal-box .mb-msg { padding: 12px 20px 20px; font-size: 14px; color: #334155; line-height: 1.55; white-space: pre-line; }
     .modal-box .mb-btns { display: flex; gap: 8px; padding: 0 20px 20px; }
     .modal-box .mb-btns .btn { flex: 1; }
+    .modal-box.green-head-modal .mb-head { text-align:center; color:#fff; background:#16a34a; padding:16px 20px; font-size:18px; font-weight:800; }
+    #ui-country-wrap { display:none; margin: 0 20px 14px; }
+    #ui-country-wrap .ui-country-title { display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:8px; }
+    .ui-country-options { display:flex; flex-direction:row; flex-wrap:nowrap; gap:8px; align-items:center; justify-content:center; width:100%; }
+    label.ui-country-option,
+    .fg label.ui-country-option { flex:0 0 auto; min-width:112px; min-height:46px; display:flex !important; flex-direction:row !important; align-items:center; justify-content:center; gap:7px; border:1.5px solid #dbe5df; border-radius:10px; margin:0 !important; padding:0 14px; cursor:pointer; background:#fff; font-size:14px; font-weight:600; line-height:1; color:#334155; white-space:nowrap; }
+    .ui-country-option input { width:16px !important; height:16px !important; margin:0 !important; padding:0 !important; display:block; cursor:pointer; accent-color:#16a34a; flex:0 0 auto; }
+    .ui-country-option span { display:inline-flex; align-items:center; justify-content:center; line-height:1; margin:0; }
+    .ui-country-option:has(input:checked) { border-color:#86efac; background:#f0fdf4; color:#166534; font-weight:700; }
+    #fp-country-options,
+    #login-country-options { align-items:center; justify-content:center; }
+    #ui-check-wrap { font-size:13px; color:#1e293b; margin:8px 0 14px; cursor:pointer; user-select:none; }
+    #ui-check { margin-right:8px; vertical-align:middle; width:16px; height:16px; }
+    .modal-box.docs-modal { max-width: min(500px, calc(100vw - 32px)); }
+    .modal-box.docs-modal .mb-head { text-align: center; color: #fff; background: #16a34a;
+      padding: 16px 20px; font-size: 18px; font-weight: 800; }
+    .modal-box.docs-modal .mb-msg { padding: 18px 22px 16px; line-height: 1.7; color: #1f2937; }
+    .modal-box.docs-modal #ui-country-wrap { margin: 0 22px 14px; }
+    .modal-box.docs-modal #ui-check-wrap { display: flex; align-items: flex-start; gap: 8px;
+      margin: 0 22px 18px; padding: 12px 14px; border: 1px solid #bbf7d0; border-radius: 10px;
+      background: #f0fdf4; color: #166534; line-height: 1.45; }
+    .modal-box.docs-modal #ui-check { margin: 2px 0 0; flex: none; }
+    .modal-box.docs-modal .mb-btns { padding: 0 22px 22px; gap: 10px; }
+    .merchant-detail-grid { display:grid; grid-template-columns:130px minmax(0, 1fr); gap:0; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; text-align:left; }
+    .merchant-detail-grid .k { background:#f8fafc; color:#64748b; font-size:12px; font-weight:700; padding:10px 12px; border-bottom:1px solid #e2e8f0; }
+    .merchant-detail-grid .v { color:#1e293b; font-size:13px; padding:10px 12px; border-bottom:1px solid #e2e8f0; word-break:break-word; }
+    .merchant-detail-grid .k:last-of-type, .merchant-detail-grid .v:last-of-type { border-bottom:none; }
     /* 모달 우상단 닫기(×) 아이콘 */
     .modal-close { position: absolute; top: 10px; right: 12px; background: none; border: none;
                    font-size: 22px; line-height: 1; color: #94a3b8; cursor: pointer;
@@ -135,16 +167,82 @@
     .modal-close:hover { background: #f1f5f9; color: #1e293b; }
     /* Gift 사용자 현황 모달 헤더: 가운데 정렬 + 파란 배경 띠 */
     .modal-box .mb-head.band { text-align: center; color: #fff; padding: 16px 20px;
-      background: linear-gradient(135deg, #2563eb, #0d3b66); }
+      background: linear-gradient(135deg, #16a34a, #166534); }
     .modal-box .mb-head.band .modal-close { color: rgba(255,255,255,.85); }
     .modal-box .mb-head.band .modal-close:hover { background: rgba(255,255,255,.2); color: #fff; }
     .ptbl th.usort { cursor: pointer; user-select: none; white-space: nowrap; }
-    .ptbl th.usort:hover { color: #2563eb; }
+    .ptbl th.usort:hover { color: #16a34a; }
     .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
     .reg-grid .full { grid-column: 1 / -1; }
+    #modal-register-th, #modal-register-th-public, #modal-register-th-personal { z-index: 2100; align-items: stretch; justify-content: center; padding: 18px; }
+    .thai-modal-box { width: min(560px, 100%); max-height: calc(100vh - 36px); background:#fff; border-radius:14px; box-shadow:0 16px 48px rgba(20,30,60,.26); display:flex; flex-direction:column; overflow:hidden; margin:auto; }
+    .thai-modal-head { flex:none; background:#16a34a; color:#fff; text-align:center; font-size:20px; font-weight:800; padding:17px 22px; }
+    .thai-modal-body { flex:1; overflow-y:auto; padding: 28px 24px 24px; }
+    .thai-modal-foot { flex:none; display:flex; justify-content:center; gap:10px; padding:14px 20px 18px; border-top:1px solid #e2e8f0; background:#fff; }
+    .thai-modal-foot .btn { width: 180px; }
+    .thai-form-card { max-width: 460px; border-radius: 0; box-shadow: none; padding: 0; background: transparent; }
+    .thai-form-card h1 { display:none; }
+    .thai-step { display: flex; flex-direction: column; gap: 26px; }
+    .thai-field label { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #444; margin-bottom: 9px; }
+    .thai-field .optional,
+    .thai-field .provided { font-size: 11px; font-weight: 700; color: #607d8b; background: #eef3f4; border: 1px solid #cfd8dc; border-radius: 5px; padding: 2px 6px; }
+    .thai-field .help { font-size: 12px; line-height: 1.55; color: #777; margin: 8px 0 0; }
+    .thai-field input,
+    .thai-field select,
+    .thai-field textarea { width: 100%; border: 1px solid #d4d4d4; border-radius: 4px; background: #fff; color: #444; font-size: 14px; padding: 8px 9px; outline: none; }
+    .thai-field input:focus,
+    .thai-field select:focus,
+    .thai-field textarea:focus { border-color: #6b72e6; box-shadow: 0 0 0 2px rgba(107,114,230,.13); }
+    .thai-field.has-error input,
+    .thai-field.has-error select,
+    .thai-field.has-error textarea { border-color: #dc2626; }
+    .thai-field-error { margin-top: 8px; padding: 9px 11px; border-radius: 7px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 12px; line-height: 1.45; }
+    .thai-field-error b { display:block; margin-bottom: 3px; color:#7f1d1d; }
+    .thai-field input[disabled],
+    .thai-field select[disabled] { background: #f7f7f7; color: #999; opacity: 1; }
+    .thai-address { display: grid; gap: 7px; }
+    .thai-phone { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
+    .thai-phone select { padding-left: 8px; }
+    .thai-tax { display: flex; align-items: center; gap: 8px; color: #555; font-size: 13px; }
+    .thai-actions { display: none; }
+    .thai-actions .btn-p { background: #6870e8; }
+    .thai-actions .btn-o { border-color: #cbd5e1; color: #555; }
+    .thai-public-intro h2 { font-size: 34px; line-height: 1.18; color: #424242; margin: 0 0 16px; letter-spacing: 0; }
+    .thai-public-intro p { font-size: 18px; line-height: 1.55; color: #707070; margin: 0; }
+    .thai-public-section h3 { font-size: 25px; color: #424242; margin: 0 0 22px; letter-spacing: 0; }
+    .thai-link { color: #536dfe; }
+    .thai-receipt-preview { border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; padding: 14px 14px 0; overflow: hidden; }
+    .thai-receipt-top { display: flex; align-items: center; gap: 10px; color: #777; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; }
+    .thai-fake-line { display: inline-block; height: 12px; border-radius: 2px; background: #f4f4f4; }
+    .thai-receipt-main { display: grid; grid-template-columns: 1fr auto; gap: 14px; padding: 16px 0 12px; align-items: center; }
+    .thai-receipt-brand { color: #536dfe; font-size: 16px; font-weight: 500; margin: 8px 0; }
+    .thai-receipt-amounts { color: #666; font-size: 15px; line-height: 1.75; text-align: right; white-space: nowrap; }
+    .thai-receipt-zigzag { height: 9px; margin: 0 -14px; background: linear-gradient(135deg, transparent 75%, #f2f2f2 0) 0 0/18px 9px, linear-gradient(225deg, transparent 75%, #f2f2f2 0) 0 0/18px 9px; }
+    .thai-switch-row { display: flex; align-items: center; gap: 10px; color: #444; font-size: 15px; font-weight: 700; }
+    .thai-switch-row input { display: none; }
+    .thai-switch-ui { width: 48px; height: 28px; border-radius: 999px; background: #cbd5e1; position: relative; transition: background .18s; flex: none; }
+    .thai-switch-ui::after { content: ""; position: absolute; width: 24px; height: 24px; left: 2px; top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: transform .18s; }
+    .thai-switch-row input:checked + .thai-switch-ui { background: #6870e8; }
+    .thai-switch-row input:checked + .thai-switch-ui::after { transform: translateX(20px); }
+    .thai-check-row { display:flex; align-items:flex-start; gap:10px; font-size:14px; font-weight:700; color:#444; line-height:1.45; }
+    .thai-check-row input { width:17px; height:17px; margin-top:2px; accent-color:#6870e8; flex:none; }
+    .thai-owner-note { color:#444; font-size:14px; line-height:1.65; }
+    .thai-danger-btn { width:100%; border-color:#e2e8f0; color:#9ca3af; background:#fff; cursor:not-allowed; }
+    .thai-profile-upload { display:grid; grid-template-columns:96px 1fr; gap:12px; align-items:center; }
+    .thai-profile-preview { width:96px; height:96px; border:1px dashed #cbd5e1; border-radius:8px; background:#f8fafc; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:11px; font-weight:800; text-align:center; overflow:hidden; }
+    .thai-profile-preview img { width:100%; height:100%; object-fit:cover; display:block; }
     @media (max-width: 560px) {
+      .ui-country-options { gap:6px; }
+      label.ui-country-option,
+      .fg label.ui-country-option { gap:5px; min-width:0; min-height:44px; padding:0 6px; font-size:13px; }
+      .ui-country-option input { width:15px !important; height:15px !important; }
+      #fp-country-options .ui-country-option,
+      #login-country-options .ui-country-option { flex:1 1 0; height:44px; }
       .reg-grid { grid-template-columns: 1fr; }
       #sec-register .card { max-width: 460px; }
+      .thai-form-card { max-width: 100%; }
+      .thai-modal-foot { flex-direction:column-reverse; }
+      .thai-modal-foot .btn { width:100%; }
     }
     /* ── Gift 결제 on/off 토글 ── */
     .gift-switch { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
@@ -152,7 +250,7 @@
     .gs-label { font-size: 12px; font-weight: 700; color: #475569; white-space: nowrap; }
     .gs-track { width: 40px; height: 22px; background: #cbd5e1; border-radius: 999px; position: relative; transition: background .2s; flex: none; }
     .gs-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s; }
-    .gift-switch input:checked + .gs-track { background: #2563eb; }
+    .gift-switch input:checked + .gs-track { background: #16a34a; }
     .gift-switch input:checked + .gs-track .gs-thumb { left: 20px; }
     /* 로그인 화면의 Gift 결제 모드 선택 박스 */
     .login-gift { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
@@ -165,19 +263,19 @@
     /* ── Gift 결제 모드 ── */
     .gift-wrap { max-width: 460px; margin: 0 auto; }
     .gp-head { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
-    .gp-name { font-weight: 800; color: #0d3b66; }
+    .gp-name { font-weight: 800; color: #166534; }
     .gp-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
     .gpj { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
            background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
            cursor: pointer; text-align: left; transition: border-color .15s, box-shadow .15s; font-family: inherit; }
-    .gpj:hover { border-color: #2563eb; box-shadow: 0 2px 10px rgba(37,99,235,.12); }
+    .gpj:hover { border-color: #16a34a; box-shadow: 0 2px 10px rgba(22,163,74,.12); }
     .gpj-name { font-weight: 700; color: #1e293b; font-size: 14px; }
     .gpj-meta { font-size: 12px; color: #94a3b8; margin-top: 3px; }
-    .gpj-amt { font-weight: 800; color: #0d3b66; white-space: nowrap; }
+    .gpj-amt { font-weight: 800; color: #166534; white-space: nowrap; }
     #scan-stage { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 14px; overflow: hidden; margin: 14px 0; }
     #scan-video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .scan-frame { position: absolute; inset: 16%; border: 3px solid rgba(255,255,255,.92); border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0,0,0,.28); pointer-events: none; }
-    .rp-head { text-align: center; background: #0d3b66; color: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .rp-head { text-align: center; background: #166534; color: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
     .rp-amt { font-size: 30px; font-weight: 800; }
     .gift-wrap .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
     .gift-wrap .row:last-of-type { border-bottom: none; }
@@ -185,7 +283,7 @@
     .lab { font-size: 13px; font-weight: 600; color: #33415c; }
     .pin-in { width: 100%; padding: 13px; font-size: 18px; letter-spacing: 4px; text-align: center;
               border: 1.5px solid #c9d6ea; border-radius: 10px; outline: none; margin-top: 8px; }
-    .pin-in:focus { border-color: #0d3b66; }
+    .pin-in:focus { border-color: #166534; }
     .rp-ico { font-size: 52px; } .rp-ttl { font-size: 20px; font-weight: 800; margin-top: 6px; }
     .rp-desc { font-size: 13px; color: #64748b; margin-top: 6px; }
     .msg.center { text-align: center; }
@@ -197,7 +295,7 @@
       /* 브랜드 라벨을 최상단 줄로 분리 (전체 너비, 가운데 정렬) */
       .topbar-brand {
         width: 100%; flex: 0 0 100%;
-        text-align: center; font-size: 15px; font-weight: 800; color: #0d3b66;
+        text-align: center; font-size: 15px; font-weight: 800; color: #166534;
         padding: 8px 0 10px;
         border-bottom: 1px solid #e2e8f0;
         margin: 0 0 8px;
@@ -208,19 +306,29 @@
 </head>
 <body>
 <div class="main-wrap">
-  <div class="logo">모노라마 트래커 · 가맹점</div>
+  <div class="logo">Tour Tracker · 가맹점</div>
 
   <!-- ── 로그인 ── -->
   <section id="sec-login" class="active">
     <div class="card">
       <h2 class="login-band">가맹점 로그인</h2>
+      <div class="fg">
+        <label>국가 <span class="req">*</span></label>
+        <div class="ui-country-options" id="login-country-options">
+          <label class="ui-country-option"><input type="checkbox" name="login-country" value="KR" checked onchange="selectLoginCountry(this)"><span>한국</span></label>
+          <label class="ui-country-option"><input type="checkbox" name="login-country" value="TH" onchange="selectLoginCountry(this)"><span>태국</span></label>
+        </div>
+      </div>
+      <div class="fg"><label id="li-identifier-label">사업자등록번호</label>
+        <input id="li-identifier" type="text" inputmode="numeric" placeholder="사업자등록번호 입력" oninput="handleLoginIdentifierInput()" onblur="validateLoginIdentifier({ showEmpty:false })" onkeydown="if(event.key==='Enter')doLogin()">
+        <div id="li-identifier-fm" class="fm"></div></div>
       <div class="fg"><label>이메일</label>
         <input id="li-email" type="email" placeholder="merchant@example.com"></div>
       <div class="fg"><label>비밀번호</label>
         <input id="li-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;cursor:pointer;margin-bottom:8px;">
         <input type="checkbox" id="li-remember" style="width:16px;height:16px;cursor:pointer;">
-        <span>이메일 저장하기</span>
+        <span>국가, 사업자등록번호, 이메일을 저장하시겠습니까?</span>
       </label>
       <div class="login-gift">
         <label class="gift-switch" title="Gift 결제 모드로 로그인">
@@ -241,7 +349,7 @@
   <!-- ── 회원가입 ── -->
   <section id="sec-register">
     <div class="card">
-      <h2>가맹점 가입 신청</h2>
+      <h2 class="login-band">가맹점 가입 신청</h2>
       <p class="hint" style="margin-bottom:14px;">먼저 이메일 인증을 완료하면 나머지 항목을 입력할 수 있습니다.</p>
       <div class="reg-grid">
         <!-- 이메일 인증 -->
@@ -294,6 +402,20 @@
           <input id="rg-bizcert" type="file" accept="application/pdf,image/jpeg,image/png" disabled></div>
         <div class="fg full"><label>은행계좌사본 <span class="req">*</span> <span class="hint">(PDF/JPG/PNG)</span></label>
           <input id="rg-bankcopy" type="file" accept="application/pdf,image/jpeg,image/png" disabled></div>
+        <div class="fg full"><label>Profile <span class="req">*</span> <span class="hint">(JPG/PNG/WEBP · 400X400으로 노출)</span></label>
+          <input id="rg-profile" type="file" accept="image/jpeg,image/png,image/webp" disabled></div>
+        <div class="fg full"><label>Google 지도 위치 <span class="hint">(선택)</span></label>
+          <div class="row2">
+            <input id="rg-google-lat" type="number" step="0.000001" min="-90" max="90" placeholder="위도 예: 13.736717" disabled oninput="updateRegisterMapPreview()">
+            <input id="rg-google-lng" type="number" step="0.000001" min="-180" max="180" placeholder="경도 예: 100.561050" disabled oninput="updateRegisterMapPreview()">
+          </div>
+          <div class="row2" style="margin-top:8px;">
+            <button type="button" class="btn btn-o btn-sm" id="rg-google-search" onclick="openRegisterGoogleSearch()" disabled>Google 지도에서 검색</button>
+            <button type="button" class="btn btn-o btn-sm" id="rg-google-preview-btn" onclick="updateRegisterMapPreview()" disabled>지도 미리보기</button>
+          </div>
+          <iframe id="rg-google-map" title="Google 지도 위치 미리보기" style="display:none;width:100%;height:220px;border:0;border-radius:8px;margin-top:10px;background:#e2e8f0;" loading="lazy"></iframe>
+          <div class="hint" style="margin-top:6px;">Google 지도에서 가맹점 위치를 확인한 뒤 위도/경도를 입력하면 랜딩 페이지의 지도 버튼에 연결됩니다.</div>
+        </div>
       </div>
 
       <div id="rg-msg" class="msg"></div>
@@ -304,6 +426,312 @@
   </section>
 
   <!-- ── 가입 완료 안내 ── -->
+  <!-- 태국 가맹점 가입 1단계: 비즈니스 세부 사항 -->
+  <div class="modal-ov" id="modal-register-th">
+    <div class="thai-modal-box">
+      <div class="thai-modal-head">비즈니스 세부사항 수정(1/3)</div>
+      <div class="thai-modal-body">
+        <div class="card thai-form-card">
+      <h1>비즈니스 세부사항 수정</h1>
+      <div class="thai-step">
+        <div class="thai-field">
+          <label for="th-business-type">비즈니스 유형</label>
+          <select id="th-business-type">
+            <option value="">비즈니스 유형 선택</option>
+            <option value="company">Company</option>
+            <option value="registered_partnership">Registered partnership</option>
+            <option value="unregistered_partnership">Unregistered partnership</option>
+            <option value="sole_proprietorship">Sole proprietorship</option>
+            <option value="individual">Individual</option>
+          </select>
+        </div>
+        <div class="thai-field">
+          <label for="th-profile-image">Profile <span class="provided">400X400</span></label>
+          <div class="thai-profile-upload">
+            <div class="thai-profile-preview" id="th-profile-preview">400X400<br>Preview</div>
+            <input id="th-profile-image" type="file" accept="image/jpeg,image/png,image/webp">
+          </div>
+          <div class="help">JPG, PNG, WEBP 이미지를 업로드해 주세요. 원본 크기와 관계없이 400X400 크기로 노출됩니다.</div>
+        </div>
+        <div class="thai-field">
+          <label for="th-legal-name">법적 비즈니스 이름</label>
+          <input id="th-legal-name" type="text" placeholder="법적 비즈니스 이름">
+          <div class="help">제공한 이름은 세금 ID에 관련된 이름과 정확히 일치해야 합니다.</div>
+        </div>
+        <div class="thai-field">
+          <label for="th-display-name">비즈니스 이름(비즈니스 명칭) <span class="optional">선택 사항</span></label>
+          <div class="help" style="margin:0 0 8px;">회사의 영업상 명칭이 실제 명칭과 다른 경우 영업상 명칭을 입력합니다.</div>
+          <input id="th-display-name" type="text" placeholder="비즈니스 명칭">
+        </div>
+        <div class="thai-field">
+          <label for="th-tax-id">TIN(세금 ID 번호) <span class="provided">제공</span></label>
+          <input id="th-tax-id" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0123456789">
+        </div>
+        <div class="thai-field">
+          <label for="th-company-reg">회사 등록 번호</label>
+          <input id="th-company-reg" type="text" inputmode="numeric" placeholder="0123456788910">
+        </div>
+        <div class="thai-field">
+          <label>비즈니스 주소 <span title="태국 내 비즈니스 주소를 입력해 주세요.">ⓘ</span></label>
+          <div class="thai-address">
+            <select id="th-country" disabled><option value="TH" selected>태국</option></select>
+            <input id="th-address1" type="text" placeholder="주소 1">
+            <input id="th-address2" type="text" placeholder="주소 2">
+            <input id="th-address3" type="text" placeholder="상세 주소">
+            <select id="th-province">
+              <option value="">지역 선택</option>
+              <option value="bangkok">กรุงเทพมหานคร - Bangkok</option>
+              <option value="chiang-mai">เชียงใหม่ - Chiang Mai</option>
+              <option value="phuket">ภูเก็ต - Phuket</option>
+              <option value="chonburi">ชลบุรี - Chonburi</option>
+              <option value="nakhon-ratchasima">นครราชสีมา - Nakhon Ratchasima</option>
+            </select>
+            <input id="th-postal" type="text" inputmode="numeric" placeholder="우편번호">
+          </div>
+        </div>
+        <div class="thai-field">
+          <label for="th-phone">비즈니스 전화번호</label>
+          <div class="thai-phone">
+            <select id="th-phone-country" aria-label="전화 국가"><option value="+66" selected>🇹🇭</option></select>
+            <input id="th-phone" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="835874114">
+          </div>
+        </div>
+        <div class="thai-field">
+          <label for="th-industry">산업</label>
+          <div class="help" style="margin:0 0 8px;">산업을 선택하면 위험 및 규제 준수 의무를 충족하는 데 도움이 됩니다. 고객이 구매할 상품 또는 서비스에 가장 잘 맞는 옵션을 선택하십시오.</div>
+          <select id="th-industry">
+            <option value="">산업 선택</option>
+            <option value="software">소프트웨어</option>
+            <option value="food">음식점 / 식음료</option>
+            <option value="travel">여행 / 관광</option>
+            <option value="retail">리테일</option>
+            <option value="services">전문 서비스</option>
+          </select>
+        </div>
+        <div class="thai-field">
+          <label for="th-website">비즈니스 웹사이트</label>
+          <input id="th-website" type="text" placeholder="artinparadise.com">
+          <div class="help">제품이나 서비스를 판매하거나 홍보하는 웹사이트를 공유하십시오. 웹사이트에는 귀하가 판매하는 제품과 서비스의 정보가 게재되어 있어야 합니다. 일반 URL이나 제작 중인 웹사이트는 지원되지 않습니다. <span style="color:#536dfe;">당사가 지원하는 비즈니스에 대해 자세히 알아보기</span></div>
+        </div>
+        <div class="thai-field">
+          <label for="th-product-desc">제품 설명</label>
+          <textarea id="th-product-desc" rows="4" placeholder="1~2문장으로 설명하십시오."></textarea>
+          <div class="help">1~2문장으로 설명하십시오. 일반적으로 고객에게 청구할 때 참고합니다. 예: 체크아웃 동안 또는 3일 후.</div>
+        </div>
+        <div class="thai-field">
+          <label>세금 세부사항을 확인해 주세요</label>
+          <div class="thai-tax">ⓘ <span>제공</span></div>
+        </div>
+        <div class="thai-actions">
+          <button class="btn btn-p btn-full" onclick="saveThaiBusinessDetails()">저장</button>
+          <button class="btn btn-o btn-full" onclick="show('sec-login')">취소</button>
+        </div>
+      </div>
+        </div>
+      </div>
+      <div class="thai-modal-foot">
+        <button class="btn btn-o btn-sm" onclick="closeThaiBusinessModal()">취소</button>
+        <button class="btn btn-p btn-sm" onclick="saveThaiBusinessDetails()">저장 후 다음단계</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-ov" id="modal-register-th-public">
+    <div class="thai-modal-box">
+      <div class="thai-modal-head">공개 세부 사항(2/3)</div>
+      <div class="thai-modal-body">
+        <div class="card thai-form-card">
+          <div class="thai-step">
+            <div class="thai-public-intro">
+              <h2>고객의 공개 세부사항 추가</h2>
+              <p>이 정보는 결제 명세서, 청구서 및 영수증에서 볼 수 있습니다.</p>
+            </div>
+
+            <div class="thai-public-section">
+              <h3>명세서 설명자</h3>
+              <p class="help" style="font-size:16px;margin:0 0 26px;">이는 고객의 은행 또는 신용카드 명세서에 표시됩니다. 지불 거절 및 분쟁을 방지하려면 명세서에 표시되는 내용이 귀사의 상호명이나 URL과 유사해야 합니다. <span class="thai-link">지원 문서 보기</span></p>
+              <div class="thai-field">
+                <label for="th-statement-descriptor">명세서 설명자</label>
+                <input id="th-statement-descriptor" type="text" maxlength="22" placeholder="TAEYANG">
+                <div class="thai-receipt-preview" aria-hidden="true">
+                  <div class="thai-receipt-top">♜ <span class="thai-fake-line" style="width:84px;"></span></div>
+                  <div class="thai-receipt-main">
+                    <div>
+                      <span class="thai-fake-line" style="width:90px;"></span>
+                      <div class="thai-receipt-brand" id="th-preview-statement">TAEYANG</div>
+                      <span class="thai-fake-line" style="width:180px;"></span>
+                    </div>
+                    <div class="thai-receipt-amounts">THB&nbsp; XX.XX<br>THB&nbsp; XXX.XX<br>THB&nbsp; XX.XX</div>
+                  </div>
+                  <div class="thai-receipt-zigzag"></div>
+                </div>
+                <div class="help" style="font-size:16px;">명세서 설명자는 고객의 은행 또는 신용 카드 명세서에 표시됩니다. 글자 수는 5~22자여야 합니다.</div>
+              </div>
+            </div>
+
+            <div class="thai-field">
+              <label for="th-short-descriptor">단축 설명자 <span class="optional">선택 사항</span></label>
+              <input id="th-short-descriptor" type="text" maxlength="10" placeholder="TAEYANG">
+              <div class="thai-receipt-preview" aria-hidden="true">
+                <div class="thai-receipt-top">♜ <span class="thai-fake-line" style="width:84px;"></span></div>
+                <div class="thai-receipt-main">
+                  <div>
+                    <span class="thai-fake-line" style="width:90px;"></span>
+                    <div class="thai-receipt-brand"><span id="th-preview-short">TAEYANG</span>* &nbsp;[제품]</div>
+                    <span class="thai-fake-line" style="width:180px;"></span>
+                  </div>
+                  <div class="thai-receipt-amounts">THB&nbsp; XX.XX<br>THB&nbsp; XXX.XX<br>THB&nbsp; XX.XX</div>
+                </div>
+                <div class="thai-receipt-zigzag"></div>
+              </div>
+              <div class="help" style="font-size:16px;">이는 개별 제품에 대한 설명을 추가할 때 고객의 명세서에 표시됩니다. 2~10자 미만이어야 합니다.</div>
+            </div>
+
+            <div class="thai-public-section">
+              <h3>고객 지원</h3>
+              <p class="help" style="font-size:16px;margin:0 0 26px;">이러한 세부사항은 귀하의 웹사이트 또는 소셜 미디어에 표시된 내용과 일치해야 합니다.</p>
+              <div class="thai-field">
+                <label for="th-support-phone">고객 지원 전화번호</label>
+                <div class="thai-phone">
+                  <select id="th-support-phone-country" aria-label="고객 지원 전화 국가"><option value="+66" selected>🇹🇭</option></select>
+                  <input id="th-support-phone" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="03230932">
+                </div>
+              </div>
+            </div>
+
+            <label class="thai-switch-row">
+              <input id="th-show-phone-on-docs" type="checkbox" checked>
+              <span class="thai-switch-ui"></span>
+              <span>전화번호를 영수증 및 청구서에 표시</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="thai-modal-foot">
+        <button class="btn btn-o btn-sm" onclick="backToThaiBusinessModal()">이전</button>
+        <button class="btn btn-p btn-sm" onclick="saveThaiPublicDetails()">저장 후 다음단계</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-ov" id="modal-register-th-personal">
+    <div class="thai-modal-box">
+      <div class="thai-modal-head">개인 정보 수정(3/3)</div>
+      <div class="thai-modal-body">
+        <div class="card thai-form-card">
+          <div class="thai-step">
+            <div class="thai-public-intro">
+              <h2>개인 정보 수정</h2>
+            </div>
+
+            <div class="thai-field">
+              <label>실명</label>
+              <div class="help" style="margin:0 0 8px;">태국 국민은 태국 문자로 실명을 제공해야 합니다.</div>
+              <input id="th-person-first-name" type="text" placeholder="이름">
+              <input id="th-person-last-name" type="text" placeholder="성" style="margin-top:7px;">
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-email">이메일 주소</label>
+              <input id="th-person-email" type="email" placeholder="dasjdasoidjs@gmail.com">
+            </div>
+
+            <label class="thai-check-row">
+              <input id="th-person-owner25" type="checkbox">
+              <span>이 사람은 회사를 25% 이상 소유하는 사람입니다.</span>
+            </label>
+
+            <div class="thai-field">
+              <label for="th-person-title">직책</label>
+              <input id="th-person-title" type="text" placeholder="CEO">
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-nationality">국적</label>
+              <select id="th-person-nationality">
+                <option value="TH" selected>태국</option>
+                <option value="KR">한국</option>
+                <option value="VN">베트남</option>
+              </select>
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-dob">생년월일</label>
+              <input id="th-person-dob" type="text" inputmode="numeric" pattern="[0-9 /]*" placeholder="30 / 03 / 1999">
+              <div class="help">생년월일(양력)을 입력하십시오.</div>
+            </div>
+
+            <div class="thai-field">
+              <label>가구 등록 주소</label>
+              <div class="thai-address">
+                <select id="th-person-address-country"><option value="TH" selected>태국</option></select>
+                <input id="th-person-address1" type="text" placeholder="주소 1">
+                <input id="th-person-address2" type="text" placeholder="주소 2">
+                <input id="th-person-address3" type="text" placeholder="상세 주소">
+                <select id="th-person-province">
+                  <option value="">지역 선택</option>
+                  <option value="bangkok">กรุงเทพมหานคร - Bangkok</option>
+                  <option value="chiang-mai">เชียงใหม่ - Chiang Mai</option>
+                  <option value="phuket">ภูเก็ต - Phuket</option>
+                  <option value="chonburi">ชลบุรี - Chonburi</option>
+                  <option value="nakhon-ratchasima">นครราชสีมา - Nakhon Ratchasima</option>
+                </select>
+                <input id="th-person-postal" type="text" inputmode="numeric" placeholder="우편번호">
+              </div>
+              <div class="help">블루 북(태국 국민인 경우)이나 옐로우 북(태국 국민이 아닌 경우)이라고도 하는 태국 주민등록증에 등록된 주소를 제공해 주십시오. 태국 국민이나 태국 주민이 아닌 경우에는 현재 주소를 대신 제공해 주십시오.</div>
+            </div>
+
+            <div>
+              <div class="thai-field" style="margin-bottom:12px;">
+                <label>현재 거주 중인 주소</label>
+              </div>
+              <label class="thai-check-row">
+                <input id="th-person-current-same" type="checkbox" checked>
+                <span>등록된 주소와 동일</span>
+              </label>
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-phone">전화번호</label>
+              <div class="thai-phone">
+                <select id="th-person-phone-country" aria-label="전화 국가"><option value="+66" selected>🇹🇭</option></select>
+                <input id="th-person-phone" type="text" inputmode="tel" placeholder="+66 83 587 4114">
+              </div>
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-id-number">개인 식별 번호 <span class="provided">제공</span></label>
+              <div class="help" style="margin:0 0 8px;">귀하의 ID를 확인하려면 개인 식별 번호를 알아야 합니다. 규제 의무를 준수하기 위해 수집해야 하는 정보입니다.</div>
+              <input id="th-person-id-number" type="text" placeholder="••••••••5 12 1">
+            </div>
+
+            <div class="thai-field">
+              <label for="th-person-laser-code">레이저 코드 <span class="provided">제공</span></label>
+              <input id="th-person-laser-code" type="text" placeholder="••••••••••••">
+              <div class="help">귀하의 ID를 확인하려면 레이저 코드를 알아야 합니다. 이는 ID 카드의 뒷면에서 확인할 수 있습니다.</div>
+            </div>
+
+            <div>
+              <div class="thai-field" style="margin-bottom:12px;">
+                <label>ID 확인</label>
+                <div class="help">다음 화면에서 테스트 데이터를 사용할 수 있습니다.</div>
+              </div>
+              <div class="thai-tax">ⓘ <span>제공</span></div>
+            </div>
+
+            <div class="thai-owner-note">이 사람은 조직을 대표하고 계정의 주담당자 권한을 가지고 있습니다.</div>
+            <button class="btn btn-o btn-sm" type="button">계정 대리인 삭제</button>
+            <button class="btn btn-o thai-danger-btn" type="button" disabled>사람 삭제</button>
+          </div>
+        </div>
+      </div>
+      <div class="thai-modal-foot">
+        <button class="btn btn-o btn-sm" onclick="backToThaiPublicModal()">이전</button>
+        <button class="btn btn-p btn-sm" onclick="saveThaiPersonalDetails()">저장</button>
+      </div>
+    </div>
+  </div>
+
   <section id="sec-done">
     <div class="card center">
       <h2>가입 신청 완료</h2>
@@ -316,8 +744,16 @@
   <section id="sec-forgot">
     <div class="card">
       <h2>비밀번호 찾기</h2>
-      <p class="hint" style="margin-bottom:14px;">가입 시 사용한 이메일로 임시 비밀번호를 보내드립니다. 로그인 후 새 비밀번호로 변경해 주세요.</p>
-      <div class="fg"><label>이메일</label>
+      <p class="hint" style="margin-bottom:14px;">국가와 가입 시 사용한 이메일을 입력하면 임시 비밀번호를 보내드립니다. 로그인 후 새 비밀번호로 변경해 주세요.</p>
+      <div class="fg">
+        <label>국가 <span class="req">*</span></label>
+        <div class="ui-country-options" id="fp-country-options">
+          <label class="ui-country-option"><input type="checkbox" name="fp-country" value="KR" onchange="selectForgotCountry(this)"><span>한국</span></label>
+          <label class="ui-country-option"><input type="checkbox" name="fp-country" value="TH" onchange="selectForgotCountry(this)"><span>태국</span></label>
+          <label class="ui-country-option"><input type="checkbox" name="fp-country" value="VN" onchange="selectForgotCountry(this)"><span>베트남</span></label>
+        </div>
+      </div>
+      <div class="fg"><label>이메일 <span class="req">*</span></label>
         <input id="fp-email" type="email" placeholder="merchant@example.com" onkeydown="if(event.key==='Enter')doForgot()"></div>
       <div id="fp-msg" class="msg"></div>
       <button class="btn btn-p btn-full" id="fp-submit" onclick="doForgot()">임시 비밀번호 발송</button>
@@ -325,11 +761,10 @@
       <div class="center"><span class="link" onclick="show('sec-login')">← 로그인으로 돌아가기</span></div>
     </div>
   </section>
-
   <!-- ── 로그인 후 대시보드 (admin 레이아웃) ── -->
   <section id="sec-dashboard">
     <div class="topbar">
-      <span class="topbar-brand">모노라마 트래커 · 가맹점</span>
+      <span class="topbar-brand">Tour Tracker · 가맹점</span>
       <span class="topbar-name"><span id="d-name"></span> 가맹점님</span>
       <span class="mode-badge" id="mode-badge"></span>
       <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
@@ -346,10 +781,9 @@
     <!-- 프로젝트 탭 -->
     <div id="pane-projects" class="pane active">
       <div class="panel-card">
-        <h3>프로젝트</h3>
         <div class="pj-filters">
+          <input id="pf-org" type="text" placeholder="주관기관" onkeydown="if(event.key==='Enter')loadProjects()">
           <input id="pf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadProjects()">
-          <input id="pf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadProjects()">
           <select id="pf-status">
             <option value="">상태 전체</option>
             <option value="ready_to_start">시작대기</option>
@@ -364,14 +798,12 @@
           <button class="btn btn-p btn-sm" onclick="loadProjects()">조회</button>
           <button class="btn btn-o btn-sm" onclick="resetProjFilter()">초기화</button>
           <button class="btn btn-o btn-sm" id="proj-excel" onclick="downloadProjectsExcel()" disabled>⬇ 엑셀 다운로드</button>
-          <label style="margin-left:auto;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
-            <select id="pf-size" onchange="changeProjSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 9px;font-size:13px;outline:none;">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
+          <select id="pf-size" class="grid-size-select grid-toolbar-push" aria-label="프로젝트 행 수" onchange="changeProjSize()">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
         </div>
         <div id="pj-body"></div>
       </div>
@@ -380,15 +812,14 @@
     <!-- 정산 탭 -->
     <div id="pane-settle" class="pane">
       <div class="panel-card">
-        <h3>정산</h3>
         <!-- sub 탭 -->
         <div style="display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:14px;">
           <button type="button" class="stl-sub active" data-sm-sub="by-proj" onclick="switchSettleSub('by-proj')">프로젝트별</button>
           <button type="button" class="stl-sub" data-sm-sub="by-person" onclick="switchSettleSub('by-person')">👥 인원별</button>
         </div>
         <div class="pj-filters">
+          <input id="sf-org" type="text" placeholder="주관기관" onkeydown="if(event.key==='Enter')loadSettleCurrent()">
           <input id="sf-name" type="text" placeholder="프로젝트명" onkeydown="if(event.key==='Enter')loadSettleCurrent()">
-          <input id="sf-org" type="text" placeholder="소속기관" onkeydown="if(event.key==='Enter')loadSettleCurrent()">
           <select id="sf-status">
             <option value="">상태 전체</option>
             <option value="ready_to_start">시작대기</option>
@@ -403,14 +834,12 @@
           <button class="btn btn-p btn-sm" onclick="loadSettleCurrent()">조회</button>
           <button class="btn btn-o btn-sm" onclick="resetSettleFilter()">초기화</button>
           <button class="btn btn-o btn-sm" id="settle-excel" onclick="downloadSettlementExcel()" disabled>⬇ 엑셀 다운로드</button>
-          <label style="margin-left:auto;font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
-            <select id="sf-size" onchange="changeSettleSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 9px;font-size:13px;outline:none;">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
+          <select id="sf-size" class="grid-size-select grid-toolbar-push" aria-label="정산 행 수" onchange="changeSettleSize()">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
         </div>
         <!-- 프로젝트별 sub -->
         <div id="sm-sub-by-proj" class="sm-sub-pane">
@@ -527,12 +956,29 @@
   </div>
 </div>
 
+<div class="modal-ov" id="approval-request-modal">
+  <div class="modal-box green-head-modal" style="max-width:460px;">
+    <div class="mb-head">승인요청 관리</div>
+    <div class="mb-msg" id="approval-request-detail" style="padding-bottom:8px;"></div>
+    <div id="approval-request-msg" class="msg" style="padding:0 20px;"></div>
+    <div class="mb-btns">
+      <button class="btn btn-o" onclick="closeApprovalRequest()">닫기</button>
+      <button class="btn btn-o" id="approval-reject-btn" onclick="decideApprovalRequest('rejected')">반려</button>
+      <button class="btn btn-p" id="approval-approve-btn" onclick="decideApprovalRequest('approved')">승인</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="ui-modal">
-  <div class="modal-box">
+  <div class="modal-box" id="ui-modal-box">
     <div class="mb-head" id="ui-title">알림</div>
     <div class="mb-msg" id="ui-msg"></div>
-    <label id="ui-check-wrap" style="display:none;font-size:13px;color:#1e293b;margin:8px 0 14px;cursor:pointer;user-select:none;">
-      <input type="checkbox" id="ui-check" style="margin-right:8px;vertical-align:middle;width:16px;height:16px;">
+    <div id="ui-country-wrap">
+      <div class="ui-country-title">국가 선택</div>
+      <div class="ui-country-options" id="ui-country-options"></div>
+    </div>
+    <label id="ui-check-wrap" style="display:none;">
+      <input type="checkbox" id="ui-check">
       <span id="ui-check-label"></span>
     </label>
     <div class="mb-btns">
@@ -593,6 +1039,14 @@
 </div>
 
 <!-- ── 기본 정보(설정) 모달 ── -->
+<div class="modal-ov" id="modal-merchant-info">
+  <div class="modal-box" style="max-width:640px;position:relative;">
+    <div class="mb-head band"><span id="mi-title">가맹점 상세 정보</span>
+      <button class="modal-close" onclick="closeMerchantInfo()" aria-label="닫기">×</button></div>
+    <div id="mi-body" style="padding:16px 20px 20px;max-height:78vh;overflow-y:auto;background:#f8fafc;"></div>
+  </div>
+</div>
+
 <div class="modal-ov" id="modal-profile">
   <div class="modal-box" style="max-width:560px;position:relative;">
     <div class="mb-head band">기본 정보
@@ -660,6 +1114,7 @@
   const MOBILE_RE = /^01[016789]\d{7,8}$/;          // 휴대폰
   const PW_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
   let emailVerified = false;
+  let currentMerchantCountry = 'KR';
 
   function show(id) {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
@@ -667,6 +1122,244 @@
     const logo = document.querySelector('.logo');
     if (logo) logo.style.display = (id === 'sec-dashboard') ? 'none' : '';
   }
+  function openThaiBusinessModal() {
+    const modal = document.getElementById('modal-register-th');
+    if (modal) modal.classList.add('open');
+  }
+  function closeThaiBusinessModal() {
+    const modal = document.getElementById('modal-register-th');
+    if (modal) modal.classList.remove('open');
+  }
+  function openThaiPublicModal() {
+    const modal = document.getElementById('modal-register-th-public');
+    if (modal) modal.classList.add('open');
+    syncThaiPublicPreview();
+  }
+  function closeThaiPublicModal() {
+    const modal = document.getElementById('modal-register-th-public');
+    if (modal) modal.classList.remove('open');
+  }
+  function backToThaiBusinessModal() {
+    closeThaiPublicModal();
+    openThaiBusinessModal();
+  }
+  function openThaiPersonalModal() {
+    const modal = document.getElementById('modal-register-th-personal');
+    if (modal) modal.classList.add('open');
+  }
+  function closeThaiPersonalModal() {
+    const modal = document.getElementById('modal-register-th-personal');
+    if (modal) modal.classList.remove('open');
+  }
+  function backToThaiPublicModal() {
+    closeThaiPersonalModal();
+    openThaiPublicModal();
+  }
+  function syncThaiPublicPreview() {
+    const statement = (document.getElementById('th-statement-descriptor')?.value || 'TAEYANG').trim() || 'TAEYANG';
+    const shortDesc = (document.getElementById('th-short-descriptor')?.value || statement).trim() || statement;
+    const statementPreview = document.getElementById('th-preview-statement');
+    const shortPreview = document.getElementById('th-preview-short');
+    if (statementPreview) statementPreview.textContent = statement;
+    if (shortPreview) shortPreview.textContent = shortDesc;
+  }
+  ['th-statement-descriptor', 'th-short-descriptor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', syncThaiPublicPreview);
+  });
+  let thaiProfileImageData = null;
+  let thaiProfileImageName = '';
+  let thaiProfileImageTask = null;
+  function setThaiProfilePreview(src) {
+    const preview = document.getElementById('th-profile-preview');
+    if (!preview) return;
+    preview.innerHTML = src ? `<img src="${src}" alt="Profile preview">` : '400X400<br>Preview';
+  }
+  function resizeThaiProfileImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+        reject(new Error('invalid_type'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          const size = Math.min(img.width, img.height);
+          const sx = Math.max(0, (img.width - size) / 2);
+          const sy = Math.max(0, (img.height - size) / 2);
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 400, 400);
+          resolve(canvas.toDataURL('image/jpeg', 0.86));
+        };
+        img.onerror = () => reject(new Error('load_failed'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('read_failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+  function handleThaiProfileImageInput() {
+    const input = document.getElementById('th-profile-image');
+    const file = input?.files?.[0];
+    thaiProfileImageData = null;
+    thaiProfileImageName = '';
+    setThaiProfilePreview('');
+    if (!file) return;
+    thaiProfileImageTask = resizeThaiProfileImage(file)
+      .then(dataUrl => {
+        thaiProfileImageData = dataUrl;
+        thaiProfileImageName = file.name;
+        setThaiProfilePreview(dataUrl);
+        clearThaiFieldError('th-profile-image');
+      })
+      .catch(() => {
+        thaiProfileImageTask = null;
+        setThaiFieldError('th-profile-image', 'Profile 이미지 형식이 올바르지 않습니다.', 'JPG, PNG, WEBP 이미지 파일을 선택해 주세요.');
+      });
+  }
+  function clearThaiFieldError(target) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
+    const field = el && el.closest ? el.closest('.thai-field') : null;
+    if (!field) return;
+    field.classList.remove('has-error');
+    const err = field.querySelector('.thai-field-error');
+    if (err) err.remove();
+  }
+  function clearThaiModalErrors(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.querySelectorAll('.thai-field.has-error').forEach(field => field.classList.remove('has-error'));
+    modal.querySelectorAll('.thai-field-error').forEach(err => err.remove());
+  }
+  function setThaiFieldError(id, message, action, opts = {}) {
+    const el = document.getElementById(id);
+    const field = el && el.closest ? el.closest('.thai-field') : null;
+    if (!el || !field) return false;
+    clearThaiFieldError(el);
+    field.classList.add('has-error');
+    const err = document.createElement('div');
+    err.className = 'thai-field-error';
+    err.innerHTML = `<b>${esc(message)}</b><span>${esc(action)}</span>`;
+    field.appendChild(err);
+    if (opts.focus !== false) el.focus();
+    if (opts.scroll !== false) field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
+  }
+  function validateThaiWebsite(opts = {}) {
+    const el = document.getElementById('th-website');
+    const website = String(el?.value || '').trim();
+    if (!website) return true;
+    const websiteToCheck = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+    try {
+      const url = new URL(websiteToCheck);
+      const hostOk = url.hostname.includes('.') && !url.hostname.startsWith('.') && !url.hostname.endsWith('.');
+      if (!hostOk) throw new Error('invalid host');
+      clearThaiFieldError('th-website');
+      return true;
+    } catch (e) {
+      setThaiFieldError('th-website', '비즈니스 웹사이트 형식이 올바르지 않습니다.', '예: artinparadise.com 또는 https://artinparadise.com 형식으로 입력해 주세요.', opts);
+      return false;
+    }
+  }
+  function formatThaiDob(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '').slice(0, 8);
+    const parts = [];
+    if (digits.length > 0) parts.push(digits.slice(0, 2));
+    if (digits.length > 2) parts.push(digits.slice(2, 4));
+    if (digits.length > 4) parts.push(digits.slice(4, 8));
+    return parts.join(' / ');
+  }
+  function isValidThaiDob(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '');
+    if (digits.length !== 8) return false;
+    const day = Number(digits.slice(0, 2));
+    const month = Number(digits.slice(2, 4));
+    const year = Number(digits.slice(4, 8));
+    if (year < 1900 || year > new Date().getFullYear()) return false;
+    const dt = new Date(year, month - 1, day);
+    return dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day;
+  }
+  function formatThaiTax13(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '').slice(0, 13);
+    if (digits.length !== 13) return digits;
+    return `${digits.slice(0, 1)}-${digits.slice(1, 5)}-${digits.slice(5, 10)}-${digits.slice(10, 12)}-${digits.slice(12, 13)}`;
+  }
+  function validateThaiTax13(id, label, opts = {}) {
+    const el = document.getElementById(id);
+    const digits = String(el?.value || '').replace(/[^0-9]/g, '');
+    if (!digits) return true;
+    if (digits.length !== 13) {
+      setThaiFieldError(id, `${label} 형식이 올바르지 않습니다.`, '숫자 13자리를 입력해 주세요. 입력 후 포커스를 벗어나면 d-dddd-ddddd-dd-d 형식으로 자동 변환됩니다.', opts);
+      return false;
+    }
+    el.value = formatThaiTax13(digits);
+    clearThaiFieldError(id);
+    return true;
+  }
+  function formatThaiBusinessPhone(value) {
+    const digits = String(value || '').replace(/[^0-9]/g, '').slice(0, 9);
+    if (digits.length !== 9) return digits;
+    if (digits.startsWith('02')) return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5, 9)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
+  }
+  function validateThaiBusinessPhone(opts = {}) {
+    const el = document.getElementById('th-phone');
+    const digits = String(el?.value || '').replace(/[^0-9]/g, '');
+    if (!digits) return true;
+    if (digits.length !== 9 || !digits.startsWith('0')) {
+      setThaiFieldError('th-phone', '비즈니스 전화번호 형식이 올바르지 않습니다.', '0으로 시작하는 숫자 9자리를 입력해 주세요. 입력 후 0X-XXX-XXXX 또는 0XX-XXX-XXX 형식으로 자동 변환됩니다.', opts);
+      return false;
+    }
+    el.value = formatThaiBusinessPhone(digits);
+    clearThaiFieldError('th-phone');
+    return true;
+  }
+  function validateThaiPostal(id, label, opts = {}) {
+    const el = document.getElementById(id);
+    const digits = String(el?.value || '').replace(/[^0-9]/g, '');
+    if (!digits) return true;
+    if (digits.length !== 5) {
+      setThaiFieldError(id, `${label} 형식이 올바르지 않습니다.`, '우편번호는 숫자 5자리만 입력할 수 있습니다. 예: 10110', opts);
+      return false;
+    }
+    el.value = digits;
+    clearThaiFieldError(id);
+    return true;
+  }
+  document.querySelectorAll('#modal-register-th input, #modal-register-th select, #modal-register-th textarea, #modal-register-th-public input, #modal-register-th-public select, #modal-register-th-public textarea, #modal-register-th-personal input, #modal-register-th-personal select, #modal-register-th-personal textarea').forEach(el => {
+    el.addEventListener('input', () => clearThaiFieldError(el));
+    el.addEventListener('change', () => clearThaiFieldError(el));
+  });
+  ['th-tax-id', 'th-company-reg', 'th-postal', 'th-phone', 'th-support-phone', 'th-person-postal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', function () {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+  });
+  const thPostalEl = document.getElementById('th-postal');
+  if (thPostalEl) thPostalEl.addEventListener('blur', () => validateThaiPostal('th-postal', '우편번호', { focus: false, scroll: false }));
+  const thPersonPostalEl = document.getElementById('th-person-postal');
+  if (thPersonPostalEl) thPersonPostalEl.addEventListener('blur', () => validateThaiPostal('th-person-postal', '우편번호', { focus: false, scroll: false }));
+  const thTaxIdEl = document.getElementById('th-tax-id');
+  if (thTaxIdEl) thTaxIdEl.addEventListener('blur', () => validateThaiTax13('th-tax-id', 'TIN(세금 ID 번호)', { focus: false, scroll: false }));
+  const thCompanyRegEl = document.getElementById('th-company-reg');
+  if (thCompanyRegEl) thCompanyRegEl.addEventListener('blur', () => validateThaiTax13('th-company-reg', '회사 등록 번호', { focus: false, scroll: false }));
+  const thPhoneEl = document.getElementById('th-phone');
+  if (thPhoneEl) thPhoneEl.addEventListener('blur', () => validateThaiBusinessPhone({ focus: false, scroll: false }));
+  const thPersonDobEl = document.getElementById('th-person-dob');
+  if (thPersonDobEl) {
+    thPersonDobEl.addEventListener('input', function () {
+      this.value = formatThaiDob(this.value);
+    });
+  }
+  const thWebsiteEl = document.getElementById('th-website');
+  if (thWebsiteEl) thWebsiteEl.addEventListener('blur', () => validateThaiWebsite({ focus: false, scroll: false }));
+  const thProfileImageEl = document.getElementById('th-profile-image');
+  if (thProfileImageEl) thProfileImageEl.addEventListener('change', handleThaiProfileImageInput);
   function setMsg(id, cls, text) { const el = document.getElementById(id); el.className = (id.endsWith('-fm') ? 'fm ' : 'msg ') + cls; el.textContent = text; }
   function clr(id) { setMsg(id, '', ''); }
   async function api(path, opt) {
@@ -679,6 +1372,18 @@
   (function loadSavedEmail() {
     try {
       const saved = localStorage.getItem('merchant_saved_email');
+      const savedCountry = localStorage.getItem('merchant_saved_country');
+      const savedIdentifier = localStorage.getItem('merchant_saved_identifier');
+      if (savedCountry) {
+        const countryInput = document.querySelector(`input[name="login-country"][value="${savedCountry}"]`);
+        if (countryInput) { countryInput.checked = true; selectLoginCountry(countryInput); }
+      } else {
+        updateLoginIdentifierField();
+      }
+      if (savedIdentifier) {
+        const idEl = document.getElementById('li-identifier');
+        if (idEl) idEl.value = savedIdentifier;
+      }
       if (saved) {
         const el = document.getElementById('li-email');
         const cb = document.getElementById('li-remember');
@@ -691,22 +1396,100 @@
     } catch (_) {}
   })();
 
+  function selectLoginCountry(input) {
+    if (!input) return;
+    if (!input.checked) { input.checked = true; return; }
+    document.querySelectorAll('input[name="login-country"]').forEach(other => {
+      if (other !== input) other.checked = false;
+    });
+    updateLoginIdentifierField();
+  }
+  function getLoginCountry() {
+    return document.querySelector('input[name="login-country"]:checked')?.value || 'KR';
+  }
+  function updateLoginIdentifierField() {
+    const country = getLoginCountry();
+    const label = document.getElementById('li-identifier-label');
+    const input = document.getElementById('li-identifier');
+    if (!label || !input) return;
+    clr('li-identifier-fm');
+    if (country === 'TH') {
+      label.textContent = 'TIN 번호';
+      input.placeholder = '13자리 TIN 번호 입력';
+      input.maxLength = 17;
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 13);
+    } else {
+      label.textContent = '사업자등록번호';
+      input.placeholder = '사업자등록번호 입력';
+      input.maxLength = 10;
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 10);
+    }
+  }
+  function handleLoginIdentifierInput() {
+    const input = document.getElementById('li-identifier');
+    if (!input) return;
+    const country = getLoginCountry();
+    input.value = input.value.replace(/[^0-9]/g, '').slice(0, country === 'TH' ? 13 : 10);
+    validateLoginIdentifier({ showEmpty:false, format:false });
+  }
+  function validateLoginIdentifier(opts = {}) {
+    const input = document.getElementById('li-identifier');
+    if (!input) return false;
+    const country = getLoginCountry();
+    const digits = input.value.replace(/[^0-9]/g, '');
+    const showEmpty = opts.showEmpty !== false;
+    const format = opts.format !== false;
+    if (!digits) {
+      if (showEmpty) setMsg('li-identifier-fm', 'e', country === 'TH' ? 'TIN 번호를 입력해 주세요.' : '사업자등록번호를 입력해 주세요.');
+      else clr('li-identifier-fm');
+      return false;
+    }
+    if (country === 'TH') {
+      if (digits.length !== 13) {
+        setMsg('li-identifier-fm', 'e', 'TIN 번호는 숫자 13자리로 입력해 주세요. 예: 1-2345-67890-12-3');
+        return false;
+      }
+      if (format) input.value = formatThaiTax13(digits);
+      clr('li-identifier-fm');
+      return true;
+    }
+    if (digits.length !== 10) {
+      setMsg('li-identifier-fm', 'e', '사업자등록번호는 숫자 10자리로 입력해 주세요.');
+      return false;
+    }
+    input.value = digits;
+    clr('li-identifier-fm');
+    return true;
+  }
+
   // ── 로그인 ──
   async function doLogin() {
     clr('li-msg');
+    const country = getLoginCountry();
+    let identifier = document.getElementById('li-identifier').value.trim();
     const email = document.getElementById('li-email').value.trim();
     const password = document.getElementById('li-pw').value;
     const remember = document.getElementById('li-remember')?.checked;
+    if (!validateLoginIdentifier({ showEmpty:true })) return;
+    identifier = document.getElementById('li-identifier').value.trim();
     if (!EM_RE.test(email)) { setMsg('li-msg', 'e', '올바른 이메일을 입력해 주세요.'); return; }
     if (!password) { setMsg('li-msg', 'e', '비밀번호를 입력해 주세요.'); return; }
-    const { ok, d } = await api('/api/merchant/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    const { ok, d } = await api('/api/merchant/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ country, identifier, email, password }) });
     if (!ok) { setMsg('li-msg', 'e', d.error || '로그인에 실패했습니다.'); return; }
     // 이메일 저장/제거
     try {
-      if (remember) localStorage.setItem('merchant_saved_email', email);
-      else localStorage.removeItem('merchant_saved_email');
+      if (remember) {
+        localStorage.setItem('merchant_saved_email', email);
+        localStorage.setItem('merchant_saved_country', country);
+        localStorage.setItem('merchant_saved_identifier', identifier);
+      } else {
+        localStorage.removeItem('merchant_saved_email');
+        localStorage.removeItem('merchant_saved_country');
+        localStorage.removeItem('merchant_saved_identifier');
+      }
     } catch (_) {}
     document.getElementById('d-name').textContent = d.merchant?.name || '';
+    currentMerchantCountry = d.merchant?.country || country;
     if (d.resetRequired) { openPwChange(); return; }   // 임시 비밀번호 → 강제 변경
     enterApp(document.getElementById('login-gift-toggle').checked);
     if (d.prevIp || d.prevLogoutAt) {
@@ -726,17 +1509,34 @@
   }
 
   // ── 비밀번호 찾기(임시 비밀번호 발송) ──
+  function selectForgotCountry(input) {
+    if (!input || !input.checked) return;
+    document.querySelectorAll('input[name="fp-country"]').forEach(other => {
+      if (other !== input) other.checked = false;
+    });
+  }
+
+  function getForgotCountry() {
+    const checked = document.querySelector('input[name="fp-country"]:checked');
+    return checked ? checked.value : '';
+  }
+
   async function doForgot() {
     clr('fp-msg');
+    const country = getForgotCountry();
     const email = document.getElementById('fp-email').value.trim();
+    if (!country) { setMsg('fp-msg', 'e', '국가를 선택해 주세요.'); return; }
     if (!EM_RE.test(email)) { setMsg('fp-msg', 'e', '올바른 이메일을 입력해 주세요.'); return; }
     const btn = document.getElementById('fp-submit'); btn.disabled = true;
-    const { ok, d } = await api('/api/merchant/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const { ok, d } = await api('/api/merchant/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country, email }),
+    });
     btn.disabled = false;
     if (!ok) { setMsg('fp-msg', 'e', d.error || '요청에 실패했습니다.'); return; }
     setMsg('fp-msg', 's', d.message || '임시 비밀번호가 발송되었습니다. 메일을 확인해 주세요.');
   }
-
   // ── 임시 비밀번호 강제 변경 ──
   function openPwChange() {
     document.getElementById('pc-cur').value = document.getElementById('li-pw').value || '';
@@ -777,7 +1577,7 @@
   });
 
   // 이메일 인증 전에는 나머지 입력 비활성화
-  const REG_GATED = ['rg-name','rg-biz','rg-cname','rg-cphone','rg-cmobile','rg-pw','rg-pw2','rg-bank','rg-account','rg-bizcert','rg-bankcopy','rg-submit'];
+  const REG_GATED = ['rg-name','rg-biz','rg-cname','rg-cphone','rg-cmobile','rg-pw','rg-pw2','rg-bank','rg-account','rg-bizcert','rg-bankcopy','rg-profile','rg-google-lat','rg-google-lng','rg-google-search','rg-google-preview-btn','rg-submit'];
   function setRegEnabled(on) { REG_GATED.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !on; }); }
   function togCode(btn) {
     const inp = document.getElementById('rg-code');
@@ -833,6 +1633,14 @@
     if (!v('rg-account')) { setMsg('rg-msg', 'e', '은행계좌번호를 입력해 주세요.'); return; }
     if (!document.getElementById('rg-bizcert').files[0]) { setMsg('rg-msg', 'e', '사업자등록증을 첨부해 주세요.'); return; }
     if (!document.getElementById('rg-bankcopy').files[0]) { setMsg('rg-msg', 'e', '은행계좌사본을 첨부해 주세요.'); return; }
+    if (!document.getElementById('rg-profile').files[0]) { setMsg('rg-msg', 'e', 'Profile 이미지를 첨부해 주세요.'); return; }
+    const googleLat = v('rg-google-lat');
+    const googleLng = v('rg-google-lng');
+    if ((googleLat && !googleLng) || (!googleLat && googleLng)) { setMsg('rg-msg', 'e', 'Google 지도 위치는 위도와 경도를 함께 입력해 주세요.'); return; }
+    if (googleLat && (Number(googleLat) < -90 || Number(googleLat) > 90 || Number(googleLng) < -180 || Number(googleLng) > 180)) {
+      setMsg('rg-msg', 'e', 'Google 지도 좌표가 올바르지 않습니다.');
+      return;
+    }
 
     const fd = new FormData();
     fd.append('merchant_name', v('rg-name'));
@@ -846,6 +1654,11 @@
     fd.append('bank_account', v('rg-account'));
     fd.append('biz_cert', document.getElementById('rg-bizcert').files[0]);
     fd.append('bank_copy', document.getElementById('rg-bankcopy').files[0]);
+    fd.append('profile_image', document.getElementById('rg-profile').files[0]);
+    if (googleLat && googleLng) {
+      fd.append('google_lat', googleLat);
+      fd.append('google_lng', googleLng);
+    }
 
     const btn = document.getElementById('rg-submit'); btn.disabled = true;
     const { ok, d } = await api('/api/merchant/register', { method: 'POST', body: fd });
@@ -853,6 +1666,24 @@
     if (!ok) { setMsg('rg-msg', 'e', d.error || '가입 신청에 실패했습니다.'); return; }
     document.getElementById('done-msg').textContent = d.message || '가맹점 가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.';
     show('sec-done');
+  }
+
+  function openRegisterGoogleSearch() {
+    const name = document.getElementById('rg-name').value.trim();
+    const query = name || 'merchant location';
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank', 'noopener');
+  }
+  function updateRegisterMapPreview() {
+    const lat = document.getElementById('rg-google-lat').value.trim();
+    const lng = document.getElementById('rg-google-lng').value.trim();
+    const map = document.getElementById('rg-google-map');
+    if (!lat || !lng || Number(lat) < -90 || Number(lat) > 90 || Number(lng) < -180 || Number(lng) > 180) {
+      map.style.display = 'none';
+      map.removeAttribute('src');
+      return;
+    }
+    map.src = `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}&z=16&output=embed`;
+    map.style.display = 'block';
   }
 
   // ── 숫자 포맷터 (포커스 아웃 시 하이픈 표기) ──
@@ -945,8 +1776,17 @@
       await checkCode();   // 자동 인증 → 나머지 필드 활성화
       return;
     }
+    if (qp.get('register') === '1') {
+      history.replaceState(null, '', '/merchant');
+      show('sec-register');
+      return;
+    }
     const { ok, d } = await api('/api/merchant/me');
-    if (ok && d.ok) { document.getElementById('d-name').textContent = d.merchant?.name || ''; enterApp(); }
+    if (ok && d.ok) {
+      document.getElementById('d-name').textContent = d.merchant?.name || '';
+      currentMerchantCountry = d.merchant?.country || 'KR';
+      enterApp();
+    }
   })();
 
   // ── 탭 전환 ──
@@ -984,7 +1824,7 @@
   const STATUS_RANK = { started: 0, ready_to_start: 1, completed: 2 };
   const APP_RANK = { pending: 0, approved: 1, rejected: 2 };
   const PJ_COLS = [
-    { key: 'organization_name', label: '소속기관', cls: '' },
+    { key: 'organization_name', label: '주관기관', cls: '' },
     { key: 'project_name',      label: '프로젝트명', cls: '' },
     { key: 'from_date',         label: '프로젝트 기간', cls: '' },
     { key: 'remaining_days',    label: '잔여일', cls: 'c', num: true },
@@ -996,6 +1836,9 @@
     { key: 'status_survey_reward', label: '🎁 설문경품<br>지원여부', cls: 'c' },
     { key: 'pin_code',          label: '인증코드', cls: 'c' },
     { key: 'application_status',label: '지원', cls: 'c' },
+    { key: 'approval_request',  label: '승인요청', cls: 'c' },
+    { key: 'approval_status',   label: '승인여부', cls: 'c' },
+    { key: 'approval_decided_at', label: '결정일시', cls: 'c' },
   ];
   let projData = [];
   let projSort = { key: 'from_date', dir: 'desc' };
@@ -1015,6 +1858,8 @@
     if (key === 'from_date') return p.from_date ? new Date(p.from_date).getTime() : 0;
     if (key === 'status' || key === 'project_status') return STATUS_RANK[p.status] ?? 9;
     if (key === 'application_status') return p.application_status ? (APP_RANK[p.application_status] ?? 8) : 9;
+    if (key === 'approval_status') return p.approval_request?.status ? (APP_RANK[p.approval_request.status] ?? 8) : 9;
+    if (key === 'approval_decided_at') return p.approval_request?.decided_at ? new Date(p.approval_request.decided_at).getTime() : 0;
     if (key === 'status_reservation' || key === 'status_entry' || key === 'status_tour' || key === 'status_quiz' || key === 'status_survey_reward') {
       const t = key.replace('status_', '');
       const apps = p.applications || [];
@@ -1041,14 +1886,14 @@
   function changeProjSize() { projPage = 1; renderProjects(); }
   function gotoProjPage(p) { projPage = p; renderProjects(); }
   function projPagerHtml(totalPages, total) {
-    let h = `<span style="color:#64748b;margin-right:6px;">총 ${total}건 · ${projPage}/${totalPages}</span>`;
+    let h = `<span class="grid-pager-count">${total}건 · ${projPage}/${totalPages}</span>`;
     h += `<button class="btn btn-o btn-sm" ${projPage <= 1 ? 'disabled' : ''} onclick="gotoProjPage(${projPage - 1})">‹</button>`;
     let s = Math.max(1, projPage - 2), e = Math.min(totalPages, s + 4); s = Math.max(1, e - 4);
     for (let i = s; i <= e; i++) h += `<button class="btn ${i === projPage ? 'btn-p' : 'btn-o'} btn-sm" onclick="gotoProjPage(${i})">${i}</button>`;
     h += `<button class="btn btn-o btn-sm" ${projPage >= totalPages ? 'disabled' : ''} onclick="gotoProjPage(${projPage + 1})">›</button>`;
-    return `<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:13px;">${h}</div>`;
+    return `<div class="grid-pager">${h}</div>`;
   }
-  // 조회조건 전체를 엑셀로 다운로드 (파일명: 소속기관_프로젝트일련번호)
+  // 조회조건 전체를 엑셀로 다운로드 (파일명: 주관기관_프로젝트일련번호)
   async function downloadProjectsExcel() {
     const btn = document.getElementById('proj-excel');
     if (!btn || btn.disabled) return;
@@ -1105,7 +1950,7 @@
       if (av > bv) return projSort.dir === 'asc' ? 1 : -1;
       return 0;
     });
-    // 페이징: 선택한 표시 개수 기준
+    // 페이징: 선택한 행 수 기준
     const pageSize = Number((document.getElementById('pf-size') || {}).value) || 10;
     const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
     if (projPage > totalPages) projPage = totalPages;
@@ -1164,6 +2009,12 @@
               : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
             pinCell = `<span class="pin-wrap"><span class="pin-code">${txt}</span><button type="button" class="pin-btn" onclick="togglePin(${p.id})" title="${shown ? '숨기기' : '보기'}">${eye}</button></span>`;
           }
+          const req = p.approval_request || null;
+          const approvalManage = req
+            ? `<button class="btn btn-o btn-sm" onclick="openApprovalRequest(${p.id})">관리</button>`
+            : '<span style="color:#cbd5e1;">-</span>';
+          const approvalStatus = approvalLabel(req?.status);
+          const approvalDecidedAt = req?.decided_at ? fmtDT(req.decided_at) : '-';
           return `<tr>
             <td>${esc(p.organization_name) || '-'}</td>
             <td><b>${esc(p.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(p.project_serial)}</span></td>
@@ -1177,9 +2028,64 @@
             <td class="c">${cellSurvey}</td>
             <td class="c">${pinCell}</td>
             <td class="c">${action}</td>
+            <td class="c">${approvalManage}</td>
+            <td class="c">${approvalStatus}</td>
+            <td class="c" style="font-size:12px;color:#64748b;">${approvalDecidedAt}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>${projPagerHtml(totalPages, sorted.length)}`;
+  }
+
+  let currentApprovalProjectId = null;
+  function openApprovalRequest(projectId) {
+    const p = projData.find(x => Number(x.id) === Number(projectId));
+    if (!p || !p.approval_request) return;
+    currentApprovalProjectId = Number(projectId);
+    const req = p.approval_request;
+    const isPending = req.status === 'pending';
+    document.getElementById('approval-request-msg').textContent = '';
+    document.getElementById('approval-request-msg').className = 'msg';
+    document.getElementById('approval-request-detail').innerHTML = `
+      <div style="display:grid;grid-template-columns:110px 1fr;gap:9px 12px;font-size:13px;line-height:1.5;">
+        <b>요청기관</b><span>${esc(req.organization_name || p.organization_name || '-')}</span>
+        <b>프로젝트</b><span>${esc(p.project_name || '-')}<br><span style="color:#94a3b8;font-size:12px;">${esc(p.project_serial || '')}</span></span>
+        <b>요청일시</b><span>${req.requested_at ? fmtDT(req.requested_at) : '-'}</span>
+        <b>수수율</b><span>${commissionLabel(req.commission_rate)}</span>
+        <b>승인여부</b><span>${approvalLabel(req.status)}</span>
+        <b>결정일시</b><span>${req.decided_at ? fmtDT(req.decided_at) : '-'}</span>
+      </div>`;
+    document.getElementById('approval-approve-btn').disabled = !isPending;
+    document.getElementById('approval-reject-btn').disabled = !isPending;
+    document.getElementById('approval-request-modal').classList.add('open');
+  }
+  function closeApprovalRequest() {
+    document.getElementById('approval-request-modal').classList.remove('open');
+    currentApprovalProjectId = null;
+  }
+  async function decideApprovalRequest(decision) {
+    if (!currentApprovalProjectId) return;
+    const ok = await uiConfirm(decision === 'approved' ? '이 프로젝트 참여 요청을 승인하시겠습니까?' : '이 프로젝트 참여 요청을 반려하시겠습니까?', { title:'승인요청 확인', boxClass:'green-head-modal' });
+    if (!ok) return;
+    const msg = document.getElementById('approval-request-msg');
+    const approveBtn = document.getElementById('approval-approve-btn');
+    const rejectBtn = document.getElementById('approval-reject-btn');
+    approveBtn.disabled = true; rejectBtn.disabled = true;
+    msg.className = 'msg'; msg.textContent = '처리 중...';
+    const { ok: rok, d } = await api(`/api/merchant/projects/${currentApprovalProjectId}/approval-request`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ decision })
+    });
+    if (!rok) {
+      msg.className = 'msg e';
+      msg.textContent = d.error || '처리하지 못했습니다.';
+      approveBtn.disabled = false; rejectBtn.disabled = false;
+      return;
+    }
+    msg.className = 'msg s';
+    msg.textContent = d.message || '처리되었습니다.';
+    await loadProjects();
+    closeApprovalRequest();
   }
 
   // ── 정산 ──
@@ -1200,9 +2106,17 @@
     const b = APP_BADGE[s] || [s, 'b-stat'];
     return `<span class="badge ${b[1]}">${b[0]}</span>`;
   }
+  function approvalLabel(s) {
+    if (!s) return '<span style="color:#cbd5e1;">-</span>';
+    const b = APP_BADGE[s] || [s, 'b-stat'];
+    return `<span class="badge ${b[1]}">${b[0]}</span>`;
+  }
+  function commissionLabel(v) {
+    return Number.isFinite(Number(v)) ? `${Number(v)}%` : '-';
+  }
 
   const STT_COLS = [
-    { key: 'organization_name', label: '소속기관', cls: '' },
+    { key: 'organization_name', label: '주관기관', cls: '' },
     { key: 'project_name',      label: '프로젝트명', cls: '' },
     { key: 'status',            label: '프로젝트상태', cls: 'c' },
     { key: 'application_status',label: '지원여부', cls: 'c' },
@@ -1234,12 +2148,12 @@
   function changeSettleSize() { settlePage = 1; renderSettlement(); }
   function gotoSettlePage(p) { settlePage = p; renderSettlement(); }
   function settlePagerHtml(totalPages, total) {
-    let h = `<span style="color:#64748b;margin-right:6px;">총 ${total}건 · ${settlePage}/${totalPages}</span>`;
+    let h = `<span class="grid-pager-count">${total}건 · ${settlePage}/${totalPages}</span>`;
     h += `<button class="btn btn-o btn-sm" ${settlePage <= 1 ? 'disabled' : ''} onclick="gotoSettlePage(${settlePage - 1})">‹</button>`;
     let s = Math.max(1, settlePage - 2), e = Math.min(totalPages, s + 4); s = Math.max(1, e - 4);
     for (let i = s; i <= e; i++) h += `<button class="btn ${i === settlePage ? 'btn-p' : 'btn-o'} btn-sm" onclick="gotoSettlePage(${i})">${i}</button>`;
     h += `<button class="btn btn-o btn-sm" ${settlePage >= totalPages ? 'disabled' : ''} onclick="gotoSettlePage(${settlePage + 1})">›</button>`;
-    return `<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:13px;">${h}</div>`;
+    return `<div class="grid-pager">${h}</div>`;
   }
   // 정산 조회조건 전체를 엑셀로 다운로드
   async function downloadSettlementExcel() {
@@ -1364,7 +2278,7 @@
         <thead><tr>
           <th>이름</th>
           <th>전화번호</th>
-          <th>소속기관</th>
+          <th>주관기관</th>
           <th>프로젝트</th>
           <th class="c">유형</th>
           <th class="c">횟수</th>
@@ -1381,7 +2295,7 @@
             <td><b>${esc(r.project_name)}</b><br><span style="font-size:11px;color:#94a3b8;">${esc(r.project_serial)}</span></td>
             <td class="c"><span class="ttag" style="background:${m.bg};color:${m.fg};">${esc(m.label)}</span></td>
             <td class="c">${Number(r.count||0)}건</td>
-            <td class="r"><b style="color:#1d4ed8;">${won(r.amount)}</b></td>
+            <td class="r"><b style="color:#15803d;">${won(r.amount)}</b></td>
             <td class="c" style="font-size:11px;color:#475569;white-space:nowrap;">${esc(fmtDt(r.first_at))}</td>
             <td class="c" style="font-size:11px;color:#475569;white-space:nowrap;">${esc(fmtDt(r.last_at))}</td>
           </tr>`;
@@ -1534,13 +2448,94 @@
   function closeUsage() { document.getElementById('usage-modal').classList.remove('open'); }
 
   // ── 기본 정보(설정) ──
+  function fillThaiProfileFromMerchantProfile(p) {
+    if (!p) return;
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && value != null && value !== '') el.value = value;
+    };
+    set('th-legal-name', p.legal_name || p.merchant_name || '');
+    set('th-display-name', p.merchant_name || '');
+    set('th-tax-id', p.tax_id || p.biz_no || '');
+    const contactParts = String(p.contact_name || '').trim().split(/\s+/).filter(Boolean);
+    if (contactParts.length) {
+      set('th-person-first-name', contactParts[0]);
+      set('th-person-last-name', contactParts.slice(1).join(' '));
+    }
+    set('th-person-email', p.email || '');
+    set('th-person-title', p.person_title || '');
+    if (p.tax_id || p.biz_no) {
+      const taxEl = document.getElementById('th-tax-id');
+      if (taxEl) taxEl.dispatchEvent(new Event('blur'));
+    }
+  }
+
+  function merchantPersonName(p) {
+    return [p.person_first_name, p.person_last_name].filter(Boolean).join(' ') || p.contact_name || '-';
+  }
+
+  function merchantPersonAddress(p) {
+    return [p.person_address1, p.person_address2, p.person_address3, p.person_province, p.person_postal_code].filter(Boolean).join(' ') || '-';
+  }
+
+  function renderMerchantInfoProfile(p) {
+    const profileUrl = p.profile_image_400 || p.profile_image_url || '';
+    const profile = profileUrl
+      ? `<img src="${esc(profileUrl)}" alt="Profile" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">`
+      : '<span style="color:#94a3b8;">-</span>';
+    const website = p.website
+      ? `<a href="${esc(/^https?:\/\//i.test(p.website) ? p.website : 'https://' + p.website)}" target="_blank" rel="noopener" style="color:#16a34a;text-decoration:none;border-bottom:1px dashed #86efac;">${esc(p.website)}</a>`
+      : '-';
+    const rows = [
+      ['Profile', profile],
+      ['일련번호', esc(p.merchant_serial || '-')],
+      ['가맹점명', esc(p.merchant_name || p.business_name || p.legal_name || '-')],
+      ['법인/상호명', esc(p.legal_name || p.business_name || '-')],
+      ['비즈니스 유형', esc(p.business_type || '-')],
+      ['TIN', esc(p.tax_id || p.biz_no || '-')],
+      ['회사 등록 번호', esc(p.company_registration_no || '-')],
+      ['사업자등록번호', esc(p.biz_no || p.tax_id || '-')],
+      ['비즈니스 전화', esc(p.business_phone || p.contact_phone || '-')],
+      ['업종', esc(p.industry || '-')],
+      ['웹사이트', website],
+      ['명세서 표기', esc(p.statement_descriptor || '-')],
+      ['고객지원 전화', esc(p.support_phone || '-')],
+      ['담당자', esc(merchantPersonName(p))],
+      ['담당자 이메일', esc(p.person_email || p.email || '-')],
+      ['담당자 직책', esc(p.person_title || '-')],
+      ['담당자 국적', esc(p.person_nationality || '-')],
+      ['담당자 생년월일', esc(p.person_date_of_birth || '-')],
+      ['담당자 전화', esc(p.person_phone || p.contact_mobile || '-')],
+      ['담당자 주소', esc(merchantPersonAddress(p))],
+      ['개인식별번호', esc(p.personal_id_number || '-')],
+      ['Laser Code', esc(p.laser_code || '-')],
+    ];
+    document.getElementById('mi-title').textContent = p.merchant_name || p.business_name || '가맹점 상세 정보';
+    document.getElementById('mi-body').innerHTML = `<div class="merchant-detail-grid">${rows.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v}</div>`).join('')}</div>`;
+    document.getElementById('modal-merchant-info').classList.add('open');
+  }
+
+  function closeMerchantInfo() {
+    document.getElementById('modal-merchant-info')?.classList.remove('open');
+  }
+
   async function openProfile() {
     clr('pf-mc-msg');
-    document.getElementById('pf-mc-bank').innerHTML = document.getElementById('rg-bank').innerHTML; // 은행 목록 재사용
-    document.getElementById('modal-profile').classList.add('open');
     const { ok, d } = await api('/api/merchant/profile');
     if (!ok) { setMsg('pf-mc-msg', 'e', '정보를 불러오지 못했습니다.'); return; }
     const p = d.profile || {};
+    const country = p.country || currentMerchantCountry || 'KR';
+    currentMerchantCountry = country;
+    if (country === 'TH') {
+      renderMerchantInfoProfile(p);
+      return;
+    }
+    if (country === 'VN') {
+      await uiAlert('베트남 가맹점 기본정보 양식은 준비 중입니다.', { title: '준비 중' });
+      return;
+    }
+    document.getElementById('pf-mc-bank').innerHTML = document.getElementById('rg-bank').innerHTML; // 은행 목록 재사용
+    document.getElementById('modal-profile').classList.add('open');
     document.getElementById('pf-mc-name').value = p.merchant_name || '';
     document.getElementById('pf-mc-email').value = p.email || '';
     document.getElementById('pf-mc-cname').value = p.contact_name || '';
@@ -1677,32 +2672,68 @@
       const ov = document.getElementById('ui-modal');
       const ok = document.getElementById('ui-ok');
       const cancel = document.getElementById('ui-cancel');
+      const box = document.getElementById('ui-modal-box');
       const checkWrap = document.getElementById('ui-check-wrap');
       const check = document.getElementById('ui-check');
       const checkLabel = document.getElementById('ui-check-label');
+      const countryWrap = document.getElementById('ui-country-wrap');
+      const countryOptions = document.getElementById('ui-country-options');
+      if (box) box.className = 'modal-box' + (opts.boxClass ? ' ' + opts.boxClass : '');
       document.getElementById('ui-title').textContent = opts.title || '알림';
       document.getElementById('ui-msg').textContent = message;
       ok.textContent = opts.okText || '확인';
       cancel.textContent = opts.cancelText || '취소';
       cancel.style.display = opts.alert ? 'none' : '';
+      const getCountryValue = () => {
+        const checked = countryOptions && countryOptions.querySelector('input[name="ui-country-choice"]:checked');
+        return checked ? checked.value : '';
+      };
+      const updateOkState = () => {
+        const countryOk = !opts.countrySelect || !!getCountryValue();
+        const checkOk = !opts.checkbox || check.checked;
+        ok.disabled = !(countryOk && checkOk);
+      };
+      if (opts.countrySelect && countryWrap && countryOptions) {
+        countryOptions.innerHTML = opts.countrySelect.map(c => `
+          <label class="ui-country-option">
+            <input type="checkbox" name="ui-country-choice" value="${c.value}">
+            <span>${c.label}</span>
+          </label>
+        `).join('');
+        countryWrap.style.display = 'block';
+        countryOptions.querySelectorAll('input[name="ui-country-choice"]').forEach(input => {
+          input.onchange = () => {
+            if (input.checked) {
+              countryOptions.querySelectorAll('input[name="ui-country-choice"]').forEach(other => {
+                if (other !== input) other.checked = false;
+              });
+            }
+            updateOkState();
+          };
+        });
+      } else if (countryWrap && countryOptions) {
+        countryWrap.style.display = 'none';
+        countryOptions.innerHTML = '';
+      }
       if (opts.checkbox && checkWrap) {
         checkLabel.textContent = opts.checkbox;
         check.checked = false;
         checkWrap.style.display = '';
-        ok.disabled = true;
-        check.onchange = () => { ok.disabled = !check.checked; };
+        check.onchange = updateOkState;
       } else if (checkWrap) {
         checkWrap.style.display = 'none';
         check.checked = false;
-        ok.disabled = false;
         check.onchange = null;
       }
+      updateOkState();
       function close(val) {
+        const selectedCountry = getCountryValue();
         ov.classList.remove('open');
         ok.onclick = cancel.onclick = ov.onclick = null;
         if (check) check.onchange = null;
+        if (countryOptions) countryOptions.innerHTML = '';
         ok.disabled = false;
-        resolve(val);
+        resolve(val && opts.countrySelect ? selectedCountry : val);
       }
       ok.onclick = () => { if (!ok.disabled) close(true); };
       cancel.onclick = () => close(false);
@@ -1719,12 +2750,169 @@
       '회원가입 진행 전에 아래 서류 파일을 미리 준비해 주십시오.\n\n• 사업자등록증 (PDF / JPG / PNG)\n• 통장사본 (PDF / JPG / PNG)',
       {
         title: '서류 준비 안내',
+        boxClass: 'docs-modal',
         okText: '예, 회원가입 진행',
         cancelText: '취소',
-        checkbox: '사업자등록증·통장사본 파일을 준비하였습니다.',
+        countrySelect: [
+          { value: 'KR', label: '한국' },
+          { value: 'TH', label: '태국' },
+          { value: 'VN', label: '베트남' },
+        ],
+        checkbox: '사업자 등록증 , 통장사본 파일을 준비하였습니다.',
       },
     );
-    if (ok) show('sec-register');
+    if (ok === 'TH') openThaiBusinessModal();
+    else if (ok === 'KR') show('sec-register');
+    else if (ok === 'VN') uiAlert('베트남 가맹점 양식은 준비 중입니다.', { title: '준비 중' });
+  }
+
+  async function saveThaiBusinessDetails() {
+    clearThaiModalErrors('modal-register-th');
+    const required = [
+      ['th-business-type', '비즈니스 유형이 선택되지 않았습니다.', '목록에서 사업자 형태를 하나 선택해 주세요.'],
+      ['th-legal-name', '법적 비즈니스 이름이 비어 있습니다.', '세금 ID와 일치하는 법적 비즈니스 이름을 입력해 주세요.'],
+      ['th-tax-id', 'TIN(세금 ID 번호)이 비어 있습니다.', '태국 세금 ID 번호를 입력해 주세요.'],
+      ['th-company-reg', '회사 등록 번호가 비어 있습니다.', '회사 등록 번호를 숫자로 입력해 주세요.'],
+      ['th-address1', '비즈니스 주소가 비어 있습니다.', '고객과 정산 문서에 사용할 비즈니스 주소를 입력해 주세요.'],
+      ['th-province', '지역이 선택되지 않았습니다.', '비즈니스 주소의 지역을 선택해 주세요.'],
+      ['th-postal', '우편번호가 비어 있습니다.', '비즈니스 주소의 우편번호를 입력해 주세요.'],
+      ['th-phone', '비즈니스 전화번호가 비어 있습니다.', '연락 가능한 태국 비즈니스 전화번호를 입력해 주세요.'],
+      ['th-industry', '산업이 선택되지 않았습니다.', '상품 또는 서비스에 가장 가까운 산업을 선택해 주세요.'],
+      ['th-website', '비즈니스 웹사이트가 비어 있습니다.', '판매 상품 또는 서비스를 확인할 수 있는 웹사이트 URL을 입력해 주세요.'],
+      ['th-product-desc', '제품 설명이 비어 있습니다.', '고객에게 청구되는 상품 또는 서비스를 1~2문장으로 설명해 주세요.'],
+    ];
+    for (const [id, message, action] of required) {
+      const el = document.getElementById(id);
+      if (!el || !String(el.value || '').trim()) {
+        setThaiFieldError(id, message, action);
+        return;
+      }
+    }
+    if (thaiProfileImageTask) {
+      try { await thaiProfileImageTask; } catch (e) {}
+    }
+    if (!thaiProfileImageData) {
+      setThaiFieldError('th-profile-image', 'Profile 이미지가 첨부되지 않았습니다.', 'JPG, PNG, WEBP 이미지 파일을 선택해 주세요. 선택한 이미지는 400X400으로 맞춰 저장됩니다.');
+      return;
+    }
+    if (!validateThaiTax13('th-tax-id', 'TIN(세금 ID 번호)')) return;
+    if (!validateThaiTax13('th-company-reg', '회사 등록 번호')) return;
+    if (!validateThaiPostal('th-postal', '우편번호')) return;
+    if (!validateThaiBusinessPhone()) return;
+    const website = document.getElementById('th-website').value.trim();
+    if (!validateThaiWebsite()) return;
+    const data = {
+      country: 'TH',
+      business_type: document.getElementById('th-business-type').value,
+      legal_name: document.getElementById('th-legal-name').value.trim(),
+      display_name: document.getElementById('th-display-name').value.trim(),
+      tax_id: document.getElementById('th-tax-id').value.trim(),
+      company_registration_no: document.getElementById('th-company-reg').value.trim(),
+      address1: document.getElementById('th-address1').value.trim(),
+      address2: document.getElementById('th-address2').value.trim(),
+      address3: document.getElementById('th-address3').value.trim(),
+      province: document.getElementById('th-province').value,
+      postal_code: document.getElementById('th-postal').value.trim(),
+      phone: document.getElementById('th-phone').value.trim(),
+      industry: document.getElementById('th-industry').value,
+      website,
+      profile_image_name: thaiProfileImageName,
+      profile_image_400: thaiProfileImageData,
+      product_description: document.getElementById('th-product-desc').value.trim(),
+    };
+    try { localStorage.setItem('merchant_th_business_details', JSON.stringify(data)); } catch (e) {}
+    closeThaiBusinessModal();
+    openThaiPublicModal();
+  }
+
+  async function saveThaiPublicDetails() {
+    clearThaiModalErrors('modal-register-th-public');
+    const statementEl = document.getElementById('th-statement-descriptor');
+    const shortEl = document.getElementById('th-short-descriptor');
+    const supportPhoneEl = document.getElementById('th-support-phone');
+    const statement = String(statementEl?.value || '').trim();
+    const shortDescriptor = String(shortEl?.value || '').trim();
+    const supportPhone = String(supportPhoneEl?.value || '').replace(/[^0-9]/g, '');
+    if (statement.length < 5 || statement.length > 22) {
+      setThaiFieldError('th-statement-descriptor', '명세서 설명자 길이가 올바르지 않습니다.', '고객 명세서에 표시될 문구를 5~22자로 입력해 주세요.');
+      return;
+    }
+    if (shortDescriptor && (shortDescriptor.length < 2 || shortDescriptor.length > 10)) {
+      setThaiFieldError('th-short-descriptor', '단축 설명자 길이가 올바르지 않습니다.', '입력하려면 2~10자로 작성하거나, 사용하지 않을 경우 비워 두세요.');
+      return;
+    }
+    if (!supportPhone) {
+      setThaiFieldError('th-support-phone', '고객 지원 전화번호가 비어 있습니다.', '고객이 문의할 수 있는 전화번호를 입력해 주세요.');
+      return;
+    }
+    const data = {
+      statement_descriptor: statement,
+      short_descriptor: shortDescriptor,
+      support_phone_country: document.getElementById('th-support-phone-country').value,
+      support_phone: supportPhone,
+      show_phone_on_docs: document.getElementById('th-show-phone-on-docs').checked,
+    };
+    try { localStorage.setItem('merchant_th_public_details', JSON.stringify(data)); } catch (e) {}
+    closeThaiPublicModal();
+    openThaiPersonalModal();
+  }
+
+  async function saveThaiPersonalDetails() {
+    clearThaiModalErrors('modal-register-th-personal');
+    const required = [
+      ['th-person-first-name', '이름이 비어 있습니다.', '신분증에 표시된 이름을 입력해 주세요.'],
+      ['th-person-last-name', '성이 비어 있습니다.', '신분증에 표시된 성을 입력해 주세요.'],
+      ['th-person-email', '이메일 주소가 비어 있습니다.', '계정 담당자에게 연락 가능한 이메일 주소를 입력해 주세요.'],
+      ['th-person-title', '직책이 비어 있습니다.', '예: CEO, Owner, Manager 등 계정 담당자의 직책을 입력해 주세요.'],
+      ['th-person-nationality', '국적이 선택되지 않았습니다.', '계정 담당자의 국적을 선택해 주세요.'],
+      ['th-person-dob', '생년월일이 비어 있습니다.', '양력 기준 생년월일을 DD / MM / YYYY 형식으로 입력해 주세요.'],
+      ['th-person-address1', '가구 등록 주소가 비어 있습니다.', '주민등록 또는 현재 거주 주소의 첫 번째 주소를 입력해 주세요.'],
+      ['th-person-province', '주소 지역이 선택되지 않았습니다.', '가구 등록 주소의 지역을 선택해 주세요.'],
+      ['th-person-postal', '우편번호가 비어 있습니다.', '가구 등록 주소의 우편번호를 입력해 주세요.'],
+      ['th-person-phone', '전화번호가 비어 있습니다.', '계정 담당자에게 연락 가능한 전화번호를 입력해 주세요.'],
+      ['th-person-id-number', '개인 식별 번호가 비어 있습니다.', 'ID 확인을 위해 개인 식별 번호를 입력해 주세요.'],
+      ['th-person-laser-code', '레이저 코드가 비어 있습니다.', 'ID 카드 뒷면의 레이저 코드를 입력해 주세요.'],
+    ];
+    for (const [id, message, action] of required) {
+      const el = document.getElementById(id);
+      if (!el || !String(el.value || '').trim()) {
+        setThaiFieldError(id, message, action);
+        return;
+      }
+    }
+    const email = String(document.getElementById('th-person-email').value || '').trim();
+    if (!EM_RE.test(email)) {
+      setThaiFieldError('th-person-email', '이메일 주소 형식이 올바르지 않습니다.', '예: name@example.com 형식으로 입력해 주세요.');
+      return;
+    }
+    if (!isValidThaiDob(document.getElementById('th-person-dob').value)) {
+      setThaiFieldError('th-person-dob', '생년월일이 올바른 날짜가 아닙니다.', '숫자 8자리로 가능한 날짜를 입력해 주세요. 예: 30031999');
+      return;
+    }
+    if (!validateThaiPostal('th-person-postal', '우편번호')) return;
+    const data = {
+      first_name: document.getElementById('th-person-first-name').value.trim(),
+      last_name: document.getElementById('th-person-last-name').value.trim(),
+      email,
+      owns_25_percent_or_more: document.getElementById('th-person-owner25').checked,
+      title: document.getElementById('th-person-title').value.trim(),
+      nationality: document.getElementById('th-person-nationality').value,
+      date_of_birth: document.getElementById('th-person-dob').value.trim(),
+      address_country: document.getElementById('th-person-address-country').value,
+      address1: document.getElementById('th-person-address1').value.trim(),
+      address2: document.getElementById('th-person-address2').value.trim(),
+      address3: document.getElementById('th-person-address3').value.trim(),
+      province: document.getElementById('th-person-province').value,
+      postal_code: document.getElementById('th-person-postal').value.trim(),
+      current_address_same: document.getElementById('th-person-current-same').checked,
+      phone_country: document.getElementById('th-person-phone-country').value,
+      phone: document.getElementById('th-person-phone').value.trim(),
+      personal_id_number: document.getElementById('th-person-id-number').value.trim(),
+      laser_code: document.getElementById('th-person-laser-code').value.trim(),
+    };
+    try { localStorage.setItem('merchant_th_personal_details', JSON.stringify(data)); } catch (e) {}
+    closeThaiPersonalModal();
+    await uiAlert('태국 가맹점 가입 정보 3단계가 저장되었습니다.', { title: '저장 완료' });
   }
 
   let applyProjectId = null;
@@ -2235,7 +3423,7 @@
 <!-- PWA 설치 유도 배너 (모바일 미설치 상태에서만 노출) -->
 <div id="pwa-install-banner"
      style="display:none;position:fixed;bottom:16px;left:16px;right:16px;
-            background:linear-gradient(135deg,#2563eb,#0d3b66);color:#fff;
+            background:linear-gradient(135deg,#16a34a,#166534);color:#fff;
             border-radius:14px;box-shadow:0 10px 30px rgba(15,30,60,.28);
             padding:14px 16px;z-index:9000;align-items:center;gap:12px;
             font-family:'Malgun Gothic',-apple-system,sans-serif;font-size:14px;">

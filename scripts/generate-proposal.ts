@@ -1,6 +1,6 @@
 // @ts-nocheck
 // ============================================================
-// 모노라마 트래커 — 주최기관 도입 제안서 PPTX 생성기
+// Tour Tracker — 주최기관 도입 제안서 PPTX 생성기
 //   실행: npx ts-node scripts/generate-proposal.ts
 //   결과: docs/모노라마_트래커_도입제안서.pptx
 // ============================================================
@@ -98,7 +98,7 @@ function addBullets(s: PptxGenJS.Slide, items: string[], opts?: any) {
 {
   const s = pres.addSlide();
   addCover(s,
-    "모노라마 트래커",
+    "Tour Tracker",
     "스탬프 투어 + Gift + 사전·현장등록 + 현장요원관리\n통합 운영 솔루션 도입 제안서",
     `(주)모노라마 · ${new Date().toLocaleDateString("ko-KR")}`,
   );
@@ -116,7 +116,7 @@ function addBullets(s: PptxGenJS.Slide, items: string[], opts?: any) {
     "참여형 콘텐츠(스탬프투어·퀴즈·미션·혜택)를 기대하고, 주최기관은 사전등록부터 현장등록·혜택 발급·\n" +
     "가맹점 정산·현장 운영 인력 근태까지 한꺼번에 챙겨야 합니다.\n\n" +
     "각각의 기능을 별도 시스템·엑셀·종이대장으로 운영하면 누락·중복·정산 오류·인건비 손실이 반복적으로\n" +
-    "발생합니다. 모노라마 트래커는 이 모든 흐름을 단 하나의 플랫폼으로 통합합니다.",
+    "발생합니다. Tour Tracker는 이 모든 흐름을 단 하나의 플랫폼으로 통합합니다.",
     { x: 0.7, y: 1.3, w: 11.9, h: 2.0, fontFace: F, fontSize: 14, color: C.dark, paraSpaceAfter: 8 },
   );
   // 핵심 수치 카드 4개
@@ -152,7 +152,7 @@ function addBullets(s: PptxGenJS.Slide, items: string[], opts?: any) {
   const rows = [
     ["회사명",          "(주)모노라마"],
     ["설립 비전",        "오프라인 운영 현장의 디지털 전환(DX) 가속"],
-    ["대표 솔루션",      "모노라마 트래커 (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
+    ["대표 솔루션",      "Tour Tracker (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
     ["적용 분야",        "전시·축제·관광·박물관·문화행사·기업 마케팅 이벤트·교육 체험"],
     ["기술 스택",        "Node.js + TypeScript + MySQL · PWA · 카카오 지도/우편번호 · 결제 연동"],
     ["운영 모델",        "SaaS 임대형(월·프로젝트 단위) + 온프레미스 구축형(별도 견적)"],
@@ -199,7 +199,7 @@ function addBullets(s: PptxGenJS.Slide, items: string[], opts?: any) {
 // ───────────────────────────────────────────────────────────────
 {
   const s = pres.addSlide();
-  addContentSlide(s, "Solution Overview", "모노라마 트래커 한눈에 보기");
+  addContentSlide(s, "Solution Overview", "Tour Tracker 한눈에 보기");
   s.addText(
     "방문객의 사전등록부터 현장 입장 → 콘텐츠 참여 → 혜택 발급/사용 → 정산 → 운영 인력 근태까지 \n" +
     "행사 운영의 전체 생애주기를 단 하나의 플랫폼에서 통합 관리합니다.",
@@ -449,7 +449,7 @@ addSectionDivider(pres.addSlide(), "06.", "도입 효과",
 {
   const s = pres.addSlide();
   addContentSlide(s, "06. Quantitative Impact", "기존 대비 정량적 효과");
-  const headers = ["항목", "기존 운영 방식", "모노라마 트래커 도입 후", "개선 효과"];
+  const headers = ["항목", "기존 운영 방식", "Tour Tracker 도입 후", "개선 효과"];
   const rows = [
     ["방문객 등록 처리 시간",   "1인당 3~5분 (수기 작성)",    "1인당 30초 이내 (QR + 폼)",            "약 90% 단축"],
     ["혜택 정산 소요 시간",     "행사당 20~40시간 (엑셀)",     "실시간 자동 집계",                       "100% 자동화"],
@@ -678,7 +678,7 @@ addSectionDivider(pres.addSlide(), "08.", "도입 일정 · 운영 지원",
   const s = pres.addSlide();
   addContentSlide(s, "Reference", "도입 사례 · 실증 데이터");
   s.addText(
-    "모노라마 트래커는 다양한 분야의 행사에서 검증되었습니다. 아래는 최근 운영된 대표 프로젝트들의 요약입니다.\n" +
+    "Tour Tracker는 다양한 분야의 행사에서 검증되었습니다. 아래는 최근 운영된 대표 프로젝트들의 요약입니다.\n" +
     "(상세 사례 데이터는 별도 NDA 하에 공유 가능합니다.)",
     { x: 0.5, y: 1.2, w: 12.3, h: 0.9, fontFace: F, fontSize: 13, color: C.gray, italic: true });
   const cases = [
@@ -765,7 +765,7 @@ addSectionDivider(pres.addSlide(), "08.", "도입 일정 · 운영 지원",
     ["대표",     "김창호"],
     ["사업자등록번호", "277-86-00185"],
     ["사업분야", "디지털 인터랙티브 콘텐츠 · 운영 시스템 SaaS"],
-    ["대표 솔루션", "모노라마 트래커 (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
+    ["대표 솔루션", "Tour Tracker (Stamp 목적지 + Gift + 입장관리 + 현장요원관리)"],
     ["주요 적용 분야", "전시·축제·관광·박물관·체험형 행사·기업 마케팅 이벤트·교육"],
     ["기술 스택", "Node.js · TypeScript · MySQL · PWA · 카카오 지도/우편번호 · Push 알림"],
     ["문의",     "contact@monorama.kr   ·   02-0000-0000   ·   https://monorama.kr"],

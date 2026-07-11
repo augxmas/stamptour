@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supervisor · 모노라마 트래커</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Supervisor · Tour Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="/supervisor/favicon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
     body { font-family: "Malgun Gothic", sans-serif; background: #f0f4f9; min-height: 100vh;
            display: flex; flex-direction: column; }
 
@@ -51,27 +52,35 @@
     .msg.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 
     /* 대시보드 */
-    #dashboard { display: none; flex-direction: column; flex: 1; }
-    .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    #dashboard { display: none; flex-direction: column; flex: 1; height: 100vh; min-height: 0; overflow: hidden; }
+    .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 28px; height: 48px; flex: 0 0 48px; display: flex; align-items: center; justify-content: space-between; }
     .topbar .brand { font-size: 17px; font-weight: 700; color: #1e293b; }
     .topbar .user { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 12px; }
-    .content { flex: 1; padding: 28px 32px; }
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; }
-    .tab-btn { padding: 10px 20px; border: none; background: none; font-size: 14px; font-weight: 600; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
+    .content { flex: 1; min-height: 0; overflow: hidden; padding: 12px 24px 10px; display: flex; flex-direction: column; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 2px solid #e2e8f0; flex: 0 0 auto; }
+    .tab-btn { padding: 8px 20px; border: none; background: none; font-size: 14px; font-weight: 600; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
     .tab-btn.active { color: #1e293b; border-bottom-color: #1e293b; }
     .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
     /* 필터 바 */
-    .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; flex: 0 0 auto; }
     .filter-bar input, .filter-bar select { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; }
     .filter-bar input:focus, .filter-bar select:focus { border-color: #1e293b; }
+    .merchant-filter-bar { justify-content: space-between; width: 100%; }
+    .merchant-filter-left, .merchant-filter-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .merchant-filter-left { justify-content:flex-start; }
+    .merchant-filter-right { justify-content:flex-end; margin-left:auto; }
 
     /* 테이블 */
-    .tbl-wrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(20,30,60,.07); }
+    .tbl-wrap { overflow: auto; border-radius: 12px; box-shadow: 0 2px 12px rgba(20,30,60,.07); min-height: 0; }
+    #dashboard .tab-panel.active > .tbl-wrap,
+    #dashboard .merchant-country-pane.active > .tbl-wrap,
+    #dashboard .stl-sub-pane > .tbl-wrap { flex: 1 1 auto; }
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
-    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 12px 14px; text-align: center; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-    tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
+    thead th { position: sticky; top: 0; z-index: 5; background: #f8fafc; color: #475569; font-weight: 600; padding: 9px 12px; text-align: center; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    thead tr:nth-child(2) th { top: 39px; z-index: 4; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: #f8fafc; }
     .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -94,6 +103,9 @@
                color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
     .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
     .stl-sub:hover { color:#1d4ed8; }
+    .merchant-country-tabs { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin:0 0 8px; flex:0 0 auto; }
+    .merchant-country-pane { display:none !important; }
+    .merchant-country-pane.active { display:flex !important; flex-direction:column; flex:1; min-height:0; }
     /* admin과 동일한 Quiz 카드 스타일 (읽기전용) */
     .quiz-list { display: flex; flex-direction: column; gap: 10px; }
     .quiz-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; background: #f8fafc; }
@@ -130,7 +142,7 @@
     .modal-msg.error { color: #dc2626; }
 
     /* 페이지네이션 */
-    .pager { display: flex; gap: 6px; align-items: center; margin-top: 16px; justify-content: flex-end; font-size: 13px; }
+    .pager { display: flex; gap: 6px; align-items: center; margin-top: 8px; justify-content: flex-end; font-size: 13px; flex: 0 0 auto; }
     .pager button { padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
     .pager button.active { background: #1e293b; color: #fff; border-color: #1e293b; }
     .pager button:disabled { opacity: .4; cursor: default; }
@@ -249,7 +261,7 @@
 
 <!-- 로그인 -->
 <div class="login-wrap" id="login-wrap">
-  <div class="logo">모노라마 트래커 · Supervisor</div>
+  <div class="logo">Tour Tracker · Supervisor</div>
   <div class="card">
     <h2>Supervisor 로그인</h2>
     <div class="form-group">
@@ -272,7 +284,7 @@
 <!-- 대시보드 -->
 <div id="dashboard">
   <div class="topbar">
-    <div class="brand">모노라마 트래커 · Supervisor</div>
+    <div class="brand">Tour Tracker · Supervisor</div>
     <div class="user">
       <span id="sv-user-label"></span>
       <button class="btn btn-outline btn-sm" onclick="doLogout()">로그아웃</button>
@@ -280,12 +292,12 @@
   </div>
   <div class="content">
     <div class="tabs">
-      <button class="tab-btn active" id="tab-hosts-btn" onclick="switchTab('hosts')">소속기관관리</button>
-      <button class="tab-btn" id="tab-projects-btn" onclick="switchTab('projects')">프로젝트 관리</button>
-      <button class="tab-btn" id="tab-visit-btn" onclick="switchTab('visit')">방문현황</button>
-      <button class="tab-btn" id="tab-merchants-btn" onclick="switchTab('merchants')">가맹점관리</button>
-      <button class="tab-btn" id="tab-settle-btn" onclick="switchTab('settle')">정산</button>
-      <button class="tab-btn" id="tab-batch-btn" onclick="switchTab('batch')">배치이력</button>
+      <button class="tab-btn active" id="tab-hosts-btn" onclick="switchTab('hosts')">Host</button>
+      <button class="tab-btn" id="tab-projects-btn" onclick="switchTab('projects')">Proejct</button>
+      <button class="tab-btn" id="tab-visit-btn" onclick="switchTab('visit')">Traffic</button>
+      <button class="tab-btn" id="tab-merchants-btn" onclick="switchTab('merchants')">Merchant</button>
+      <button class="tab-btn" id="tab-settle-btn" onclick="switchTab('settle')">Settlement</button>
+      <button class="tab-btn" id="tab-batch-btn" onclick="switchTab('batch')">Batch Hisstory</button>
     </div>
 
     <!-- Host 관리 탭 -->
@@ -311,6 +323,7 @@
           <thead>
             <tr>
               <th class="sortable" onclick="sortHosts('id')">ID<span class="sort-icon" id="si-id"></span></th>
+              <th class="sortable" onclick="sortHosts('host_serial')">일련번호<span class="sort-icon" id="si-host_serial"></span></th>
               <th class="sortable" onclick="sortHosts('organization_name')">소속기관<span class="sort-icon" id="si-organization_name"></span></th>
               <th>담당자명</th>
               <th class="sortable" onclick="sortHosts('biz_no')">사업자번호<span class="sort-icon" id="si-biz_no"></span></th>
@@ -431,7 +444,14 @@
 
     <!-- 가맹점관리 탭 -->
     <div class="tab-panel" id="tab-merchants">
-      <div class="filter-bar">
+      <div class="merchant-country-tabs">
+        <button type="button" class="stl-sub active" id="mc-country-kr-btn" onclick="switchMerchantCountry('kr')">한국</button>
+        <button type="button" class="stl-sub" id="mc-country-th-btn" onclick="switchMerchantCountry('th')">태국</button>
+        <button type="button" class="stl-sub" id="mc-country-vn-btn" onclick="switchMerchantCountry('vn')">베트남</button>
+      </div>
+      <div class="merchant-country-pane active" id="mc-country-kr">
+      <div class="filter-bar merchant-filter-bar">
+        <div class="merchant-filter-left">
         <input id="mc-name" type="text" placeholder="가맹점명" style="width:150px;" oninput="loadMerchants(1)">
         <input id="mc-biz" type="text" placeholder="사업자등록번호" style="width:150px;" oninput="loadMerchants(1)">
         <select id="mc-status" onchange="loadMerchants(1)">
@@ -442,17 +462,66 @@
           <option value="terminated">종료</option>
           <option value="locked">잠김</option>
         </select>
+        <select id="mc-roampay-request-status" onchange="loadMerchants(1)">
+          <option value="">RoamPay 요청상태 전체</option>
+          <option value="none">미요청</option>
+          <option value="approval_requested">승인요청</option>
+          <option value="request_received">요청접수</option>
+          <option value="request_unavailable">승인요청불가</option>
+        </select>
         <button class="btn btn-primary btn-sm" onclick="loadMerchants(1)">검색</button>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openSupportProjects()">프로젝트보기</button>
+        </div>
+        <div class="merchant-filter-right">
+        <button class="btn btn-outline btn-sm" onclick="openSupportProjects()">프로젝트보기</button>
+        <button class="btn btn-outline btn-sm" onclick="openMerchantColumnModal('kr')">⚙ 컬럼조정</button>
+        </div>
       </div>
       <div id="mc-summary" style="margin-bottom:10px;font-size:13px;color:#475569;font-weight:600;">&nbsp;</div>
       <div class="tbl-wrap">
-        <table>
+        <table id="mc-table">
           <thead id="mc-thead"></thead>
           <tbody id="mc-tbody"></tbody>
         </table>
       </div>
       <div class="pager" id="mc-pager"></div>
+      </div>
+
+      <div class="merchant-country-pane" id="mc-country-th">
+        <div class="filter-bar merchant-filter-bar">
+          <div class="merchant-filter-left">
+          <input id="mc-th-name" type="text" placeholder="비즈니스명" style="width:150px;" oninput="loadThaiMerchants(1)">
+          <input id="mc-th-tax-id" type="text" placeholder="TIN / 회사등록번호" style="width:180px;" oninput="loadThaiMerchants(1)">
+          <select id="mc-th-status" onchange="loadThaiMerchants(1)">
+            <option value="">전체 상태</option>
+            <option value="draft">작성중</option>
+            <option value="pending">승인대기</option>
+            <option value="approved">승인</option>
+            <option value="rejected">거절</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadThaiMerchants(1)">검색</button>
+          </div>
+          <div class="merchant-filter-right">
+          <button class="btn btn-outline btn-sm" onclick="openMerchantColumnModal('th')">⚙ 컬럼조정</button>
+          </div>
+        </div>
+        <div id="mc-th-summary" style="margin-bottom:10px;font-size:13px;color:#475569;font-weight:600;">&nbsp;</div>
+        <div class="tbl-wrap">
+          <table id="mc-th-table">
+            <thead id="mc-th-thead"></thead>
+            <tbody id="mc-th-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pager" id="mc-th-pager"></div>
+      </div>
+
+      <div class="merchant-country-pane" id="mc-country-vn">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>국가</th><th>상태</th><th>비고</th></tr></thead>
+            <tbody><tr><td>베트남</td><td><span class="badge badge-pending">준비중</span></td><td style="color:#64748b;">베트남 Merchant 양식 및 데이터 연동 준비 중입니다.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- 정산 탭 (admin과 동일 sub 탭: 프로젝트별/가맹점별/일별 + 소속기관 추가) -->
@@ -752,7 +821,30 @@
       <div id="merchant-modal-msg" class="modal-msg"></div>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;padding-top:14px;border-top:1px solid #e2e8f0;">
         <button class="btn btn-outline btn-sm" onclick="closeMerchantModal()">닫기</button>
+        <button class="btn btn-outline btn-sm" id="merchant-roampay-request-btn" onclick="requestMerchantRoampayApproval()">RoamPay 요청 보내기</button>
         <button class="btn btn-primary btn-sm" id="merchant-save-btn" onclick="saveMerchantChanges()" disabled>저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 태국 Merchant 상세 정보 모달 -->
+<div class="modal-overlay" id="thai-merchant-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="card-header">
+      <h3>태국 Merchant 상세 정보</h3>
+      <button class="modal-close" onclick="closeThaiMerchantModal()" title="닫기">×</button>
+    </div>
+    <div class="card-body">
+      <div id="thai-merchant-detail"></div>
+      <div class="reason-wrap" id="thai-merchant-reason-wrap">
+        <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">처리 사유 (선택)</label>
+        <textarea id="thai-merchant-reason-input" placeholder="사유를 입력해 주세요."></textarea>
+      </div>
+      <div id="thai-merchant-modal-msg" class="modal-msg"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;padding-top:14px;border-top:1px solid #e2e8f0;">
+        <button class="btn btn-outline btn-sm" onclick="closeThaiMerchantModal()">닫기</button>
+        <button class="btn btn-primary btn-sm" id="thai-merchant-save-btn" onclick="saveThaiMerchantChanges()" disabled>저장</button>
       </div>
     </div>
   </div>
@@ -1146,7 +1238,7 @@
     if (name === 'hosts') loadHosts(1);
     else if (name === 'projects') loadProjects(1);
     else if (name === 'visit') loadVisitStatus(1);
-    else if (name === 'merchants') loadMerchants(1);
+    else if (name === 'merchants') loadActiveMerchantCountry(1);
     else if (name === 'settle') loadSettlement();
     else if (name === 'batch') loadBatchLogs(1);
   }
@@ -1714,8 +1806,227 @@
   // ── 가맹점관리 탭 ──
   const MC_STATUS = { pending:'승인대기', approved:'승인', cancelled:'취소', terminated:'종료', locked:'잠김' };
   const MC_BADGE = { pending:'bp-quoted', approved:'bp-started', cancelled:'bp-cancelled', terminated:'bp-cancelled', locked:'bp-cancelled' };
+  const MC_ROAMPAY_REQ_STATUS = { none:'미요청', approval_requested:'승인요청', request_received:'요청접수', request_unavailable:'승인요청불가' };
+  const MC_ROAMPAY_REQ_BADGE = { none:'bp-quoted', approval_requested:'bp-quoted', request_received:'bp-started', request_unavailable:'bp-cancelled' };
   let mcSortCol = 'created_at', mcSortDir = 'desc';
+  let merchantCountry = 'kr';
   let merchantsCache = {};
+  let thaiMerchantsCache = {};
+  const MERCHANT_COLUMN_CONFIGS = {
+    kr: {
+      title: '한국 Merchant 컬럼조정',
+      tableId: 'mc-table',
+      storageKey: 'supervisor.merchant.kr.columns.v1',
+      attr: 'data-mc-kr-col',
+      groupAttr: 'data-mc-kr-group',
+      groups: { contact: ['contact_name', 'contact_phone', 'contact_mobile'], tour: ['tour_status', 'tour_approved_at'], roampay: ['roampay_request_status', 'roampay_requested_at', 'roampay_response_at'] },
+      columns: [
+        { key:'serial', label:'일련번호' },
+        { key:'merchant_name', label:'가맹점명' },
+        { key:'contact_name', label:'이름' },
+        { key:'contact_phone', label:'연락처' },
+        { key:'contact_mobile', label:'모바일' },
+        { key:'biz_no', label:'사업자등록번호' },
+        { key:'biz_cert', label:'사업자등록증' },
+        { key:'email', label:'이메일' },
+        { key:'bank_name', label:'은행' },
+        { key:'bank_account', label:'계좌번호' },
+        { key:'bank_copy', label:'은행통장사본' },
+        { key:'created_at', label:'가입일' },
+        { key:'tour_status', label:'Tour 승인' },
+        { key:'tour_approved_at', label:'Tour 승인일' },
+        { key:'roampay_request_status', label:'요청상태' },
+        { key:'roampay_requested_at', label:'요청일시' },
+        { key:'roampay_response_at', label:'응답일시' },
+        { key:'manage', label:'관리' },
+      ],
+    },
+    th: {
+      title: '태국 Merchant 컬럼조정',
+      tableId: 'mc-th-table',
+      storageKey: 'supervisor.merchant.th.columns.v1',
+      attr: 'data-mc-th-col',
+      groupAttr: 'data-mc-th-group',
+      groups: {
+        contact: ['person_name', 'person_email', 'person_title', 'person_nationality', 'person_dob', 'person_address', 'person_phone', 'personal_id_number', 'laser_code'],
+        tour: ['tour_status', 'tour_approved_at'],
+        roampay: ['roampay_request_status', 'roampay_requested_at', 'roampay_response_at'],
+      },
+      columns: [
+        { key:'serial', label:'일련번호' },
+        { key:'business_name', label:'비즈니스명' },
+        { key:'business_type', label:'비즈니스 유형' },
+        { key:'profile', label:'프로필' },
+        { key:'tax_id', label:'TIN' },
+        { key:'company_registration_no', label:'회사 등록 번호' },
+        { key:'business_phone', label:'전화번호' },
+        { key:'industry', label:'산업' },
+        { key:'website', label:'웹사이트' },
+        { key:'statement_descriptor', label:'명세서 설명자' },
+        { key:'support_phone', label:'고객지원 전화' },
+        { key:'created_at', label:'가입일' },
+        { key:'person_name', label:'이름' },
+        { key:'person_email', label:'이메일' },
+        { key:'person_title', label:'직책' },
+        { key:'person_nationality', label:'국적' },
+        { key:'person_dob', label:'생년월일' },
+        { key:'person_address', label:'주소' },
+        { key:'person_phone', label:'전화번호' },
+        { key:'personal_id_number', label:'개인식별번호' },
+        { key:'laser_code', label:'레이져코드' },
+        { key:'tour_status', label:'Tour 승인' },
+        { key:'tour_approved_at', label:'Tour 승인일' },
+        { key:'roampay_request_status', label:'요청상태' },
+        { key:'roampay_requested_at', label:'요청일시' },
+        { key:'roampay_response_at', label:'응답일시' },
+        { key:'manage', label:'관리' },
+      ],
+    },
+  };
+  function getMerchantColumnPrefs(country) {
+    const cfg = MERCHANT_COLUMN_CONFIGS[country];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(cfg.storageKey) || '{}');
+      return {
+        hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
+        frozen: Array.isArray(parsed.frozen) ? parsed.frozen : [],
+      };
+    } catch (_) {
+      return { hidden: [], frozen: [] };
+    }
+  }
+  function saveMerchantColumnPrefs(country, prefs) {
+    const cfg = MERCHANT_COLUMN_CONFIGS[country];
+    try { localStorage.setItem(cfg.storageKey, JSON.stringify(prefs)); } catch (_) {}
+  }
+  function applyMerchantColumnPrefs(country) {
+    const cfg = MERCHANT_COLUMN_CONFIGS[country];
+    const table = document.getElementById(cfg.tableId);
+    if (!cfg || !table) return;
+    const prefs = getMerchantColumnPrefs(country);
+    const hidden = new Set(prefs.hidden);
+    const frozen = new Set(prefs.frozen || []);
+    table.querySelectorAll(`[${cfg.attr}]`).forEach(el => {
+      el.style.position = '';
+      el.style.left = '';
+      el.style.zIndex = '';
+      el.style.background = '';
+      el.style.boxShadow = '';
+    });
+    cfg.columns.forEach(col => {
+      table.querySelectorAll(`[${cfg.attr}="${col.key}"]`).forEach(el => {
+        el.style.display = hidden.has(col.key) ? 'none' : '';
+      });
+    });
+    Object.entries(cfg.groups).forEach(([group, keys]) => {
+      const visibleCount = keys.filter(key => !hidden.has(key)).length;
+      table.querySelectorAll(`[${cfg.groupAttr}="${group}"]`).forEach(el => {
+        el.style.display = visibleCount ? '' : 'none';
+        el.colSpan = Math.max(visibleCount, 1);
+      });
+    });
+    let left = 0;
+    cfg.columns.forEach(col => {
+      if (hidden.has(col.key) || !frozen.has(col.key)) return;
+      const cells = Array.from(table.querySelectorAll(`[${cfg.attr}="${col.key}"]`)).filter(el => el.style.display !== 'none');
+      if (!cells.length) return;
+      cells.forEach(el => {
+        const isHead = el.tagName === 'TH';
+        el.style.position = 'sticky';
+        el.style.left = `${left}px`;
+        el.style.zIndex = isHead ? '12' : '6';
+        el.style.background = isHead ? '#f8fafc' : '#fff';
+        el.style.boxShadow = '2px 0 0 #e2e8f0';
+      });
+      left += Math.ceil(cells[0].getBoundingClientRect().width || cells[0].offsetWidth || 120);
+    });
+  }
+  function openMerchantColumnModal(country) {
+    const cfg = MERCHANT_COLUMN_CONFIGS[country];
+    if (!cfg) return;
+    document.getElementById('merchant-column-panel')?.remove();
+    const prefs = getMerchantColumnPrefs(country);
+    const hidden = new Set(prefs.hidden);
+    const frozen = new Set(prefs.frozen || []);
+    const panel = document.createElement('div');
+    panel.id = 'merchant-column-panel';
+    panel.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+    panel.innerHTML = `
+      <div style="background:#fff;border-radius:14px;width:360px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <div style="flex:none;display:grid;grid-template-columns:30px 1fr 30px;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #0f172a;background:#000;color:#fff;">
+          <span aria-hidden="true"></span>
+          <div style="font-weight:800;font-size:15px;color:#fff;text-align:center;">${cfg.title}</div>
+          <button type="button" id="mcp-close-x" aria-label="닫기" style="flex:none;width:30px;height:30px;border:none;border-radius:50%;background:#1f2937;color:#fff;font-size:18px;line-height:1;cursor:pointer;">&times;</button>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px;">
+          <div style="font-size:12px;color:#64748b;margin-bottom:10px;">표시할 컬럼을 선택해 주세요.</div>
+          <div style="display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;font-size:12px;color:#64748b;margin-bottom:8px;padding:0 10px;">
+            <span>컬럼</span><span style="text-align:center;">표시</span><span style="text-align:center;">📌 고정</span>
+          </div>
+          <div id="merchant-column-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div style="flex:none;display:flex;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+          <button type="button" id="mcp-reset" class="btn btn-outline btn-sm" style="flex:1;">초기화</button>
+          <button type="button" id="mcp-close" class="btn btn-primary btn-sm" style="flex:1;">닫기</button>
+        </div>
+      </div>`;
+    const list = panel.querySelector('#merchant-column-list');
+    const noneRow = document.createElement('div');
+    noneRow.style.cssText = 'display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;border:1px dashed #cbd5e1;border-radius:8px;padding:9px 10px;background:#f8fafc;font-size:13px;color:#475569;';
+    noneRow.innerHTML = `<span style="font-weight:700;">고정 안 함</span><span></span>
+      <label title="틀고정 해제" style="display:flex;justify-content:center;align-items:center;gap:4px;cursor:pointer;"><span aria-hidden="true" style="font-size:14px;line-height:1;">📌</span><input type="radio" name="mcp-freeze" data-role="frozen" data-col="" ${frozen.size ? '' : 'checked'} style="width:15px;height:15px;accent-color:#0f172a;"></label>`;
+    list.appendChild(noneRow);
+    cfg.columns.forEach(col => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:8px;padding:9px 10px;background:#fff;font-size:13px;color:#1e293b;';
+      row.innerHTML = `<span style="font-weight:700;">${col.label}</span>
+        <label style="display:flex;justify-content:center;cursor:pointer;"><input type="checkbox" data-role="visible" data-col="${col.key}" ${hidden.has(col.key) ? '' : 'checked'} style="width:15px;height:15px;accent-color:#2563eb;"></label>
+        <label title="이 컬럼을 좌측에 틀고정" style="display:flex;justify-content:center;align-items:center;gap:4px;cursor:pointer;"><span aria-hidden="true" style="font-size:14px;line-height:1;">📌</span><input type="radio" name="mcp-freeze" data-role="frozen" data-col="${col.key}" ${frozen.has(col.key) && !hidden.has(col.key) ? 'checked' : ''} ${hidden.has(col.key) ? 'disabled' : ''} style="width:15px;height:15px;accent-color:#0f172a;"></label>`;
+      list.appendChild(row);
+    });
+    panel.addEventListener('click', e => { if (e.target === panel) panel.remove(); });
+    panel.querySelector('#mcp-close-x').onclick = () => panel.remove();
+    panel.querySelector('#mcp-close').onclick = () => panel.remove();
+    panel.querySelector('#mcp-reset').onclick = () => {
+      saveMerchantColumnPrefs(country, { hidden: [], frozen: [] });
+      panel.remove();
+      applyMerchantColumnPrefs(country);
+    };
+    list.addEventListener('change', () => {
+      const nextHidden = [];
+      let nextFrozen = [];
+      list.querySelectorAll('input[data-role="visible"]').forEach(chk => {
+        if (!chk.checked) nextHidden.push(chk.dataset.col);
+      });
+      const hiddenSet = new Set(nextHidden);
+      list.querySelectorAll('input[data-role="frozen"]').forEach(chk => {
+        if (!chk.dataset.col) return;
+        chk.disabled = hiddenSet.has(chk.dataset.col);
+        if (chk.disabled) chk.checked = false;
+        if (chk.checked) nextFrozen = [chk.dataset.col];
+      });
+      saveMerchantColumnPrefs(country, { hidden: nextHidden, frozen: nextFrozen });
+      applyMerchantColumnPrefs(country);
+    });
+    document.body.appendChild(panel);
+  }
+  function switchMerchantCountry(country) {
+    merchantCountry = country;
+    ['kr', 'th', 'vn'].forEach(c => {
+      document.getElementById(`mc-country-${c}-btn`)?.classList.toggle('active', c === country);
+      const pane = document.getElementById(`mc-country-${c}`);
+      if (pane) {
+        pane.classList.toggle('active', c === country);
+        pane.style.display = c === country ? 'flex' : 'none';
+      }
+    });
+    loadActiveMerchantCountry(1);
+  }
+  function loadActiveMerchantCountry(page) {
+    if (merchantCountry === 'th') return loadThaiMerchants(page || 1);
+    if (merchantCountry === 'vn') return;
+    return loadMerchants(page || 1);
+  }
   function sortMerchants(col) {
     if (mcSortCol === col) mcSortDir = mcSortDir === 'asc' ? 'desc' : 'asc';
     else { mcSortCol = col; mcSortDir = 'asc'; }
@@ -1736,6 +2047,7 @@
       merchant_name: document.getElementById('mc-name').value,
       biz_no: document.getElementById('mc-biz').value,
       status: document.getElementById('mc-status').value,
+      roampay_request_status: document.getElementById('mc-roampay-request-status').value,
       sort_by: mcSortCol, sort_dir: mcSortDir, page, size: 10,
     }).toString();
     const r = await apiFetch('/api/supervisor/merchants?' + qs);
@@ -1749,9 +2061,28 @@
   function renderMerchants(rows) {
     const arr = key => mcSortCol === key ? (mcSortDir === 'asc' ? ' ▲' : ' ▼') : '';
     const sh = (key, label) => `<th class="sortable" onclick="sortMerchants('${key}')">${label}${arr(key)}</th>`;
-    document.getElementById('mc-thead').innerHTML = '<tr>' +
-      sh('id', 'ID') + '<th>가맹점명</th>' + sh('biz_no', '사업자등록번호') + '<th>사업자등록증</th>' + '<th>이메일</th>' +
-      sh('bank_name', '은행') + '<th>계좌번호</th><th>은행통장사본</th>' + sh('status', '상태') + sh('created_at', '가입일') + '<th>관리</th></tr>';
+    const shr = (key, label, colKey) => `<th rowspan="2" data-mc-kr-col="${colKey}" class="sortable" onclick="sortMerchants('${key}')">${label}${arr(key)}</th>`;
+    document.getElementById('mc-thead').innerHTML =
+      '<tr>' +
+        `${shr('merchant_serial', '일련번호', 'serial')}` +
+        '<th rowspan="2" data-mc-kr-col="merchant_name">가맹점명</th>' +
+        '<th colspan="3" data-mc-kr-group="contact">담당자</th>' +
+        `${shr('biz_no', '사업자등록번호', 'biz_no')}` +
+        '<th rowspan="2" data-mc-kr-col="biz_cert">사업자등록증</th>' +
+        '<th rowspan="2" data-mc-kr-col="email">이메일</th>' +
+        `${shr('bank_name', '은행', 'bank_name')}` +
+        '<th rowspan="2" data-mc-kr-col="bank_account">계좌번호</th>' +
+        '<th rowspan="2" data-mc-kr-col="bank_copy">은행통장사본</th>' +
+        `${shr('created_at', '가입일', 'created_at')}` +
+        '<th colspan="2" data-mc-kr-group="tour">Tour</th>' +
+        '<th colspan="3" data-mc-kr-group="roampay">Roampay</th>' +
+        '<th rowspan="2" data-mc-kr-col="manage">관리</th>' +
+      '</tr>' +
+      '<tr>' +
+        '<th data-mc-kr-col="contact_name">이름</th><th data-mc-kr-col="contact_phone">연락처</th><th data-mc-kr-col="contact_mobile">모바일</th>' +
+        '<th data-mc-kr-col="tour_status">승인</th><th data-mc-kr-col="tour_approved_at">승인일</th>' +
+        '<th data-mc-kr-col="roampay_request_status">요청상태</th><th data-mc-kr-col="roampay_requested_at">요청일시</th><th data-mc-kr-col="roampay_response_at">응답일시</th>' +
+      '</tr>';
     const bizFmt = b => b ? String(b).replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
     const fileBtn = (m, kind, title) => m[kind === 'biz-cert' ? 'biz_cert_path' : 'bank_copy_path']
       ? `<button class="btn btn-outline btn-sm" onclick="viewMerchantFile(${m.id},'${kind}','${title}')">보기</button>`
@@ -1763,19 +2094,262 @@
         ? `<a href="javascript:void(0)" class="email-link" onclick="openSendMerchantEmail(${m.id})" title="메일 발송">${esc(m.email)}</a>`
         : '-';
       return `<tr>
-        <td>${m.id}</td>
-        <td><b>${esc(m.merchant_name)}</b></td>
-        <td>${bizFmt(m.biz_no)}</td>
-        <td style="text-align:center;">${fileBtn(m, 'biz-cert', '사업자등록증')}</td>
-        <td>${emailCell}</td>
-        <td>${esc(m.bank_name || '-')}</td>
-        <td>${esc(m.bank_account || '-')}</td>
-        <td style="text-align:center;">${fileBtn(m, 'bank-copy', '은행통장사본')}</td>
-        <td><span class="badge ${MC_BADGE[m.status] || ''}">${MC_STATUS[m.status] || m.status}</span></td>
-        <td style="font-size:12px;color:#64748b;white-space:nowrap;">${m.created_at ? new Date(m.created_at).toLocaleDateString('ko-KR') : '-'}</td>
-        <td style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openMerchantModal(${m.id})">관리</button></td>
+        <td data-mc-kr-col="serial">${esc(m.merchant_serial || '-')}</td>
+        <td data-mc-kr-col="merchant_name"><b>${esc(m.merchant_name)}</b></td>
+        <td data-mc-kr-col="contact_name">${esc(m.contact_name || '-')}</td>
+        <td data-mc-kr-col="contact_phone">${esc(stPhone(m.contact_phone))}</td>
+        <td data-mc-kr-col="contact_mobile">${esc(stPhone(m.contact_mobile))}</td>
+        <td data-mc-kr-col="biz_no">${bizFmt(m.biz_no)}</td>
+        <td data-mc-kr-col="biz_cert" style="text-align:center;">${fileBtn(m, 'biz-cert', '사업자등록증')}</td>
+        <td data-mc-kr-col="email">${emailCell}</td>
+        <td data-mc-kr-col="bank_name">${esc(m.bank_name || '-')}</td>
+        <td data-mc-kr-col="bank_account">${esc(m.bank_account || '-')}</td>
+        <td data-mc-kr-col="bank_copy" style="text-align:center;">${fileBtn(m, 'bank-copy', '은행통장사본')}</td>
+        <td data-mc-kr-col="created_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.created_at ? new Date(m.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-kr-col="tour_status"><span class="badge ${MC_BADGE[m.status] || ''}">${MC_STATUS[m.status] || m.status}</span></td>
+        <td data-mc-kr-col="tour_approved_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.system_approved_at ? new Date(m.system_approved_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-kr-col="roampay_request_status"><span class="badge ${MC_ROAMPAY_REQ_BADGE[m.roampay_request_status || 'none'] || ''}">${MC_ROAMPAY_REQ_STATUS[m.roampay_request_status || 'none'] || m.roampay_request_status || '-'}</span></td>
+        <td data-mc-kr-col="roampay_requested_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.roampay_requested_at ? new Date(m.roampay_requested_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-kr-col="roampay_response_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.roampay_response_at ? new Date(m.roampay_response_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-kr-col="manage" style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openMerchantModal(${m.id})">관리</button></td>
       </tr>`;
-    }).join('') : '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+    }).join('') : '<tr><td colspan="18" style="text-align:center;color:#94a3b8;padding:24px;">조회된 데이터가 없습니다.</td></tr>';
+    applyMerchantColumnPrefs('kr');
+  }
+
+  async function loadThaiMerchants(page) {
+    const qs = new URLSearchParams({
+      business_name: document.getElementById('mc-th-name')?.value || '',
+      tax_id: document.getElementById('mc-th-tax-id')?.value || '',
+      status: document.getElementById('mc-th-status')?.value || '',
+      page, size: 10,
+    }).toString();
+    const r = await apiFetch('/api/supervisor/thai-merchants?' + qs);
+    if (!r) return;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return;
+    renderThaiMerchantSummary(data.total || 0, data.status_counts || {});
+    renderThaiMerchants(data.data || []);
+    renderPager('mc-th-pager', data.total || 0, data.size || 10, data.page || page, loadThaiMerchants);
+  }
+  function renderThaiMerchantSummary(total, counts) {
+    const labels = { draft:'작성중', pending:'승인대기', approved:'승인', rejected:'거절' };
+    const parts = Object.keys(labels)
+      .filter(k => Number(counts[k]) > 0)
+      .map(k => `${labels[k]}: ${counts[k]}개`);
+    document.getElementById('mc-th-summary').textContent = `총 ${Number(total) || 0}개${parts.length ? ' (' + parts.join(' / ') + ')' : ''}`;
+  }
+  const TH_APPROVAL_STATUS = { draft:'작성중', pending:'승인대기', approved:'승인', rejected:'거절', cancelled:'취소', terminated:'종료', locked:'잠김' };
+  function thaiApprovalLabel(status) {
+    return TH_APPROVAL_STATUS[status] || status || '-';
+  }
+  function thaiApprovalBadge(status) {
+    if (status === 'approved') return 'badge-approved';
+    if (['rejected', 'cancelled', 'terminated', 'locked'].includes(status)) return 'badge-cancelled';
+    return 'badge-pending';
+  }
+  function thaiPersonName(m) {
+    return [m.person_first_name || m.first_name, m.person_last_name || m.last_name].filter(Boolean).join(' ') || m.representative_name || '-';
+  }
+  function thaiPersonAddress(m) {
+    return [
+      m.person_address1 || m.address1,
+      m.person_address2 || m.address2,
+      m.person_address3 || m.address3,
+      m.person_province || m.province,
+      m.person_postal_code || m.postal_code,
+    ].filter(Boolean).join(' ') || '-';
+  }
+  function renderThaiMerchants(rows) {
+    document.getElementById('mc-th-thead').innerHTML =
+      '<tr>' +
+        '<th rowspan="2" data-mc-th-col="serial">일련번호</th><th rowspan="2" data-mc-th-col="business_name">비즈니스명</th><th rowspan="2" data-mc-th-col="business_type">비즈니스 유형</th><th rowspan="2" data-mc-th-col="profile">프로필</th><th rowspan="2" data-mc-th-col="tax_id">TIN</th><th rowspan="2" data-mc-th-col="company_registration_no">회사 등록 번호</th>' +
+        '<th rowspan="2" data-mc-th-col="business_phone">전화번호</th><th rowspan="2" data-mc-th-col="industry">산업</th><th rowspan="2" data-mc-th-col="website">웹사이트</th><th rowspan="2" data-mc-th-col="statement_descriptor">명세서 설명자</th><th rowspan="2" data-mc-th-col="support_phone">고객지원 전화</th><th rowspan="2" data-mc-th-col="created_at">가입일</th><th colspan="9" data-mc-th-group="contact">담당자</th>' +
+        '<th colspan="2" data-mc-th-group="tour">Tour</th><th colspan="3" data-mc-th-group="roampay">Roampay</th><th rowspan="2" data-mc-th-col="manage">관리</th>' +
+      '</tr>' +
+      '<tr><th data-mc-th-col="person_name">이름</th><th data-mc-th-col="person_email">이메일</th><th data-mc-th-col="person_title">직책</th><th data-mc-th-col="person_nationality">국적</th><th data-mc-th-col="person_dob">생년월일</th><th data-mc-th-col="person_address">주소</th><th data-mc-th-col="person_phone">전화번호</th><th data-mc-th-col="personal_id_number">개인식별번호</th><th data-mc-th-col="laser_code">레이져코드</th><th data-mc-th-col="tour_status">승인</th><th data-mc-th-col="tour_approved_at">승인일</th><th data-mc-th-col="roampay_request_status">요청상태</th><th data-mc-th-col="roampay_requested_at">요청일시</th><th data-mc-th-col="roampay_response_at">응답일시</th></tr>';
+    thaiMerchantsCache = {};
+    document.getElementById('mc-th-tbody').innerHTML = rows.length ? rows.map((m, idx) => {
+      const cacheKey = `th-${idx}`;
+      thaiMerchantsCache[cacheKey] = m;
+      const tourStatus = m.tour_status || m.status || 'draft';
+      const requestStatus = m.roampay_request_status || 'none';
+      return `
+      <tr>
+        <td data-mc-th-col="serial">${esc(m.merchant_serial || '-')}</td>
+        <td data-mc-th-col="business_name"><b>${esc(m.business_name || m.legal_name || '-')}</b></td>
+        <td data-mc-th-col="business_type">${esc(m.business_type || '-')}</td>
+        <td data-mc-th-col="profile" style="text-align:center;">${(m.profile_image_400 || m.profile_image_url) ? `<button class="btn btn-outline btn-sm" onclick="openThaiMerchantProfile('${cacheKey}')">보기</button>` : '<span style="color:#cbd5e1;">-</span>'}</td>
+        <td data-mc-th-col="tax_id">${esc(m.tax_id || '-')}</td>
+        <td data-mc-th-col="company_registration_no">${esc(m.company_registration_no || '-')}</td>
+        <td data-mc-th-col="business_phone">${esc(m.business_phone || '-')}</td>
+        <td data-mc-th-col="industry">${esc(m.industry || '-')}</td>
+        <td data-mc-th-col="website">${m.website ? `<a class="email-link" href="${esc(/^https?:\/\//i.test(m.website) ? m.website : 'https://' + m.website)}" target="_blank" rel="noopener">${esc(m.website)}</a>` : '-'}</td>
+        <td data-mc-th-col="statement_descriptor">${esc(m.statement_descriptor || '-')}</td>
+        <td data-mc-th-col="support_phone">${esc(m.support_phone || '-')}</td>
+        <td data-mc-th-col="created_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.created_at ? new Date(m.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-th-col="person_name">${esc(thaiPersonName(m))}</td>
+        <td data-mc-th-col="person_email">${esc(m.person_email || m.email || '-')}</td>
+        <td data-mc-th-col="person_title">${esc(m.person_title || m.title || '-')}</td>
+        <td data-mc-th-col="person_nationality">${esc(m.person_nationality || m.nationality || '-')}</td>
+        <td data-mc-th-col="person_dob">${esc(m.person_date_of_birth || m.date_of_birth || '-')}</td>
+        <td data-mc-th-col="person_address" style="min-width:220px;text-align:left;">${esc(thaiPersonAddress(m))}</td>
+        <td data-mc-th-col="person_phone">${esc(m.person_phone || m.phone || '-')}</td>
+        <td data-mc-th-col="personal_id_number">${esc(m.personal_id_number || '-')}</td>
+        <td data-mc-th-col="laser_code">${esc(m.laser_code || '-')}</td>
+        <td data-mc-th-col="tour_status"><span class="badge ${thaiApprovalBadge(tourStatus)}">${esc(m.tour_status_label || m.status_label || thaiApprovalLabel(tourStatus))}</span></td>
+        <td data-mc-th-col="tour_approved_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${(m.tour_approved_at || m.system_approved_at) ? new Date(m.tour_approved_at || m.system_approved_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-th-col="roampay_request_status"><span class="badge ${MC_ROAMPAY_REQ_BADGE[requestStatus] || ''}">${esc(MC_ROAMPAY_REQ_STATUS[requestStatus] || requestStatus)}</span></td>
+        <td data-mc-th-col="roampay_requested_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.roampay_requested_at ? new Date(m.roampay_requested_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-th-col="roampay_response_at" style="font-size:12px;color:#64748b;white-space:nowrap;">${m.roampay_response_at ? new Date(m.roampay_response_at).toLocaleDateString('ko-KR') : '-'}</td>
+        <td data-mc-th-col="manage" style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openThaiMerchantModal('${cacheKey}')">관리</button></td>
+      </tr>
+    `;
+    }).join('') : '<tr><td colspan="27" style="text-align:center;color:#94a3b8;padding:24px;">태국 Merchant 데이터가 없습니다.</td></tr>';
+    applyMerchantColumnPrefs('th');
+  }
+
+  function openThaiMerchantProfile(key) {
+    const m = thaiMerchantsCache[key];
+    if (!m) { showInfo('알림', '가맹점 정보를 찾을 수 없습니다.'); return; }
+    const url = m.profile_image_400 || m.profile_image_url;
+    if (!url) { showInfo('알림', '등록된 프로필 이미지가 없습니다.'); return; }
+    const title = `${m.business_name || m.legal_name || 'Merchant'} Profile`;
+    showImageUrl(url, title);
+  }
+
+  let currentThaiMerchantKey = null;
+  let origThaiTourStatus = null;
+  let origThaiRoampayRequestStatus = null;
+
+  function thaiMerchantStatusOptions(current, values) {
+    return values
+      .map(s => `<option value="${s}"${s === current ? ' selected' : ''}>${thaiApprovalLabel(s)}</option>`)
+      .join('');
+  }
+  function openThaiMerchantModal(key) {
+    const m = thaiMerchantsCache[key];
+    if (!m) { showInfo('알림', '태국 Merchant 정보를 불러올 수 없습니다.'); return; }
+    currentThaiMerchantKey = key;
+    origThaiTourStatus = m.tour_status || m.status || 'draft';
+    origThaiRoampayRequestStatus = m.roampay_request_status || 'none';
+    document.getElementById('thai-merchant-modal-msg').textContent = '';
+    document.getElementById('thai-merchant-modal-msg').className = 'modal-msg';
+    document.getElementById('thai-merchant-reason-wrap').style.display = 'none';
+    document.getElementById('thai-merchant-reason-input').value = '';
+    document.getElementById('thai-merchant-save-btn').disabled = true;
+
+    const website = m.website
+      ? `<a class="email-link" href="${esc(/^https?:\/\//i.test(m.website) ? m.website : 'https://' + m.website)}" target="_blank" rel="noopener">${esc(m.website)}</a>`
+      : '-';
+    const profile = m.profile_image_400 || m.profile_image_url
+      ? `<img src="${esc(m.profile_image_400 || m.profile_image_url)}" alt="Profile" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;">`
+      : '-';
+    const tourOpts = thaiMerchantStatusOptions(origThaiTourStatus, ['draft', 'pending', 'approved', 'rejected', 'cancelled', 'terminated', 'locked']);
+    const roampayReqOpts = Object.entries(MC_ROAMPAY_REQ_STATUS)
+      .map(([value, label]) => `<option value="${value}"${value === origThaiRoampayRequestStatus ? ' selected' : ''}>${label}</option>`)
+      .join('');
+
+    document.getElementById('thai-merchant-detail').innerHTML = `
+      <div class="detail-row"><span class="detail-label">일련번호</span><span class="detail-val">${esc(m.merchant_serial || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">Profile</span><span class="detail-val">${profile}</span></div>
+      <div class="detail-row"><span class="detail-label">비즈니스명</span><span class="detail-val">${esc(m.business_name || m.legal_name || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">비즈니스 유형</span><span class="detail-val">${esc(m.business_type || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">TIN</span><span class="detail-val">${esc(m.tax_id || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">회사 등록 번호</span><span class="detail-val">${esc(m.company_registration_no || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">전화번호</span><span class="detail-val">${esc(m.business_phone || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">산업</span><span class="detail-val">${esc(m.industry || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">웹사이트</span><span class="detail-val">${website}</span></div>
+      <div class="detail-row"><span class="detail-label">명세서 설명자</span><span class="detail-val">${esc(m.statement_descriptor || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">고객지원 전화</span><span class="detail-val">${esc(m.support_phone || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">담당자</span><span class="detail-val">${esc(m.representative_name || '-')}</span></div>
+      <div class="detail-row">
+        <span class="detail-label">Tour 승인</span>
+        <span class="detail-val">
+          <select id="th-md-tour-status" onchange="onThaiMerchantStatusChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
+            ${tourOpts}
+          </select>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Roampay 요청상태</span>
+        <span class="detail-val">
+          <select id="th-md-roampay-request-status" onchange="onThaiMerchantStatusChange()"
+            style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
+            ${roampayReqOpts}
+          </select>
+        </span>
+      </div>
+      <div class="detail-row"><span class="detail-label">Tour 승인일</span><span class="detail-val">${(m.tour_approved_at || m.system_approved_at) ? new Date(m.tour_approved_at || m.system_approved_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 요청일시</span><span class="detail-val">${m.roampay_requested_at ? new Date(m.roampay_requested_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 응답일시</span><span class="detail-val">${m.roampay_response_at ? new Date(m.roampay_response_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">가입일</span><span class="detail-val">${m.created_at ? new Date(m.created_at).toLocaleString('ko-KR') : '-'}</span></div>
+    `;
+
+    document.getElementById('thai-merchant-modal').classList.add('open');
+  }
+  function onThaiMerchantStatusChange() {
+    const tourSel = document.getElementById('th-md-tour-status');
+    const roampaySel = document.getElementById('th-md-roampay-request-status');
+    if (!tourSel || !roampaySel) return;
+    const changed = tourSel.value !== origThaiTourStatus || roampaySel.value !== origThaiRoampayRequestStatus;
+    document.getElementById('thai-merchant-save-btn').disabled = !changed;
+    document.getElementById('thai-merchant-reason-wrap').style.display = changed ? 'block' : 'none';
+    const msgEl = document.getElementById('thai-merchant-modal-msg');
+    msgEl.textContent = '';
+    msgEl.className = 'modal-msg';
+  }
+  async function saveThaiMerchantChanges() {
+    if (!currentThaiMerchantKey) return;
+    const m = thaiMerchantsCache[currentThaiMerchantKey];
+    const tourSel = document.getElementById('th-md-tour-status');
+    const roampaySel = document.getElementById('th-md-roampay-request-status');
+    if (!m || !tourSel || !roampaySel) return;
+    const nextTourStatus = tourSel.value;
+    const nextRoampayRequestStatus = roampaySel.value;
+    if (nextTourStatus === origThaiTourStatus && nextRoampayRequestStatus === origThaiRoampayRequestStatus) return;
+    const reason = document.getElementById('thai-merchant-reason-input').value.trim();
+    showSaveConfirm(`상태를 저장하시겠습니까?\n\nTour: ${thaiApprovalLabel(nextTourStatus)}\nRoamPay 요청상태: ${MC_ROAMPAY_REQ_STATUS[nextRoampayRequestStatus] || nextRoampayRequestStatus}`, async () => {
+      const msgEl = document.getElementById('thai-merchant-modal-msg');
+      const btn = document.getElementById('thai-merchant-save-btn');
+      msgEl.textContent = '';
+      msgEl.className = 'modal-msg';
+      btn.disabled = true;
+      if (m.id) {
+        const r = await apiFetch(`/api/supervisor/thai-merchants/${m.id}/status`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ tour_status: nextTourStatus, roampay_request_status: nextRoampayRequestStatus, reason }),
+        });
+        if (!r) return;
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          msgEl.textContent = data.error || '저장에 실패했습니다.';
+          msgEl.className = 'modal-msg error';
+          btn.disabled = false;
+          return;
+        }
+      }
+      const now = new Date().toISOString();
+      m.tour_status = nextTourStatus;
+      m.status = nextTourStatus;
+      m.roampay_request_status = nextRoampayRequestStatus;
+      m.tour_approved_at = nextTourStatus === 'approved' ? (m.tour_approved_at || m.system_approved_at || now) : null;
+      m.system_approved_at = m.tour_approved_at;
+      m.roampay_requested_at = nextRoampayRequestStatus === 'approval_requested' ? (m.roampay_requested_at || now) : m.roampay_requested_at;
+      m.roampay_response_at = ['request_received', 'request_unavailable'].includes(nextRoampayRequestStatus) ? (m.roampay_response_at || now) : null;
+      m.status_reason = reason || m.status_reason || '';
+      renderThaiMerchants(Object.values(thaiMerchantsCache));
+      closeThaiMerchantModal();
+      showInfo('저장 완료', '태국 Merchant 승인 정보가 저장되었습니다.');
+    });
+  }
+  function closeThaiMerchantModal() {
+    document.getElementById('thai-merchant-modal').classList.remove('open');
+    currentThaiMerchantKey = null;
+    origThaiTourStatus = null;
+    origThaiRoampayRequestStatus = null;
   }
   // 첨부파일(PDF/이미지) 팝업 보기
   async function viewMerchantFile(id, kind, title) {
@@ -1842,7 +2416,8 @@
     document.getElementById('merchant-modal-msg').className = 'modal-msg';
     document.getElementById('merchant-reason-wrap').style.display = 'none';
     document.getElementById('merchant-reason-input').value = '';
-    document.getElementById('merchant-save-btn').disabled = true;
+    document.getElementById('merchant-save-btn').disabled = m.status !== 'approved';
+    document.getElementById('merchant-roampay-request-btn').disabled = false;
 
     const bizNo = m.biz_no ? m.biz_no.replace(/^(\d{3})(\d{2})(\d{5})$/, '$1-$2-$3') : '-';
     const bizCert = m.biz_cert_path
@@ -1857,9 +2432,16 @@
     const emailLink = m.email
       ? `<a href="javascript:void(0)" class="email-link" onclick="openSendMerchantEmail(${m.id})">${esc(m.email)}</a>`
       : '-';
+    const requestStatus = m.roampay_request_status || 'none';
+    const requestBody = m.roampay_response_body
+      ? `<pre style="white-space:pre-wrap;word-break:break-all;margin:0;font-size:12px;color:#475569;">${esc(String(m.roampay_response_body).slice(0, 2000))}</pre>`
+      : '-';
 
     document.getElementById('merchant-detail').innerHTML = `
       <div class="detail-row"><span class="detail-label">가맹점명</span><span class="detail-val">${esc(m.merchant_name || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">담당자 이름</span><span class="detail-val">${esc(m.contact_name || '-')}</span></div>
+      <div class="detail-row"><span class="detail-label">담당자 연락처</span><span class="detail-val">${esc(stPhone(m.contact_phone))}</span></div>
+      <div class="detail-row"><span class="detail-label">담당자 모바일</span><span class="detail-val">${esc(stPhone(m.contact_mobile))}</span></div>
       <div class="detail-row"><span class="detail-label">사업자번호</span><span class="detail-val">${bizNo}</span></div>
       <div class="detail-row"><span class="detail-label">이메일</span><span class="detail-val">${emailLink}</span></div>
       <div class="detail-row"><span class="detail-label">은행</span><span class="detail-val">${esc(m.bank_name || '-')}</span></div>
@@ -1867,7 +2449,7 @@
       <div class="detail-row"><span class="detail-label">사업자등록증</span><span class="detail-val">${bizCert}</span></div>
       <div class="detail-row"><span class="detail-label">통장사본</span><span class="detail-val">${bankCopy}</span></div>
       <div class="detail-row">
-        <span class="detail-label">상태</span>
+        <span class="detail-label">Tour 승인</span>
         <span class="detail-val">
           <select id="md-status-select" onchange="onMerchantStatusChange()"
             style="border:1.5px solid #cbd5e1;border-radius:6px;padding:6px 10px;outline:none;font-size:13px;background:#fff;">
@@ -1875,6 +2457,11 @@
           </select>
         </span>
       </div>
+      <div class="detail-row"><span class="detail-label">Tour 승인일</span><span class="detail-val">${m.system_approved_at ? new Date(m.system_approved_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 요청상태</span><span class="detail-val"><span class="badge ${MC_ROAMPAY_REQ_BADGE[requestStatus] || ''}">${MC_ROAMPAY_REQ_STATUS[requestStatus] || requestStatus}</span></span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 요청일시</span><span class="detail-val">${m.roampay_requested_at ? new Date(m.roampay_requested_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 응답일시</span><span class="detail-val">${m.roampay_response_at ? new Date(m.roampay_response_at).toLocaleString('ko-KR') : '-'}</span></div>
+      <div class="detail-row"><span class="detail-label">Roampay 응답</span><span class="detail-val">${requestBody}</span></div>
       <div class="detail-row"><span class="detail-label">가입일</span><span class="detail-val">${m.created_at ? new Date(m.created_at).toLocaleString('ko-KR') : '-'}</span></div>
       ${m.status_reason ? `<div class="detail-row"><span class="detail-label">처리사유</span><span class="detail-val">${esc(m.status_reason)}</span></div>` : ''}
     `;
@@ -1886,7 +2473,7 @@
     const sel = document.getElementById('md-status-select');
     if (!sel) return;
     const changed = sel.value !== origMerchantStatus;
-    document.getElementById('merchant-save-btn').disabled = !changed;
+    document.getElementById('merchant-save-btn').disabled = !(changed || sel.value === 'approved');
     const needReason = changed && MC_REASON_REQ.includes(sel.value);
     document.getElementById('merchant-reason-wrap').style.display = needReason ? 'block' : 'none';
     const msgEl = document.getElementById('merchant-modal-msg');
@@ -1899,9 +2486,9 @@
     const sel = document.getElementById('md-status-select');
     if (!sel) return;
     const newStatus = sel.value;
-    if (newStatus === origMerchantStatus) return;
+    if (newStatus === origMerchantStatus && newStatus !== 'approved') return;
     const reason = document.getElementById('merchant-reason-input').value.trim();
-    showSaveConfirm(`상태를 '${MC_STATUS[newStatus]}'(으)로 변경하시겠습니까?`, async () => {
+    showSaveConfirm(`상태를 저장하시겠습니까?\n\nTour: ${MC_STATUS[newStatus]}\nRoamPay: ${newStatus === 'approved' ? '승인요청 전송' : '요청 없음'}`, async () => {
       const msgEl = document.getElementById('merchant-modal-msg');
       msgEl.textContent = '';
       msgEl.className = 'modal-msg';
@@ -1920,9 +2507,35 @@
         btn.disabled = false;
         return;
       }
+      if (data.roampayRequest) {
+        showInfo(data.roampayRequest.ok ? 'RoamPay 요청접수' : 'RoamPay 승인요청 결과', data.roampayRequest.message || '');
+      }
       closeMerchantModal();
       loadMerchants(1);
     }, { title: '상태 변경 확인', okText: '저장' });
+  }
+
+  async function requestMerchantRoampayApproval() {
+    if (!currentMerchantId) return;
+    showSaveConfirm('이 가맹점 정보를 RoamPay로 승인요청 전송하시겠습니까?', async () => {
+      const msgEl = document.getElementById('merchant-modal-msg');
+      const btn = document.getElementById('merchant-roampay-request-btn');
+      msgEl.textContent = '';
+      msgEl.className = 'modal-msg';
+      btn.disabled = true;
+      const r = await apiFetch(`/api/supervisor/merchants/${currentMerchantId}/roampay-request`, { method: 'POST' });
+      if (!r) { btn.disabled = false; return; }
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        msgEl.textContent = data.error || 'RoamPay 승인요청 전송에 실패했습니다.';
+        msgEl.className = 'modal-msg error';
+        btn.disabled = false;
+        return;
+      }
+      closeMerchantModal();
+      loadMerchants(1);
+      showInfo(data.roampayRequest?.ok ? 'RoamPay 요청접수' : 'RoamPay 승인요청 결과', data.roampayRequest?.message || 'RoamPay 승인요청을 전송했습니다.');
+    }, { title: 'RoamPay 승인요청', okText: '요청 보내기' });
   }
 
   function closeMerchantModal() {
@@ -2407,6 +3020,7 @@
         : '-';
       return `<tr>
         <td>${h.id}</td>
+        <td>${esc(h.host_serial || '-')}</td>
         <td>${orgLink({ host_id: h.id, organization_name: h.organization_name })}</td>
         <td>${h.host_name}</td>
         <td>${bizNo}</td>
@@ -2435,7 +3049,7 @@
   }
 
   function updateSortIcons() {
-    ['id','organization_name','biz_no','status','created_at'].forEach(col => {
+    ['id','host_serial','organization_name','biz_no','status','created_at'].forEach(col => {
       const el = document.getElementById('si-' + col);
       if (!el) return;
       el.className = 'sort-icon' + (hostSortCol === col ? ' ' + hostSortDir : '');
@@ -2615,6 +3229,7 @@
       : '';
 
     document.getElementById('host-detail').innerHTML = `
+      <div class="detail-row"><span class="detail-label">일련번호</span><span class="detail-val">${host.host_serial || '-'}</span></div>
       <div class="detail-row"><span class="detail-label">담당자명</span><span class="detail-val">${host.host_name}</span></div>
       <div class="detail-row"><span class="detail-label">소속기관</span><span class="detail-val">${host.organization_name ?? '-'}</span></div>
       <div class="detail-row"><span class="detail-label">사업자번호</span><span class="detail-val">${bizNo}</span></div>

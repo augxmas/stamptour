@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import pool from "../config/database";
 
-const MAX_IDLE_MS = 4 * 60 * 1000;
+const MAX_IDLE_MS = 10 * 60 * 1000;
 
 // 세션 만료/종료 시 로그아웃 시각을 기록 (host/supervisor 공통)
 function markLogout(sessionId: string): void {

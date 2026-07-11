@@ -9,7 +9,7 @@ window.I18N_DICT = {
     "저장": "Save", "취소": "Cancel", "닫기": "Close", "검색": "Search",
     "로그인": "Sign in", "로그아웃": "Sign out", "수정": "Edit", "삭제": "Delete",
     "등록": "Register", "추가": "Add", "미리보기": "Preview", "초기화": "Reset",
-    "새로고침": "Refresh", "보기": "View", "확인": "Confirm", "다음": "Next",
+    "새로고침": "Reload", "보기": "View", "확인": "Confirm", "다음": "Next",
     "이전": "Prev", "복사": "Copy", "다운로드": "Download", "엑셀 다운로드": "Excel download",
     "새로 작성": "New", "컬럼조정": "Columns", "조회조건 초기화": "Reset filters",
     "변경": "Change", "발송": "Send", "전송": "Send",

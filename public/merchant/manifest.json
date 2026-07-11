@@ -1,14 +1,14 @@
 {
-  "name": "모노라마 트래커 가맹점",
+  "name": "Tour Tracker 가맹점",
   "short_name": "가맹점",
   "start_url": "/merchant",
   "scope": "/merchant",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eff6ff",
-  "theme_color": "#2563eb",
+  "background_color": "#f0fdf4",
+  "theme_color": "#16a34a",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/favicon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+    { "src": "/merchant/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/merchant/favicon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
   ]
 }

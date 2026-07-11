@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>현장요원 등록 · 모노라마 트래커</title>
+<title>현장요원 등록 · Tour Tracker</title>
 <link rel="manifest" id="manifest-link">
 <meta name="theme-color" content="#15803d">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -644,7 +644,7 @@ function closePostcode() {
 
 const TERMS = {
   terms: { title: '이용약관', body: `
-    <p><b>제1조 (목적)</b> 본 약관은 모노라마 트래커가 제공하는 현장요원관리 서비스의 이용과 관련하여
+    <p><b>제1조 (목적)</b> 본 약관은 Tour Tracker가 제공하는 현장요원관리 서비스의 이용과 관련하여
     회사와 이용자(현장요원) 간의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</p>
     <p><b>제2조 (서비스의 내용)</b> 회사는 현장요원의 등록, 출퇴근 QR 발급, 근태 기록 관리,
     근태 통계 제공 등의 서비스를 제공합니다.</p>
@@ -808,7 +808,7 @@ async function prepareComposed(d) {
     ctx.font = '12px sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.fillText('출근 시 관리자에게 이 QR을 보여주세요', W/2, 700);
-    ctx.fillText('모노라마 트래커 · ' + new Date().toLocaleDateString('ko-KR'), W/2, 720);
+    ctx.fillText('Tour Tracker · ' + new Date().toLocaleDateString('ko-KR'), W/2, 720);
   };
   img.src = d.qr_image_url;
 }

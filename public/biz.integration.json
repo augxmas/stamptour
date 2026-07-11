@@ -1,0 +1,45 @@
+{
+  "event": "thai_merchant.approval.requested",
+  "merchant": {
+    "business": {
+      "business_name": "Bangkok River Dinner Cruise",
+      "profile_image_url": "https://tour.roampay.kr/uploads/merchant-profiles/bangkok-dinner-cruise-400.png",
+      "legal_name": "Bangkok River Dinner Cruise Co., Ltd.",
+      "business_type": "Company",
+      "tax_id": "1-2345-67890-12-9",
+      "company_registration_no": "0-1055-67890-13-0",
+      "industry": "hospitality",
+      "website": "bangkokriverdinnercruise.example",
+      "statement_descriptor": "BKK DINNER CRUISE",
+      "business_phone": "02-456-7707",
+      "support_phone": "02-456-7707",
+      "address": {
+        "country": "TH",
+        "address1": "219 Charoen Nakhon Road",
+        "address2": "Khlong San",
+        "address3": "Bangkok",
+        "province": "bangkok",
+        "postal_code": "10600"
+      }
+    },
+    "representative": {
+      "person_first_name": "Siriporn",
+      "person_last_name": "Nanthakorn",
+      "person_email": "siriporn.cruise@example.com",
+      "person_title": "General Manager",
+      "person_nationality": "TH",
+      "person_date_of_birth": "07 / 03 / 1987",
+      "person_phone": "+66 87 456 7707",
+      "registered_address": {
+        "country": "TH",
+        "person_address1": "219 Charoen Nakhon Road",
+        "person_address2": "Khlong San",
+        "person_address3": "Bangkok",
+        "person_province": "Bangkok",
+        "person_postal_code": "10600"
+      },
+      "personal_id_number": "111111117234",
+      "laser_code": "JT0-7234567-89"
+    }
+  }
+}

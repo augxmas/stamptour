@@ -6,16 +6,17 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Host Admin · 모노라마 트래커</title>
+  <title>Host Admin · Tour Tracker</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   <script src="/vendor/jsQR.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
     body { font-family: "Malgun Gothic", sans-serif; background: #f0f4f9; min-height: 100vh;
            display: flex; flex-direction: column; }
-    .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 16px 40px; }
-    .logo { font-size: 22px; font-weight: 700; color: #2563eb; margin-bottom: 28px; }
+    .main-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; padding: 14px 16px 10px; }
+    .logo { font-size: 22px; font-weight: 700; color: #2563eb; margin-bottom: 12px; flex: 0 0 auto; }
 
     /* ── 카드 헤더 (회원가입·팝업 공통) ── */
     .card-header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -44,7 +45,7 @@
     .fg { margin-bottom: 13px; }
     .fg label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600;
                 color: #475569; margin-bottom: 5px; }
-    .req { color: #dc2626; font-size: 11px; }
+    .req { color: inherit; font-size: inherit; }
     .fg input[type=text], .fg input[type=email], .fg input[type=password],
     .fg input[type=date], .fg input[type=number], .fg textarea {
       width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;
@@ -325,14 +326,15 @@
 
     /* ── 섹션 ── */
     section { display: none; width: 100%; }
-    section.active { display: flex; flex-direction: column; align-items: center; }
-    #sec-dashboard { align-items: stretch; width: 90vw; max-width: 90vw; }
+    section.active { display: flex; flex-direction: column; align-items: center; min-height: 0; }
+    #sec-dashboard { align-items: stretch; width: 90vw; max-width: 90vw; flex: 1; overflow: hidden; }
 
     /* ── 대시보드 ── */
     /* supervisor와 동일한 상단 바 */
     .topbar { display: none; background: #fff; border-bottom: 1px solid #e2e8f0;
-              padding: 0 32px; height: 60px; align-items: center; justify-content: space-between; }
+              padding: 0 28px; height: 48px; flex: 0 0 48px; align-items: center; justify-content: space-between; }
     .topbar.show { display: flex; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .topbar .brand { font-size: 17px; font-weight: 700; color: #1e293b; white-space: nowrap; }
     .topbar .user { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 12px; }
     .topbar .user .name { font-weight: 700; color: #1e293b; white-space: nowrap; }
@@ -370,7 +372,7 @@
     /* Chrome 스타일 탭 버튼 — 사다리꼴 + 상단 둥글림 */
     .tab-btn {
       position: relative;
-      padding: 10px 13px 9px;
+      padding: 8px 13px 7px;
       border: 1px solid #cbd5e1;
       border-bottom: none;
       background: linear-gradient(to bottom, #f1f5f9, #e2e8f0);
@@ -400,7 +402,7 @@
       border-bottom: 2px solid #ffffff;  /* 활성 탭은 하단 보더라인을 덮어서 contiguous 효과 */
       font-weight: 800;
       z-index: 2;
-      padding-bottom: 10px;
+      padding-bottom: 8px;
       transform: translateY(1px);    /* 살짝 떠오르듯 */
       box-shadow: 0 -2px 4px rgba(0,0,0,.06);
     }
@@ -426,6 +428,93 @@
     .tab-btn.tab-cfg.act { color: #b45309; }       /* 활성 시 흰 바탕 + 앰버 글자 */
     .tab-btn.tab-cfg.act::before { background: #d97706; }  /* 강조선도 앰버 */
     .tab-btn:focus { outline: none; }
+    .dashboard-nav {
+      width: 100%;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 0 8px;
+    }
+    .dashboard-nav .tabs {
+      flex: 1;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .topbar-menu-toggle {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      background: #ffffff;
+      color: #1e293b;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .topbar-menu-toggle:hover,
+    .topbar-menu-toggle.open {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+    .admin-menu-backdrop {
+      position: fixed;
+      inset: 48px 0 0 0;
+      z-index: 78;
+      display: none;
+      background: rgba(15, 23, 42, .18);
+    }
+    .admin-menu-backdrop.open { display: block; }
+    .admin-menu {
+      position: fixed;
+      left: 0;
+      top: 48px;
+      bottom: 0;
+      z-index: 80;
+      width: 260px;
+      padding: 14px;
+      border-right: 1px solid #cbd5e1;
+      background: #ffffff;
+      box-shadow: 0 18px 42px rgba(15,23,42,.18);
+      transform: translateX(-105%);
+      transition: transform .22s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .admin-menu.open { transform: translateX(0); }
+    .admin-menu .tab-btn {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff7ed;
+      text-align: left;
+      box-shadow: none;
+      transform: none;
+    }
+    .admin-menu .tab-btn:hover {
+      background: #ffedd5;
+    }
+    .admin-menu .tab-btn.act {
+      padding: 10px 12px;
+      border-color: #f59e0b;
+      background: #fff;
+      transform: none;
+      box-shadow: inset 3px 0 0 #d97706;
+    }
+    .admin-menu .tab-btn.act::before {
+      display: none;
+    }
     /* 정산 sub 탭 */
     /* 정산 그리드 — 색상 없이 구분선으로만 영역 분리 */
     .settle-grid .grp-end { border-right: 1px solid #cbd5e1 !important; }
@@ -434,21 +523,92 @@
                color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
     .stl-sub.active { color:#2563eb; border-bottom-color:#2563eb; }
     .stl-sub:hover { color:#1d4ed8; }
-    .tab-panel { display: none; } .tab-panel.act { display: block; }
-    #tab-new { width: 90%; margin: 0 auto; }
-    /* 등록 폼은 기존 너비 유지(넓은 대시보드에서 과도하게 늘어나지 않도록) */
-    #tab-new { max-width: 1020px; }
-    .panel-card { background: #fff; border-radius: 0 0 14px 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 24px; border-top: 1px solid #cbd5e1; }
+    .tab-panel { display: none; } .tab-panel.act { display: flex; flex-direction: column; flex: 1; min-height: 0; align-items: stretch; }
+    #tab-new { width: 100%; }
+    .project-create-modal .modal {
+      width: min(1020px, calc(100vw - 32px));
+      max-width: none;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .project-create-modal .card-body {
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      background: #f8fafc;
+    }
+    .project-create-modal #tab-new .panel-card:first-child { margin-top: 0; }
+    .panel-card { background: #fff; border-radius: 0 0 14px 14px; box-shadow: 0 2px 12px rgba(20,30,60,.08); padding: 18px; border-top: 1px solid #cbd5e1; }
     .panel-card h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
 
     /* ── 테이블 ── */
-    .tbl-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); }
+    .tbl-wrap { overflow: auto; border-radius: 10px; box-shadow: 0 1px 8px rgba(20,30,60,.07); min-height: 0; }
+    #sec-dashboard #tab-proj.act > .panel-card,
+    #sec-dashboard #tab-entry.act > .panel-card,
+    #sec-dashboard #tab-agent.act > .panel-card,
+    #sec-dashboard #tab-tour.act > .panel-card,
+    #sec-dashboard #tab-quiz.act > .panel-card,
+    #sec-dashboard #tab-survey.act > .panel-card,
+    #sec-dashboard #tab-mail.act > .panel-card {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sec-dashboard .tab-panel.act > .tbl-wrap,
+    #sec-dashboard .tab-panel.act > .panel-card > .tbl-wrap { flex: 1 1 auto; }
+    #sec-dashboard #tab-settle.act,
+    #sec-dashboard #tab-guest.act,
+    #sec-dashboard #tab-vote.act,
+    #sec-dashboard #tab-votemgr.act,
+    #sec-dashboard #tab-notifreg.act,
+    #sec-dashboard #tab-notifmng.act,
+    #sec-dashboard #tab-noticereg.act,
+    #sec-dashboard #tab-noticemng.act,
+    #sec-dashboard #tab-inquiry.act,
+    #sec-dashboard #tab-video.act,
+    #sec-dashboard #tab-apps.act {
+      flex: 1 1 auto;
+      min-height: 0;
+      justify-content: flex-start;
+      align-items: stretch;
+      overflow-y: auto;
+      padding-bottom: 10px;
+    }
+    #sec-dashboard #tab-settle.act > .panel-card,
+    #sec-dashboard #tab-guest.act > .panel-card,
+    #sec-dashboard #tab-vote.act > .panel-card,
+    #sec-dashboard #tab-votemgr.act > .panel-card,
+    #sec-dashboard #tab-notifreg.act > .panel-card,
+    #sec-dashboard #tab-notifmng.act > .panel-card,
+    #sec-dashboard #tab-noticereg.act > .panel-card,
+    #sec-dashboard #tab-noticemng.act > .panel-card,
+    #sec-dashboard #tab-inquiry.act > .panel-card,
+    #sec-dashboard #tab-video.act > .panel-card,
+    #sec-dashboard #tab-apps.act > .panel-card {
+      flex: 0 0 auto;
+      width: 100%;
+      display: block;
+      overflow: visible;
+      margin-top: 0;
+    }
+    #sec-dashboard #tab-settle.act > .panel-card > .tbl-wrap,
+    #sec-dashboard #tab-settle.act .stl-sub-pane > .tbl-wrap,
+    #sec-dashboard #tab-guest.act > .panel-card > .tbl-wrap,
+    #sec-dashboard #tab-notifmng.act > .panel-card > .tbl-wrap,
+    #sec-dashboard #tab-noticemng.act > .panel-card > .tbl-wrap,
+    #sec-dashboard #tab-inquiry.act > .panel-card > .tbl-wrap {
+      max-height: calc(100vh - 240px);
+    }
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
-    thead th { background: #f8fafc; color: #475569; font-weight: 600; padding: 11px 13px;
+    thead th { position: sticky; top: 0; z-index: 5; background: #f8fafc; color: #475569; font-weight: 600; padding: 9px 12px;
                text-align: center; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    thead tr:nth-child(2) th { top: 38px; z-index: 4; }
     thead th.sortable { cursor: pointer; user-select: none; }
     thead th.sortable:hover { color: #2563eb; background: #eff6ff; }
-    tbody td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: #fafbfd; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -463,8 +623,9 @@
       background: rgba(0,0,0,.5); z-index: 100;
       padding: 20px; overflow-y: auto;
     }
+    #loc-panel { overflow: hidden; }
     #loc-panel.open, #quiz-panel.open {
-      display: flex; align-items: flex-start; justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
     .panel-modal-box {
       background: #fff; border-radius: 14px; padding: 0;
@@ -473,6 +634,75 @@
       margin: auto 0;
       overflow: hidden;
     }
+    #loc-panel .panel-modal-box {
+      max-height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+    }
+    #loc-panel.open {
+      display: block;
+    }
+    #loc-panel.open .panel-modal-box {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(920px, calc(100vw - 40px));
+      margin: 0;
+    }
+    #loc-panel .card-header {
+      flex: 0 0 auto;
+    }
+    #loc-panel .card-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding-bottom: 0;
+    }
+    #loc-panel .loc-modal-footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      background: #fff;
+      margin: 16px -24px 0;
+      padding: 16px 24px;
+      border-top: 1px solid #e5e7eb;
+      box-shadow: 0 -8px 18px rgba(15,23,42,.06);
+    }
+    .loc-merchant-box { border:1px solid #dbe3ef; border-radius:10px; background:#fff; overflow:hidden; margin-bottom:14px; }
+    .loc-merchant-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
+    .loc-merchant-head strong { font-size:14px; color:#1e293b; }
+    .loc-merchant-table-wrap { max-height:280px; overflow:auto; }
+    .loc-merchant-table { width:100%; border-collapse:collapse; font-size:12px; min-width:780px; }
+    .loc-merchant-table th, .loc-merchant-table td { padding:9px 10px; border-bottom:1px solid #edf2f7; text-align:center; vertical-align:middle; white-space:nowrap; }
+    .loc-merchant-table .td-left, .loc-merchant-table .th-left { text-align:left; }
+    .loc-merchant-table .td-right, .loc-merchant-table .th-right { text-align:right; }
+    .loc-merchant-table th { background:#f8fafc; color:#475569; font-weight:700; position:sticky; top:0; z-index:1; }
+    .loc-merchant-empty { padding:28px 12px; text-align:center; color:#94a3b8; font-size:13px; }
+    .loc-merchant-status { display:inline-flex; align-items:center; justify-content:center; min-width:54px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+    .loc-merchant-status.approved { background:#dcfce7; color:#166534; }
+    .loc-merchant-status.pending { background:#fef3c7; color:#92400e; }
+    .loc-merchant-status.approval_sent { background:#dbeafe; color:#1d4ed8; }
+    .loc-merchant-status.requested { background:#fef3c7; color:#92400e; }
+    .loc-merchant-table tr.commission-approved td { background:#ecfdf5; }
+    .loc-merchant-table tr.commission-approved td:first-child { box-shadow: inset 4px 0 0 #22c55e; }
+    .merchant-info-btn { width:24px; height:24px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; color:#2563eb; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; margin-left:6px; vertical-align:middle; }
+    .merchant-info-btn:hover { background:#eff6ff; border-color:#93c5fd; }
+    .merchant-detail-grid { display:grid; grid-template-columns:130px minmax(0, 1fr); gap:0; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; text-align:left; }
+    .merchant-detail-grid .k { background:#f8fafc; color:#64748b; font-size:12px; font-weight:700; padding:10px 12px; border-bottom:1px solid #e2e8f0; }
+    .merchant-detail-grid .v { color:#1e293b; font-size:13px; padding:10px 12px; border-bottom:1px solid #e2e8f0; word-break:break-word; }
+    .merchant-detail-grid .k:last-of-type, .merchant-detail-grid .v:last-of-type { border-bottom:none; }
+    .loc-merchant-commission-input { width:96px; border:1px solid #cbd5e1; border-radius:7px; padding:7px 9px; font-size:13px; text-align:right; }
+    .loc-merchant-commission-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+    .loc-merchant-commission-note { margin-top:8px; color:#64748b; font-size:12px; line-height:1.5; }
+    .loc-merchant-picker { display:none; position:fixed; inset:0; z-index:180; background:rgba(15,23,42,.46); padding:24px; align-items:center; justify-content:center; }
+    .loc-merchant-picker.open { display:flex; }
+    .loc-merchant-picker-box { width:min(1220px, calc(100vw - 32px)); height:min(88vh, 920px); max-height:calc(100vh - 32px); background:#fff; border-radius:12px; box-shadow:0 18px 48px rgba(15,23,42,.28); display:flex; flex-direction:column; overflow:hidden; }
+    .loc-merchant-picker-head { flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 22px; background:#111827; color:#fff; }
+    .loc-merchant-picker-head h3 { margin:0; color:#fff !important; font-size:16px !important; }
+    .loc-merchant-picker-body { flex:1 1 auto; min-height:0; overflow:auto; padding:18px 20px; background:#f8fafc; }
+    .loc-merchant-picker-body .loc-merchant-table-wrap { max-height:none; height:100%; }
+    .loc-merchant-picker-foot { flex:0 0 auto; display:flex; align-items:center; justify-content:center; gap:10px; padding:14px 20px; border-top:1px solid #e2e8f0; background:#fff; }
     .panel-modal-box .card-body { padding: 24px; }
     .panel-modal-box .card-header { position: relative; padding: 16px 56px; text-align: center; }
     .panel-modal-box .card-header h2 { width: 100%; text-align: center; }
@@ -611,6 +841,240 @@
     th.col-center { text-align: center; }
 
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .guest-shell { display:flex; flex-direction:column; gap:18px; }
+    .guest-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    .guest-head h3 { margin-bottom:4px; }
+    .guest-muted { font-size:12px; color:#64748b; line-height:1.55; }
+    .guest-layout { display:grid; grid-template-columns:minmax(320px, 430px) 1fr; gap:16px; align-items:start; }
+    .guest-box { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:14px; }
+    .guest-box h4 { font-size:13px; color:#1e293b; margin:0 0 10px; display:flex; justify-content:space-between; align-items:center; }
+    .guest-tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .guest-tools select, .guest-tools input { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; background:#fff; }
+    .guest-field-group { margin-bottom:14px; border:1px solid #dbe4ef; border-radius:10px; background:#f8fafc; padding:10px; }
+    .guest-field-group-title { font-size:12px; font-weight:900; color:#2563eb; margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:6px; justify-content:space-between; }
+    .guest-field-group-title-main { display:flex; align-items:center; gap:6px; }
+    .guest-group-check { display:flex; align-items:center; gap:5px; color:#475569; font-size:11px; font-weight:800; cursor:pointer; }
+    .guest-group-check input { width:15px; height:15px; cursor:pointer; }
+    .guest-field-row { display:grid; grid-template-columns:22px 1fr auto auto auto; gap:8px; align-items:center; border:1px solid #e2e8f0; border-radius:8px; padding:8px; margin-bottom:6px; background:#f8fafc; }
+    .guest-field-row[draggable=true] { cursor:grab; }
+    .guest-field-row.dragging { opacity:.45; }
+    .guest-drag { color:#94a3b8; font-weight:900; text-align:center; }
+    .guest-field-label { font-size:13px; font-weight:700; color:#1e293b; }
+    .guest-field-type { display:block; margin-top:2px; font-size:10px; font-weight:600; color:#94a3b8; }
+    .guest-mini-check { display:flex; align-items:center; gap:4px; font-size:11px; color:#475569; white-space:nowrap; }
+    .guest-preview-form { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+    .guest-input-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+    .guest-form-field label { display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; }
+    .guest-form-field input, .guest-form-field select { width:100%; border:1.5px solid #cbd5e1; border-radius:8px; padding:9px 10px; font-size:13px; background:#fff; }
+    .guest-form-field .req { color:inherit; font-size:inherit; }
+    .guest-form-field.has-error input, .guest-form-field.has-error select { border-color:#ef4444; background:#fff7f7; }
+    .guest-field-error { min-height:16px; margin-top:4px; color:#dc2626; font-size:11px; font-weight:700; line-height:1.35; }
+    .guest-card-number-wrap { display:flex; width:100%; }
+    .guest-card-number-wrap input { border-radius:8px 0 0 8px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:0; }
+    .guest-card-toggle { width:42px; flex:0 0 auto; border:1.5px solid #cbd5e1; border-left:0; border-radius:0 8px 8px 0; background:#f8fafc; color:#334155; font-size:15px; cursor:pointer; }
+    .guest-card-toggle:hover { background:#eff6ff; color:#1d4ed8; }
+    .guest-phone-wrap { display:flex; width:100%; }
+    .guest-phone-code { flex:0 0 auto; min-width:74px; display:flex; align-items:center; justify-content:center; border:1.5px solid #cbd5e1; border-right:0; border-radius:8px 0 0 8px; background:#f1f5f9; color:#334155; font-size:13px; font-weight:800; }
+    .guest-phone-wrap input { border-radius:0 8px 8px 0; }
+    .guest-table-tools { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
+    .guest-querybar { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
+    .guest-filter-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex:1; min-width:260px; }
+    .guest-filter-row input { border:1.5px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; width:150px; }
+    .guest-form-panel { display:none; }
+    .guest-form-panel.open { display:grid; }
+    .guest-form-box { display:none; }
+    .guest-form-box.open { display:block; }
+    .guest-revision-list { display:flex; flex-direction:column; gap:7px; margin-top:12px; border-top:1px solid #e2e8f0; padding-top:12px; }
+    .guest-revision-row { display:grid; grid-template-columns:1fr auto auto auto; gap:8px; align-items:center; border:1px solid #e2e8f0; border-radius:8px; padding:9px 10px; background:#fff; }
+    .guest-revision-row.active { border-color:#2563eb; background:#eff6ff; }
+    .guest-revision-name { font-size:13px; font-weight:800; color:#1e293b; }
+    .guest-revision-meta { display:block; margin-top:2px; font-size:10px; color:#94a3b8; font-weight:600; }
+    .guest-revision-badge { display:inline-flex; align-items:center; min-height:22px; padding:2px 8px; border-radius:999px; background:#dcfce7; color:#166534; font-size:11px; font-weight:800; }
+    .guest-col-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; padding-right:4px; }
+    .guest-col-row { display:grid; grid-template-columns:22px 22px 1fr 34px; gap:8px; align-items:center; border:1px solid #e2e8f0; border-radius:8px; padding:8px; background:#fff; min-height:42px; }
+    .guest-col-row[draggable=true] { cursor:grab; }
+    .guest-col-check { width:16px; height:16px; accent-color:#2383ef; cursor:pointer; }
+    .guest-pin-btn { width:28px; height:28px; border:0; background:transparent; border-radius:7px; color:#cbd5e1; cursor:pointer; font-size:16px; }
+    .guest-pin-btn.on { color:#f3a6bd; }
+    .guest-pin-btn:hover { background:#f8fafc; color:#e879a0; }
+    .guest-column-modal .modal {
+      width: min(434px, calc(100vw - 24px));
+      height: min(92vh, 760px);
+      max-width: none;
+      max-height: none;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .guest-column-modal .card-header {
+      min-height: 70px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .guest-column-modal .card-header h2 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 18px;
+      text-align: left;
+    }
+    .guest-column-modal .modal-close {
+      top: 18px;
+      right: 20px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #334155;
+    }
+    .guest-column-modal .modal-close:hover { background:#e2e8f0; color:#0f172a; }
+    .guest-column-modal .card-body { padding: 18px 22px; overflow-y:auto; flex:1; min-height:0; }
+    .guest-column-modal .modal-foot {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      padding:14px 22px 18px;
+      background:#f8fafc;
+      border-top:1px solid #e2e8f0;
+      flex-shrink:0;
+    }
+    .guest-column-modal .modal-foot .btn { width:100%; }
+    .guest-entry-modal .modal {
+      width: min(1180px, calc(100vw - 32px));
+      height: min(92vh, 860px);
+      max-width: none;
+      max-height: none;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .guest-entry-modal .card-header {
+      flex-shrink: 0;
+      min-height: 58px;
+      padding: 0 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #2563eb;
+      color: #fff;
+      position: relative;
+    }
+    .guest-entry-modal .card-header h2 {
+      margin: 0;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      font-size: 18px;
+    }
+    .guest-entry-modal .modal-close {
+      top: 10px;
+      right: 12px;
+      color: #fff;
+    }
+    .guest-entry-modal .card-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 18px 22px;
+      background: #fff;
+    }
+    .guest-entry-tabs {
+      display:flex;
+      gap:6px;
+      border-bottom:1px solid #e2e8f0;
+      margin-bottom:14px;
+    }
+    .guest-entry-tab {
+      border:0;
+      background:transparent;
+      color:#64748b;
+      font-size:13px;
+      font-weight:800;
+      padding:9px 14px;
+      border-bottom:2px solid transparent;
+      cursor:pointer;
+    }
+    .guest-entry-tab.active {
+      color:#2563eb;
+      border-bottom-color:#2563eb;
+    }
+    .guest-entry-tab:disabled {
+      color:#cbd5e1;
+      cursor:not-allowed;
+      border-bottom-color:transparent;
+    }
+    .guest-entry-section { display:none; }
+    .guest-entry-section.active { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+    .guest-roampay-card {
+      grid-column:1/-1;
+      border:1px solid #dbe4ef;
+      border-radius:10px;
+      background:#f8fafc;
+      padding:14px;
+    }
+    .guest-roampay-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px 16px;
+      margin-bottom:14px;
+    }
+    .guest-roampay-item label {
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      color:#64748b;
+      margin-bottom:4px;
+    }
+    .guest-roampay-item div {
+      min-height:36px;
+      display:flex;
+      align-items:center;
+      border:1px solid #e2e8f0;
+      border-radius:8px;
+      background:#fff;
+      padding:8px 10px;
+      font-size:13px;
+      color:#0f172a;
+    }
+    .guest-roampay-qr {
+      display:flex;
+      justify-content:center;
+      padding-top:8px;
+      border-top:1px solid #e2e8f0;
+    }
+    .guest-roampay-qr img {
+      width:180px;
+      height:180px;
+      border:2px dashed #86efac;
+      border-radius:12px;
+      background:#fff;
+      padding:8px;
+    }
+    .guest-entry-modal .modal-foot {
+      flex-shrink:0;
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      padding:14px 22px;
+      border-top:1px solid #e2e8f0;
+      background:#f8fafc;
+    }
+    @media (max-width:760px) {
+      .guest-entry-section.active { grid-template-columns:1fr; }
+      .guest-roampay-grid { grid-template-columns:1fr; }
+    }
+    .guest-th-sticky, .guest-td-sticky { position:sticky; left:0; z-index:3; box-shadow:2px 0 0 #e2e8f0; }
+    .guest-td-sticky { background:#fff; z-index:2; }
+    .guest-empty { color:#94a3b8; text-align:center; padding:22px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; font-size:13px; }
+    @media (max-width:1100px) {
+      .guest-layout { grid-template-columns:1fr; }
+      .guest-input-grid, .guest-preview-form { grid-template-columns:1fr; }
+    }
 
     /* ── 회원가입 넓은 카드 ── */
     .reg-card { background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(20,30,60,.10);
@@ -644,15 +1108,27 @@
 </head>
 <body>
 <div class="topbar" id="topbar">
-  <div class="brand" id="topbar-brand">모노라마 트래커 · 주관기관</div>
+  <div class="topbar-left">
+    <button class="topbar-menu-toggle" id="admin-menu-toggle" type="button" aria-label="Open admin menu" aria-controls="admin-menu" aria-expanded="false" onclick="toggleAdminMenu()">☰</button>
+    <div class="brand" id="topbar-brand">Tour Tracker · 주관기관</div>
+  </div>
   <div class="user">
     <span class="name"><span id="d-org" style="color:#64748b;font-weight:600;"></span><span id="d-name"></span>님</span>
     <button class="btn btn-o btn-sm" title="기본 정보" onclick="openProfile()" style="padding:7px 11px;">⚙</button>
     <button class="btn btn-o btn-sm" onclick="doLogout()">로그아웃</button>
   </div>
 </div>
+<div class="admin-menu-backdrop" id="admin-menu-backdrop" onclick="setAdminMenu(false)"></div>
+<div class="admin-menu" id="admin-menu">
+  <button class="tab-btn tab-cfg" id="tb-mail" onclick="switchTab('mail')">📨 발송이력</button>
+  <button class="tab-btn tab-cfg" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
+  <button class="tab-btn tab-cfg" id="tb-pform" onclick="switchTab('pform')">📋 참여기관 등록폼</button>
+  <button class="tab-btn tab-cfg" id="tb-vote" onclick="switchTab('vote')">🏆 투표등록</button>
+  <button class="tab-btn tab-cfg" id="tb-notifreg" onclick="switchTab('notifreg')">🔔 알림등록</button>
+  <button class="tab-btn tab-cfg" id="tb-noticereg" onclick="switchTab('noticereg')">📢 공지사항등록</button>
+</div>
 <div class="main-wrap">
-<div class="logo">모노라마 트래커 · 주관기관</div>
+<div class="logo">Tour Tracker · 주관기관</div>
 
 <!-- ── 로그인 ── -->
 <section id="sec-login" class="active">
@@ -858,64 +1334,65 @@
 
 <!-- ── 대시보드 ── -->
 <section id="sec-dashboard">
-  <div class="tabs">
-    <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">📁 내 프로젝트</button>
-    <button class="tab-btn" id="tb-partner" onclick="switchTab('partner')">🤝 참여기관관리</button>
-    <button class="tab-btn" id="tb-agent" onclick="switchTab('agent')">🦺 현장요원관리</button>
-    <button class="tab-btn" id="tb-entry" onclick="switchTab('entry')">🎫 입장관리</button>
-    <button class="tab-btn" id="tb-tour" onclick="switchTab('tour')">🎯 Tour관리</button>
-    <button class="tab-btn" id="tb-quiz" onclick="switchTab('quiz')">🧩 Quiz관리</button>
-    <button class="tab-btn" id="tb-survey" onclick="switchTab('survey')">📝 설문조사</button>
-    <button class="tab-btn" id="tb-votemgr" onclick="switchTab('votemgr')">🏆 투표관리</button>
-    <button class="tab-btn" id="tb-notifmng" onclick="switchTab('notifmng')">🔔 알림관리</button>
-    <button class="tab-btn" id="tb-noticemng" onclick="switchTab('noticemng')">📢 공지사항관리</button>
-    <button class="tab-btn" id="tb-inquiry" onclick="switchTab('inquiry')">💬 문의사항</button>
-    <button class="tab-btn" id="tb-video" onclick="switchTab('video')">🎬 동영상</button>
-    <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">🏪 가맹점관리</button>
-    <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">💰 정산</button>
-    <button class="tab-btn tab-cfg" id="tb-mail" onclick="switchTab('mail')" style="margin-left:auto;">📨 발송이력</button>
-    <button class="tab-btn tab-cfg" id="tb-mailtpl" onclick="switchTab('mailtpl')">📧 메일양식</button>
-    <button class="tab-btn tab-cfg" id="tb-pform" onclick="switchTab('pform')">📋 참여기관등록 폼</button>
-    <button class="tab-btn tab-cfg" id="tb-vote" onclick="switchTab('vote')">🏆 투표등록</button>
-    <button class="tab-btn tab-cfg" id="tb-notifreg" onclick="switchTab('notifreg')">🔔 알림등록</button>
-    <button class="tab-btn tab-cfg" id="tb-noticereg" onclick="switchTab('noticereg')">📢 공지사항등록</button>
-    <button class="tab-btn tab-cfg" id="tb-new"  onclick="switchTab('new')">➕ 프로젝트 등록</button>
+  <div class="dashboard-nav">
+    <div class="tabs">
+      <button class="tab-btn act" id="tb-proj" onclick="switchTab('proj')">📁 내 프로젝트</button>
+      <button class="tab-btn" id="tb-settle" onclick="switchTab('settle')">💰 정산</button>
+      <button class="tab-btn" id="tb-tour" onclick="switchTab('tour')">🎯 Tour</button>
+      <button class="tab-btn" id="tb-guest" onclick="switchTab('guest')">🛎️ Guest</button>
+      <button class="tab-btn" id="tb-quiz" onclick="switchTab('quiz')">🧩 Quiz</button>
+      <button class="tab-btn" id="tb-survey" onclick="switchTab('survey')">📝 설문조사</button>
+      <button class="tab-btn" id="tb-votemgr" onclick="switchTab('votemgr')">🏆 투표</button>
+      <button class="tab-btn" id="tb-partner" onclick="switchTab('partner')">🤝 참여기관</button>
+      <button class="tab-btn" id="tb-agent" onclick="switchTab('agent')">🦺 현장요원</button>
+      <button class="tab-btn" id="tb-entry" onclick="switchTab('entry')">🎫 참가자</button>
+      <button class="tab-btn" id="tb-notifmng" onclick="switchTab('notifmng')">🔔 알림</button>
+      <button class="tab-btn" id="tb-noticemng" onclick="switchTab('noticemng')">📢 공지사항</button>
+      <button class="tab-btn" id="tb-inquiry" onclick="switchTab('inquiry')">💬 문의사항</button>
+      <button class="tab-btn" id="tb-video" onclick="switchTab('video')">🎬 동영상</button>
+      <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">🏪 가맹점</button>
+    </div>
   </div>
 
   <!-- ─ 내 프로젝트 탭 ─ -->
   <div class="tab-panel act" id="tab-proj">
     <div class="panel-card">
       <h3>내 프로젝트 <span id="proj-summary" style="font-size:13px;font-weight:500;color:#64748b;margin-left:10px;"></span></h3>
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
-        <input id="pf-name" type="text" placeholder="프로젝트명 검색"
-          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
-          oninput="loadProjects(1)">
-        <select id="pf-status" onchange="loadProjects(1)"
-          style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
-          <option value="">전체 상태</option>
-          <option value="quoted">견적</option>
-          <option value="deposit_wait">입금대기</option>
-          <option value="deposit_confirmed">입금확인</option>
-          <option value="ready_to_start">시작대기</option>
-          <option value="started">진행중</option>
-          <option value="completed">완료</option>
-          <option value="cancelled">취소</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="loadProjects(1)">검색</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pf-name').value='';document.getElementById('pf-status').value='';loadProjects(1)">초기화</button>
-        <button class="btn btn-primary btn-sm" id="proj-refresh-btn" onclick="refreshProjects()">🔄 Refresh</button>
-        <button class="btn btn-g btn-sm" id="proj-excel" onclick="downloadProjectsExcel()" disabled>⬇ 엑셀 다운로드</button>
-        <label style="margin-left:auto;font-size:13px;color:#475569;display:flex;align-items:center;gap:6px;">표시 개수
-          <select id="pf-size" onchange="changeProjSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;">
+        <div style="display:flex;gap:10px;align-items:center;flex:0 0 auto;">
+          <input id="pf-name" type="text" placeholder="프로젝트명 검색"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:200px;"
+            oninput="loadProjects(1)">
+          <select id="pf-status" onchange="loadProjects(1)"
+            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
+            <option value="">전체 상태</option>
+            <option value="quoted">견적</option>
+            <option value="deposit_wait">입금대기</option>
+            <option value="deposit_confirmed">입금확인</option>
+            <option value="ready_to_start">시작대기</option>
+            <option value="started">진행중</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
           </select>
-        </label>
+          <button class="btn btn-primary btn-sm" onclick="loadProjects(1)">검색</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('pf-name').value='';document.getElementById('pf-status').value='';loadProjects(1)">초기화</button>
+          <button class="btn btn-primary btn-sm" id="proj-refresh-btn" onclick="refreshProjects()">⟳ Reload</button>
+          <button class="btn btn-g btn-sm" id="proj-excel" onclick="downloadProjectsExcel()" disabled>⬇ 엑셀다운로드</button>
+        </div>
+        <div class="gc-inline-actions" style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex:0 0 auto;margin-left:auto;">
+          <button class="btn btn-p btn-sm" type="button" onclick="openProjectCreateModal()">Project register</button>
+          <label style="font-size:13px;color:#475569;display:flex;align-items:center;gap:6px;white-space:nowrap;">Rows
+            <select id="pf-size" onchange="changeProjSize()" style="border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div class="tbl-wrap">
-        <table>
+        <table id="proj-table">
           <thead id="proj-thead"></thead>
           <tbody id="proj-tbody"></tbody>
         </table>
@@ -1016,14 +1493,15 @@
 
       <!-- Tour 추가 폼 -->
       <div class="divider"></div>
-      <h3 style="margin-bottom:14px;">Tour 추가</h3>
+      <h3 style="margin-bottom:14px;">경로 만들기</h3>
 
       <!-- 유형 선택 -->
       <div class="fg">
-        <label>Tour 유형 <span class="req">*</span></label>
+        <label>경로 유형 <span class="req">*</span></label>
         <div class="seg" id="dest-type-seg">
           <button type="button" class="seg-btn act" data-type="location" onclick="setDestType('location')">📍 위치</button>
           <button type="button" class="seg-btn" data-type="exhibit" onclick="setDestType('exhibit')">🎨 전시물</button>
+          <button type="button" class="seg-btn" data-type="merchant" onclick="setDestType('merchant')">🏪 가맹점</button>
         </div>
       </div>
 
@@ -1085,12 +1563,31 @@
         <div class="fg">
           <label>전시물 설명 <span class="hint">(선택, 최대 500자)</span></label>
           <textarea id="exh-desc" placeholder="전시물에 대한 상세 설명을 입력해주세요" maxlength="500"
-            style="resize:vertical;min-height:80px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea>
+          style="resize:vertical;min-height:80px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;"></textarea>
         </div>
       </div>
 
+            <div id="mode-merchant" style="display:none;">
+        <div class="loc-merchant-box">
+          <div class="loc-merchant-head">
+            <strong id="loc-merchant-title">참여/요청 가맹점</strong>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button type="button" class="btn btn-o btn-sm" id="loc-merchant-reload-btn" onclick="reloadTourMerchants()">Reload</button>
+              <button type="button" class="btn btn-g btn-sm" id="loc-merchant-approval-btn" onclick="openTourMerchantApprovalRequest()">가맹점 승인 요청</button>
+              <button type="button" class="btn btn-r btn-sm" id="loc-merchant-cancel-btn" onclick="cancelTourMerchantRequests()">가맹점 취소</button>
+              <button type="button" class="btn btn-p btn-sm" id="loc-merchant-all-btn" onclick="showAllTourMerchants()">가맹점 선택</button>
+            </div>
+          </div>
+          <div class="loc-merchant-table-wrap" id="loc-merchant-grid">
+            <div class="loc-merchant-empty">가맹점 목록을 불러오는 중입니다.</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748b;margin-top:-6px;margin-bottom:12px;">
+          가맹점 선택에서 원하는 태국 가맹점을 선택 후 적용하면 해당 프로젝트의 Tour 참여 요청 상태로 추가됩니다.
+        </div>
+      </div>
       <!-- 아이콘 이미지 (위치/전시물 공통, 선택) -->
-      <div class="fg">
+      <div class="fg" id="loc-icon-field">
         <label>이미지(아이콘) <span class="hint">(선택, 5MB 이하)</span></label>
         <div class="icon-up">
           <img id="icon-prev" class="icon-prev" alt="" style="display:none;">
@@ -1100,8 +1597,8 @@
       </div>
 
       <div id="loc-msg" class="msg"></div>
-      <button class="btn btn-g btn-sm" style="margin-top:4px;" onclick="addLocation()">+ Tour 추가</button>
-      <div style="display:flex;justify-content:center;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
+      <button class="btn btn-g btn-sm" id="loc-add-btn" style="margin-top:4px;" onclick="addLocation()">+ 경로 만들기</button>
+      <div class="loc-modal-footer" style="display:flex;justify-content:center;">
         <button class="btn btn-o" style="min-width:120px;" onclick="closeLoc()">닫기</button>
       </div>
       </div>
@@ -1109,6 +1606,40 @@
     </div>
 
     <!-- Quiz 관리 패널 -->
+
+    <div class="loc-merchant-picker" id="loc-merchant-picker">
+      <div class="loc-merchant-picker-box">
+        <div class="loc-merchant-picker-head">
+          <h3>가맹점 선택</h3>
+          <button type="button" class="modal-close" onclick="closeTourMerchantPicker()">×</button>
+        </div>
+        <div class="loc-merchant-picker-body">
+          <div class="loc-merchant-table-wrap" id="loc-merchant-picker-grid">
+            <div class="loc-merchant-empty">태국 가맹점 목록을 불러오는 중입니다.</div>
+          </div>
+        </div>
+        <div class="loc-merchant-picker-foot">
+          <button type="button" class="btn btn-o" style="min-width:120px;" onclick="closeTourMerchantPicker()">취소</button>
+          <button type="button" class="btn btn-g" style="min-width:120px;" onclick="applyTourMerchantRequest()">적용</button>
+        </div>
+      </div>
+    </div>
+    <div class="loc-merchant-picker" id="loc-merchant-commission-modal">
+      <div class="loc-merchant-picker-box" style="width:min(760px, calc(100vw - 32px)); height:auto; max-height:min(86vh, 720px);">
+        <div class="loc-merchant-picker-head">
+          <h3>가맹점 승인 요청</h3>
+          <button type="button" class="modal-close" onclick="closeTourMerchantApprovalRequest()">×</button>
+        </div>
+        <div class="loc-merchant-picker-body">
+          <div id="loc-merchant-commission-list"></div>
+          <div class="loc-merchant-commission-note">선택된 모든 가맹점의 수수율을 입력해야 요청하기 버튼이 활성화됩니다. 수수율은 숫자만 입력 가능합니다.</div>
+        </div>
+        <div class="loc-merchant-picker-foot">
+          <button type="button" class="btn btn-o" style="min-width:120px;" onclick="closeTourMerchantApprovalRequest()">취소</button>
+          <button type="button" class="btn btn-g" id="loc-merchant-commission-submit" style="min-width:120px;" onclick="submitTourMerchantApprovalRequest()" disabled>요청하기</button>
+        </div>
+      </div>
+    </div>
     <div id="quiz-panel">
       <div class="panel-modal-box">
       <div class="card-header">
@@ -1180,16 +1711,24 @@
     </div>
   </div>
 
-  <!-- ─ 프로젝트 등록 탭 ─ -->
-  <div class="tab-panel" id="tab-new">
+  <!-- ─ 프로젝트 등록 모달 ─ -->
+  <div class="modal-ov project-create-modal" id="modal-project-create">
+    <div class="modal">
+      <div class="card-header" style="flex-shrink:0;">
+        <h2>프로젝트 등록</h2>
+        <button class="modal-close" onclick="closeProjectCreateModal()">×</button>
+      </div>
+      <div class="card-body">
+        <div id="tab-new">
 
-    <!-- 견적 계산 안내 -->
+    <!-- 견적 계산 안내
     <div class="panel-card" id="quote-info-card">
       <h3>견적 계산 안내</h3>
       <div id="quote-info-body">
         <p style="font-size:13px;color:#94a3b8;">불러오는 중...</p>
       </div>
     </div>
+    -->
 
     <!-- Gift 승인 비밀번호 -->
     <div class="panel-card" style="margin-top:16px;">
@@ -1242,6 +1781,57 @@
         <!-- pj-gift-tiers 는 hidden 컨테이너로 보존 (단계 그리드는 Tour 관리 팝업에서 입력) -->
         <div id="pj-gift-tiers" class="gift-tiers-grid" style="display:none;"></div>
 
+        <!-- ③ Tour 관리 -->
+        <div class="fg" style="grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px;">Tour 관리 옵션 <span style="font-weight:500;color:#3b82f6;font-size:11px;">(견적에 포함 · 일 단위)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pj-tour-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">Tour 관리 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(Tour 위치·전시물 등록 + QR 스탬프 투어 — 체크 시 'Tour관리' 탭 활성)</span>
+          </label>
+        </div>
+
+        <!-- ④ Quiz 관리 -->
+        <div class="fg" style="grid-column:1/-1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:8px;">Quiz 관리 옵션 <span style="font-weight:500;color:#7c3aed;font-size:11px;">(견적에 포함 · 일 단위)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="pj-quiz-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">Quiz 관리 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(객관식·주관식·OX 퀴즈 등록 + 정답 보상 — 체크 시 'Quiz관리' 탭 활성)</span>
+          </label>
+        </div>
+
+        <!-- ④-1 보상 / 예산 옵션 -->
+        <div class="fg" style="grid-column:1/-1;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">보상 / 예산 옵션 <span style="font-weight:500;color:#a16207;font-size:11px;">(견적과 무관 · 운영 정책)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <input type="checkbox" id="pj-tiers-enable" disabled onchange="onGiftTiersEnableChange('pj')" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">Gift 단계별 보상 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(단계별 도달률에 따라 다른 금액의 Gift 발급 — 단계 금액은 Tour 관리 팝업에서 입력)</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:26px;margin-bottom:10px;">
+            <span style="font-size:12px;color:#475569;">단계 수</span>
+            <input type="number" id="pj-tiers-count" min="2" max="10" value="2" disabled
+              style="width:70px;padding:5px 8px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">
+            <span style="font-size:11px;color:#94a3b8;">단계 (2~10)</span>
+          </div>
+          <div id="pj-tiers-hint" style="font-size:11px;color:#3b82f6;margin-left:26px;margin-bottom:8px;display:none;"></div>
+        </div>
+
+        <!-- ⑤ 설문조사 -->
+        <div class="fg" style="grid-column:1/-1;background:#fdf2f8;border:1px solid #fbcfe8;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#9d174d;margin-bottom:8px;">설문조사 옵션 <span style="font-weight:500;color:#be185d;font-size:11px;">(견적에 포함 · 프로젝트당 정액)</span></div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <input type="checkbox" id="pj-survey-use" disabled onchange="onSurveyUseChange('pj')" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">설문조사 기능 사용</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(방문객 대상 설문지 발송·집계 — 체크 시에만 사용 가능)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;margin-left:26px;">
+            <input type="checkbox" id="pj-survey-reward-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:13px;color:#1e293b;font-weight:600;">└ 응답자에게 경품 지급</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">(설문 완료 시 경품 수령 QR 발급 · 별도 비용 없음)</span>
+          </label>
+        </div>
         <!-- ⓪ 구축 옵션 (현장요원관리 위) -->
         <div class="fg" style="grid-column:1/-1;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 14px;">
           <div style="font-size:13px;font-weight:700;color:#9a3412;margin-bottom:8px;">구축 옵션 <span style="font-weight:500;color:#c2410c;font-size:11px;">(견적에 포함 · 프로젝트 초기 1회)</span></div>
@@ -1297,61 +1887,30 @@
           </label>
         </div>
 
-        <!-- ③ Tour 관리 -->
-        <div class="fg" style="grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;">
-          <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px;">Tour 관리 옵션 <span style="font-weight:500;color:#3b82f6;font-size:11px;">(견적에 포함 · 일 단위)</span></div>
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" id="pj-tour-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
-            <span style="font-size:13px;color:#1e293b;font-weight:600;">Tour 관리 사용</span>
-            <span style="font-size:11px;color:#64748b;font-weight:400;">(Tour 위치·전시물 등록 + QR 스탬프 투어 — 체크 시 'Tour관리' 탭 활성)</span>
-          </label>
-        </div>
-
-        <!-- ④ Quiz 관리 -->
-        <div class="fg" style="grid-column:1/-1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px 14px;">
-          <div style="font-size:13px;font-weight:700;color:#6d28d9;margin-bottom:8px;">Quiz 관리 옵션 <span style="font-weight:500;color:#7c3aed;font-size:11px;">(견적에 포함 · 일 단위)</span></div>
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" id="pj-quiz-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
-            <span style="font-size:13px;color:#1e293b;font-weight:600;">Quiz 관리 사용</span>
-            <span style="font-size:11px;color:#64748b;font-weight:400;">(객관식·주관식·OX 퀴즈 등록 + 정답 보상 — 체크 시 'Quiz관리' 탭 활성)</span>
-          </label>
-        </div>
-
-        <!-- ④-1 보상 / 예산 옵션 -->
-        <div class="fg" style="grid-column:1/-1;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;">
-          <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">보상 / 예산 옵션 <span style="font-weight:500;color:#a16207;font-size:11px;">(견적과 무관 · 운영 정책)</span></div>
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <input type="checkbox" id="pj-tiers-enable" disabled onchange="onGiftTiersEnableChange('pj')" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
-            <span style="font-size:13px;color:#1e293b;font-weight:600;">Gift 단계별 보상 사용</span>
-            <span style="font-size:11px;color:#64748b;font-weight:400;">(단계별 도달률에 따라 다른 금액의 Gift 발급 — 단계 금액은 Tour 관리 팝업에서 입력)</span>
-          </label>
-          <div style="display:flex;align-items:center;gap:8px;margin-left:26px;margin-bottom:10px;">
-            <span style="font-size:12px;color:#475569;">단계 수</span>
-            <input type="number" id="pj-tiers-count" min="2" max="10" value="2" disabled
-              style="width:70px;padding:5px 8px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">
-            <span style="font-size:11px;color:#94a3b8;">단계 (2~10)</span>
-          </div>
-          <div id="pj-tiers-hint" style="font-size:11px;color:#3b82f6;margin-left:26px;margin-bottom:8px;display:none;"></div>
-        </div>
-
-        <!-- ⑤ 설문조사 -->
-        <div class="fg" style="grid-column:1/-1;background:#fdf2f8;border:1px solid #fbcfe8;border-radius:10px;padding:12px 14px;">
-          <div style="font-size:13px;font-weight:700;color:#9d174d;margin-bottom:8px;">설문조사 옵션 <span style="font-weight:500;color:#be185d;font-size:11px;">(견적에 포함 · 프로젝트당 정액)</span></div>
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <input type="checkbox" id="pj-survey-use" disabled onchange="onSurveyUseChange('pj')" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
-            <span style="font-size:13px;color:#1e293b;font-weight:600;">설문조사 기능 사용</span>
-            <span style="font-size:11px;color:#64748b;font-weight:400;">(방문객 대상 설문지 발송·집계 — 체크 시에만 사용 가능)</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;margin-left:26px;">
-            <input type="checkbox" id="pj-survey-reward-use" disabled onchange="onProjectOptionChange()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
-            <span style="font-size:13px;color:#1e293b;font-weight:600;">└ 응답자에게 경품 지급</span>
-            <span style="font-size:11px;color:#64748b;font-weight:400;">(설문 완료 시 경품 수령 QR 발급 · 별도 비용 없음)</span>
-          </label>
-        </div>
         <input type="hidden" id="pj-budget" value="0">
       </div>
       <div id="pj-msg" class="msg"></div>
-      <button class="btn btn-p btn-full" id="btn-create-proj" onclick="createProject()" disabled>프로젝트 등록</button>
+      <button class="btn btn-p btn-full" id="btn-create-proj" onclick="createProject()" disabled>Register</button>
+    </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-ov" id="modal-proj-columns">
+    <div class="modal" style="max-width:420px;">
+      <div class="card-header">
+        <h2>컬럼 조정</h2>
+        <button class="modal-close" onclick="closeProjColumnModal()">×</button>
+      </div>
+      <div class="card-body">
+        <div style="font-size:12px;color:#64748b;line-height:1.55;margin-bottom:14px;">내 프로젝트 그리드에 표시할 컬럼을 선택하세요.</div>
+        <div id="proj-col-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-o" style="flex:1;" onclick="resetProjColumns()">초기화</button>
+          <button class="btn btn-p" style="flex:1;" onclick="closeProjColumnModal()">닫기</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1706,7 +2265,7 @@
         <button class="btn btn-o btn-sm" id="agent-qr-btn" onclick="openAgentRegQrModal()" disabled>📱 등록 QR</button>
         <button class="btn btn-o btn-sm" id="agent-att-copy-btn" onclick="copyAgentAttUrl()" disabled>📋 근태관리 URL</button>
         <button class="btn btn-o btn-sm" id="agent-att-qr-btn" onclick="openAgentAttUrlQrModal()" disabled>📱 근태 QR</button>
-        <button class="btn btn-p btn-sm" id="agent-refresh-btn" onclick="refreshAgentData()" disabled style="margin-left:auto;">🔄 Refresh</button>
+        <button class="btn btn-p btn-sm" id="agent-refresh-btn" onclick="refreshAgentData()" disabled style="margin-left:auto;">🔄 Reload</button>
       </div>
       <div id="agent-empty" style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">
         프로젝트를 선택해 주세요.<br>
@@ -1790,7 +2349,7 @@
           </select>
           <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="renderTourGrid()">🔍 검색</button>
           <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetTourFilter()">↻ 초기화</button>
-          <button class="btn btn-p btn-sm" id="tour-refresh-btn" style="white-space:nowrap;" onclick="refreshTourProjects()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="tour-refresh-btn" style="white-space:nowrap;" onclick="refreshTourProjects()">🔄 Reload</button>
           <span id="tour-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
 
@@ -1816,7 +2375,7 @@
             style="flex:1;min-width:140px;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
           <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="renderTourVisitors()">🔍 검색</button>
           <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetTourVisitorsFilter()">↻ 초기화</button>
-          <button class="btn btn-p btn-sm" id="tvis-refresh-btn" style="white-space:nowrap;" onclick="loadTourVisitors()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="tvis-refresh-btn" style="white-space:nowrap;" onclick="loadTourVisitors()">🔄 Reload</button>
           <span id="tvis-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <!-- 요약 카드 -->
@@ -1864,7 +2423,7 @@
           </select>
           <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="renderQuizGrid()">🔍 검색</button>
           <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetQuizFilter()">↻ 초기화</button>
-          <button class="btn btn-p btn-sm" id="quiz-refresh-btn" style="white-space:nowrap;" onclick="refreshQuizProjects()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="quiz-refresh-btn" style="white-space:nowrap;" onclick="refreshQuizProjects()">🔄 Reload</button>
           <span id="quiz-tab-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <div id="quiz-grid-wrap">
@@ -1889,7 +2448,7 @@
             style="flex:1;min-width:140px;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
           <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="renderQuizVisitors()">🔍 검색</button>
           <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetQuizVisitorsFilter()">↻ 초기화</button>
-          <button class="btn btn-p btn-sm" id="qvis-refresh-btn" style="white-space:nowrap;" onclick="loadQuizVisitors()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="qvis-refresh-btn" style="white-space:nowrap;" onclick="loadQuizVisitors()">🔄 Reload</button>
           <span id="qvis-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <!-- 요약 카드 -->
@@ -1936,7 +2495,7 @@
           </select>
           <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="loadSurveyDashboard()">🔍 검색</button>
           <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetSvdFilter()">↻ 초기화</button>
-          <button class="btn btn-p btn-sm" id="svd-refresh-btn" style="white-space:nowrap;" onclick="loadSurveyDashboard()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="svd-refresh-btn" style="white-space:nowrap;" onclick="loadSurveyDashboard()">🔄 Reload</button>
           <span id="svd-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <div id="svd-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
@@ -1957,7 +2516,7 @@
             style="flex:1;min-width:240px;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
             <option value="">— 프로젝트 선택 —</option>
           </select>
-          <button class="btn btn-p btn-sm" id="svres-refresh-btn" style="white-space:nowrap;" onclick="loadSurveyResults()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="svres-refresh-btn" style="white-space:nowrap;" onclick="loadSurveyResults()">🔄 Reload</button>
           <span id="svres-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <!-- 요약 카드 -->
@@ -2001,7 +2560,7 @@
             <option value="used">수령</option>
             <option value="not_used">미수령</option>
           </select>
-          <button class="btn btn-p btn-sm" id="svr-refresh-btn" style="white-space:nowrap;margin-left:auto;" onclick="loadSurveyRespondents()">🔄 Refresh</button>
+          <button class="btn btn-p btn-sm" id="svr-refresh-btn" style="white-space:nowrap;margin-left:auto;" onclick="loadSurveyRespondents()">🔄 Reload</button>
         </div>
 
         <!-- 조회조건 2행 — 이름·이메일·모바일 + 검색/초기화 -->
@@ -2438,6 +2997,93 @@
     </div>
   </div>
 
+  <div class="tab-panel" id="tab-guest">
+    <div class="panel-card">
+      <div class="guest-shell">
+        <div class="guest-box">
+          <div class="guest-querybar">
+            <div id="guest-filter-row" class="guest-filter-row"></div>
+            <div class="guest-tools">
+              <button class="btn btn-primary btn-sm" onclick="guestSearch()">조회</button>
+              <button class="btn btn-p btn-sm" onclick="guestOpenEntryModal()">투숙객등록</button>
+              <button class="btn btn-g btn-sm" onclick="guestDownloadExcel()">엑셀다운로드</button>
+              <button class="btn btn-o btn-sm" onclick="guestToggleFormPanel()">폼설정</button>
+              <button class="btn btn-o btn-sm" onclick="guestToggleColumnPanel()">⚙ 컬럼조정</button>
+            </div>
+          </div>
+          <div class="tbl-wrap" style="margin-top:10px;">
+            <table id="guest-grid" style="min-width:1120px;">
+              <thead id="guest-grid-head"></thead>
+              <tbody id="guest-grid-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="guest-form-panel" class="guest-layout guest-form-panel">
+          <div class="guest-box">
+            <div class="guest-tools" style="margin-bottom:12px;">
+              <button class="btn btn-o btn-sm" onclick="guestResetBuilder()">기본값</button>
+              <button class="btn btn-p btn-sm" onclick="guestSaveRevision()">Revision 저장</button>
+            </div>
+            <h4>항목 설정 <span class="guest-muted">drag & drop으로 순서 변경</span></h4>
+            <div id="guest-field-builder"></div>
+            <div id="guest-revision-list" class="guest-revision-list"></div>
+          </div>
+
+          <div class="guest-box">
+            <h4>실시간 Form 미리보기</h4>
+            <div id="guest-form-preview" class="guest-preview-form"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-ov guest-column-modal" id="modal-guest-columns">
+    <div class="modal">
+      <div class="card-header">
+        <h2>⚙ 컬럼 조정</h2>
+        <button class="modal-close" onclick="guestCloseColumnModal()">×</button>
+      </div>
+      <div class="card-body">
+        <div class="guest-muted" style="margin-bottom:14px;">
+          표시할 컬럼을 선택하고, 드래그(⋮⋮)로 순서를 바꾸세요.<br>
+          📌 를 누르면 그 컬럼까지 좌측 틀 고정됩니다.
+        </div>
+        <div id="guest-col-list" class="guest-col-list"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-o" onclick="guestResetColumns()">초기화</button>
+        <button class="btn btn-p" style="background:#0f172a;" onclick="guestCloseColumnModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-ov guest-entry-modal" id="modal-guest-entry">
+    <div class="modal">
+      <div class="card-header">
+        <h2>투숙객 등록</h2>
+        <button class="modal-close" onclick="guestCloseEntryModal()">×</button>
+      </div>
+      <div class="card-body">
+        <div class="guest-entry-tabs">
+          <button class="guest-entry-tab active" id="guest-entry-tab-general" type="button" onclick="guestSwitchEntryTab('general')">일반정보</button>
+          <button class="guest-entry-tab" id="guest-entry-tab-card" type="button" onclick="guestSwitchEntryTab('card')">신용카드 정보</button>
+          <button class="guest-entry-tab" id="guest-entry-tab-roampay" type="button" onclick="guestSwitchEntryTab('roampay')" disabled>Roampay 정보</button>
+        </div>
+        <div id="guest-entry-general" class="guest-entry-section active"></div>
+        <div id="guest-entry-card" class="guest-entry-section"></div>
+        <div id="guest-entry-roampay" class="guest-entry-section"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-o" onclick="guestCloseEntryModal()">취소</button>
+        <button class="btn btn-p" id="guest-entry-register" onclick="guestRegisterRecord()">등록</button>
+        <button class="btn btn-p" id="guest-entry-save" onclick="guestSaveEntryRecord()" disabled>저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 투표등록 탭 -->
   <div class="tab-panel" id="tab-vote">
     <div class="panel-card">
@@ -2860,14 +3506,22 @@
     <div class="panel-card">
       <h3>가맹점관리 <span style="font-size:12px;font-weight:500;color:#94a3b8;margin-left:10px;">(프로젝트별 가맹점 지원 승인/거절 처리)</span></h3>
       <!-- 조회조건 한 줄 -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;
+      <div class="filter-bar" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;
                   display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;">
         <label style="font-size:12px;color:#475569;font-weight:600;white-space:nowrap;">프로젝트</label>
         <input id="apps-tab-project" type="text" list="apps-tab-project-list" placeholder="프로젝트명 또는 일련번호 입력"
           onchange="onAppsTabProjectChange()"
           onkeydown="if(event.key==='Enter')onAppsTabProjectChange()"
-          style="flex:1;min-width:240px;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          style="flex:0 1 320px;width:320px;min-width:220px;max-width:360px;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
         <datalist id="apps-tab-project-list"></datalist>
+        <label style="font-size:12px;color:#475569;font-weight:600;white-space:nowrap;">국가</label>
+        <select id="apps-tab-country" onchange="loadAppsTab()"
+          style="padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
+          <option value="ALL">전체</option>
+          <option value="KR">한국</option>
+          <option value="TH">태국</option>
+          <option value="VN">베트남</option>
+        </select>
         <label style="font-size:12px;color:#475569;font-weight:600;white-space:nowrap;">유형</label>
         <select id="apps-tab-type" onchange="renderAppsTab()"
           style="padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;">
@@ -2886,10 +3540,12 @@
           <option value="approved">✓ 승인</option>
           <option value="rejected">✗ 거절</option>
         </select>
-        <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="renderAppsTab()">🔍 검색</button>
+        <button class="btn btn-p btn-sm" style="white-space:nowrap;" onclick="onAppsTabProjectChange()">🔍 검색</button>
         <button class="btn btn-o btn-sm" style="white-space:nowrap;" onclick="resetAppsTabFilter()">↻ 초기화</button>
-        <button class="btn btn-p btn-sm" id="apps-tab-refresh" style="white-space:nowrap;" onclick="loadAppsTab()">🔄 Refresh</button>
-        <span id="apps-tab-count" style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:auto;"></span>
+        <button class="btn btn-p btn-sm" id="apps-tab-refresh" style="white-space:nowrap;" onclick="loadAppsTab()">⟳ Reload</button>
+        <div class="gc-inline-actions" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex:0 0 auto;margin-left:auto;">
+          <span id="apps-tab-count" style="display:none;font-size:12px;color:#94a3b8;white-space:nowrap;"></span>
+        </div>
       </div>
       <!-- 표 -->
       <div id="apps-tab-body">
@@ -3398,6 +4054,14 @@
 </div>
 
 <!-- 가맹점 파일 뷰어 (사업자등록증/통장사본) — 이미지 + PDF 통합 -->
+<div class="modal-ov" id="modal-merchant-info">
+  <div class="modal" style="width:90vw;max-width:640px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2 id="mi-title">가맹점 상세 정보</h2>
+      <button class="modal-close" onclick="closeMerchantInfo()" aria-label="닫기">×</button></div>
+    <div class="card-body" id="mi-body" style="overflow:auto;background:#f8fafc;"></div>
+  </div>
+</div>
+
 <div class="modal-ov" id="modal-merchant-file">
   <div class="modal" style="width:90vw;max-width:780px;max-height:92vh;display:flex;flex-direction:column;">
     <div class="card-header" style="flex-shrink:0;"><h2 id="mf-title">파일 보기</h2>
@@ -3876,28 +4540,1133 @@ function show(id) {
   // 대시보드 진입 시 중앙 로고 숨기고 상단 풀폭 바 노출
   const logo = document.querySelector('.logo');
   if (logo) logo.style.display = (id === 'sec-dashboard') ? 'none' : '';
-  const topbar = document.getElementById('topbar');
+const topbar = document.getElementById('topbar');
   if (topbar) topbar.classList.toggle('show', id === 'sec-dashboard');
 }
-function switchTab(name) {
-  // 비활성 탭(옵션 미사용) 클릭 차단
-  const btn = document.getElementById('tb-'+name);
-  if (btn?.disabled) {
-    if (btn.title) uiAlert(btn.title);
+const GUEST_COUNTRIES = [
+  { name:'Afghanistan', dial:'+93' }, { name:'Albania', dial:'+355' }, { name:'Algeria', dial:'+213' }, { name:'Andorra', dial:'+376' },
+  { name:'Angola', dial:'+244' }, { name:'Argentina', dial:'+54' }, { name:'Armenia', dial:'+374' }, { name:'Australia', dial:'+61' },
+  { name:'Austria', dial:'+43' }, { name:'Azerbaijan', dial:'+994' }, { name:'Bahamas', dial:'+1-242' }, { name:'Bahrain', dial:'+973' },
+  { name:'Bangladesh', dial:'+880' }, { name:'Belgium', dial:'+32' }, { name:'Belize', dial:'+501' }, { name:'Benin', dial:'+229' },
+  { name:'Bhutan', dial:'+975' }, { name:'Bolivia', dial:'+591' }, { name:'Bosnia and Herzegovina', dial:'+387' }, { name:'Botswana', dial:'+267' },
+  { name:'Brazil', dial:'+55' }, { name:'Brunei', dial:'+673' }, { name:'Bulgaria', dial:'+359' }, { name:'Burkina Faso', dial:'+226' },
+  { name:'Cambodia', dial:'+855' }, { name:'Cameroon', dial:'+237' }, { name:'Canada', dial:'+1' }, { name:'Chile', dial:'+56' },
+  { name:'China', dial:'+86' }, { name:'Colombia', dial:'+57' }, { name:'Costa Rica', dial:'+506' }, { name:'Croatia', dial:'+385' },
+  { name:'Cuba', dial:'+53' }, { name:'Cyprus', dial:'+357' }, { name:'Czech Republic', dial:'+420' }, { name:'Denmark', dial:'+45' },
+  { name:'Dominican Republic', dial:'+1-809' }, { name:'Ecuador', dial:'+593' }, { name:'Egypt', dial:'+20' }, { name:'El Salvador', dial:'+503' },
+  { name:'Estonia', dial:'+372' }, { name:'Ethiopia', dial:'+251' }, { name:'Finland', dial:'+358' }, { name:'France', dial:'+33' },
+  { name:'Georgia', dial:'+995' }, { name:'Germany', dial:'+49' }, { name:'Ghana', dial:'+233' }, { name:'Greece', dial:'+30' },
+  { name:'Guatemala', dial:'+502' }, { name:'Honduras', dial:'+504' }, { name:'Hong Kong', dial:'+852' }, { name:'Hungary', dial:'+36' },
+  { name:'Iceland', dial:'+354' }, { name:'India', dial:'+91' }, { name:'Indonesia', dial:'+62' }, { name:'Iran', dial:'+98' },
+  { name:'Iraq', dial:'+964' }, { name:'Ireland', dial:'+353' }, { name:'Israel', dial:'+972' }, { name:'Italy', dial:'+39' },
+  { name:'Japan', dial:'+81' }, { name:'Jordan', dial:'+962' }, { name:'Kazakhstan', dial:'+7' }, { name:'Kenya', dial:'+254' },
+  { name:'Kuwait', dial:'+965' }, { name:'Kyrgyzstan', dial:'+996' }, { name:'Laos', dial:'+856' }, { name:'Latvia', dial:'+371' },
+  { name:'Lebanon', dial:'+961' }, { name:'Lithuania', dial:'+370' }, { name:'Luxembourg', dial:'+352' }, { name:'Macau', dial:'+853' },
+  { name:'Malaysia', dial:'+60' }, { name:'Maldives', dial:'+960' }, { name:'Mexico', dial:'+52' }, { name:'Mongolia', dial:'+976' },
+  { name:'Morocco', dial:'+212' }, { name:'Myanmar', dial:'+95' }, { name:'Nepal', dial:'+977' }, { name:'Netherlands', dial:'+31' },
+  { name:'New Zealand', dial:'+64' }, { name:'Nigeria', dial:'+234' }, { name:'Norway', dial:'+47' }, { name:'Oman', dial:'+968' },
+  { name:'Pakistan', dial:'+92' }, { name:'Panama', dial:'+507' }, { name:'Paraguay', dial:'+595' }, { name:'Peru', dial:'+51' },
+  { name:'Philippines', dial:'+63' }, { name:'Poland', dial:'+48' }, { name:'Portugal', dial:'+351' }, { name:'Qatar', dial:'+974' },
+  { name:'Romania', dial:'+40' }, { name:'Russia', dial:'+7' }, { name:'Saudi Arabia', dial:'+966' }, { name:'Singapore', dial:'+65' },
+  { name:'Slovakia', dial:'+421' }, { name:'Slovenia', dial:'+386' }, { name:'South Africa', dial:'+27' }, { name:'South Korea', dial:'+82' },
+  { name:'Spain', dial:'+34' }, { name:'Sri Lanka', dial:'+94' }, { name:'Sweden', dial:'+46' }, { name:'Switzerland', dial:'+41' },
+  { name:'Taiwan', dial:'+886' }, { name:'Tajikistan', dial:'+992' }, { name:'Tanzania', dial:'+255' }, { name:'Thailand', dial:'+66' },
+  { name:'Turkey', dial:'+90' }, { name:'Turkmenistan', dial:'+993' }, { name:'Ukraine', dial:'+380' }, { name:'United Arab Emirates', dial:'+971' },
+  { name:'United Kingdom', dial:'+44' }, { name:'United States', dial:'+1' }, { name:'Uruguay', dial:'+598' }, { name:'Uzbekistan', dial:'+998' },
+  { name:'Venezuela', dial:'+58' }, { name:'Vietnam', dial:'+84' }, { name:'Other', dial:'+' },
+];
+const GUEST_COUNTRY_DIALS_BY_REGION = {
+  AD:'+376', AE:'+971', AF:'+93', AG:'+1-268', AI:'+1-264', AL:'+355', AM:'+374', AO:'+244', AQ:'+672', AR:'+54', AS:'+1-684', AT:'+43', AU:'+61', AW:'+297', AX:'+358', AZ:'+994',
+  BA:'+387', BB:'+1-246', BD:'+880', BE:'+32', BF:'+226', BG:'+359', BH:'+973', BI:'+257', BJ:'+229', BL:'+590', BM:'+1-441', BN:'+673', BO:'+591', BQ:'+599', BR:'+55', BS:'+1-242', BT:'+975', BW:'+267', BY:'+375', BZ:'+501',
+  CA:'+1', CC:'+61', CD:'+243', CF:'+236', CG:'+242', CH:'+41', CI:'+225', CK:'+682', CL:'+56', CM:'+237', CN:'+86', CO:'+57', CR:'+506', CU:'+53', CV:'+238', CW:'+599', CX:'+61', CY:'+357', CZ:'+420',
+  DE:'+49', DJ:'+253', DK:'+45', DM:'+1-767', DO:'+1-809', DZ:'+213', EC:'+593', EE:'+372', EG:'+20', EH:'+212', ER:'+291', ES:'+34', ET:'+251',
+  FI:'+358', FJ:'+679', FK:'+500', FM:'+691', FO:'+298', FR:'+33',
+  GA:'+241', GB:'+44', GD:'+1-473', GE:'+995', GF:'+594', GG:'+44', GH:'+233', GI:'+350', GL:'+299', GM:'+220', GN:'+224', GP:'+590', GQ:'+240', GR:'+30', GT:'+502', GU:'+1-671', GW:'+245', GY:'+592',
+  HK:'+852', HN:'+504', HR:'+385', HT:'+509', HU:'+36',
+  ID:'+62', IE:'+353', IL:'+972', IM:'+44', IN:'+91', IO:'+246', IQ:'+964', IR:'+98', IS:'+354', IT:'+39',
+  JE:'+44', JM:'+1-876', JO:'+962', JP:'+81',
+  KE:'+254', KG:'+996', KH:'+855', KI:'+686', KM:'+269', KN:'+1-869', KP:'+850', KR:'+82', KW:'+965', KY:'+1-345', KZ:'+7',
+  LA:'+856', LB:'+961', LC:'+1-758', LI:'+423', LK:'+94', LR:'+231', LS:'+266', LT:'+370', LU:'+352', LV:'+371', LY:'+218',
+  MA:'+212', MC:'+377', MD:'+373', ME:'+382', MF:'+590', MG:'+261', MH:'+692', MK:'+389', ML:'+223', MM:'+95', MN:'+976', MO:'+853', MP:'+1-670', MQ:'+596', MR:'+222', MS:'+1-664', MT:'+356', MU:'+230', MV:'+960', MW:'+265', MX:'+52', MY:'+60', MZ:'+258',
+  NA:'+264', NC:'+687', NE:'+227', NF:'+672', NG:'+234', NI:'+505', NL:'+31', NO:'+47', NP:'+977', NR:'+674', NU:'+683', NZ:'+64',
+  OM:'+968',
+  PA:'+507', PE:'+51', PF:'+689', PG:'+675', PH:'+63', PK:'+92', PL:'+48', PM:'+508', PR:'+1-787', PS:'+970', PT:'+351', PW:'+680', PY:'+595',
+  QA:'+974',
+  RE:'+262', RO:'+40', RS:'+381', RU:'+7', RW:'+250',
+  SA:'+966', SB:'+677', SC:'+248', SD:'+249', SE:'+46', SG:'+65', SH:'+290', SI:'+386', SJ:'+47', SK:'+421', SL:'+232', SM:'+378', SN:'+221', SO:'+252', SR:'+597', SS:'+211', ST:'+239', SV:'+503', SX:'+1-721', SY:'+963', SZ:'+268',
+  TC:'+1-649', TD:'+235', TG:'+228', TH:'+66', TJ:'+992', TK:'+690', TL:'+670', TM:'+993', TN:'+216', TO:'+676', TR:'+90', TT:'+1-868', TV:'+688', TW:'+886', TZ:'+255',
+  UA:'+380', UG:'+256', US:'+1', UY:'+598', UZ:'+998',
+  VA:'+379', VC:'+1-784', VE:'+58', VG:'+1-284', VI:'+1-340', VN:'+84', VU:'+678',
+  WF:'+681', WS:'+685',
+  XK:'+383',
+  YE:'+967', YT:'+262',
+  ZA:'+27', ZM:'+260', ZW:'+263',
+};
+(function guestAddAllCountryOptions() {
+  const displayNames = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], { type:'region' }) : null;
+  Object.entries(GUEST_COUNTRY_DIALS_BY_REGION).forEach(([region, dial]) => {
+    const name = displayNames ? displayNames.of(region) : region;
+    if (name && !GUEST_COUNTRIES.some(c => c.name === name)) GUEST_COUNTRIES.push({ name, dial });
+  });
+  GUEST_COUNTRIES.sort((a, b) => a.name.localeCompare(b.name));
+})();
+const GUEST_FIELDS = [
+  { key:'guest_serial', label:'일련번호', category:'시스템', type:'text', system:true },
+  { key:'guest_name', label:'투숙객명', category:'일반정보', type:'text', placeholder:'Hong Gil Dong' },
+  { key:'nationality', label:'국적', category:'일반정보', type:'select', options:GUEST_COUNTRIES.map(c => c.name) },
+  { key:'mobile_phone', label:'모바일폰', category:'일반정보', type:'phone', placeholder:'10-1234-5678' },
+  { key:'email', label:'이메일', category:'일반정보', type:'email', placeholder:'guest@example.com' },
+  { key:'gender', label:'성별', category:'일반정보', type:'select', options:['Male','Female','Other'] },
+  { key:'birth_date', label:'생년월일', category:'일반정보', type:'date' },
+  { key:'room_no', label:'방호수', category:'일반정보', type:'text', placeholder:'1205' },
+  { key:'stay_start', label:'투숙 시작일', category:'일반정보', type:'date' },
+  { key:'stay_end', label:'투숙 종료일', category:'일반정보', type:'date' },
+  { key:'stay_period', label:'투숙기간(days)', category:'일반정보', type:'text', placeholder:'3 nights' },
+  { key:'card_holder', label:'카드 명의자', category:'신용카드 정보', type:'text' },
+  { key:'card_brand', label:'카드사', category:'신용카드 정보', type:'select', options:['Visa','Mastercard','Amex','JCB','UnionPay','Other'] },
+  { key:'card_number', label:'카드번호', category:'신용카드 정보', type:'text', placeholder:'숫자만 입력' },
+  { key:'card_expiry', label:'유효기간', category:'신용카드 정보', type:'month' },
+  { key:'card_approval_no', label:'CVC', category:'신용카드 정보', type:'text', placeholder:'3자리' },
+];
+const GUEST_CREDIT_CARD_FIELD_KEYS = ['card_holder','card_brand','card_number','card_expiry','card_approval_no'];
+const GUEST_DEFAULT_FIELD_KEYS = ['guest_name','nationality','mobile_phone','email','gender','birth_date','room_no','stay_start','stay_end','stay_period', ...GUEST_CREDIT_CARD_FIELD_KEYS];
+const GUEST_STORE_KEY = 'hostAdminGuestManagerState.v1';
+let guestState = null;
+let guestBuilderDragKey = '';
+let guestColumnDragKey = '';
+let guestEntryDraftId = null;
+let guestRoampayTimer = null;
+let guestProjectOptions = [];
+
+function guestFormFieldDefs() {
+  return GUEST_FIELDS.filter(f => !f.system);
+}
+function guestEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function guestCountryDial(countryName = '') {
+  const normalized = String(countryName || '').trim();
+  if (normalized === 'Korea') return '+82';
+  return (GUEST_COUNTRIES.find(c => c.name === normalized) || GUEST_COUNTRIES.find(c => c.name === 'South Korea')).dial;
+}
+function guestCardNumberDigits(value) {
+  return String(value || '').replace(/\D/g, '').slice(0, 24);
+}
+function guestIsCreditCardField(key) {
+  return GUEST_CREDIT_CARD_FIELD_KEYS.includes(key);
+}
+function guestMobileDigits(value) {
+  return String(value || '').replace(/\D/g, '').slice(0, 11);
+}
+function guestFormatMobilePhone(value) {
+  const digits = guestMobileDigits(value);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+}
+function guestOnMobileInput(el) {
+  if (!el) return;
+  el.value = guestMobileDigits(el.value);
+  guestValidateEntryForm(true);
+}
+function guestOnMobileFocus(el) {
+  if (!el) return;
+  el.value = guestMobileDigits(el.value);
+}
+function guestOnMobileBlur(el) {
+  if (!el) return;
+  el.value = guestFormatMobilePhone(el.value);
+  guestValidateEntryForm(true);
+}
+function guestOnStayPeriodInput(el) {
+  if (!el) return;
+  el.value = String(el.value || '').replace(/\D/g, '');
+  guestValidateEntryForm(true);
+}
+function guestFormatCardNumber(digits, reveal = false) {
+  const clean = guestCardNumberDigits(digits);
+  const groups = clean.match(/.{1,4}/g) || [];
+  if (!reveal) {
+    const maskIndex = clean.length > 16 ? 4 : 2;
+    if (groups[maskIndex]) groups[maskIndex] = '*'.repeat(groups[maskIndex].length);
+  }
+  return groups.join('-');
+}
+function guestCardRawIndexAt(el, caret) {
+  const text = String(el.value || '').slice(0, Number(caret || 0));
+  return Math.min((text.match(/[0-9*]/g) || []).length, guestCardNumberDigits(el.dataset.raw || '').length);
+}
+function guestCardRawRangeFromSelection(el) {
+  const start = guestCardRawIndexAt(el, el.selectionStart || 0);
+  const end = guestCardRawIndexAt(el, el.selectionEnd || el.selectionStart || 0);
+  return { start: Math.min(start, end), end: Math.max(start, end) };
+}
+function guestSetCardNumberInput(el, rawDigits, reveal, rawCaret = null) {
+  if (!el) return;
+  const clean = guestCardNumberDigits(rawDigits);
+  el.dataset.raw = clean;
+  el.dataset.reveal = reveal ? '1' : '0';
+  el.value = guestFormatCardNumber(clean, reveal);
+  if (rawCaret !== null) {
+    const target = Math.max(0, Math.min(Number(rawCaret), clean.length));
+    let seen = 0, caret = el.value.length;
+    for (let i = 0; i < el.value.length; i++) {
+      if (/[0-9*]/.test(el.value[i])) seen++;
+      if (seen >= target) { caret = i + 1; break; }
+    }
+    try { el.setSelectionRange(caret, caret); } catch (e) {}
+  }
+  if (el.nextElementSibling && el.nextElementSibling.classList?.contains('guest-card-toggle')) {
+    el.nextElementSibling.textContent = reveal ? '🙈' : '👁';
+  }
+}
+function guestEditCardNumberInput(el, insertDigits, removeBefore = 0, removeAfter = 0) {
+  const raw = guestCardNumberDigits(el.dataset.raw || '');
+  const range = guestCardRawRangeFromSelection(el);
+  const start = Math.max(0, range.start - removeBefore);
+  const end = Math.min(raw.length, range.end + removeAfter);
+  const next = guestCardNumberDigits(raw.slice(0, start) + insertDigits + raw.slice(end));
+  guestSetCardNumberInput(el, next, el.dataset.reveal === '1', start + guestCardNumberDigits(insertDigits).length);
+  guestValidateEntryForm(true);
+}
+function guestOnCardNumberBeforeInput(el, ev) {
+  if (!ev || ev.isComposing) return;
+  const type = ev.inputType || '';
+  if (type === 'insertText') {
+    const digits = guestCardNumberDigits(ev.data || '');
+    ev.preventDefault();
+    if (digits) guestEditCardNumberInput(el, digits);
     return;
   }
-  ['proj','new','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','inquiry','video','apps','settle','mail','mailtpl','pform','partner','vote'].forEach(t => {
-    document.getElementById('tb-'+t).classList.toggle('act', t===name);
-    document.getElementById('tab-'+t).classList.toggle('act', t===name);
+  if (type === 'deleteContentBackward') {
+    ev.preventDefault();
+    guestEditCardNumberInput(el, '', 1, 0);
+    return;
+  }
+  if (type === 'deleteContentForward') {
+    ev.preventDefault();
+    guestEditCardNumberInput(el, '', 0, 1);
+  }
+}
+function guestOnCardNumberPaste(el, ev) {
+  const digits = guestCardNumberDigits((ev.clipboardData || window.clipboardData)?.getData('text') || '');
+  ev.preventDefault();
+  if (digits) guestEditCardNumberInput(el, digits);
+}
+function guestOnCardNumberInput(el) {
+  const reveal = el.dataset.reveal === '1';
+  const clean = reveal ? guestCardNumberDigits(el.value || el.dataset.raw || '') : guestCardNumberDigits(el.dataset.raw || el.value || '');
+  guestSetCardNumberInput(el, clean, reveal);
+  guestValidateEntryForm(true);
+}
+function guestToggleCardNumber(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const reveal = el.dataset.reveal !== '1';
+  guestSetCardNumberInput(el, el.dataset.raw || el.value, reveal);
+}
+function guestUpdatePhoneCode(idPrefix = 'guest-input') {
+  const codeEl = document.getElementById(`${idPrefix}-mobile_phone-code`);
+  if (!codeEl) return;
+  const country = document.getElementById(`${idPrefix}-nationality`)?.value || 'South Korea';
+  codeEl.textContent = guestCountryDial(country);
+}
+function guestDefaultFields() {
+  return guestFormFieldDefs().map((f, idx) => ({
+    key: f.key,
+    enabled: GUEST_DEFAULT_FIELD_KEYS.includes(f.key),
+    required: ['guest_name','room_no','stay_start','stay_end'].includes(f.key) || guestIsCreditCardField(f.key),
+    searchable: ['guest_name','nationality','mobile_phone','email','room_no'].includes(f.key),
+    order: idx,
+  }));
+}
+function guestDefaultState() {
+  const fields = guestDefaultFields();
+  return {
+    currentRevisionId: 'rev-1',
+    defaultRevisionId: 'rev-1',
+    inputRevisionId: 'rev-1',
+    fields,
+    revisions: [{ id:'rev-1', name:'Revision 1', createdAt:new Date().toISOString(), fields: JSON.parse(JSON.stringify(fields)) }],
+    records: [],
+    columns: GUEST_FIELDS.map((f, idx) => ({ key:f.key, visible:true, frozen:idx === 0, order:idx })),
+    filters: {},
+  };
+}
+function guestNormalizeFields(fields) {
+  const map = new Map((fields || []).map(f => [f.key, f]));
+  const normalized = guestFormFieldDefs().map((def, idx) => {
+    const old = map.get(def.key) || {};
+    return {
+      key:def.key,
+      enabled: old.enabled ?? GUEST_DEFAULT_FIELD_KEYS.includes(def.key),
+      required: guestIsCreditCardField(def.key) ? true : !!old.required,
+      searchable: !!old.searchable,
+      order: Number.isFinite(Number(old.order)) ? Number(old.order) : idx,
+    };
+  }).sort((a,b) => a.order - b.order);
+  const cardItems = normalized.filter(item => guestFieldDef(item.key).category === '신용카드 정보');
+  const hasCardSelection = cardItems.some(item => item.enabled);
+  if (hasCardSelection) cardItems.forEach(item => { item.enabled = true; });
+  return normalized;
+}
+function guestNormalizeColumns(columns) {
+  const map = new Map((columns || []).map(c => [c.key, c]));
+  return GUEST_FIELDS.map((def, idx) => {
+    const old = map.get(def.key) || {};
+    return {
+      key:def.key,
+      visible: old.visible !== false,
+      frozen: !!old.frozen,
+      order: Number.isFinite(Number(old.order)) ? Number(old.order) : idx,
+    };
+  }).sort((a,b) => a.order - b.order);
+}
+function guestLoadState() {
+  if (guestState) return;
+  try { guestState = JSON.parse(localStorage.getItem(GUEST_STORE_KEY) || 'null'); } catch { guestState = null; }
+  if (!guestState) guestState = guestDefaultState();
+  guestState.fields = guestNormalizeFields(guestState.fields);
+  if (!guestState.creditCardsEnabledByDefault) {
+    guestState.fields.forEach(item => {
+      if (GUEST_CREDIT_CARD_FIELD_KEYS.includes(item.key)) item.enabled = true;
+    });
+    guestState.revisions = (guestState.revisions || []).map(r => ({
+      ...r,
+      fields: guestNormalizeFields(r.fields).map(item => (
+        GUEST_CREDIT_CARD_FIELD_KEYS.includes(item.key) ? { ...item, enabled: true } : item
+      )),
+    }));
+    guestState.creditCardsEnabledByDefault = true;
+  }
+  if (!guestState.defaultRevisionId) guestState.defaultRevisionId = guestState.currentRevisionId || 'rev-1';
+  guestState.columns = guestNormalizeColumns(guestState.columns);
+  guestState.revisions = (guestState.revisions || []).map(r => ({ ...r, fields: guestNormalizeFields(r.fields) }));
+}
+function guestPersist() {
+  localStorage.setItem(GUEST_STORE_KEY, JSON.stringify(guestState));
+}
+function guestFieldDef(key) {
+  return GUEST_FIELDS.find(f => f.key === key) || GUEST_FIELDS[0];
+}
+function guestInit() {
+  guestLoadState();
+  guestRenderRevisionSelectors();
+  guestRenderBuilder();
+  guestRenderPreview();
+  guestRenderInputForm();
+  guestRenderColumnPanel();
+  guestRenderFilters();
+  guestRenderGrid();
+}
+function guestRenderRevisionSelectors() {
+  const box = document.getElementById('guest-revision-list');
+  if (!box) return;
+  box.innerHTML = guestState.revisions.map(r => {
+    const active = r.id === guestState.currentRevisionId;
+    const isDefault = r.id === guestState.defaultRevisionId;
+    return `<div class="guest-revision-row ${active ? 'active' : ''}">
+      <div>
+        <span class="guest-revision-name">${guestEsc(r.name)}</span>
+        <span class="guest-revision-meta">${guestEsc(String(r.updatedAt || r.createdAt || '').slice(0, 10))}${active ? ' · 미리보기 중' : ''}</span>
+      </div>
+      ${isDefault ? '<span class="guest-revision-badge">기본</span>' : `<button class="btn btn-o btn-sm" onclick="guestSetDefaultRevision('${guestEsc(r.id)}')">기본설정</button>`}
+      <button class="btn ${active ? 'btn-p' : 'btn-o'} btn-sm" onclick="guestLoadRevision('${guestEsc(r.id)}')">${active ? '선택됨' : '선택'}</button>
+      <button class="btn btn-r btn-sm" onclick="guestDeleteRevision('${guestEsc(r.id)}')">삭제</button>
+    </div>`;
+  }).join('');
+}
+function guestSetField(key, prop, value) {
+  const item = guestState.fields.find(f => f.key === key);
+  if (!item) return;
+  if (prop === 'enabled' && guestFieldDef(key).category === '신용카드 정보') {
+    guestSetCategoryEnabled('신용카드 정보', value);
+    return;
+  }
+  item[prop] = value;
+  if (!item.enabled) { item.required = false; item.searchable = false; }
+  guestPersist();
+  guestRenderBuilder();
+  guestRenderPreview();
+  if (guestState.defaultRevisionId === guestState.currentRevisionId) guestRenderInputForm();
+  guestRenderFilters();
+  guestRenderGrid();
+}
+function guestSetCategoryEnabled(category, enabled) {
+  guestState.fields.forEach(item => {
+    if (guestFieldDef(item.key).category !== category) return;
+    item.enabled = enabled;
+    if (!enabled) {
+      item.required = false;
+      item.searchable = false;
+    }
+  });
+  guestPersist();
+  guestRenderBuilder();
+  guestRenderPreview();
+  if (guestState.defaultRevisionId === guestState.currentRevisionId) guestRenderInputForm();
+  guestRenderFilters();
+  guestRenderGrid();
+}
+function guestMoveField(beforeKey) {
+  if (!guestBuilderDragKey || guestBuilderDragKey === beforeKey) return;
+  const dragged = guestState.fields.find(f => f.key === guestBuilderDragKey);
+  const before = guestState.fields.find(f => f.key === beforeKey);
+  if (!dragged || !before || guestFieldDef(dragged.key).category !== guestFieldDef(before.key).category) {
+    guestBuilderDragKey = '';
+    return;
+  }
+  const category = guestFieldDef(dragged.key).category;
+  const same = guestState.fields.filter(f => guestFieldDef(f.key).category === category && f.key !== guestBuilderDragKey);
+  const idx = same.findIndex(f => f.key === beforeKey);
+  same.splice(idx < 0 ? same.length : idx, 0, dragged);
+  const merged = [];
+  ['일반정보', '신용카드 정보'].forEach(cat => {
+    const items = cat === category ? same : guestState.fields.filter(f => guestFieldDef(f.key).category === cat);
+    items.forEach(f => merged.push(f));
+  });
+  guestState.fields = merged.map((f, i) => ({ ...f, order:i }));
+  guestBuilderDragKey = '';
+  guestPersist();
+  guestRenderBuilder();
+  guestRenderPreview();
+  if (guestState.defaultRevisionId === guestState.currentRevisionId) guestRenderInputForm();
+}
+function guestRenderBuilder() {
+  const box = document.getElementById('guest-field-builder');
+  if (!box) return;
+  const cardItems = guestState.fields.filter(item => guestFieldDef(item.key).category === '신용카드 정보');
+  const hasPartialCardSelection = cardItems.some(item => item.enabled) && !cardItems.every(item => item.enabled);
+  if (hasPartialCardSelection) {
+    cardItems.forEach(item => { item.enabled = true; });
+    guestPersist();
+  }
+  const renderItem = (item) => {
+    const def = guestFieldDef(item.key);
+    const isCard = def.category === '신용카드 정보';
+    return `<div class="guest-field-row" draggable="true" ondragstart="guestBuilderDragKey='${guestEsc(item.key)}';this.classList.add('dragging')" ondragend="this.classList.remove('dragging')" ondragover="event.preventDefault()" ondrop="guestMoveField('${guestEsc(item.key)}')">
+      <div class="guest-drag">⋮⋮</div>
+      <div>
+        <span class="guest-field-label">${guestEsc(def.label)}</span>
+      </div>
+      <label class="guest-mini-check"><input type="checkbox" ${item.enabled?'checked':''} ${isCard?'disabled title="신용카드 정보는 블록 전체선택으로만 사용 여부를 변경합니다."':''} onchange="guestSetField('${guestEsc(item.key)}','enabled',this.checked)">사용</label>
+      <label class="guest-mini-check"><input type="checkbox" ${item.required || isCard ?'checked':''} ${(!item.enabled || isCard)?'disabled':''} onchange="guestSetField('${guestEsc(item.key)}','required',this.checked)">필수</label>
+      <label class="guest-mini-check"><input type="checkbox" ${item.searchable?'checked':''} ${!item.enabled?'disabled':''} onchange="guestSetField('${guestEsc(item.key)}','searchable',this.checked)">조회</label>
+    </div>`;
+  };
+  box.innerHTML = ['일반정보', '신용카드 정보'].map(cat => {
+    const items = guestState.fields.filter(item => guestFieldDef(item.key).category === cat);
+    const allChecked = items.length > 0 && items.every(item => item.enabled);
+    const groupControl = cat === '신용카드 정보'
+      ? `<label class="guest-group-check"><input type="checkbox" ${allChecked ? 'checked' : ''} onchange="guestSetCategoryEnabled('신용카드 정보', this.checked)">전체선택</label>`
+      : '';
+    return `<div class="guest-field-group">
+      <div class="guest-field-group-title"><span class="guest-field-group-title-main">${cat === '일반정보' ? '👤' : '💳'} ${guestEsc(cat)}</span>${groupControl}</div>
+      ${items.map(renderItem).join('')}
+    </div>`;
+  }).join('');
+}
+function guestInputHtml(def, value = '', required = false, idPrefix = 'guest-input') {
+  const id = `${idPrefix}-${def.key}`;
+  const req = required ? 'required' : '';
+  const liveValidate = idPrefix === 'guest-input'
+    ? ' oninput="guestValidateEntryForm(true)" onchange="guestValidateEntryForm(true)" onblur="guestValidateEntryForm(true)"'
+    : '';
+  if (def.type === 'select') {
+    const current = String(value || (def.key === 'nationality' ? 'South Korea' : ''));
+    const change = def.key === 'nationality'
+      ? ` onchange="guestUpdatePhoneCode('${guestEsc(idPrefix)}')${idPrefix === 'guest-input' ? ';guestValidateEntryForm(true)' : ''}"`
+      : (liveValidate ? ' onchange="guestValidateEntryForm(true)" onblur="guestValidateEntryForm(true)"' : '');
+    const emptyOption = def.key === 'card_brand' ? '<option value="">선택</option>' : '';
+    return `<select id="${id}" ${req}${change}>${emptyOption}${(def.options || []).map(o => `<option value="${guestEsc(o)}" ${current===o?'selected':''}>${guestEsc(o)}</option>`).join('')}</select>`;
+  }
+  if (def.type === 'phone') {
+    const phoneEvents = def.key === 'mobile_phone' && idPrefix === 'guest-input'
+      ? ' inputmode="numeric" autocomplete="tel-national" onfocus="guestOnMobileFocus(this)" oninput="guestOnMobileInput(this)" onblur="guestOnMobileBlur(this)"'
+      : '';
+    return `<div class="guest-phone-wrap"><span class="guest-phone-code" id="${id}-code">${guestEsc(guestCountryDial())}</span><input id="${id}" type="tel" value="${guestEsc(value)}" placeholder="${guestEsc(def.placeholder || '')}"${phoneEvents} ${req}></div>`;
+  }
+  if (def.key === 'card_number') {
+    const clean = guestCardNumberDigits(value);
+    return `<div class="guest-card-number-wrap">
+      <input id="${id}" type="text" value="${guestEsc(guestFormatCardNumber(clean, false))}" data-raw="${guestEsc(clean)}" data-reveal="0" placeholder="${guestEsc(def.placeholder || '')}" inputmode="numeric" autocomplete="cc-number" onbeforeinput="guestOnCardNumberBeforeInput(this, event)" onpaste="guestOnCardNumberPaste(this, event)" oninput="guestOnCardNumberInput(this)" ${req}>
+      <button class="guest-card-toggle" type="button" onclick="guestToggleCardNumber('${guestEsc(id)}')" title="카드번호 보기/가리기" aria-label="카드번호 보기/가리기">👁</button>
+    </div>`;
+  }
+  if (def.key === 'card_approval_no') {
+    return `<input id="${id}" type="text" value="${guestEsc(value)}" placeholder="${guestEsc(def.placeholder || '')}" inputmode="numeric" pattern="[0-9]{0,3}" maxlength="3" autocomplete="cc-csc" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,3);guestValidateEntryForm(true)" onblur="guestValidateEntryForm(true)" ${req}>`;
+  }
+  if (def.key === 'stay_period' && idPrefix === 'guest-input') {
+    return `<input id="${id}" type="text" value="${guestEsc(value)}" placeholder="${guestEsc(def.placeholder || '')}" inputmode="numeric" oninput="guestOnStayPeriodInput(this)" onblur="guestValidateEntryForm(true)" ${req}>`;
+  }
+  return `<input id="${id}" type="${def.type}" value="${guestEsc(value)}" placeholder="${guestEsc(def.placeholder || '')}" ${liveValidate} ${req}>`;
+}
+function guestRevisionFields(revisionId) {
+  return guestNormalizeFields((guestState.revisions.find(r => r.id === revisionId) || guestState.revisions[0]).fields);
+}
+function guestInputRevisionFields(revisionId) {
+  if (revisionId && revisionId === guestState.currentRevisionId) return guestNormalizeFields(guestState.fields);
+  return guestRevisionFields(revisionId);
+}
+function guestCreditCardBlockEnabled(revisionId) {
+  const hasCard = (fields = []) => guestNormalizeFields(fields).some(item => item.enabled && guestFieldDef(item.key).category === '신용카드 정보');
+  const revision = guestState.revisions.find(r => r.id === revisionId);
+  return hasCard(guestState.fields) || hasCard(revision?.fields);
+}
+function guestEntryFields(revisionId) {
+  const fields = guestInputRevisionFields(revisionId).map(item => ({ ...item }));
+  if (guestCreditCardBlockEnabled(revisionId)) {
+    fields.forEach(item => {
+      if (guestFieldDef(item.key).category === '신용카드 정보') item.enabled = true;
+    });
+  }
+  return fields;
+}
+function guestTodayKey() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}`;
+}
+function guestNextSerial() {
+  const day = guestTodayKey();
+  const maxNo = (guestState.records || []).reduce((max, row) => {
+    const serial = String(row.values?.guest_serial || '');
+    if (!serial.startsWith(`${day}_`)) return max;
+    const no = Number(serial.slice(9));
+    return Number.isFinite(no) ? Math.max(max, no) : max;
+  }, 0);
+  return `${day}_${String(maxNo + 1).padStart(4, '0')}`;
+}
+function guestRenderPreview() {
+  const box = document.getElementById('guest-form-preview');
+  if (!box) return;
+  const enabled = guestState.fields.filter(f => f.enabled);
+  box.innerHTML = enabled.length ? enabled.map(item => {
+    const def = guestFieldDef(item.key);
+    return `<div class="guest-form-field"><label>${guestEsc(def.label)} ${item.required ? '<span class="req">*</span>' : ''}</label>${guestInputHtml(def, '', item.required, 'guest-preview')}</div>`;
+  }).join('') : '<div class="guest-empty" style="grid-column:1/-1;">사용할 항목을 선택하면 미리보기가 표시됩니다.</div>';
+  guestUpdatePhoneCode('guest-preview');
+}
+function guestLoadRevision(id) {
+  const rev = guestState.revisions.find(r => r.id === id);
+  if (!rev) return;
+  guestState.currentRevisionId = id;
+  guestState.fields = guestNormalizeFields(JSON.parse(JSON.stringify(rev.fields)));
+  guestPersist();
+  guestRenderBuilder();
+  guestRenderPreview();
+  guestRenderRevisionSelectors();
+}
+function guestSetDefaultRevision(id) {
+  const rev = guestState.revisions.find(r => r.id === id);
+  if (!rev) return;
+  guestState.defaultRevisionId = id;
+  guestState.inputRevisionId = id;
+  guestPersist();
+  guestRenderRevisionSelectors();
+  guestRenderInputForm();
+}
+async function guestSaveRevision() {
+  const current = guestState.revisions.find(r => r.id === guestState.currentRevisionId);
+  if (current && typeof uiConfirm === 'function') {
+    const overwrite = await uiConfirm(`${current.name}에 현재 폼 설정을 덮어쓸까요?\n취소를 누르면 새 revision으로 저장합니다.`, {
+      title: 'Revision 저장',
+      okText: '덮어쓰기',
+      cancelText: '새로 만들기',
+    });
+    if (overwrite) {
+      current.fields = JSON.parse(JSON.stringify(guestState.fields));
+      current.updatedAt = new Date().toISOString();
+      guestPersist();
+      guestRenderRevisionSelectors();
+      guestRenderPreview();
+      guestRenderInputForm();
+      if (typeof uiAlert === 'function') uiAlert(`${current.name}에 덮어썼습니다.`);
+      return;
+    }
+  }
+  const nextNo = (guestState.revisions || []).length + 1;
+  const rev = { id:`rev-${Date.now()}`, name:`Revision ${nextNo}`, createdAt:new Date().toISOString(), fields:JSON.parse(JSON.stringify(guestState.fields)) };
+  guestState.revisions.push(rev);
+  guestState.currentRevisionId = rev.id;
+  guestState.inputRevisionId = rev.id;
+  if (!guestState.defaultRevisionId) guestState.defaultRevisionId = rev.id;
+  guestPersist();
+  guestRenderRevisionSelectors();
+  guestRenderInputForm();
+  if (typeof uiAlert === 'function') uiAlert(`${rev.name} 이 저장되었습니다.`);
+}
+async function guestDeleteRevision(id) {
+  if (guestState.revisions.length <= 1) {
+    if (typeof uiAlert === 'function') uiAlert('최소 1개의 revision은 필요합니다.');
+    return;
+  }
+  const rev = guestState.revisions.find(r => r.id === id);
+  if (!rev) return;
+  const ok = typeof uiConfirm === 'function'
+    ? await uiConfirm(`${rev.name}을 삭제하시겠습니까?`, { title:'Revision 삭제', okText:'삭제', cancelText:'취소', danger:true })
+    : confirm(`${rev.name}을 삭제하시겠습니까?`);
+  if (!ok) return;
+  guestState.revisions = guestState.revisions.filter(r => r.id !== id);
+  if (guestState.defaultRevisionId === id) guestState.defaultRevisionId = guestState.revisions[0].id;
+  if (guestState.currentRevisionId === id) {
+    guestState.currentRevisionId = guestState.defaultRevisionId || guestState.revisions[0].id;
+    const next = guestState.revisions.find(r => r.id === guestState.currentRevisionId) || guestState.revisions[0];
+    guestState.fields = guestNormalizeFields(JSON.parse(JSON.stringify(next.fields)));
+  }
+  guestPersist();
+  guestRenderRevisionSelectors();
+  guestRenderBuilder();
+  guestRenderPreview();
+  guestRenderInputForm();
+}
+function guestResetBuilder() {
+  guestState.fields = guestDefaultFields();
+  guestPersist();
+  guestRenderBuilder();
+  guestRenderPreview();
+}
+function guestRenderInputForm() {
+  guestLoadState();
+  guestState.inputRevisionId = guestState.defaultRevisionId || guestState.currentRevisionId;
+  const generalBox = document.getElementById('guest-entry-general');
+  const cardBox = document.getElementById('guest-entry-card');
+  const roampayBox = document.getElementById('guest-entry-roampay');
+  if (!generalBox || !cardBox || !roampayBox) return;
+  const fields = guestEntryFields(guestState.inputRevisionId).filter(f => f.enabled);
+  const render = (category) => {
+    const items = fields.filter(item => guestFieldDef(item.key).category === category);
+    return items.length ? items.map(item => {
+      const def = guestFieldDef(item.key);
+      const isCredit = guestIsCreditCardField(def.key);
+      const needsError = item.required || isCredit || def.key === 'mobile_phone' || def.key === 'stay_period';
+      return `<div class="guest-form-field" id="guest-field-${guestEsc(def.key)}"><label>${guestEsc(def.label)} ${(item.required || isCredit) ? '<span class="req">*</span>' : ''}</label>${guestInputHtml(def, '', item.required || isCredit, 'guest-input')}${needsError ? `<div class="guest-field-error" id="guest-error-${guestEsc(def.key)}"></div>` : ''}</div>`;
+    }).join('') : '<div class="guest-empty" style="grid-column:1/-1;">선택된 항목이 없습니다.</div>';
+  };
+  generalBox.innerHTML = guestProjectSelectHtml() + render('일반정보');
+  cardBox.innerHTML = render('신용카드 정보');
+  guestRenderRoampayInfo();
+  guestUpdatePhoneCode('guest-input');
+  guestValidateEntryForm(false);
+  guestPersist();
+}
+async function guestOpenEntryModal() {
+  guestLoadState();
+  guestEntryDraftId = null;
+  if (guestRoampayTimer) clearTimeout(guestRoampayTimer);
+  guestRoampayTimer = null;
+  guestState.inputRevisionId = guestState.defaultRevisionId || guestState.currentRevisionId;
+  try { await guestLoadProjectsForEntry(); } catch (e) { console.warn('[guest] project load failed', e); }
+  guestRenderInputForm();
+  guestSwitchEntryTab('general');
+  document.getElementById('modal-guest-entry')?.classList.add('open');
+  guestValidateEntryForm(false);
+}
+function guestCloseEntryModal() {
+  document.getElementById('modal-guest-entry')?.classList.remove('open');
+  if (guestRoampayTimer) clearTimeout(guestRoampayTimer);
+  guestRoampayTimer = null;
+}
+function guestSwitchEntryTab(name) {
+  const tab = document.getElementById(`guest-entry-tab-${name}`);
+  if (tab?.disabled) return;
+  ['general','card','roampay'].forEach(t => {
+    document.getElementById(`guest-entry-tab-${t}`)?.classList.toggle('active', t === name);
+    document.getElementById(`guest-entry-${t}`)?.classList.toggle('active', t === name);
+  });
+}
+function guestSetEntryError(key, message, show) {
+  const field = document.getElementById(`guest-field-${key}`);
+  const error = document.getElementById(`guest-error-${key}`);
+  if (!field || !error) return;
+  field.classList.toggle('has-error', !!message && show);
+  error.textContent = show ? message : '';
+}
+function guestCurrentDraft() {
+  return (guestState?.records || []).find(row => row.id === guestEntryDraftId) || null;
+}
+async function guestLoadProjectsForEntry() {
+  if (guestProjectOptions.length) return guestProjectOptions;
+  if (Array.isArray(projData) && projData.length) {
+    guestProjectOptions = projData.map(p => ({ id:p.id, project_name:p.project_name, project_serial:p.project_serial })).filter(p => p.id);
+    return guestProjectOptions;
+  }
+  const r = await fetch('/api/host/projects?page=1&size=100');
+  const d = await r.json().catch(() => ({}));
+  guestProjectOptions = (d.data || []).map(p => ({ id:p.id, project_name:p.project_name, project_serial:p.project_serial })).filter(p => p.id);
+  return guestProjectOptions;
+}
+function guestProjectSelectHtml() {
+  const options = guestProjectOptions.map(p => {
+    const label = `${p.project_name || '프로젝트'}${p.project_serial ? ` (${p.project_serial})` : ''}`;
+    return `<option value="${guestEsc(p.id)}">${guestEsc(label)}</option>`;
+  }).join('');
+  return `<div class="guest-form-field" id="guest-field-project_id">
+    <label>project_id <span class="req">*</span></label>
+    <select id="guest-input-project_id" onchange="guestValidateEntryForm(true)">
+      <option value="">프로젝트 선택</option>
+      ${options}
+    </select>
+    <div class="guest-field-error" id="guest-error-project_id"></div>
+  </div>`;
+}
+function guestRoampayLabel(status) {
+  if (status === 'approved') return '승인';
+  if (status === 'rejected') return '반려';
+  if (status === 'pending') return '처리중';
+  if (status === 'failed') return '등록실패';
+  return '-';
+}
+function guestDateTimeText(value) {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}. ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function guestRoampayQrUrl(row) {
+  const serial = row?.roampay?.serial || row?.values?.guest_serial || '';
+  if (!serial) return '';
+  const payload = `${location.origin}/roampay/guests/${encodeURIComponent(serial)}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=2&data=${encodeURIComponent(payload)}`;
+}
+function guestRenderRoampayInfo() {
+  const box = document.getElementById('guest-entry-roampay');
+  if (!box) return;
+  const row = guestCurrentDraft();
+  const rp = row?.roampay || {};
+  const qrUrl = guestRoampayQrUrl(row);
+  box.innerHTML = `<div class="guest-roampay-card">
+    <div class="guest-roampay-grid">
+      <div class="guest-roampay-item"><label>Roampay 일련번호</label><div>${guestEsc(rp.serial || '-')}</div></div>
+      <div class="guest-roampay-item"><label>상태</label><div>${guestEsc(guestRoampayLabel(rp.status))}</div></div>
+      <div class="guest-roampay-item"><label>승인일</label><div>${guestEsc(rp.status === 'approved' ? guestDateTimeText(rp.approvedAt) : '-')}</div></div>
+      <div class="guest-roampay-item"><label>반려일</label><div>${guestEsc(rp.status === 'rejected' ? guestDateTimeText(rp.rejectedAt) : '-')}</div></div>
+    </div>
+    <div class="guest-roampay-qr">
+      ${qrUrl ? `<img src="${guestEsc(qrUrl)}" alt="Roampay QR">` : '<div class="guest-muted">Roampay 등록 완료 후 QR 코드가 표시됩니다.</div>'}
+    </div>
+  </div>`;
+}
+function guestUpdateEntryActions(valid = guestValidateEntryForm(false)) {
+  const row = guestCurrentDraft();
+  const registered = !!row;
+  const roampayReady = !!row && (row.roampay?.status === 'failed' || (!!row.roampay?.serial && ['approved','rejected'].includes(row.roampay?.status)));
+  const approved = row?.roampay?.status === 'approved';
+  const registerBtn = document.getElementById('guest-entry-register');
+  const saveBtn = document.getElementById('guest-entry-save');
+  const roampayTab = document.getElementById('guest-entry-tab-roampay');
+  if (registerBtn) registerBtn.disabled = !valid || registered;
+  if (saveBtn) saveBtn.disabled = registered ? !approved : !valid;
+  if (roampayTab) roampayTab.disabled = !roampayReady;
+}
+function guestValidateEntryForm(show = false) {
+  const modal = document.getElementById('modal-guest-entry');
+  if (!modal) return true;
+  const get = key => document.getElementById(`guest-input-${key}`);
+  const fields = guestEntryFields(guestState?.inputRevisionId).filter(f => f.enabled);
+  const requiredByKey = new Map(fields.map(item => [item.key, !!item.required || guestIsCreditCardField(item.key)]));
+  const errors = {};
+  const projectEl = document.getElementById('guest-input-project_id');
+  if (projectEl && !String(projectEl.value || '').trim()) {
+    errors.project_id = 'project_id를 선택해 주세요.';
+  }
+  fields.forEach(item => {
+    const def = guestFieldDef(item.key);
+    const el = get(def.key);
+    if (!el) return;
+    if (item.required && !guestIsCreditCardField(def.key)) {
+      const raw = def.key === 'mobile_phone'
+        ? guestMobileDigits(el.value)
+        : (def.key === 'stay_period' ? String(el.value || '').replace(/\D/g, '') : String(el.value || '').trim());
+      errors[def.key] = raw ? '' : `${def.label} 항목을 입력해 주세요.`;
+    }
+  });
+  const mobileEl = get('mobile_phone');
+  if (mobileEl) {
+    const digits = guestMobileDigits(mobileEl.value);
+    if (digits && digits.length !== 11) errors.mobile_phone = '모바일폰은 숫자 11자리여야 합니다.';
+    else if (!digits && requiredByKey.get('mobile_phone')) errors.mobile_phone = errors.mobile_phone || '모바일폰을 입력해 주세요.';
+  }
+  const stayPeriodEl = get('stay_period');
+  if (stayPeriodEl) {
+    const digits = String(stayPeriodEl.value || '').replace(/\D/g, '');
+    if (String(stayPeriodEl.value || '') !== digits) stayPeriodEl.value = digits;
+    if (!digits && requiredByKey.get('stay_period')) errors.stay_period = errors.stay_period || '투숙기간을 숫자로 입력해 주세요.';
+  }
+  const hasCardInputs = GUEST_CREDIT_CARD_FIELD_KEYS.some(key => !!get(key));
+  const values = {
+    card_holder: String(get('card_holder')?.value || '').trim(),
+    card_brand: String(get('card_brand')?.value || '').trim(),
+    card_number: guestCardNumberDigits(get('card_number')?.dataset?.raw || get('card_number')?.value || ''),
+    card_expiry: String(get('card_expiry')?.value || '').trim(),
+    card_approval_no: String(get('card_approval_no')?.value || '').replace(/\D/g, ''),
+  };
+  if (hasCardInputs) {
+    errors.card_holder = values.card_holder ? '' : '카드 명의자를 입력해 주세요.';
+    errors.card_brand = values.card_brand ? '' : '카드사를 선택해 주세요.';
+    errors.card_number = !values.card_number ? '카드번호를 입력해 주세요.' : (![16, 24].includes(values.card_number.length) ? '카드번호는 숫자 16자리 또는 24자리여야 합니다.' : '');
+    errors.card_expiry = values.card_expiry ? '' : '유효기간을 선택해 주세요.';
+    errors.card_approval_no = !values.card_approval_no ? 'CVC를 입력해 주세요.' : (values.card_approval_no.length !== 3 ? 'CVC는 숫자 3자리여야 합니다.' : '');
+  }
+  fields.forEach(item => guestSetEntryError(item.key, errors[item.key] || '', show));
+  guestSetEntryError('project_id', errors.project_id || '', show);
+  const ok = Object.values(errors).every(message => !message);
+  const row = guestCurrentDraft();
+  const roampayReady = !!row && (row.roampay?.status === 'failed' || (!!row.roampay?.serial && ['approved','rejected'].includes(row.roampay?.status)));
+  const registerBtn = document.getElementById('guest-entry-register');
+  const saveBtn = document.getElementById('guest-entry-save');
+  const roampayTab = document.getElementById('guest-entry-tab-roampay');
+  if (registerBtn) registerBtn.disabled = !ok || !!row;
+  if (saveBtn) saveBtn.disabled = row?.roampay?.status !== 'approved';
+  if (roampayTab) roampayTab.disabled = !roampayReady;
+  return ok;
+}
+function guestValidateCreditCardFields(show = false) {
+  return guestValidateEntryForm(show);
+}
+function guestFocusFirstEntryError() {
+  const firstError = document.querySelector('#modal-guest-entry .guest-form-field.has-error');
+  if (firstError && firstError.closest('#guest-entry-card')) guestSwitchEntryTab('card');
+  else guestSwitchEntryTab('general');
+}
+function guestBuildRecordFromForm() {
+  const fields = guestEntryFields(guestState.inputRevisionId).filter(f => f.enabled);
+  const projectId = Number(document.getElementById('guest-input-project_id')?.value || 0);
+  if (!projectId) { if (typeof uiAlert === 'function') uiAlert('project_id를 선택해 주세요.'); return false; }
+  const row = { id:Date.now(), project_id:projectId, revisionId:guestState.inputRevisionId, createdAt:new Date().toISOString(), values:{ guest_serial:guestNextSerial() } };
+  for (const item of fields) {
+    const def = guestFieldDef(item.key);
+    const el = document.getElementById(`guest-input-${def.key}`);
+    const val = el?.value || '';
+    if (item.required && !val.trim()) { if (typeof uiAlert === 'function') uiAlert(`${def.label} 항목은 필수입니다.`); return false; }
+    if (def.key === 'mobile_phone' && val.trim()) {
+      const country = document.getElementById('guest-input-nationality')?.value || '';
+      row.values[def.key] = `${guestCountryDial(country)} ${guestFormatMobilePhone(val)}`;
+    } else if (def.key === 'card_number') {
+      const digits = guestCardNumberDigits(el?.dataset?.raw || val);
+      if (digits && digits.length !== 16 && digits.length !== 24) {
+        if (typeof uiAlert === 'function') uiAlert('카드번호는 숫자 16자리 또는 24자리로 입력해 주세요.');
+        return false;
+      }
+      row.values[def.key] = digits;
+    } else if (def.key === 'card_approval_no') {
+      row.values[def.key] = val.replace(/\D/g, '').slice(0, 3);
+    } else if (def.key === 'stay_period') {
+      row.values[def.key] = String(val || '').replace(/\D/g, '');
+    } else {
+      row.values[def.key] = val;
+    }
+  }
+  GUEST_FIELDS.forEach(f => { if (!(f.key in row.values)) row.values[f.key] = ''; });
+  row.roampay = {
+    serial: '',
+    status: 'pending',
+    approvedAt: '',
+    rejectedAt: '',
+    qrImageUrl: '',
+    registeredAt: new Date().toISOString(),
+  };
+  row.finalSaved = false;
+  return row;
+}
+function guestApplyRoampayResult(rowId, result) {
+  const row = (guestState.records || []).find(r => r.id === rowId);
+  if (!row) return;
+  row.roampay = {
+    ...(row.roampay || {}),
+    serial: result.serial || row.roampay?.serial || '',
+    status: result.status || row.roampay?.status || 'pending',
+    approvedAt: result.approvedAt || '',
+    rejectedAt: result.rejectedAt || '',
+    qrImageUrl: result.qrImageUrl || '',
+    updatedAt: new Date().toISOString(),
+  };
+  guestPersist();
+  guestRenderGrid();
+}
+function guestMockRoampayRegister(row) {
+  const serial = `RP-${guestTodayKey()}-${String(row.id).slice(-5)}`;
+  return new Promise(resolve => {
+    guestRoampayTimer = setTimeout(() => {
+      resolve({
+        serial,
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+        rejectedAt: '',
+        qrImageUrl: guestRoampayQrUrl({ ...row, roampay:{ serial } }),
+      });
+    }, 600);
+  });
+}
+async function guestSendRoampayRegister(row) {
+  const r = await fetch('/api/host/guests', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({
+      project_id: row.project_id,
+      mode: 'entry',
+      amount: 0,
+      fields_json: row.values || {},
+    }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+    throw new Error(d.error || `HTTP ${r.status}`);
+  }
+  const body = d.roampay?.response_body || {};
+  const serial = body.payer_serial || body.payerSerial || body.roampay_serial || body.requestId || body.request_id || d.data?.token || row.values?.guest_serial || '';
+  const status = d.roampay?.ok ? (body.status || 'approved') : 'failed';
+  return {
+    reservation_id: d.data?.id,
+    token: d.data?.token,
+    serial,
+    status,
+    approvedAt: status === 'approved' ? new Date().toISOString() : '',
+    rejectedAt: status === 'rejected' ? new Date().toISOString() : '',
+    qrImageUrl: guestRoampayQrUrl({ ...row, roampay:{ serial } }),
+    raw: d.roampay,
+  };
+}
+async function guestRegisterRecord() {
+  guestLoadState();
+  if (!guestValidateEntryForm(true)) {
+    guestFocusFirstEntryError();
+    return false;
+  }
+  const row = guestBuildRecordFromForm();
+  guestState.records.unshift(row);
+  guestEntryDraftId = row.id;
+  guestPersist();
+  guestRenderGrid();
+  guestRenderRoampayInfo();
+  guestUpdateEntryActions(true);
+  const registerBtn = document.getElementById('guest-entry-register');
+  if (registerBtn) registerBtn.textContent = '등록중';
+  try {
+    const result = await guestSendRoampayRegister(row);
+    const savedRow = (guestState.records || []).find(r => r.id === row.id);
+    if (!savedRow) return false;
+    savedRow.reservation_id = result.reservation_id || '';
+    savedRow.token = result.token || '';
+    savedRow.roampay = {
+      ...(savedRow.roampay || {}),
+      serial: result.serial,
+      status: result.status,
+      approvedAt: result.status === 'approved' ? result.approvedAt : '',
+      rejectedAt: result.status === 'rejected' ? (result.rejectedAt || new Date().toISOString()) : '',
+      qrImageUrl: result.qrImageUrl,
+      response: result.raw,
+      updatedAt: new Date().toISOString(),
+    };
+    guestPersist();
+    guestRenderRoampayInfo();
+    guestRenderGrid();
+    guestUpdateEntryActions(true);
+    guestSwitchEntryTab('roampay');
+    if (typeof uiAlert === 'function') uiAlert(result.status === 'approved' ? 'Roampay payer 등록이 완료되었습니다.' : 'Roampay payer 등록 결과를 확인해 주세요.');
+  } catch (error) {
+    const savedRow = (guestState.records || []).find(r => r.id === row.id);
+    if (savedRow) {
+      savedRow.roampay = { ...(savedRow.roampay || {}), status:'failed', response:{ error:String(error?.message || error) }, updatedAt:new Date().toISOString() };
+      guestPersist();
+      guestRenderRoampayInfo();
+      guestRenderGrid();
+      guestUpdateEntryActions(true);
+      guestSwitchEntryTab('roampay');
+    }
+    if (typeof uiAlert === 'function') uiAlert(`Roampay payer 등록 실패: ${String(error?.message || error)}`);
+  } finally {
+    if (registerBtn) registerBtn.textContent = '등록';
+  }
+  return true;
+}
+async function guestSaveEntryRecord() {
+  const row = guestCurrentDraft();
+  if (!row) {
+    const ok = await guestRegisterRecord();
+    const saved = guestCurrentDraft();
+    if (ok && saved?.roampay?.status === 'approved') guestCloseEntryModal();
+    return ok;
+  }
+  if (guestFinalizeRecord()) {
+    guestCloseEntryModal();
+    return true;
+  }
+  return false;
+}
+function guestFinalizeRecord() {
+  guestLoadState();
+  const row = guestCurrentDraft();
+  if (!row || row.roampay?.status !== 'approved') return false;
+  row.finalSaved = true;
+  row.finalSavedAt = new Date().toISOString();
+  guestPersist();
+  guestRenderInputForm();
+  guestRenderGrid();
+  return true;
+}
+function guestSearch() {
+  guestRenderGrid();
+}
+function guestToggleFormPanel() {
+  document.getElementById('guest-form-panel')?.classList.toggle('open');
+  guestRenderRevisionSelectors();
+}
+function guestToggleColumnPanel() {
+  guestRenderColumnPanel();
+  document.getElementById('modal-guest-columns')?.classList.add('open');
+}
+function guestCloseColumnModal() {
+  document.getElementById('modal-guest-columns')?.classList.remove('open');
+}
+function guestDownloadExcel() {
+  const cols = guestState.columns.filter(c => c.visible);
+  const rows = guestFilteredRecords();
+  const header = cols.map(c => guestFieldDef(c.key).label).concat('Revision');
+  const csvRows = [header].concat(rows.map(row => {
+    const rev = guestState.revisions.find(r => r.id === row.revisionId);
+    return cols.map(c => guestDisplayValue(c.key, row.values?.[c.key] || '')).concat(rev?.name || row.revisionId);
+  }));
+  const csv = csvRows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `guest-grid-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function guestSetColumn(key, prop, value) {
+  const col = guestState.columns.find(c => c.key === key);
+  if (!col) return;
+  if (prop === 'frozen') {
+    const ordered = guestState.columns.slice().sort((a,b) => a.order - b.order);
+    const idx = ordered.findIndex(c => c.key === key);
+    ordered.forEach((c, i) => { c.frozen = value && i <= idx; });
+  } else {
+    col[prop] = value;
+  }
+  guestPersist();
+  guestRenderColumnPanel();
+  guestRenderGrid();
+}
+function guestResetColumns() {
+  guestState.columns = GUEST_FIELDS.map((f, idx) => ({ key:f.key, visible:true, frozen:idx === 0, order:idx }));
+  guestPersist();
+  guestRenderColumnPanel();
+  guestRenderGrid();
+}
+function guestMoveColumn(beforeKey) {
+  if (!guestColumnDragKey || guestColumnDragKey === beforeKey) return;
+  const list = guestState.columns.filter(c => c.key !== guestColumnDragKey);
+  const dragged = guestState.columns.find(c => c.key === guestColumnDragKey);
+  const idx = list.findIndex(c => c.key === beforeKey);
+  list.splice(idx < 0 ? list.length : idx, 0, dragged);
+  guestState.columns = list.map((c, i) => ({ ...c, order:i }));
+  guestColumnDragKey = '';
+  guestPersist();
+  guestRenderColumnPanel();
+  guestRenderGrid();
+}
+function guestRenderColumnPanel() {
+  const box = document.getElementById('guest-col-list');
+  if (!box) return;
+  box.innerHTML = guestState.columns.map(col => {
+    const def = guestFieldDef(col.key);
+    return `<div class="guest-col-row" draggable="true" ondragstart="guestColumnDragKey='${guestEsc(col.key)}'" ondragover="event.preventDefault()" ondrop="guestMoveColumn('${guestEsc(col.key)}')">
+      <div class="guest-drag">⋮⋮</div>
+      <input class="guest-col-check" type="checkbox" ${col.visible?'checked':''} onchange="guestSetColumn('${guestEsc(col.key)}','visible',this.checked)" aria-label="${guestEsc(def.label)} 노출">
+      <div><b>${guestEsc(def.label)}</b></div>
+      <button type="button" class="guest-pin-btn ${col.frozen ? 'on' : ''}" onclick="guestSetColumn('${guestEsc(col.key)}','frozen',${col.frozen ? 'false' : 'true'})" title="이 컬럼까지 틀 고정">📌</button>
+    </div>`;
+  }).join('');
+}
+function guestRenderFilters() {
+  const box = document.getElementById('guest-filter-row');
+  if (!box) return;
+  const searchFields = guestState.fields.filter(f => f.enabled && f.searchable);
+  box.innerHTML = searchFields.map(item => {
+    const def = guestFieldDef(item.key);
+    return `<input value="${guestEsc(guestState.filters[item.key] || '')}" placeholder="${guestEsc(def.label)} 조회" oninput="guestState.filters['${guestEsc(item.key)}']=this.value;guestPersist();guestRenderGrid();">`;
+  }).join('') || '<span class="guest-muted">조회조건으로 지정된 항목이 없습니다.</span>';
+}
+function guestFilteredRecords() {
+  const filters = guestState.filters || {};
+  return (guestState.records || []).filter(row => Object.entries(filters).every(([key, val]) => {
+    if (!String(val || '').trim()) return true;
+    return String(row.values?.[key] || '').toLowerCase().includes(String(val).toLowerCase());
+  }));
+}
+function guestDisplayValue(key, value) {
+  if (key === 'card_number') return guestFormatCardNumber(value, false);
+  return value;
+}
+function guestRenderGrid() {
+  const head = document.getElementById('guest-grid-head');
+  const body = document.getElementById('guest-grid-body');
+  if (!head || !body) return;
+  const cols = guestState.columns.filter(c => c.visible);
+  head.innerHTML = `<tr>${cols.map((col, idx) => {
+    const def = guestFieldDef(col.key);
+    const sticky = col.frozen ? ` class="guest-th-sticky" style="left:${idx * 160}px;min-width:160px;"` : ' style="min-width:160px;"';
+    return `<th${sticky}>${guestEsc(def.label)}</th>`;
+  }).join('')}<th style="min-width:140px;">Revision</th></tr>`;
+  const rows = guestFilteredRecords();
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="${cols.length + 1}"><div class="guest-empty">등록된 투숙객 정보가 없습니다.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map(row => {
+    const rev = guestState.revisions.find(r => r.id === row.revisionId);
+    return `<tr>${cols.map((col, idx) => {
+      const sticky = col.frozen ? ` class="guest-td-sticky" style="left:${idx * 160}px;min-width:160px;"` : ' style="min-width:160px;"';
+      return `<td${sticky}>${guestEsc(guestDisplayValue(col.key, row.values?.[col.key] || ''))}</td>`;
+    }).join('')}<td style="text-align:center;color:#64748b;">${guestEsc(rev?.name || row.revisionId)}</td></tr>`;
+  }).join('');
+}
+function setAdminMenu(open) {
+  const menu = document.getElementById('admin-menu');
+  const toggle = document.getElementById('admin-menu-toggle');
+  const backdrop = document.getElementById('admin-menu-backdrop');
+  if (!menu || !toggle) return;
+  menu.classList.toggle('open', open);
+  toggle.classList.toggle('open', open);
+  if (backdrop) backdrop.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function toggleAdminMenu() {
+  const menu = document.getElementById('admin-menu');
+  setAdminMenu(!menu?.classList.contains('open'));
+}
+document.addEventListener('click', (ev) => {
+  const menu = document.getElementById('admin-menu');
+  const toggle = document.getElementById('admin-menu-toggle');
+  if (menu?.contains(ev.target) || toggle?.contains(ev.target)) return;
+  setAdminMenu(false);
+});
+function openProjectCreateModal() {
+  setAdminMenu(false);
+  document.getElementById('modal-project-create')?.classList.add('open');
+  loadQuoteConfig();
+}
+function closeProjectCreateModal() {
+  document.getElementById('modal-project-create')?.classList.remove('open');
+}
+function switchTab(name) {
+  setAdminMenu(false);
+  ['proj','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','inquiry','video','apps','settle','mail','mailtpl','pform','partner','guest','vote'].forEach(t => {
+    document.getElementById('tb-'+t)?.classList.toggle('act', t===name);
+    document.getElementById('tab-'+t)?.classList.toggle('act', t===name);
   });
   if (name === 'proj') loadProjects(1);
-  if (name === 'new') loadQuoteConfig();
   if (name === 'settle') loadSettlement();
   if (name === 'agent') loadAgentProjects();
   if (name === 'apps') loadAppsTabProjects();
   if (name === 'mailtpl') loadEmailTemplates();
   if (name === 'pform') loadPartnerFormProjects();
   if (name === 'partner') loadPartnerListProjects();
+  if (name === 'guest') guestInit();
   if (name === 'vote') loadVoteProjects();
   if (name === 'votemgr') { loadVoteMgrProjects(); if (document.getElementById('votemgr-project').value) loadVoteResults(); }
   if (name === 'notifreg') loadNotifProjects();
@@ -4221,7 +5990,7 @@ async function doForgot() {
 function setHostTopbar(org, name) {
   const oe = document.getElementById('d-org');   if (oe) oe.textContent = org ? org + ' · ' : '';
   const ne = document.getElementById('d-name');  if (ne) ne.textContent = name || '';
-  const tb = document.getElementById('topbar-brand'); if (tb) tb.textContent = '모노라마 트래커 · 주관기관';
+  const tb = document.getElementById('topbar-brand'); if (tb) tb.textContent = 'Tour Tracker · 주관기관';
 }
 
 // ── 로그아웃 ──
@@ -4322,6 +6091,156 @@ const PROJ_COLS = [
   { key:'preview',           label:'미리<br>보기', cls:'col-center' },
 ];
 const PROJ_NUM_KEYS = new Set(PROJ_COLS.filter(c => c.num).map(c => c.key));
+const PROJ_COL_STORAGE_KEY = 'admin.project.columns.v1';
+function loadProjColumnKeys() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROJ_COL_STORAGE_KEY) || '[]');
+    const valid = new Set(PROJ_COLS.map(c => c.key));
+    const rawKeys = Array.isArray(saved) ? saved : saved.visible;
+    const keys = Array.isArray(rawKeys) ? rawKeys.filter(k => valid.has(k)) : [];
+    return keys.length ? Array.from(new Set(['project_name'].concat(keys))) : PROJ_COLS.map(c => c.key);
+  } catch (_) {
+    return PROJ_COLS.map(c => c.key);
+  }
+}
+function loadProjFrozenKeys() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROJ_COL_STORAGE_KEY) || '[]');
+    const valid = new Set(PROJ_COLS.map(c => c.key));
+    return Array.isArray(saved?.frozen) ? saved.frozen.filter(k => valid.has(k)) : [];
+  } catch (_) {
+    return [];
+  }
+}
+let projVisibleCols = loadProjColumnKeys();
+let projFrozenCols = loadProjFrozenKeys();
+function saveProjColumnKeys() {
+  localStorage.setItem(PROJ_COL_STORAGE_KEY, JSON.stringify({ visible: projVisibleCols, frozen: projFrozenCols }));
+}
+function updateProjColumnVisibility() {
+  let style = document.getElementById('proj-col-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'proj-col-style';
+    document.head.appendChild(style);
+  }
+  const visible = new Set(projVisibleCols);
+  const rules = PROJ_COLS
+    .map((c, idx) => visible.has(c.key) ? '' : `#proj-table th:nth-child(${idx + 1}),#proj-table td:nth-child(${idx + 1}){display:none;}`)
+    .filter(Boolean)
+    .join('');
+  style.textContent = rules;
+}
+function applyProjFrozenColumns() {
+  const table = document.getElementById('proj-table');
+  if (!table) return;
+  table.querySelectorAll('th,td').forEach(el => {
+    el.style.position = '';
+    el.style.left = '';
+    el.style.zIndex = '';
+    el.style.background = '';
+    el.style.boxShadow = '';
+  });
+  const visible = new Set(projVisibleCols);
+  const frozen = new Set(projFrozenCols.filter(k => visible.has(k)));
+  let left = 0;
+  PROJ_COLS.forEach((col, idx) => {
+    if (!visible.has(col.key) || !frozen.has(col.key)) return;
+    const cells = Array.from(table.querySelectorAll(`th:nth-child(${idx + 1}),td:nth-child(${idx + 1})`))
+      .filter(el => getComputedStyle(el).display !== 'none');
+    if (!cells.length) return;
+    cells.forEach(el => {
+      const isHead = el.tagName === 'TH';
+      el.style.position = 'sticky';
+      el.style.left = `${left}px`;
+      el.style.zIndex = isHead ? '12' : '6';
+      el.style.background = isHead ? '#f8fafc' : '#fff';
+      el.style.boxShadow = '2px 0 0 #e2e8f0';
+    });
+    left += Math.ceil(cells[0].getBoundingClientRect().width || cells[0].offsetWidth || 120);
+  });
+}
+function plainProjColLabel(label) {
+  return String(label || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+function openProjColumnModal() {
+  renderProjColumnModal();
+  document.getElementById('modal-proj-columns')?.classList.add('open');
+}
+function closeProjColumnModal() {
+  document.getElementById('modal-proj-columns')?.classList.remove('open');
+}
+function setProjColumnVisible(key, visible) {
+  if (key === 'project_name' && !visible) {
+    uiAlert('프로젝트명 컬럼은 숨길 수 없습니다.');
+    renderProjColumnModal();
+    return;
+  }
+  const next = visible
+    ? Array.from(new Set(projVisibleCols.concat(key)))
+    : projVisibleCols.filter(k => k !== key);
+  if (!next.length) {
+    uiAlert('최소 1개의 컬럼은 표시해야 합니다.');
+    renderProjColumnModal();
+    return;
+  }
+  projVisibleCols = PROJ_COLS.map(c => c.key).filter(k => next.includes(k));
+  projFrozenCols = projFrozenCols.filter(k => projVisibleCols.includes(k));
+  saveProjColumnKeys();
+  updateProjColumnVisibility();
+  applyProjFrozenColumns();
+  renderProjColumnModal();
+  renderProjectsTable();
+}
+function setProjColumnFrozen(key, frozen) {
+  if (!projVisibleCols.includes(key)) {
+    renderProjColumnModal();
+    return;
+  }
+  projFrozenCols = frozen ? [key] : [];
+  saveProjColumnKeys();
+  applyProjFrozenColumns();
+  renderProjColumnModal();
+}
+function clearProjColumnFrozen() {
+  projFrozenCols = [];
+  saveProjColumnKeys();
+  applyProjFrozenColumns();
+  renderProjColumnModal();
+}
+function resetProjColumns() {
+  projVisibleCols = PROJ_COLS.map(c => c.key);
+  projFrozenCols = [];
+  saveProjColumnKeys();
+  updateProjColumnVisibility();
+  applyProjFrozenColumns();
+  renderProjColumnModal();
+  renderProjectsTable();
+}
+function renderProjColumnModal() {
+  const box = document.getElementById('proj-col-list');
+  if (!box) return;
+  box.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;font-size:12px;color:#64748b;margin-bottom:8px;padding:0 10px;">
+      <span>컬럼</span><span style="text-align:center;">표시</span><span style="text-align:center;">📌 고정</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;border:1px dashed #cbd5e1;border-radius:8px;padding:9px 10px;background:#f8fafc;margin-bottom:6px;">
+      <span style="font-size:13px;font-weight:700;color:#475569;">고정 안 함</span>
+      <span></span>
+      <label title="틀고정 해제" style="display:flex;justify-content:center;align-items:center;gap:4px;cursor:pointer;"><span aria-hidden="true" style="font-size:14px;line-height:1;">📌</span><input type="radio" name="proj-freeze-col" ${projFrozenCols.length ? '' : 'checked'} onchange="clearProjColumnFrozen()" style="width:16px;height:16px;accent-color:#0f172a;"></label>
+    </div>
+    ${PROJ_COLS.map(c => {
+      const visible = projVisibleCols.includes(c.key);
+      return `
+        <div style="display:grid;grid-template-columns:1fr 58px 58px;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:8px;padding:9px 10px;background:#fff;">
+          <span style="font-size:13px;font-weight:700;color:#1e293b;">${plainProjColLabel(c.label)}</span>
+          <label style="display:flex;justify-content:center;cursor:pointer;"><input type="checkbox" ${visible ? 'checked' : ''} ${c.key === 'project_name' ? 'disabled' : ''} onchange="setProjColumnVisible('${c.key}', this.checked)" style="width:16px;height:16px;accent-color:#2563eb;"></label>
+          <label title="이 컬럼을 좌측에 틀고정" style="display:flex;justify-content:center;align-items:center;gap:4px;cursor:pointer;"><span aria-hidden="true" style="font-size:14px;line-height:1;">📌</span><input type="radio" name="proj-freeze-col" ${projFrozenCols.includes(c.key) && visible ? 'checked' : ''} ${visible ? '' : 'disabled'} onchange="setProjColumnFrozen('${c.key}', this.checked)" style="width:16px;height:16px;accent-color:#0f172a;"></label>
+        </div>`;
+    }).join('')}
+  `;
+}
+updateProjColumnVisibility();
 let projData = [];
 let projSort = { key: 'created_at', dir: 'desc' }; // 기본: 최신 등록순
 const pjPinShown = new Set();   // 승인비밀번호 노출 행 id 집합
@@ -4371,64 +6290,31 @@ async function loadProjects(page) {
 async function refreshProjects() {
   const btn = document.getElementById('proj-refresh-btn');
   const orig = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '⟳ 불러오는 중...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Reloading...'; }
   try {
     await loadProjects(1);
     if (btn) {
-      btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1200);
+      btn.textContent = '✓ Reloaded';
+      setTimeout(() => { btn.textContent = orig || '⟳ Reload'; btn.disabled = false; }, 1200);
     }
   } catch (e) {
     if (btn) {
-      btn.textContent = '⚠ 실패';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1500);
+      btn.textContent = '⚠ Failed';
+      setTimeout(() => { btn.textContent = orig || '⟳ Reload'; btn.disabled = false; }, 1500);
     }
   }
 }
 
-// ── 옵션 사용 프로젝트 유무에 따라 main 탭 활성/비활성 ──
+// ── main 탭은 프로젝트 옵션 사용 여부와 관계없이 항상 활성화 ──
 function applyHostFeatureFlags() {
-  const all = projData || [];
-  const hasEntry = all.some(p => Number(p.reservation_use) === 1 || Number(p.entry_use) === 1);
-  const hasAgent = all.some(p => Number(p.field_agent_use) === 1);
-  const hasSurvey = all.some(p => Number(p.survey_use) === 1);
-  const hasTour = all.some(p => Number(p.tour_use) === 1);
-  const hasQuiz = all.some(p => Number(p.quiz_use) === 1);
-  const tbEntry = document.getElementById('tb-entry');
-  const tbAgent = document.getElementById('tb-agent');
-  const tbSurvey = document.getElementById('tb-survey');
-  const tbTour = document.getElementById('tb-tour');
-  const tbQuiz = document.getElementById('tb-quiz');
-  if (tbEntry) {
-    tbEntry.disabled = !hasEntry;
-    tbEntry.style.opacity = hasEntry ? '' : '0.4';
-    tbEntry.style.cursor  = hasEntry ? '' : 'not-allowed';
-    tbEntry.title = hasEntry ? '' : '사전등록/현장등록 옵션을 사용 중인 프로젝트가 없습니다.';
-  }
-  if (tbAgent) {
-    tbAgent.disabled = !hasAgent;
-    tbAgent.style.opacity = hasAgent ? '' : '0.4';
-    tbAgent.style.cursor  = hasAgent ? '' : 'not-allowed';
-    tbAgent.title = hasAgent ? '' : '현장요원관리 옵션을 사용 중인 프로젝트가 없습니다.';
-  }
-  if (tbSurvey) {
-    tbSurvey.disabled = !hasSurvey;
-    tbSurvey.style.opacity = hasSurvey ? '' : '0.4';
-    tbSurvey.style.cursor  = hasSurvey ? '' : 'not-allowed';
-    tbSurvey.title = hasSurvey ? '' : '설문조사 옵션을 사용 중인 프로젝트가 없습니다.';
-  }
-  if (tbTour) {
-    tbTour.disabled = !hasTour;
-    tbTour.style.opacity = hasTour ? '' : '0.4';
-    tbTour.style.cursor  = hasTour ? '' : 'not-allowed';
-    tbTour.title = hasTour ? '' : 'Tour 관리 옵션을 사용 중인 프로젝트가 없습니다.';
-  }
-  if (tbQuiz) {
-    tbQuiz.disabled = !hasQuiz;
-    tbQuiz.style.opacity = hasQuiz ? '' : '0.4';
-    tbQuiz.style.cursor  = hasQuiz ? '' : 'not-allowed';
-    tbQuiz.title = hasQuiz ? '' : 'Quiz 관리 옵션을 사용 중인 프로젝트가 없습니다.';
-  }
+  ['entry','agent','survey','tour','quiz'].forEach(name => {
+    const btn = document.getElementById('tb-' + name);
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.title = '';
+  });
 }
 
 // 조회조건에 해당하는 모든 프로젝트를 엑셀로 다운로드(서버에서 동일 필터 적용, 페이지 무관 전체)
@@ -4602,6 +6488,7 @@ function renderProjectsTable() {
       <td style="text-align:center;"><button class="btn btn-o btn-sm" onclick="openPreview('${p.project_serial}')">보기</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px;">프로젝트가 없습니다.</td></tr>';
+  applyProjFrozenColumns();
   renderProjPager(totalPages, list.length);
 }
 
@@ -4609,6 +6496,12 @@ function renderProjectsTable() {
 let currentProjectId = null;
 let searchTimer = null;
 let sugDocs = [];
+let locMerchantMode = 'joined';
+let locMerchantRows = [];
+let locMerchantSelectedId = null;
+let locMerchantSelectedIds = [];
+let locMerchantCommissionTargets = [];
+const TOUR_MERCHANT_DEFAULT_COUNTRY = 'TH';
 
 async function openLoc(pid, pname, pserial) {
   currentProjectId = pid;
@@ -6093,47 +7986,138 @@ let appsTabPinShown = new Set(); // 평문 노출 가맹점(merchant_id) 집합
 // 프로젝트별 PIN 캐시 (전체 모드에서 가맹점-프로젝트 쌍별 PIN 표시 위해)
 const appsTabPinByProject = new Map();
 
+function appsTabCountry() {
+  return document.getElementById('apps-tab-country')?.value || 'ALL';
+}
+
+function countryOfApplication(a) {
+  const explicit = String(a.country || '').trim().toUpperCase();
+  if (explicit) return explicit;
+  const serial = String(a.merchant_serial || '').toUpperCase();
+  const bizDigits = String(a.biz_no || '').replace(/\D/g, '');
+  const phoneDigits = `${a.contact_phone || ''}${a.contact_mobile || ''}`.replace(/\D/g, '');
+  if (serial.includes('_TH') || bizDigits.length === 13 || phoneDigits.startsWith('66')) return 'TH';
+  return 'KR';
+}
+
+function shouldIncludeAppByCountry(a, country) {
+  if (!country || country === 'ALL') return true;
+  return countryOfApplication(a) === country;
+}
+
+function mapTourMerchantToApp(m, project) {
+  const appId = m.application_id ? Number(m.application_id) : null;
+  const status = m.application_status || (m.approval_status === 'approved' ? 'approved' : 'pending');
+  return {
+    id: appId || `thai-${project.id}-${m.merchant_id}`,
+    readonly_tour: !appId,
+    country: 'TH',
+    status,
+    applied_at: m.applied_at || m.requested_at || null,
+    decided_at: m.approved_at || m.decided_at || null,
+    support_type: 'tour',
+    merchant_id: m.merchant_id,
+    merchant_serial: m.merchant_serial,
+    merchant_name: m.merchant_name || m.business_name,
+    biz_no: m.biz_no,
+    merchant_status: m.merchant_status || 'approved',
+    bank_name: m.bank_name || '',
+    bank_account: m.bank_account || '',
+    contact_name: m.contact_name || '',
+    contact_phone: m.contact_phone || '',
+    contact_mobile: m.contact_mobile || '',
+    email: m.email || '',
+    business_name: m.business_name || m.merchant_name || '',
+    legal_name: m.legal_name || '',
+    business_type: m.business_type || '',
+    tax_id: m.tax_id || m.biz_no || '',
+    company_registration_no: m.company_registration_no || '',
+    business_phone: m.business_phone || '',
+    industry: m.industry || '',
+    website: m.website || '',
+    statement_descriptor: m.statement_descriptor || '',
+    support_phone: m.support_phone || '',
+    province: m.province || '',
+    postal_code: m.postal_code || '',
+    person_first_name: m.person_first_name || '',
+    person_last_name: m.person_last_name || '',
+    person_email: m.person_email || m.email || '',
+    person_title: m.person_title || '',
+    person_nationality: m.person_nationality || '',
+    person_date_of_birth: m.person_date_of_birth || '',
+    person_address1: m.person_address1 || '',
+    person_address2: m.person_address2 || '',
+    person_address3: m.person_address3 || '',
+    person_province: m.person_province || '',
+    person_postal_code: m.person_postal_code || '',
+    person_phone: m.person_phone || '',
+    personal_id_number: m.personal_id_number || '',
+    laser_code: m.laser_code || '',
+    profile_image_url: m.profile_image_url || '',
+    profile_image_400: m.profile_image_400 || m.profile_image_url || '',
+    project_id: Number(project.id),
+    project_name: project.project_name || '',
+    project_serial: project.project_serial || '',
+    approval_status: m.approval_status || '',
+    commission_rate: m.commission_rate,
+    merchant_detail: m,
+  };
+}
+
+async function fetchAppsForProject(project, country) {
+  const r = await fetch(`/api/host/projects/${project.id}/applications`);
+  const d = await r.json();
+  if (!r.ok || !d.ok) return { project, list: [], pin: null };
+
+  const list = (d.data || []).map(a => ({
+    ...a,
+    country: countryOfApplication(a),
+    project_id: Number(project.id),
+    project_name: project.project_name || '',
+    project_serial: project.project_serial || '',
+  })).filter(a => shouldIncludeAppByCountry(a, country));
+
+  if (country === 'TH' || country === 'ALL') {
+    try {
+      const tr = await fetch(`/api/host/projects/${project.id}/tour-merchants?mode=joined&country=TH`);
+      const td = await tr.json();
+      if (tr.ok && td.ok) {
+        const existing = new Set(list.map(a => `${a.merchant_id}:tour`));
+        (td.data || []).forEach(m => {
+          const key = `${m.merchant_id}:tour`;
+          if (!existing.has(key)) list.push(mapTourMerchantToApp(m, project));
+        });
+      }
+    } catch (e) {}
+  }
+
+  return { project, list, pin: d.project_pin || null };
+}
+
 async function loadAppsTab() {
   const btn = document.getElementById('apps-tab-refresh');
   const orig = btn ? btn.textContent : '';
+  const country = appsTabCountry();
   if (btn) { btn.disabled = true; btn.textContent = '⟳ 불러오는 중...'; }
   document.getElementById('apps-tab-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;">불러오는 중...</div>';
   try {
     if (appsTabCurrentPid) {
       // 단일 프로젝트
-      const r = await fetch(`/api/host/projects/${appsTabCurrentPid}/applications`);
-      const d = await r.json();
-      if (!r.ok) throw 0;
-      appsTabData = (d.data || []).map(a => ({
-        ...a,
-        project_id: Number(appsTabCurrentPid),
-        project_name: appsTabProjects.find(p => String(p.id) === String(appsTabCurrentPid))?.project_name || '',
-        project_serial: appsTabProjects.find(p => String(p.id) === String(appsTabCurrentPid))?.project_serial || '',
-      }));
-      appsTabProjectPin = d.project_pin || null;
+      const project = appsTabProjects.find(p => String(p.id) === String(appsTabCurrentPid)) || { id: Number(appsTabCurrentPid), project_name: '', project_serial: '' };
+      const result = await fetchAppsForProject(project, country);
+      appsTabData = result.list;
+      appsTabProjectPin = result.pin || null;
       appsTabPinByProject.clear();
-      appsTabPinByProject.set(Number(appsTabCurrentPid), d.project_pin || null);
+      appsTabPinByProject.set(Number(appsTabCurrentPid), result.pin || null);
     } else {
       // 전체 프로젝트 — 병렬 fetch
       if (!appsTabProjects.length) await loadAppsTabProjects();
-      const results = await Promise.all(appsTabProjects.map(async p => {
-        try {
-          const r = await fetch(`/api/host/projects/${p.id}/applications`);
-          const d = await r.json();
-          if (!r.ok || !d.ok) return { project: p, list: [], pin: null };
-          return { project: p, list: d.data || [], pin: d.project_pin || null };
-        } catch (e) { return { project: p, list: [], pin: null }; }
-      }));
+      const results = await Promise.all(appsTabProjects.map(p => fetchAppsForProject(p, country).catch(() => ({ project: p, list: [], pin: null }))));
       appsTabData = [];
       appsTabPinByProject.clear();
       results.forEach(({ project, list, pin }) => {
         appsTabPinByProject.set(project.id, pin);
-        list.forEach(a => appsTabData.push({
-          ...a,
-          project_id: project.id,
-          project_name: project.project_name,
-          project_serial: project.project_serial,
-        }));
+        list.forEach(a => appsTabData.push(a));
       });
       appsTabProjectPin = null; // 전체 모드에서는 행별 프로젝트 PIN 매핑
     }
@@ -6141,17 +8125,19 @@ async function loadAppsTab() {
     renderAppsTab();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '⟳ Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     document.getElementById('apps-tab-body').innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다.</div>';
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '⟳ Reload'; btn.disabled = false; }
   }
 }
 
 function resetAppsTabFilter() {
   ['apps-tab-type','apps-tab-status'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  renderAppsTab();
+  const country = document.getElementById('apps-tab-country');
+  if (country) country.value = 'ALL';
+  loadAppsTab();
 }
 
 // 지원 유형별 컬럼 정의 — 헤더 그룹 (지원 유형) 하위
@@ -6189,6 +8175,35 @@ function renderAppsTab() {
         contact_phone: a.contact_phone,
         contact_mobile: a.contact_mobile,
         email: a.email,
+        business_name: a.business_name,
+        legal_name: a.legal_name,
+        business_type: a.business_type,
+        tax_id: a.tax_id,
+        company_registration_no: a.company_registration_no,
+        business_phone: a.business_phone,
+        industry: a.industry,
+        website: a.website,
+        statement_descriptor: a.statement_descriptor,
+        support_phone: a.support_phone,
+        province: a.province,
+        postal_code: a.postal_code,
+        person_first_name: a.person_first_name,
+        person_last_name: a.person_last_name,
+        person_email: a.person_email,
+        person_title: a.person_title,
+        person_nationality: a.person_nationality,
+        person_date_of_birth: a.person_date_of_birth,
+        person_address1: a.person_address1,
+        person_address2: a.person_address2,
+        person_address3: a.person_address3,
+        person_province: a.person_province,
+        person_postal_code: a.person_postal_code,
+        person_phone: a.person_phone,
+        personal_id_number: a.personal_id_number,
+        laser_code: a.laser_code,
+        profile_image_url: a.profile_image_url,
+        profile_image_400: a.profile_image_400,
+        merchant_detail: a.merchant_detail || a,
         project_id: a.project_id,
         project_name: a.project_name,
         project_serial: a.project_serial,
@@ -6223,8 +8238,9 @@ function renderAppsTab() {
   const pend = allApps.filter(a => a.status === 'pending').length;
   const appr = allApps.filter(a => a.status === 'approved').length;
   const rej  = allApps.filter(a => a.status === 'rejected').length;
-  document.getElementById('apps-tab-count').textContent =
-    `가맹점 ${merchants.length} · 지원 ${allApps.length} 건 (대기 ${pend} · 승인 ${appr} · 거절 ${rej})`;
+  const appsSummaryText = `가맹점 ${merchants.length} · 지원 ${allApps.length} 건 (대기 ${pend} · 승인 ${appr} · 거절 ${rej})`;
+  const appsTabCount = document.getElementById('apps-tab-count');
+  if (appsTabCount) appsTabCount.textContent = appsSummaryText;
 
   const body = document.getElementById('apps-tab-body');
   if (!merchants.length) {
@@ -6238,6 +8254,12 @@ function renderAppsTab() {
     const safeMn = String(mname || '').replace(/'/g, "\\'");
     const st = APP_STATUS[a.status] || [a.status, 'bc'];
     const badge = `<span class="badge ${st[1]}">${st[0]}</span>`;
+    if (a.readonly_tour) {
+      const rate = Number.isFinite(Number(a.commission_rate))
+        ? `<span style="font-size:10px;color:#64748b;">수수율 ${Number(a.commission_rate)}%</span>`
+        : '';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">${badge}${rate}</div>`;
+    }
     const apBtn = a.status === 'approved'
       ? `<button class="mini-btn" disabled style="opacity:.35;cursor:not-allowed;background:#dcfce7;color:#166534;" title="이미 승인됨">✓</button>`
       : `<button class="mini-btn" style="background:#dbeafe;color:#1e40af;" title="승인" onclick="decideApplicationFromTab(${a.id},'approved','${safeMn}')">✓</button>`;
@@ -6272,23 +8294,28 @@ function renderAppsTab() {
       .mini-btn:not(:disabled):hover{filter:brightness(.95);}
       .apps-grp-th{background:#eef2ff !important;color:#3730a3 !important;font-weight:800;}
       .apps-type-th{background:#f1f5f9;font-size:11px;color:#475569;}
+      .apps-grid-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;}
+      .apps-grid-summary{font-size:12px;color:#64748b;white-space:nowrap;}
     </style>
+    <div class="apps-grid-toolbar">
+      <div class="apps-grid-summary">${esc(appsSummaryText)}</div>
+    </div>
     <div class="tbl-wrap" style="max-height:65vh;overflow:auto;">
-      <table class="vis-table">
+      <table class="vis-table" data-grid-key="admin.apps.grid.v1" data-grid-grouped="1">
         <thead>
           <tr>
-            ${isAllMode ? '<th rowspan="2" style="text-align:left;">프로젝트</th>' : ''}
-            <th rowspan="2">가맹점명</th>
-            <th rowspan="2">사업자등록번호</th>
-            <th rowspan="2">은행</th>
-            <th rowspan="2">계좌번호</th>
-            <th rowspan="2">담당자</th>
-            <th rowspan="2">모바일폰</th>
-            <th rowspan="2">연락처</th>
-            <th rowspan="2">이메일</th>
+            ${isAllMode ? '<th rowspan="2" style="text-align:center;">프로젝트</th>' : ''}
+            <th rowspan="2" style="text-align:center;">가맹점명</th>
+            <th rowspan="2" style="text-align:center;">사업자등록번호</th>
+            <th rowspan="2" style="text-align:center;">은행</th>
+            <th rowspan="2" style="text-align:center;">계좌번호</th>
+            <th rowspan="2" style="text-align:center;">담당자</th>
+            <th rowspan="2" style="text-align:center;">모바일폰</th>
+            <th rowspan="2" style="text-align:center;">연락처</th>
+            <th rowspan="2" style="text-align:center;">이메일</th>
             <th colspan="${colspan}" class="apps-grp-th" style="text-align:center;">지원 유형</th>
             <th rowspan="2" style="text-align:center;">인증비밀번호</th>
-            <th rowspan="2">최근 지원일시</th>
+            <th rowspan="2" style="text-align:center;">최근 지원일시</th>
           </tr>
           <tr>
             ${typeCols.map(c => `<th class="apps-type-th" style="text-align:center;white-space:nowrap;padding:6px 8px;">${c.label}</th>`).join('')}
@@ -6314,7 +8341,7 @@ function renderAppsTab() {
             : '';
           return `<tr>
             ${projCell}
-            <td><b>${esc(m.merchant_name)}</b></td>
+            <td><b>${esc(m.merchant_name)}</b><button type="button" class="merchant-info-btn" title="가맹점 상세 정보" onclick="openMerchantInfo(${Number(m.merchant_id || 0)}, ${Number(m.project_id || 0)})">ⓘ</button></td>
             <td style="white-space:nowrap;"><code style="font-size:12px;">${fmtBizNo(m.biz_no)}</code>${bizCertBtn}</td>
             <td style="font-size:12px;">${esc(m.bank_name) || '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
             <td style="white-space:nowrap;"><span style="font-size:12px;font-family:Consolas,monospace;">${esc(m.bank_account) || '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</span>${bankCopyBtn}</td>
@@ -6337,7 +8364,82 @@ function toggleAppsTabPin(key) {
   renderAppsTab();
 }
 
+function openAppsTabColumnPanel(btn) {
+  const table = document.querySelector('#apps-tab-body table.vis-table');
+  if (!table) { uiAlert('컬럼을 조정할 Grid가 없습니다. 먼저 조회해 주세요.'); return; }
+  if (window.TourTrackerGridColumns && typeof window.TourTrackerGridColumns.openFor === 'function') {
+    window.TourTrackerGridColumns.openFor(table, btn);
+    return;
+  }
+  uiAlert('컬럼조정 기능을 아직 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+}
+
 // 가맹점 파일 뷰어 — 이미지/PDF 자동 분기
+function findMerchantInfoRow(merchantId, projectId) {
+  const mid = Number(merchantId || 0);
+  const pid = Number(projectId || 0);
+  const loc = (!pid || Number(currentProjectId || 0) === pid)
+    ? (locMerchantRows || []).find(m => Number(m.merchant_id || 0) === mid)
+    : null;
+  if (loc) return loc;
+  const app = (appsTabData || []).find(a => Number(a.merchant_id || 0) === mid && (!pid || Number(a.project_id || 0) === pid))
+    || (appsTabData || []).find(a => Number(a.merchant_id || 0) === mid);
+  return app ? (app.merchant_detail || app) : null;
+}
+
+function merchantPersonName(m) {
+  return [m.person_first_name, m.person_last_name].filter(Boolean).join(' ') || m.contact_name || '-';
+}
+
+function merchantPersonAddress(m) {
+  return [m.person_address1, m.person_address2, m.person_address3, m.person_province, m.person_postal_code].filter(Boolean).join(' ') || '-';
+}
+
+function openMerchantInfo(merchantId, projectId) {
+  const m = findMerchantInfoRow(merchantId, projectId);
+  if (!m) { uiAlert('가맹점 정보를 찾을 수 없습니다.'); return; }
+  const profileUrl = m.profile_image_400 || m.profile_image_url || '';
+  const profile = profileUrl
+    ? `<img src="${esc(profileUrl)}" alt="Profile" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">`
+    : '<span style="color:#94a3b8;">-</span>';
+  const website = m.website
+    ? `<a href="${esc(/^https?:\/\//i.test(m.website) ? m.website : 'https://' + m.website)}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none;border-bottom:1px dashed #93c5fd;">${esc(m.website)}</a>`
+    : '-';
+  const rows = [
+    ['Profile', profile],
+    ['일련번호', esc(m.merchant_serial || '-')],
+    ['가맹점명', esc(m.merchant_name || m.business_name || m.legal_name || '-')],
+    ['법인/상호명', esc(m.legal_name || m.business_name || '-')],
+    ['비즈니스 유형', esc(m.business_type || '-')],
+    ['TIN', esc(m.tax_id || m.biz_no || '-')],
+    ['회사 등록 번호', esc(m.company_registration_no || '-')],
+    ['사업자등록번호', esc(m.biz_no || m.tax_id || '-')],
+    ['비즈니스 전화', esc(m.business_phone || m.contact_phone || '-')],
+    ['업종', esc(m.industry || '-')],
+    ['웹사이트', website],
+    ['명세서 표기', esc(m.statement_descriptor || '-')],
+    ['고객지원 전화', esc(m.support_phone || '-')],
+    ['담당자', esc(merchantPersonName(m))],
+    ['담당자 이메일', esc(m.person_email || m.email || '-')],
+    ['담당자 직책', esc(m.person_title || '-')],
+    ['담당자 국적', esc(m.person_nationality || '-')],
+    ['담당자 생년월일', esc(m.person_date_of_birth || '-')],
+    ['담당자 전화', esc(m.person_phone || m.contact_mobile || '-')],
+    ['담당자 주소', esc(merchantPersonAddress(m))],
+    ['개인식별번호', esc(m.personal_id_number || '-')],
+    ['Laser Code', esc(m.laser_code || '-')],
+    ['Tour 상태', esc(locMerchantApprovalStatusLabel(m.approval_status || m.tour_status || m.application_status || m.status || '-'))],
+    ['수수율', m.commission_rate != null && m.commission_rate !== '' ? `${esc(String(m.commission_rate))}%` : '-'],
+  ];
+  document.getElementById('mi-title').textContent = m.merchant_name || m.business_name || '가맹점 상세 정보';
+  document.getElementById('mi-body').innerHTML = `<div class="merchant-detail-grid">${rows.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v}</div>`).join('')}</div>`;
+  document.getElementById('modal-merchant-info').classList.add('open');
+}
+
+function closeMerchantInfo() {
+  document.getElementById('modal-merchant-info')?.classList.remove('open');
+}
+
 function openMerchantFile(url, title, filename) {
   if (!url) return;
   document.getElementById('mf-title').textContent = title || '파일 보기';
@@ -6666,12 +8768,14 @@ function setLocFormLocked(locked, tierCount, activeCount) {
 
 function renderLocRow(l, started) {
   const isExhibit = l.dest_type === 'exhibit';
+  const isMerchant = l.dest_type === 'merchant';
   const off = !!l.disabled;
   const hasCoord = !isExhibit && l.kakao_lat != null && l.kakao_lng != null;
   const thumb = l.image_url
     ? `<img class="loc-thumb" src="${l.image_url}" alt="">`
-    : `<div class="loc-thumb loc-thumb-ph">${isExhibit ? '🎨' : '📍'}</div>`;
-  const badge = `<span class="loc-tag ${isExhibit ? 'tag-exh' : 'tag-loc'}">${isExhibit ? '전시물' : '위치'}</span>`;
+    : `<div class="loc-thumb loc-thumb-ph">${isExhibit ? '🎨' : (isMerchant ? '🏪' : '📍')}</div>`;
+  const typeText = isExhibit ? '전시물' : (isMerchant ? '가맹점' : '위치');
+  const badge = `<span class="loc-tag ${isExhibit ? 'tag-exh' : 'tag-loc'}">${typeText}</span>`;
   const coord = hasCoord
     ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px;">위도 ${l.kakao_lat} · 경도 ${l.kakao_lng}</div>` : '';
   const isGoogleLoc = l.map_provider === 'google';
@@ -6728,18 +8832,19 @@ async function openEditLoc(locId) {
   // 초기 진입은 보기 모드 — 저장 버튼 비활성, 사용자가 값을 변경하면 활성화
   document.getElementById('el-save').disabled = true;
   const isExhibit = l.dest_type === 'exhibit';
-  document.getElementById('el-title').textContent = isExhibit ? '전시물 수정' : '위치 수정';
-  document.getElementById('el-type').textContent = isExhibit ? '🎨 전시물' : '📍 위치';
+  const isMerchant = l.dest_type === 'merchant';
+  document.getElementById('el-title').textContent = isExhibit ? '전시물 수정' : (isMerchant ? '가맹점 수정' : '위치 수정');
+  document.getElementById('el-type').textContent = isExhibit ? '🎨 전시물' : (isMerchant ? '🏪 가맹점' : '📍 위치');
   document.getElementById('el-name').value = l.location_name || '';
   document.getElementById('el-name').maxLength = 100;
   document.getElementById('el-desc-row').style.display = '';
-  document.getElementById('el-coord-row').style.display = isExhibit ? 'none' : '';
+  document.getElementById('el-coord-row').style.display = (isExhibit || isMerchant) ? 'none' : '';
   document.getElementById('el-desc').value = l.location_desc || '';
   document.getElementById('el-lat').value = l.kakao_lat != null ? l.kakao_lat : '';
   document.getElementById('el-lng').value = l.kakao_lng != null ? l.kakao_lng : '';
   // 지도 제공자 반영 (저장된 값 또는 기본 'kakao')
   const provRow = document.getElementById('el-provider-row');
-  if (provRow) provRow.style.display = isExhibit ? 'none' : '';
+  if (provRow) provRow.style.display = (isExhibit || isMerchant) ? 'none' : '';
   setElProvider(l.map_provider === 'google' ? 'google' : 'kakao', /*silent*/true);
   const fileEl = document.getElementById('el-image');
   if (fileEl) fileEl.value = '';
@@ -6803,6 +8908,8 @@ async function saveEditLoc() {
   const desc = document.getElementById('el-desc').value.trim();
   const lat  = document.getElementById('el-lat').value.trim();
   const lng  = document.getElementById('el-lng').value.trim();
+  const currentLoc = locDataCache.find(x => Number(x.id) === Number(editingLocId));
+  const isMerchantEdit = currentLoc && currentLoc.dest_type === 'merchant';
   if (!name) { setMsg('el-msg','e','이름을 입력해 주세요.'); return; }
   const ok = await uiConfirm('저장하시겠습니까?', { title: '저장 확인', okText: '저장', cancelText: '취소' });
   if (!ok) return;
@@ -6811,10 +8918,10 @@ async function saveEditLoc() {
   const fd = new FormData();
   fd.append('location_name', name);
   fd.append('location_desc', desc);
-  if (lat) fd.append('kakao_lat', lat);
-  if (lng) fd.append('kakao_lng', lng);
+  if (!isMerchantEdit && lat) fd.append('kakao_lat', lat);
+  if (!isMerchantEdit && lng) fd.append('kakao_lng', lng);
   // 사용자가 편집 모달에서 선택한 지도 제공자
-  if (elMapProvider) fd.append('map_provider', elMapProvider);
+  if (!isMerchantEdit && elMapProvider) fd.append('map_provider', elMapProvider);
   if (elRemoveImage) fd.append('remove_image', '1');
   const fileEl = document.getElementById('el-image');
   if (fileEl && fileEl.files && fileEl.files[0]) fd.append('image', fileEl.files[0]);
@@ -7088,13 +9195,290 @@ function selectPlace(i) {
 // ── Tour 유형 전환 ──
 let destType = 'location';
 function setDestType(t) {
+  if (t !== 'location' && t !== 'exhibit' && t !== 'merchant') t = 'location';
   destType = t;
   document.querySelectorAll('#dest-type-seg .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.type === t));
   document.getElementById('mode-location').style.display = t === 'location' ? 'block' : 'none';
   document.getElementById('mode-exhibit').style.display  = t === 'exhibit'  ? 'block' : 'none';
+  const merchantMode = document.getElementById('mode-merchant');
+  if (merchantMode) merchantMode.style.display = t === 'merchant' ? 'block' : 'none';
+  const iconField = document.getElementById('loc-icon-field');
+  if (iconField) iconField.style.display = t === 'merchant' ? 'none' : '';
+  const addBtn = document.getElementById('loc-add-btn');
+  if (addBtn) addBtn.style.display = '';
+  if (t === 'merchant') showJoinedTourMerchants();
   clrMsg('loc-msg');
 }
 
+function locMerchantStatusLabel(s) {
+  if (s === 'approved') return '승인';
+  if (s === 'pending') return '요청중';
+  if (s === 'rejected') return '거절';
+  return '-';
+}
+
+function locMerchantApprovalStatusLabel(s) {
+  if (s === 'approved') return '수수율 확정';
+  if (s === 'approval_sent') return '승인 요청';
+  if (s === 'requested') return '수수율 미요청';
+  return '-';
+}
+
+function locMerchantCommissionLabel(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '-';
+  return `${n}%`;
+}
+
+function locMerchantDate(v) {
+  if (!v) return '-';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('ko-KR');
+}
+
+function closeTourMerchantPicker() {
+  const picker = document.getElementById('loc-merchant-picker');
+  if (picker) picker.classList.remove('open');
+  locMerchantSelectedId = null;
+  locMerchantSelectedIds = [];
+}
+
+function renderLocMerchantGrid() {
+  const isAll = locMerchantMode === 'all';
+  const grid = document.getElementById(isAll ? 'loc-merchant-picker-grid' : 'loc-merchant-grid');
+  if (!grid) return;
+  if (!isAll) {
+    const title = document.getElementById('loc-merchant-title');
+    if (title) title.textContent = '참여/요청 가맹점';
+  }
+
+  if (!locMerchantRows.length) {
+    grid.innerHTML = `<div class="loc-merchant-empty">${isAll ? '요청 가능한 태국 가맹점이 없습니다.' : '참여 또는 요청 중인 가맹점이 없습니다.'}</div>`;
+    return;
+  }
+
+  const selectedSet = new Set(locMerchantSelectedIds.map(Number));
+  const rows = locMerchantRows.map(m => {
+    const id = Number(m.merchant_id || 0);
+    const checked = selectedSet.has(id) ? ' checked' : '';
+    const pick = `<td style="text-align:center;"><input type="checkbox" name="${isAll ? 'loc-merchant-pick' : 'loc-merchant-joined-pick'}" value="${id}"${checked} onchange="toggleTourMerchantSelection(${id}, this.checked)"></td>`;
+    const status = m.application_status || (isAll ? 'available' : '');
+    const approvalStatus = m.approval_status || (isAll ? '' : 'requested');
+    const approvedClass = !isAll && approvalStatus === 'approved' ? ' class="commission-approved"' : '';
+    const statusCell = isAll
+      ? '<span class="loc-merchant-status approved">가능</span>'
+      : `<span class="loc-merchant-status ${esc(status)}">${locMerchantStatusLabel(status)}</span>`;
+    const approvalCell = isAll
+      ? '-'
+      : `<span class="loc-merchant-status ${esc(approvalStatus)}">${locMerchantApprovalStatusLabel(approvalStatus)}</span>`;
+    return `<tr${approvedClass}>
+      ${pick}
+      <td class="td-left"><b>${esc(m.merchant_name || '-')}</b><button type="button" class="merchant-info-btn" title="가맹점 상세 정보" onclick="openMerchantInfo(${id}, ${Number(currentProjectId || 0)})">ⓘ</button></td>
+      <td class="td-left">${esc(m.merchant_serial || '-')}</td>
+      <td class="td-left">${esc(m.biz_no || '-')}</td>
+      <td class="td-left">${esc(m.contact_name || '-')}</td>
+      <td>${esc(fmtPhone(m.contact_mobile || m.contact_phone || ''))}</td>
+      <td class="td-left">${esc(m.email || '-')}</td>
+      <td>${statusCell}</td>
+      <td class="td-right">${locMerchantCommissionLabel(m.commission_rate)}</td>
+      <td>${approvalCell}</td>
+      <td>${locMerchantDate(m.applied_at)}</td>
+    </tr>`;
+  }).join('');
+
+  grid.innerHTML = `<table class="loc-merchant-table">
+    <thead><tr>
+      <th style="width:48px;text-align:center;">선택</th>
+      <th class="th-left">가맹점명</th><th class="th-left">일련번호</th><th class="th-left">TIN</th><th class="th-left">담당자</th><th>연락처</th><th class="th-left">이메일</th><th>상태</th><th class="th-right">수수율</th><th>승인상태</th><th>요청일</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+async function loadTourMerchants(mode) {
+  if (!currentProjectId) return;
+  locMerchantMode = mode || 'joined';
+  locMerchantSelectedId = null;
+  locMerchantSelectedIds = [];
+  const isAll = locMerchantMode === 'all';
+  const grid = document.getElementById(isAll ? 'loc-merchant-picker-grid' : 'loc-merchant-grid');
+  if (grid) grid.innerHTML = '<div class="loc-merchant-empty">가맹점 목록을 불러오는 중입니다.</div>';
+  try {
+    const r = await fetch(`/api/host/projects/${currentProjectId}/tour-merchants?mode=${encodeURIComponent(locMerchantMode)}&country=${encodeURIComponent(TOUR_MERCHANT_DEFAULT_COUNTRY)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || d.error || '가맹점 목록을 불러오지 못했습니다.');
+    locMerchantRows = Array.isArray(d.data) ? d.data : [];
+    renderLocMerchantGrid();
+  } catch (e) {
+    if (grid) grid.innerHTML = `<div class="loc-merchant-empty">${esc(e.message || '가맹점 목록을 불러오지 못했습니다.')}</div>`;
+  }
+}
+
+function showJoinedTourMerchants() { return loadTourMerchants('joined'); }
+async function reloadTourMerchants() {
+  const btn = document.getElementById('loc-merchant-reload-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Reloading...';
+  }
+  try {
+    await loadTourMerchants('joined');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Reload';
+    }
+  }
+}
+function showAllTourMerchants() {
+  const picker = document.getElementById('loc-merchant-picker');
+  if (picker) picker.classList.add('open');
+  return loadTourMerchants('all');
+}
+function toggleTourMerchantSelection(id, checked) {
+  const numericId = Number(id || 0);
+  if (!numericId) return;
+  const set = new Set(locMerchantSelectedIds.map(Number));
+  if (checked) set.add(numericId);
+  else set.delete(numericId);
+  locMerchantSelectedIds = Array.from(set);
+}
+function selectTourMerchant(id) {
+  locMerchantSelectedId = Number(id || 0);
+  locMerchantSelectedIds = locMerchantSelectedId ? [locMerchantSelectedId] : [];
+  renderLocMerchantGrid();
+}
+
+async function applyTourMerchantRequest() {
+  const ids = Array.from(new Set(locMerchantSelectedIds.map(Number).filter(Boolean)));
+  if (!ids.length) {
+    await uiAlert('가맹점을 선택해 주세요.');
+    return;
+  }
+  const ok = await uiConfirm('해당 가맹점에 참여 요청을 보내시겠습니까?', { title: '참여 요청', okText: '적용', cancelText: '취소' });
+  if (!ok) return;
+  const r = await fetch(`/api/host/projects/${currentProjectId}/tour-merchants/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant_ids: ids }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    await uiAlert(d.message || d.error || '참여 요청에 실패했습니다.');
+    return;
+  }
+  closeTourMerchantPicker();
+  await loadTourMerchants('joined');
+  loadProjects(1);
+}
+
+function closeTourMerchantApprovalRequest() {
+  const modal = document.getElementById('loc-merchant-commission-modal');
+  if (modal) modal.classList.remove('open');
+  locMerchantCommissionTargets = [];
+}
+
+function sanitizeCommissionInput(input) {
+  let v = String(input.value || '').replace(/[^\d.]/g, '');
+  const dot = v.indexOf('.');
+  if (dot >= 0) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, '');
+  input.value = v;
+  validateTourMerchantCommissionInputs();
+}
+
+function validateTourMerchantCommissionInputs() {
+  const btn = document.getElementById('loc-merchant-commission-submit');
+  const inputs = Array.from(document.querySelectorAll('.loc-merchant-commission-input'));
+  const valid = inputs.length > 0 && inputs.every(input => {
+    const n = Number(input.value);
+    return input.value !== '' && Number.isFinite(n) && n >= 0 && n <= 100;
+  });
+  if (btn) btn.disabled = !valid;
+  return valid;
+}
+
+function renderTourMerchantCommissionInputs() {
+  const box = document.getElementById('loc-merchant-commission-list');
+  if (!box) return;
+  if (!locMerchantCommissionTargets.length) {
+    box.innerHTML = '<div class="loc-merchant-empty">선택된 가맹점이 없습니다.</div>';
+    validateTourMerchantCommissionInputs();
+    return;
+  }
+  const rows = locMerchantCommissionTargets.map(m => {
+    const rate = Number.isFinite(Number(m.commission_rate)) ? Number(m.commission_rate) : '';
+    return `<tr>
+      <td><b>${esc(m.merchant_name || '-')}</b><div style="font-size:11px;color:#64748b;margin-top:2px;">${esc(m.email || '-')}</div></td>
+      <td>${esc(m.merchant_serial || '-')}</td>
+      <td style="text-align:right;"><input class="loc-merchant-commission-input" data-merchant-id="${Number(m.merchant_id || 0)}" inputmode="decimal" value="${rate}" oninput="sanitizeCommissionInput(this)" placeholder="0"></td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="loc-merchant-table" style="min-width:0;">
+    <thead><tr><th>가맹점</th><th>일련번호</th><th style="text-align:right;">수수율(%)</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  validateTourMerchantCommissionInputs();
+}
+
+async function openTourMerchantApprovalRequest() {
+  const ids = Array.from(new Set(locMerchantSelectedIds.map(Number).filter(Boolean)));
+  if (!ids.length) {
+    await uiAlert('승인 요청할 가맹점을 선택해 주세요.');
+    return;
+  }
+  locMerchantCommissionTargets = locMerchantRows.filter(m => ids.includes(Number(m.merchant_id || 0)));
+  if (!locMerchantCommissionTargets.length) {
+    await uiAlert('선택된 가맹점 정보를 찾을 수 없습니다.');
+    return;
+  }
+  const modal = document.getElementById('loc-merchant-commission-modal');
+  if (modal) modal.classList.add('open');
+  renderTourMerchantCommissionInputs();
+}
+
+async function submitTourMerchantApprovalRequest() {
+  if (!validateTourMerchantCommissionInputs()) return;
+  const inputs = Array.from(document.querySelectorAll('.loc-merchant-commission-input'));
+  const commissions = {};
+  inputs.forEach(input => { commissions[input.dataset.merchantId] = Number(input.value); });
+  const r = await fetch(`/api/host/projects/${currentProjectId}/tour-merchants/approval-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ commissions }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    await uiAlert(d.message || d.error || '가맹점 승인 요청에 실패했습니다.');
+    return;
+  }
+  closeTourMerchantApprovalRequest();
+  await uiAlert('가맹점 담당자 이메일로 승인 요청을 전송했습니다.');
+  await loadTourMerchants('joined');
+  loadProjects(1);
+}
+
+async function cancelTourMerchantRequests() {
+  const ids = Array.from(new Set(locMerchantSelectedIds.map(Number).filter(Boolean)));
+  if (!ids.length) {
+    await uiAlert('취소할 가맹점을 선택해 주세요.');
+    return;
+  }
+  const ok = await uiConfirm('가맹점을 취소하시겠습니까?', { title: '가맹점 취소', okText: '취소 처리', cancelText: '닫기', danger: true });
+  if (!ok) return;
+  const r = await fetch(`/api/host/projects/${currentProjectId}/tour-merchants/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant_ids: ids }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    await uiAlert(d.message || d.error || '가맹점 취소에 실패했습니다.');
+    return;
+  }
+  await loadTourMerchants('joined');
+  loadProjects(1);
+}
 // ── 아이콘 이미지 미리보기 ──
 function onIconChange(input) {
   const f = input.files && input.files[0];
@@ -7271,6 +9655,42 @@ document.getElementById('loc-desc').addEventListener('input', function() {
 
 async function addLocation() {
   clrMsg('loc-msg');
+
+  if (destType === 'merchant') {
+    const ids = Array.from(new Set(locMerchantSelectedIds.map(Number).filter(Boolean)));
+    if (!ids.length) {
+      setMsg('loc-msg','e','경로로 만들 가맹점을 선택해 주세요.');
+      return;
+    }
+    const targets = locMerchantRows.filter(m => ids.includes(Number(m.merchant_id || 0)));
+    if (!targets.length) {
+      setMsg('loc-msg','e','선택된 가맹점 정보를 찾을 수 없습니다.');
+      return;
+    }
+    for (const m of targets) {
+      const fd = new FormData();
+      fd.append('dest_type', 'merchant');
+      fd.append('location_name', String(m.merchant_name || '가맹점').slice(0, 100));
+      const desc = [
+        m.merchant_serial ? `일련번호: ${m.merchant_serial}` : '',
+        m.biz_no ? `TIN: ${m.biz_no}` : '',
+        Number.isFinite(Number(m.commission_rate)) ? `수수율: ${Number(m.commission_rate)}%` : '',
+      ].filter(Boolean).join(' / ');
+      fd.append('location_desc', desc.slice(0, 500));
+      const r = await fetch(`/api/host/projects/${currentProjectId}/locations`, { method:'POST', body: fd });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setMsg('loc-msg','e', d.error || '가맹점 경로 추가에 실패했습니다.');
+        return;
+      }
+    }
+    setMsg('loc-msg','s',`${targets.length}개 가맹점이 Tour 경로로 추가되었습니다.`);
+    locMerchantSelectedIds = [];
+    await Promise.all([loadLocations(), loadTourMerchants('joined')]);
+    loadProjects(1);
+    return;
+  }
+
   const fd = new FormData();
   fd.append('dest_type', destType);
 
@@ -8785,11 +11205,11 @@ async function loadTourVisitors() {
     renderTourVisitors();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     body.innerHTML = `<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다.</div>`;
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
   }
 }
 
@@ -8927,12 +11347,12 @@ async function refreshTourProjects() {
     await loadTourProjects();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1200);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1200);
     }
   } catch (e) {
     if (btn) {
       btn.textContent = '⚠ 실패';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1500);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1500);
     }
   }
 }
@@ -8943,6 +11363,16 @@ function openTourFromGrid(pid, pname, pserial) {
     return openLoc(pid, pname, pserial);
   }
   console.error('openLoc 함수를 찾을 수 없습니다.');
+  return false;
+}
+
+function openTourProjectImage(pid) {
+  const project = tourProjects.find(p => Number(p.id) === Number(pid));
+  if (!project || !project.tour_image_url) {
+    uiAlert('등록된 Tour 대표 이미지가 없습니다.');
+    return false;
+  }
+  openAgentImage(project.tour_image_url, `Tour 대표 이미지 — ${project.project_name || ''}`);
   return false;
 }
 
@@ -8987,10 +11417,11 @@ function renderTourGrid() {
     <div class="tbl-wrap">
       <table style="table-layout:fixed;width:100%;">
         <colgroup>
-          <col style="width:30%;">
+          <col style="width:27%;">
           <col style="width:140px;">
           <col style="width:80px;">
           <col style="width:180px;">
+          <col style="width:90px;">
           <col style="width:90px;">
           <col style="width:90px;">
         </colgroup>
@@ -9000,6 +11431,7 @@ function renderTourGrid() {
             <th>일련번호</th>
             <th style="text-align:center;">상태</th>
             <th style="text-align:center;">기간</th>
+            <th style="text-align:center;">이미지</th>
             <th style="text-align:center;">Tour</th>
             <th style="text-align:center;">가맹점</th>
           </tr>
@@ -9014,6 +11446,9 @@ function renderTourGrid() {
             const activeLocs = Number(p.active_locations ?? 0);
             const questCnt = Number(p.tour_merchant_count ?? 0);
             const safeName = (p.project_name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            const imageBtn = p.tour_image_url
+              ? `<button type="button" class="btn btn-o btn-sm" onclick="openTourProjectImage(${p.id});return false;">보기</button>`
+              : '<span style="color:#cbd5e1;font-size:12px;">-</span>';
             const tourBtn = `<button type="button" class="btn ${activeLocs>0?'btn-p':'btn-o'} btn-sm"
               onclick="openTourFromGrid(${p.id},'${safeName}','${p.project_serial}');return false;"
               title="Tour 등록 내역 보기 / 추가">${activeLocs}</button>`;
@@ -9025,6 +11460,7 @@ function renderTourGrid() {
               <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><code style="font-size:11px;">${esc(p.project_serial||'')}</code></td>
               <td style="text-align:center;">${statusBadge}</td>
               <td style="text-align:center;font-size:12px;white-space:nowrap;">${esc(fromYmd)} ~ ${esc(toYmd_)}</td>
+              <td style="text-align:center;">${imageBtn}</td>
               <td style="text-align:center;">${tourBtn}</td>
               <td style="text-align:center;">${merchBtn}</td>
             </tr>`;
@@ -9114,11 +11550,11 @@ async function loadQuizVisitors() {
     renderQuizVisitors();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     body.innerHTML = `<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다.</div>`;
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
   }
 }
 
@@ -9249,12 +11685,12 @@ async function refreshQuizProjects() {
     await loadQuizProjects();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1200);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1200);
     }
   } catch (e) {
     if (btn) {
       btn.textContent = '⚠ 실패';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1500);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1500);
     }
   }
 }
@@ -9447,7 +11883,7 @@ async function loadSurveyResults() {
     if (!survey) {
       body.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">설문조사가 등록되지 않은 프로젝트입니다.</div>`;
       summary.innerHTML = ''; if (countEl) countEl.textContent = '';
-      if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+      if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
       return;
     }
 
@@ -9469,7 +11905,7 @@ async function loadSurveyResults() {
 
     if (questions.length === 0) {
       body.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">등록된 질문이 없습니다.</div>`;
-      if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+      if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
       return;
     }
     if (responses.length === 0) {
@@ -9478,7 +11914,7 @@ async function loadSurveyResults() {
         ${survey.description ? `<div style="font-size:12px;color:#475569;">${esc(survey.description)}</div>` : ''}
       </div>
       <div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">아직 응답이 없습니다.</div>`;
-      if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+      if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
       return;
     }
 
@@ -9492,11 +11928,11 @@ async function loadSurveyResults() {
 
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     body.innerHTML = `<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다. ${esc(String(e?.message || e))}</div>`;
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
   }
 }
 
@@ -9840,7 +12276,7 @@ async function loadSurveyDashboard() {
     if (!nameFiltered.length) {
       if (countEl) countEl.textContent = `0 / 전체 ${svProjects.length} 건`;
       wrap.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">검색 결과가 없습니다.</div>`;
-      if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+      if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
       return;
     }
     // 각 프로젝트별 응답 데이터 fetch
@@ -9873,7 +12309,7 @@ async function loadSurveyDashboard() {
     if (!filteredResults.length) {
       summary.innerHTML = '';
       wrap.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:30px;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;font-size:13px;">검색 결과가 없습니다.</div>`;
-      if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+      if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
       return;
     }
 
@@ -9962,11 +12398,11 @@ async function loadSurveyDashboard() {
 
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     wrap.innerHTML = `<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다.</div>`;
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
   }
 }
 
@@ -10062,11 +12498,11 @@ async function loadSurveyRespondents() {
     renderSurveyRespondents();
     if (btn) {
       btn.textContent = '✓ 완료';
-      setTimeout(() => { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }, 1000);
+      setTimeout(() => { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }, 1000);
     }
   } catch (e) {
     document.getElementById('svr-grid-wrap').innerHTML = '<div style="text-align:center;color:#dc2626;padding:30px;">불러오지 못했습니다.</div>';
-    if (btn) { btn.textContent = orig || '🔄 Refresh'; btn.disabled = false; }
+    if (btn) { btn.textContent = orig || '🔄 Reload'; btn.disabled = false; }
   }
 }
 
@@ -12586,12 +15022,14 @@ let quoteConfigLoaded = false;
 let quoteConfigCache = null;
 async function loadQuoteConfig() {
   if (quoteConfigLoaded) return;
+  const quoteInfoBody = document.getElementById('quote-info-body');
+  if (!quoteInfoBody) return;
   const r = await fetch('/api/host/quote-config');
   if (!r.ok) return;
   const c = await r.json();
   quoteConfigCache = c;
   const fmt = n => Number(n).toLocaleString('ko-KR') + '원';
-  document.getElementById('quote-info-body').innerHTML = `
+  quoteInfoBody.innerHTML = `
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:8px;text-align:left;">
       <tr style="background:#f8fafc;">
         <td style="font-weight:600;width:50%;text-align:center;">항목</td>
@@ -12699,6 +15137,7 @@ async function confirmCreateProject() {
   });
   document.getElementById('pj-stop-overbudget').checked = false;
   resetPinState();
+  closeProjectCreateModal();
   switchTab('proj');
 }
 
@@ -14398,6 +16837,12 @@ function isMobileDevice() {
 // ── 초기 로그인 상태 확인 ──
 (async () => {
   try {
+    const qp = new URLSearchParams(location.search);
+    if (qp.get('register') === '1') {
+      history.replaceState(null, '', '/admin');
+      show('sec-register');
+      return;
+    }
     const r = await fetch('/api/host/me');
     if (!r.ok) return;
     // 이미 세션 있고 모바일이면 → 관리자 모바일 PWA 로

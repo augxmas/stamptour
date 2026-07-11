@@ -11,6 +11,7 @@ import {
   sendHostTempPasswordEmail,
   sendSupervisorNewHostNotification,
 } from "../services/email.service";
+import { nextHostSerial } from "../services/project.service";
 import { encKey, dec, ENC } from "../utils/encrypt";
 
 const router = Router();
@@ -158,30 +159,43 @@ router.post("/register", upload.single("biz_cert"), async (req, res) => {
   }
 
   const hash = await bcrypt.hash(password, 12);
-  const [result] = await pool.execute(
-    `INSERT INTO hosts
-     (host_name, host_email, mobile_phone, phone,
-      organization_name, biz_no, biz_cert_path, biz_cert_name,
-      address_zip, address1, address2,
-      password_hash, status)
-     VALUES (${ENC}, ${ENC}, ${ENC}, ${ENC}, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-    [
-      host_name.trim(), k,
-      host_email.trim(), k,
-      mobile_phone.trim(), k,
-      phone?.trim() || null, k,
-      organization_name.trim(),
-      bizNoDigits,
-      certFile?.path ?? null,
-      certFile?.originalname ?? null,
-      address_zip?.trim() || null,
-      address1.trim(),
-      address2?.trim() || null,
-      hash,
-    ],
-  ) as any;
-
-  const hostId = Number(result.insertId);
+  const connection = await pool.getConnection();
+  let hostId = 0;
+  let hostSerial = "";
+  try {
+    await connection.beginTransaction();
+    hostSerial = await nextHostSerial(connection, new Date());
+    const [result] = await connection.execute(
+      `INSERT INTO hosts
+       (host_serial, host_name, host_email, mobile_phone, phone,
+        organization_name, biz_no, biz_cert_path, biz_cert_name,
+        address_zip, address1, address2,
+        password_hash, status)
+       VALUES (?, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        hostSerial,
+        host_name.trim(), k,
+        host_email.trim(), k,
+        mobile_phone.trim(), k,
+        phone?.trim() || null, k,
+        organization_name.trim(),
+        bizNoDigits,
+        certFile?.path ?? null,
+        certFile?.originalname ?? null,
+        address_zip?.trim() || null,
+        address1.trim(),
+        address2?.trim() || null,
+        hash,
+      ],
+    ) as any;
+    hostId = Number(result.insertId);
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
   req.session.emailVerified = undefined;
 
   try { await sendHostRegistrationEmail(host_email.trim(), host_name.trim(), hostId); } catch (_) {}
@@ -192,6 +206,7 @@ router.post("/register", upload.single("biz_cert"), async (req, res) => {
       organizationName: organization_name.trim(),
       bizNo: bizNoDigits,
       hostId,
+      hostSerial,
     });
   } catch (_) {}
 
@@ -211,7 +226,7 @@ router.post("/login", async (req, res) => {
 
   const k = encKey();
   const [rows] = await pool.execute(
-    `SELECT id, ${dec("host_name")}, ${dec("host_email")}, organization_name,
+    `SELECT id, host_serial, ${dec("host_name")}, ${dec("host_email")}, organization_name,
             password_hash, status, project_locked,
             password_reset_required, last_login_ip, last_logout_at
      FROM hosts WHERE host_email = ${ENC}`,
@@ -237,6 +252,7 @@ router.post("/login", async (req, res) => {
 
   req.session.host = {
     id: Number(host.id),
+    host_serial: String(host.host_serial || ""),
     name: String(host.host_name),
     email: String(host.host_email),
     organization_name: host.organization_name ? String(host.organization_name) : "",
@@ -351,7 +367,7 @@ router.get("/profile", requireHost, async (req, res) => {
   const hostId = req.session.host!.id;
   const k = encKey();
   const [rows] = await pool.execute(
-    `SELECT ${dec("host_name")}, ${dec("host_email")}, ${dec("mobile_phone")}, ${dec("phone")},
+    `SELECT host_serial, ${dec("host_name")}, ${dec("host_email")}, ${dec("mobile_phone")}, ${dec("phone")},
             organization_name, biz_no, address_zip, address1, address2
      FROM hosts WHERE id = ?`,
     [k, k, k, k, hostId],
@@ -362,6 +378,7 @@ router.get("/profile", requireHost, async (req, res) => {
     ok: true,
     profile: {
       host_name: h.host_name, host_email: h.host_email,
+      host_serial: h.host_serial,
       mobile_phone: h.mobile_phone, phone: h.phone,
       organization_name: h.organization_name, biz_no: h.biz_no,
       address_zip: h.address_zip, address1: h.address1, address2: h.address2,

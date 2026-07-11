@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Roampay Journey | Stamp Tour Platform</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    :root {
+      --ink: #101828;
+      --muted: #5d6b82;
+      --line: #dce3eb;
+      --green: #3fa66f;
+      --blue: #4c87a7;
+      --navy: #111827;
+      --panel: #182033;
+      --panel-soft: #233047;
+      --paper: #f7fafc;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--paper);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .topbar {
+      height: 74px;
+      border-top: 1px solid #cfd7df;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .nav {
+      width: min(1112px, calc(100% - 48px));
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      box-shadow: 0 10px 22px rgba(76, 135, 167, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img {
+      width: 21px;
+      height: 21px;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    .brand-name strong {
+      color: var(--green);
+    }
+
+    .brand-subtitle {
+      margin-top: 4px;
+      color: #8b9aac;
+      display: block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .nav-links a:last-child {
+      color: #2e8b5b;
+    }
+
+    .hero {
+      min-height: 366px;
+      display: grid;
+      place-items: center;
+      padding: 58px 24px 72px;
+      background:
+        radial-gradient(circle at 90% 8%, rgba(63, 166, 111, 0.12), transparent 22%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+      text-align: center;
+      border-bottom: 1px solid #edf1f5;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      padding: 0 15px;
+      border: 1px solid #bee9d2;
+      border-radius: 999px;
+      background: #dcf8e8;
+      color: #24704d;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #74d79c;
+    }
+
+    h1 {
+      margin: 22px auto 18px;
+      max-width: 760px;
+      color: #0b1220;
+      font-size: 42px;
+      line-height: 1.16;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    h1 span {
+      display: block;
+      color: var(--blue);
+    }
+
+    h1 strong {
+      color: var(--green);
+    }
+
+    .lead {
+      margin: 0 auto;
+      max-width: 690px;
+      color: #344054;
+      font-size: 17px;
+      line-height: 1.7;
+      font-weight: 700;
+    }
+
+    .mission-band {
+      padding: 60px 24px 72px;
+      background: #f4f7fb;
+    }
+
+    .mission-panel {
+      width: min(932px, 100%);
+      margin: 0 auto;
+      padding: 44px;
+      border-radius: 22px;
+      color: var(--white);
+      background:
+        radial-gradient(circle at 93% 18%, rgba(80, 169, 157, 0.26), transparent 18%),
+        linear-gradient(135deg, var(--navy) 0%, var(--panel) 72%, var(--panel-soft) 100%);
+      box-shadow: 0 20px 45px rgba(16, 24, 40, 0.12);
+    }
+
+    .mission-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #62e49d;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+    }
+
+    .mission-label::before {
+      content: "i";
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #16301f;
+      background: #72e3a1;
+      font-size: 11px;
+      font-weight: 900;
+      font-family: Georgia, serif;
+    }
+
+    .mission-copy {
+      margin: 28px 0 0;
+      max-width: 780px;
+      font-size: 17px;
+      line-height: 2.14;
+      font-weight: 800;
+    }
+
+    .mission-copy strong {
+      color: #56e69a;
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        height: auto;
+      }
+
+      .nav {
+        width: min(100% - 32px, 1112px);
+        min-height: 74px;
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        gap: 14px;
+        padding: 14px 0;
+      }
+
+      .nav-links {
+        width: 100%;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 12px;
+      }
+
+      .hero {
+        min-height: 352px;
+        padding: 44px 18px 58px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .lead {
+        font-size: 15px;
+      }
+
+      .mission-band {
+        padding: 34px 18px 52px;
+      }
+
+      .mission-panel {
+        padding: 30px 24px;
+        border-radius: 18px;
+      }
+
+      .mission-copy {
+        font-size: 15px;
+        line-height: 1.9;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/intro" aria-label="Roampay Journey home">
+        <span class="brand-mark"><img src="/favicon.svg" alt="" /></span>
+        <span>
+          <span class="brand-name">Roampay <strong>Journey</strong></span>
+          <span class="brand-subtitle">STAMP TOUR PLATFORM</span>
+        </span>
+      </a>
+      <div class="nav-links">
+        <a href="/admin">Admin Login</a>
+        <a href="/merchant">Merchant System</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="intro-title">
+      <div>
+        <div class="eyebrow">THAILAND TRAVEL EXPERIENCE</div>
+        <h1 id="intro-title">
+          Designing Thailand Sightseeing Journeys,
+          <span><strong>Roampay</strong> Journey Tracker</span>
+        </h1>
+        <p class="lead">
+          Follow beautiful Thailand travel routes designed by your hotel,
+          pay easily with one smart card, and collect special rewards in person.
+        </p>
+      </div>
+    </section>
+
+    <section class="mission-band" aria-labelledby="mission-title">
+      <div class="mission-panel">
+        <div id="mission-title" class="mission-label">PLATFORM MISSION</div>
+        <p class="mission-copy">
+          This site helps hotels operating <strong>Roampay</strong> select tour spots across Thailand, build a journey around those locations, and let travelers confirm their route as they visit each merchant, district, and attraction after paying with a hotel-issued Roampay card. The platform also supports reward planning so completed journeys can lead to meaningful on-site benefits.
+        </p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

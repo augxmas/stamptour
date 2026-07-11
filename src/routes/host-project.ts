@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -10,6 +11,8 @@ import { sendProjectPinEmail, sendQuoteEmail, sendSupervisorQuoteNotification, s
 import { calculateQuote } from "../services/quote.service";
 import { nextLocationNumbers, nextProjectSerial, validateProjectDates, verifyPin } from "../services/project.service";
 import { createQrZip, generateProjectQrs } from "../services/qr.service";
+import { sendRoampayRequest } from "../services/roampay.service";
+import { getThaiTourMerchantApprovalToken, getThaiTourMerchantState, setThaiTourMerchantApprovalToken } from "../services/thai-tour-merchant-state";
 import { encKey, dec, ENC } from "../utils/encrypt";
 import { verifyQuoteToken } from "../utils/quote-token";
 
@@ -238,7 +241,7 @@ router.post("/manual-email/send", requireHost, async (req, res) => {
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0;">
     <div style="font-size:11px;color:#94a3b8;line-height:1.7;">
       회신 시 발신자(<b>${host.email || ''}</b>)에게 직접 전달됩니다.<br>
-      본 메일은 모노라마 트래커를 통해 발송되었습니다.
+      본 메일은 Tour Tracker를 통해 발송되었습니다.
     </div>
   </div>`;
   try {
@@ -568,6 +571,7 @@ router.get("/projects", requireHost, async (req, res) => {
 
   const data = Array.isArray(rows) ? rows.map((item: any) => ({
     ...item,
+    tour_image_url: item.tour_image_path ? `/uploads/tour-images/${path.basename(String(item.tour_image_path))}` : null,
     budget_consumption_rate: Number(item.budget_amount) > 0
       ? Math.round((Number(item.gift_spent) / Number(item.budget_amount)) * 10000) / 100
       : 0,
@@ -1352,7 +1356,8 @@ function fmtYmdLocal(v: any): string {
 router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
-  const destType = (req.body.dest_type === "exhibit") ? "exhibit" : "location";
+  const rawDestType = String(req.body.dest_type ?? "");
+  const destType = rawDestType === "exhibit" ? "exhibit" : (rawDestType === "merchant" ? "merchant" : "location");
   const locationName = String(req.body.location_name ?? "").trim();
   const locationDesc = String(req.body.location_desc ?? "").trim();
   const kakaoLat = req.body.kakao_lat;
@@ -1367,6 +1372,19 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
     }
     if (locationName.length > 100) {
       res.status(400).json({ error: "장소명은 100자 이내여야 합니다." });
+      return;
+    }
+    if (locationDesc.length > 500) {
+      res.status(400).json({ error: "설명은 500자 이내여야 합니다." });
+      return;
+    }
+  } else if (destType === "merchant") {
+    if (!locationName) {
+      res.status(400).json({ error: "가맹점명을 입력해 주세요." });
+      return;
+    }
+    if (locationName.length > 100) {
+      res.status(400).json({ error: "가맹점명은 100자 이내여야 합니다." });
       return;
     }
     if (locationDesc.length > 500) {
@@ -1410,7 +1428,7 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
     return;
   }
 
-  const isLocation = destType === "location";
+  const hasCoordinates = destType === "location";
   await pool.execute(
     `INSERT INTO project_locations
      (project_id, location_seq, display_seq, dest_type, location_name, kakao_lat, kakao_lng, map_provider, location_desc, image_path)
@@ -1421,10 +1439,10 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
       numbers.displaySeq,
       destType,
       locationName,
-      isLocation ? Number(kakaoLat) : null,
-      isLocation ? Number(kakaoLng) : null,
-      isLocation ? mapProvider : null,
-      isLocation ? locationDesc : null,
+      hasCoordinates ? Number(kakaoLat) : null,
+      hasCoordinates ? Number(kakaoLng) : null,
+      hasCoordinates ? mapProvider : null,
+      hasCoordinates ? locationDesc : null,
       imagePath,
     ],
   );
@@ -1635,6 +1653,128 @@ async function ensureHostOwnsProject(projectId: number, hostId: number): Promise
   return Array.isArray(rows) && rows.length > 0;
 }
 
+const THAI_TOUR_MERCHANT_DUMMIES = [
+  { merchant_id: 1001, merchant_serial: "20260704_TH001", merchant_name: "Bangkok Sky Bistro", biz_no: "1-2345-67890-12-3", contact_name: "Anong Srisuk", contact_mobile: "+66 81 234 1101", email: "kimch@mono-rama.com", industry: "food", website: "bangkokskybistro.example", google_lat: 13.736717, google_lng: 100.561050, profile_image_url: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png", profile_image_400: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png" },
+  { merchant_id: 1002, merchant_serial: "20260704_TH002", merchant_name: "Chao Phraya Cafe", business_name: "Chao Phraya Cafe", legal_name: "Chao Phraya Cafe Co., Ltd.", business_type: "Registered partnership", biz_no: "1-2345-67890-12-4", tax_id: "1-2345-67890-12-4", company_registration_no: "0-1055-67890-12-5", business_phone: "02-345-2202", contact_name: "Krit Wongchai", contact_mobile: "+66 82 345 2202", email: "wefuture@nate.com", industry: "food", website: "chaophrayacafe.example", statement_descriptor: "CHAO CAFE", support_phone: "02-345-2202", province: "bangkok", postal_code: "10110", person_first_name: "Krit", person_last_name: "Wongchai", person_email: "wefuture@nate.com", person_title: "Owner", person_nationality: "태국", person_date_of_birth: "22 / 09 / 1984", person_address1: "15 Rama IV Road", person_address2: "Pathum Wan", person_address3: "Bangkok", person_province: "Bangkok", person_postal_code: "10330", person_phone: "+66 82 345 2202", personal_id_number: "•••••••2234", laser_code: "JT0-2234567-89", profile_image_url: "/uploads/merchant-profiles/chao-phraya-cafe-400.png", profile_image_400: "/uploads/merchant-profiles/chao-phraya-cafe-400.png" },
+  { merchant_id: 1003, merchant_serial: "20260704_TH003", merchant_name: "Siam Artisan Market", biz_no: "1-2345-67890-12-5", contact_name: "Narin Kamon", contact_mobile: "+66 83 456 3303", email: "augxmas@gmail.com", industry: "retail", website: "siamartisan.example", google_lat: 13.746111, google_lng: 100.534722, profile_image_url: "/uploads/merchant-profiles/siam-artisan-market-400.png", profile_image_400: "/uploads/merchant-profiles/siam-artisan-market-400.png" },
+  { merchant_id: 1004, merchant_serial: "20260704_TH004", merchant_name: "Pattaya Beach Grill", biz_no: "1-2345-67890-12-6", contact_name: "Malee Sangwan", contact_mobile: "+66 84 123 4404", email: "nitsuser@naver.com", industry: "food", website: "pattayabeachgrill.example", google_lat: 12.927608, google_lng: 100.875778, profile_image_url: "/uploads/merchant-profiles/pattaya-beach-grill-400.png", profile_image_400: "/uploads/merchant-profiles/pattaya-beach-grill-400.png" },
+  { merchant_id: 1005, merchant_serial: "20260704_TH005", merchant_name: "Jomtien Tour Shop", biz_no: "1-2345-67890-12-7", contact_name: "Somchai Phan", contact_mobile: "+66 85 234 5505", email: "somchai.phan@example.com", industry: "travel", website: "jomtientourshop.example", google_lat: 12.891845, google_lng: 100.875167, profile_image_url: "/uploads/merchant-profiles/jomtien-tour-shop-400.png", profile_image_400: "/uploads/merchant-profiles/jomtien-tour-shop-400.png" },
+  { merchant_id: 1006, merchant_serial: "20260704_TH006", merchant_name: "Pattaya Wellness Spa", biz_no: "1-2345-67890-12-8", contact_name: "Darika Rattan", contact_mobile: "+66 86 345 6606", email: "darika.rattan@example.com", industry: "services", website: "pattayawellness.example", google_lat: 12.934071, google_lng: 100.889267, profile_image_url: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png", profile_image_400: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png" },
+].map(m => ({
+  ...m,
+  google_lat: (m as any).google_lat ?? ({
+    1001: 13.736717,
+    1002: 13.730578,
+    1003: 13.746111,
+    1004: 12.927608,
+    1005: 12.891845,
+    1006: 12.934071,
+  } as Record<number, number>)[Number((m as any).merchant_id)],
+  google_lng: (m as any).google_lng ?? ({
+    1001: 100.561050,
+    1002: 100.541766,
+    1003: 100.534722,
+    1004: 100.875778,
+    1005: 100.875167,
+    1006: 100.889267,
+  } as Record<number, number>)[Number((m as any).merchant_id)],
+  merchant_status: "approved",
+  roampay_status: "approved",
+  country: "TH",
+  is_dummy: true,
+}));
+
+function findThaiTourDummyMerchant(merchantId: number) {
+  return THAI_TOUR_MERCHANT_DUMMIES.find(m => Number(m.merchant_id) === Number(merchantId)) || null;
+}
+
+function thaiTourDummyDbSerial(m: any): string {
+  return String(m.merchant_serial || `TH${m.merchant_id}`).replace(/[^A-Za-z0-9]/g, "").slice(0, 13);
+}
+
+function thaiTourDummyDbEmail(m: any): string {
+  return `thai-tour-${Number(m.merchant_id)}@example.invalid`;
+}
+
+function mergeThaiTourDummyFields(row: any): any {
+  const dummy = findThaiTourDummyMerchant(Number(row?.merchant_id));
+  if (!dummy) return row;
+  return {
+    ...row,
+    ...dummy,
+    merchant_serial: dummy.merchant_serial,
+    merchant_name: dummy.merchant_name,
+    biz_no: dummy.biz_no,
+    contact_name: dummy.contact_name,
+    contact_mobile: dummy.contact_mobile,
+    email: dummy.email,
+    profile_image_url: dummy.profile_image_url || toUploadUrl(row?.profile_image_path),
+    profile_image_400: dummy.profile_image_400 || dummy.profile_image_url || toUploadUrl(row?.profile_image_path),
+    merchant_status: "approved",
+    roampay_status: "approved",
+    country: "TH",
+    is_dummy: true,
+  };
+}
+
+async function ensureThaiTourDummyMerchant(m: any): Promise<number> {
+  const merchantId = Number(m.merchant_id);
+  const [existingRows] = await pool.execute("SELECT id FROM merchants WHERE id = ?", [merchantId]);
+  if (Array.isArray(existingRows) && existingRows.length > 0) return merchantId;
+
+  const k = encKey();
+  const passwordHash = await bcrypt.hash(crypto.randomBytes(18).toString("base64url"), 12);
+  await pool.execute(
+    `INSERT INTO merchants
+       (id, merchant_serial, merchant_name, contact_name, contact_phone, contact_mobile, email, biz_no,
+        profile_image_path, profile_image_name,
+        google_lat, google_lng, password_hash, status, system_approved_at, roampay_status, roampay_approved_at)
+     VALUES (?, ?, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ?, ?, ?, ?, ?, ?, 'approved', NOW(), 'approved', NOW())`,
+    [
+      merchantId,
+      thaiTourDummyDbSerial(m),
+      m.merchant_name, k,
+      m.contact_name || "", k,
+      null, k,
+      String(m.contact_mobile || "").replace(/[^0-9]/g, ""), k,
+      thaiTourDummyDbEmail(m), k,
+      String(m.biz_no || ""),
+      m.profile_image_url ? path.join("uploads", "merchant-profiles", path.basename(String(m.profile_image_url))) : null,
+      m.profile_image_url ? path.basename(String(m.profile_image_url)) : null,
+      m.google_lat ?? null,
+      m.google_lng ?? null,
+      passwordHash,
+    ],
+  );
+  return merchantId;
+}
+
+async function ensureTourApplication(projectId: number, merchantId: number, status: "pending" | "approved" = "pending"): Promise<void> {
+  const [existingRows] = await pool.execute(
+    "SELECT id, status FROM project_applications WHERE project_id = ? AND merchant_id = ? AND support_type = 'tour'",
+    [projectId, merchantId],
+  );
+  const existing = (Array.isArray(existingRows) ? existingRows[0] : null) as any;
+  if (existing) {
+    if (existing.status === "approved" && status === "pending") return;
+    await pool.execute(
+      `UPDATE project_applications
+          SET status = ?,
+              decided_at = CASE WHEN ? = 'approved' THEN NOW() ELSE NULL END,
+              decided_reason = NULL,
+              applied_at = CASE WHEN ? = 'pending' THEN NOW() ELSE applied_at END,
+              updated_at = NOW()
+        WHERE id = ?`,
+      [status, status, status, existing.id],
+    );
+    return;
+  }
+  await pool.execute(
+    `INSERT INTO project_applications (project_id, merchant_id, status, support_type, decided_at)
+     VALUES (?, ?, ?, 'tour', CASE WHEN ? = 'approved' THEN NOW() ELSE NULL END)`,
+    [projectId, merchantId, status, status],
+  );
+}
 // ============================================================
 //  입장관리(사전등록) — Phase 1: 항목/혜택 설정 + 예약 목록 조회
 // ============================================================
@@ -2175,6 +2315,116 @@ router.get("/reservations", requireHost, async (req, res) => {
       entry:       { total: e_all.length, visited: e_all.filter(x=>x.visited).length, gift_used: e_all.filter(x=>x.gift_used).length },
     },
   });
+});
+
+router.post("/guests", requireHost, async (req, res) => {
+  const hostId = req.session.host!.id;
+  const projectId = Number(req.body?.project_id);
+  const fields = (req.body?.fields_json && typeof req.body.fields_json === "object")
+    ? req.body.fields_json
+    : (req.body?.fields && typeof req.body.fields === "object" ? req.body.fields : {});
+  const mode = ["reservation", "entry"].includes(String(req.body?.mode || "entry"))
+    ? String(req.body?.mode || "entry")
+    : "entry";
+
+  if (!Number.isFinite(projectId) || projectId <= 0) {
+    res.status(400).json({ ok: false, error: "project_id_required" });
+    return;
+  }
+
+  const [projectRows] = await pool.execute(
+    `SELECT p.id, p.project_name, p.project_serial,
+            h.id AS host_id, h.host_serial, h.organization_name
+       FROM projects p
+       JOIN hosts h ON h.id = p.host_id
+      WHERE p.id = ? AND p.host_id = ? AND p.status != 'cancelled'
+      LIMIT 1`,
+    [projectId, hostId],
+  );
+  const project = Array.isArray(projectRows) ? (projectRows[0] as any) : null;
+  if (!project) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const emailLower = String((fields as any).email || "").trim().toLowerCase() || null;
+  const token = crypto.randomBytes(24).toString("hex");
+  const amount = Number.isFinite(Number(req.body?.amount)) ? Math.max(0, Math.floor(Number(req.body.amount))) : 0;
+  const fieldsJson = JSON.stringify(fields);
+
+  try {
+    const [result] = await pool.execute(
+      `INSERT INTO reservations (project_id, mode, email_lower, token, fields_json, amount, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+      [projectId, mode, emailLower, token, fieldsJson, amount],
+    );
+    const reservationId = Number((result as any).insertId);
+    const [reservationRows] = await pool.execute(
+      `SELECT id, project_id, mode, email_lower, token, pin_hash, fields_json, amount, status,
+              qr_image_path, activated_at, activated_by_host_id, used_at, used_by_merchant_id, created_at
+         FROM reservations
+        WHERE id = ?
+        LIMIT 1`,
+      [reservationId],
+    );
+    const reservation = Array.isArray(reservationRows) ? (reservationRows[0] as any) : null;
+    const payload = {
+      event: "guest.payer.register.requested",
+      reservation: {
+        id: reservation.id,
+        project_id: reservation.project_id,
+        mode: reservation.mode,
+        email_lower: reservation.email_lower,
+        token: reservation.token,
+        pin_hash: reservation.pin_hash,
+        fields_json: JSON.parse(reservation.fields_json || "{}"),
+        amount: Number(reservation.amount || 0),
+        status: reservation.status,
+        qr_image_path: reservation.qr_image_path,
+        activated_at: reservation.activated_at,
+        activated_by_host_id: reservation.activated_by_host_id,
+        used_at: reservation.used_at,
+        used_by_merchant_id: reservation.used_by_merchant_id,
+        created_at: reservation.created_at,
+      },
+      host: {
+        id: project.host_id,
+        host_serial: project.host_serial,
+        organization_name: project.organization_name,
+      },
+    };
+
+    let roampay;
+    try {
+      roampay = await sendRoampayRequest(payload);
+    } catch (error: any) {
+      roampay = {
+        ok: false,
+        statusCode: null,
+        attempts: 0,
+        responseText: "",
+        responseJson: null,
+        error: String(error?.message || error),
+      };
+    }
+    res.json({
+      ok: true,
+      data: payload.reservation,
+      roampay: {
+        ok: roampay.ok,
+        status_code: roampay.statusCode,
+        attempts: roampay.attempts,
+        response_body: roampay.responseJson ?? roampay.responseText,
+        error: roampay.error || null,
+      },
+    });
+  } catch (error: any) {
+    if (error?.code === "ER_DUP_ENTRY") {
+      res.status(409).json({ ok: false, error: "duplicate_guest_email" });
+      return;
+    }
+    throw error;
+  }
 });
 
 router.get("/reservations/export", requireHost, async (req, res) => {
@@ -3068,6 +3318,7 @@ router.get("/projects/:id/applications", requireHost, async (req, res) => {
             m.id AS merchant_id, m.biz_no, m.status AS merchant_status,
             m.biz_cert_path, m.biz_cert_name,
             m.bank_name, m.bank_copy_path, m.bank_copy_name,
+            m.profile_image_path, m.profile_image_name,
             ${dec("m.merchant_name", "merchant_name")},
             ${dec("m.contact_name", "contact_name")},
             ${dec("m.contact_phone", "contact_phone")},
@@ -3081,15 +3332,358 @@ router.get("/projects/:id/applications", requireHost, async (req, res) => {
     [k, k, k, k, k, k, projectId],
   );
 
-  const data = (Array.isArray(rows) ? rows : []).map((r: any) => ({
-    ...r,
-    biz_cert_url:  toUploadUrl(r.biz_cert_path),
-    bank_copy_url: toUploadUrl(r.bank_copy_path),
-  }));
+  const data = (Array.isArray(rows) ? rows : []).map((r: any) => {
+    const merged = mergeThaiTourDummyFields(r);
+    return {
+      ...merged,
+      biz_cert_url:  toUploadUrl(r.biz_cert_path),
+      bank_copy_url: toUploadUrl(r.bank_copy_path),
+      profile_image_url: merged.profile_image_url || toUploadUrl(r.profile_image_path),
+      profile_image_400: merged.profile_image_400 || merged.profile_image_url || toUploadUrl(r.profile_image_path),
+    };
+  });
   res.json({ ok: true, data, project_pin: projectPin });
 });
 
+router.get("/projects/:id/tour-merchants", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const mode = String(req.query.mode || "joined");
+  const country = String(req.query.country || "TH").trim().toUpperCase();
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const k = encKey();
+  let rows: any;
+  if (mode === "all") {
+    [rows] = await pool.execute(
+      `SELECT m.id AS merchant_id, m.merchant_serial, m.biz_no, m.status AS merchant_status,
+              m.profile_image_path, m.profile_image_name,
+              m.roampay_status, pa.id AS application_id, pa.status AS application_status,
+              pa.applied_at, pa.decided_at,
+              ${dec("m.merchant_name", "merchant_name")},
+              ${dec("m.contact_name", "contact_name")},
+              ${dec("m.contact_phone", "contact_phone")},
+              ${dec("m.contact_mobile", "contact_mobile")},
+              ${dec("m.email", "email")}
+         FROM merchants m
+         LEFT JOIN project_applications pa
+           ON pa.project_id = ? AND pa.merchant_id = m.id AND pa.support_type = 'tour'
+        WHERE m.status = 'approved'
+          AND m.roampay_status = 'approved'
+          AND (pa.id IS NULL OR pa.status = 'rejected')
+        ORDER BY merchant_name ASC`,
+      [k, k, k, k, k, projectId],
+    );
+  } else {
+    [rows] = await pool.execute(
+      `SELECT pa.id AS application_id, pa.status AS application_status,
+              pa.applied_at, pa.decided_at,
+              m.id AS merchant_id, m.merchant_serial, m.biz_no, m.status AS merchant_status,
+              m.roampay_status, m.profile_image_path, m.profile_image_name,
+              ${dec("m.merchant_name", "merchant_name")},
+              ${dec("m.contact_name", "contact_name")},
+              ${dec("m.contact_phone", "contact_phone")},
+              ${dec("m.contact_mobile", "contact_mobile")},
+              ${dec("m.email", "email")}
+         FROM project_applications pa
+         JOIN merchants m ON m.id = pa.merchant_id
+        WHERE pa.project_id = ?
+          AND pa.support_type = 'tour'
+          AND pa.status IN ('pending', 'approved')
+        ORDER BY (pa.status = 'pending') DESC, pa.applied_at DESC, merchant_name ASC`,
+      [k, k, k, k, k, projectId],
+    );
+  }
+
+  let data = (Array.isArray(rows) ? rows : []).map((r: any) => {
+    const merged = mergeThaiTourDummyFields(r);
+    return {
+      ...merged,
+      profile_image_url: merged.profile_image_url || toUploadUrl(r.profile_image_path),
+      profile_image_400: merged.profile_image_400 || merged.profile_image_url || toUploadUrl(r.profile_image_path),
+    };
+  }).filter((m: any) => {
+    if (!country || country === "ALL") return true;
+    if (country !== "TH") return false;
+    const serial = String(m.merchant_serial || "").toUpperCase();
+    const bizDigits = String(m.biz_no || "").replace(/\D/g, "");
+    const phoneDigits = `${m.contact_phone || ""}${m.contact_mobile || ""}`.replace(/\D/g, "");
+    return serial.includes("_TH") || bizDigits.length === 13 || phoneDigits.startsWith("66");
+  });
+  if (country === "TH") {
+    const requested = getThaiTourMerchantState(projectId);
+    if (mode !== "all") {
+      data = data.map((m: any) => {
+        const state = requested.get(Number(m.merchant_id));
+        return state ? {
+          ...m,
+          approval_status: state.approval_status,
+          commission_rate: state.commission_rate,
+          approved_at: state.approved_at || null,
+        } : m;
+      });
+    }
+    if (mode === "all") {
+      const existingIds = new Set(data.map((m: any) => Number(m.merchant_id)));
+      for (const m of THAI_TOUR_MERCHANT_DUMMIES) {
+        if (!requested.has(Number(m.merchant_id)) && !existingIds.has(Number(m.merchant_id))) data.push(m);
+      }
+    } else {
+      const existingIds = new Set(data.map((m: any) => Number(m.merchant_id)));
+      for (const m of THAI_TOUR_MERCHANT_DUMMIES) {
+        const state = requested.get(Number(m.merchant_id));
+        if (state && !existingIds.has(Number(m.merchant_id))) {
+          data.push({
+            ...m,
+            application_status: state.approval_status === "approved" ? "approved" : "pending",
+            approval_status: state.approval_status,
+            commission_rate: state.commission_rate,
+            applied_at: state.requested_at,
+            approved_at: state.approved_at || null,
+          });
+        }
+      }
+    }
+  }
+  res.json({ ok: true, country, data });
+});
+
+router.post("/projects/:id/tour-merchants/request", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const rawIds = Array.isArray(req.body?.merchant_ids) ? req.body.merchant_ids : [req.body?.merchant_id];
+  const merchantIds: number[] = Array.from(new Set<number>(rawIds.map((v: any) => Number(v || 0)).filter((v: number) => Number.isFinite(v) && v > 0)));
+  if (merchantIds.length === 0) {
+    res.status(400).json({ ok: false, error: "merchant_required", message: "가맹점을 선택해 주세요." });
+    return;
+  }
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const requestedDummy = getThaiTourMerchantState(projectId);
+  const dbMerchantIds: number[] = [];
+  for (const merchantId of merchantIds) {
+    const dummyMerchant = findThaiTourDummyMerchant(merchantId);
+    if (dummyMerchant) {
+      await ensureThaiTourDummyMerchant(dummyMerchant);
+      await ensureTourApplication(projectId, merchantId, "pending");
+      if (!requestedDummy.has(merchantId)) {
+        requestedDummy.set(merchantId, {
+          merchant_id: merchantId,
+          commission_rate: null,
+          approval_status: "requested",
+          requested_at: new Date().toISOString(),
+        });
+      }
+    }
+    else dbMerchantIds.push(merchantId);
+  }
+
+  const k = encKey();
+  for (const merchantId of dbMerchantIds) {
+    const [merchantRows] = await pool.execute(
+      `SELECT id, merchant_serial, biz_no, status, roampay_status,
+              ${dec("merchant_name", "merchant_name")},
+              ${dec("contact_phone", "contact_phone")},
+              ${dec("contact_mobile", "contact_mobile")},
+              ${dec("email", "email")}
+         FROM merchants
+        WHERE id = ?`,
+      [k, k, k, k, merchantId],
+    );
+    const merchant = (Array.isArray(merchantRows) ? merchantRows[0] : null) as any;
+    if (!merchant) {
+      res.status(404).json({ ok: false, error: "merchant_not_found", merchant_id: merchantId });
+      return;
+    }
+    if (merchant.status !== "approved" || merchant.roampay_status !== "approved") {
+      res.status(400).json({ ok: false, error: "merchant_not_operational", merchant_id: merchantId, message: "Tour와 Roampay 승인이 완료된 가맹점만 요청할 수 있습니다." });
+      return;
+    }
+    const serial = String(merchant.merchant_serial || "").toUpperCase();
+    const bizDigits = String(merchant.biz_no || "").replace(/\D/g, "");
+    const phoneDigits = `${merchant.contact_phone || ""}${merchant.contact_mobile || ""}`.replace(/\D/g, "");
+    const isThaiMerchant = serial.includes("_TH") || bizDigits.length === 13 || phoneDigits.startsWith("66");
+    if (!isThaiMerchant) {
+      res.status(400).json({ ok: false, error: "country_not_supported", merchant_id: merchantId, message: "기본 검색 대상은 태국 가맹점입니다. 태국 가맹점만 참여 요청할 수 있습니다." });
+      return;
+    }
+
+    await ensureTourApplication(projectId, merchantId, "pending");
+  }
+
+  res.json({ ok: true, status: "pending", requested_count: merchantIds.length });
+});
 // ── Tour 방문자별 통계 — 응시한 방문자(전화번호) 목록 + 방문 Tour 수 ──
+router.post("/projects/:id/tour-merchants/approval-request", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const commissions = (req.body?.commissions || {}) as Record<string, any>;
+  const merchantIds = Object.keys(commissions).map(v => Number(v)).filter(v => Number.isFinite(v) && v > 0);
+  if (merchantIds.length === 0) {
+    res.status(400).json({ ok: false, error: "merchant_required", message: "가맹점을 선택해 주세요." });
+    return;
+  }
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const [projectRows] = await pool.execute(
+    "SELECT project_name, project_serial FROM projects WHERE id = ? AND host_id = ?",
+    [projectId, host.id],
+  );
+  const project = (Array.isArray(projectRows) ? projectRows[0] : null) as any;
+  if (!project) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const stateMap = getThaiTourMerchantState(projectId);
+  const baseUrl = (process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, "");
+  const k = encKey();
+  const sent: number[] = [];
+
+  for (const merchantId of merchantIds) {
+    const commissionRate = Number(String(commissions[String(merchantId)] ?? "").replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100) {
+      res.status(400).json({ ok: false, error: "invalid_commission", merchant_id: merchantId, message: "수수율은 0 이상 100 이하 숫자로 입력해 주세요." });
+      return;
+    }
+
+    let merchant = findThaiTourDummyMerchant(merchantId) as any;
+    if (!merchant) {
+      const [merchantRows] = await pool.execute(
+        `SELECT id AS merchant_id, merchant_serial, biz_no,
+                ${dec("merchant_name", "merchant_name")},
+                ${dec("contact_name", "contact_name")},
+                ${dec("contact_mobile", "contact_mobile")},
+                ${dec("email", "email")}
+           FROM merchants
+          WHERE id = ?`,
+        [k, k, k, k, merchantId],
+      );
+      merchant = (Array.isArray(merchantRows) ? merchantRows[0] : null) as any;
+    } else {
+      await ensureThaiTourDummyMerchant(merchant);
+      await ensureTourApplication(projectId, merchantId, "pending");
+    }
+    if (!merchant?.email) {
+      res.status(404).json({ ok: false, error: "merchant_email_not_found", merchant_id: merchantId, message: "가맹점 담당자 이메일을 찾을 수 없습니다." });
+      return;
+    }
+
+    const token = crypto.randomBytes(24).toString("hex");
+    const approveUrl = `${baseUrl}/api/host/tour-merchant-approval/${token}`;
+    await sendEmail({
+      templateKey: "tour_merchant_commission_approval",
+      to: String(merchant.email),
+      subject: `[Tour Tracker] ${project.project_name} 가맹점 승인 요청`,
+      projectId,
+      hostId: host.id,
+      html: `<div style="font-family:'Malgun Gothic',sans-serif;max-width:560px;line-height:1.7;color:#334155;">
+        <h2 style="color:#2563eb;margin:0 0 14px;">가맹점 승인 요청</h2>
+        <p><b>${merchant.merchant_name || merchant.business_name || "가맹점"}</b> 담당자님, 아래 프로젝트의 Tour 가맹점 참여 및 수수율 승인을 요청드립니다.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+          <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;padding:9px;font-weight:700;">프로젝트</td><td style="border:1px solid #e2e8f0;padding:9px;">${project.project_name}</td></tr>
+          <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;padding:9px;font-weight:700;">프로젝트 번호</td><td style="border:1px solid #e2e8f0;padding:9px;">${project.project_serial}</td></tr>
+          <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;padding:9px;font-weight:700;">수수율</td><td style="border:1px solid #e2e8f0;padding:9px;"><b>${commissionRate}%</b></td></tr>
+        </table>
+        <p style="text-align:center;margin:22px 0;"><a href="${approveUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;padding:12px 24px;font-weight:800;">승인하기</a></p>
+        <p style="font-size:12px;color:#64748b;">버튼이 열리지 않으면 아래 주소를 브라우저에 붙여넣어 주세요.<br>${approveUrl}</p>
+      </div>`,
+      vars: {
+        projectName: String(project.project_name),
+        projectSerial: String(project.project_serial),
+        merchantName: String(merchant.merchant_name || merchant.business_name || ""),
+        commissionRate: String(commissionRate),
+        approveUrl,
+      },
+    });
+
+    setThaiTourMerchantApprovalToken(token, { projectId, merchantId });
+    stateMap.set(merchantId, {
+      merchant_id: merchantId,
+      commission_rate: commissionRate,
+      approval_status: "approval_sent",
+      token,
+      requested_at: stateMap.get(merchantId)?.requested_at || new Date().toISOString(),
+      approval_sent_at: new Date().toISOString(),
+    });
+    sent.push(merchantId);
+  }
+
+  res.json({ ok: true, sent_count: sent.length, sent });
+});
+
+router.get("/tour-merchant-approval/:token", async (req, res) => {
+  const token = String(req.params.token || "");
+  const ref = getThaiTourMerchantApprovalToken(token);
+  if (!ref) {
+    res.status(404).send("<h2>승인 요청을 찾을 수 없습니다.</h2>");
+    return;
+  }
+  const state = getThaiTourMerchantState(ref.projectId).get(ref.merchantId);
+  if (!state) {
+    res.status(404).send("<h2>승인 요청 상태를 찾을 수 없습니다.</h2>");
+    return;
+  }
+  state.approval_status = "approved";
+  state.approved_at = new Date().toISOString();
+  getThaiTourMerchantState(ref.projectId).set(ref.merchantId, state);
+  const dummyMerchant = findThaiTourDummyMerchant(ref.merchantId);
+  if (dummyMerchant) await ensureThaiTourDummyMerchant(dummyMerchant).catch(() => undefined);
+  await ensureTourApplication(ref.projectId, ref.merchantId, "approved").catch(() => undefined);
+
+  res.send(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>승인 완료</title>
+    <style>body{font-family:Malgun Gothic,sans-serif;background:#f8fafc;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.box{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:34px;box-shadow:0 12px 32px rgba(15,23,42,.12);max-width:520px;text-align:center}.rate{font-size:24px;font-weight:900;color:#16a34a}</style></head>
+    <body><div class="box"><h2>승인이 완료되었습니다.</h2><p>가맹점 참여 요청과 수수율이 승인되었습니다.</p><p>확정 수수율</p><div class="rate">${state.commission_rate}%</div></div></body></html>`);
+});
+
+router.post("/projects/:id/tour-merchants/cancel", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  const rawIds = Array.isArray(req.body?.merchant_ids) ? req.body.merchant_ids : [req.body?.merchant_id];
+  const merchantIds: number[] = Array.from(new Set<number>(rawIds.map((v: any) => Number(v || 0)).filter((v: number) => Number.isFinite(v) && v > 0)));
+  if (merchantIds.length === 0) {
+    res.status(400).json({ ok: false, error: "merchant_required", message: "가맹점을 선택해 주세요." });
+    return;
+  }
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ ok: false, error: "project_not_found" });
+    return;
+  }
+
+  const requestedDummy = getThaiTourMerchantState(projectId);
+  for (const merchantId of merchantIds) {
+    const dummyMerchant = findThaiTourDummyMerchant(merchantId);
+    if (dummyMerchant) requestedDummy.delete(merchantId);
+  }
+
+  for (const merchantId of merchantIds) {
+    const [existingRows] = await pool.execute(
+      "SELECT id, status FROM project_applications WHERE project_id = ? AND merchant_id = ? AND support_type = 'tour'",
+      [projectId, merchantId],
+    );
+    const existing = (Array.isArray(existingRows) ? existingRows[0] : null) as any;
+    if (!existing) continue;
+    if (existing.status === "pending") {
+      await pool.execute("DELETE FROM project_applications WHERE id = ? AND project_id = ?", [existing.id, projectId]);
+    } else {
+      await pool.execute(
+        "UPDATE project_applications SET status = 'rejected', decided_at = NOW(), decided_reason = ?, updated_at = NOW() WHERE id = ? AND project_id = ?",
+        ["host_cancelled", existing.id, projectId],
+      );
+    }
+  }
+
+  res.json({ ok: true, cancelled_count: merchantIds.length });
+});
 router.get("/projects/:id/tour-visitors", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);

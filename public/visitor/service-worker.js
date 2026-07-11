@@ -65,7 +65,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (_) { data = { body: e.data ? e.data.text() : '' }; }
-  const title = data.title || '모노라마 트래커';
+  const title = data.title || 'Tour Tracker';
   const options = {
     body: data.body || '',
     icon: data.icon || '/favicon.svg',

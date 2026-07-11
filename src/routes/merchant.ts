@@ -1,4 +1,4 @@
-import path from "node:path";
+﻿import path from "node:path";
 import fs from "node:fs";
 import { Router } from "express";
 import multer from "multer";
@@ -12,9 +12,11 @@ import {
   sendSupervisorNewMerchantNotification,
   sendHostNewApplicationEmail,
   sendMerchantTempPasswordEmail,
+  sendEmail,
 } from "../services/email.service";
 import { encKey, dec, ENC } from "../utils/encrypt";
 import { publicBaseUrl } from "../services/qr.service";
+import { getThaiTourMerchantProjectsFor, getThaiTourMerchantState } from "../services/thai-tour-merchant-state";
 
 const router = Router();
 
@@ -34,6 +36,71 @@ export const BANKS: Record<string, string> = {
   "090": "카카오뱅크", "092": "토스뱅크",
 };
 
+const THAI_MERCHANT_PASSWORD_CONTACTS = [
+  { id: 1001, taxId: "1-2345-67890-12-3", email: "kimch@mono-rama.com", name: "Bangkok Sky Bistro", contactName: "Anong Srisuk", profile_image_url: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png", profile_image_400: "/uploads/merchant-profiles/bangkok-sky-bistro-400.png" },
+  {
+    id: 1002,
+    taxId: "1-2345-67890-12-4",
+    email: "wefuture@nate.com",
+    name: "Chao Phraya Cafe",
+    contactName: "Krit Wongchai",
+    merchant_serial: "20260704_TH002",
+    legal_name: "Chao Phraya Cafe Co., Ltd.",
+    business_type: "Registered partnership",
+    company_registration_no: "0-1055-67890-12-5",
+    business_phone: "02-345-2202",
+    industry: "food",
+    website: "chaophrayacafe.example",
+    statement_descriptor: "CHAO CAFE",
+    support_phone: "02-345-2202",
+    province: "bangkok",
+    postal_code: "10110",
+    person_first_name: "Krit",
+    person_last_name: "Wongchai",
+    person_email: "wefuture@nate.com",
+    person_title: "Owner",
+    person_nationality: "태국",
+    person_date_of_birth: "22 / 09 / 1984",
+    person_address1: "15 Rama IV Road",
+    person_address2: "Pathum Wan",
+    person_address3: "Bangkok",
+    person_province: "Bangkok",
+    person_postal_code: "10330",
+    person_phone: "+66 82 345 2202",
+    personal_id_number: "•••••••2234",
+    laser_code: "JT0-2234567-89",
+    profile_image_url: "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+    profile_image_400: "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+  },
+  { id: 1003, taxId: "1-2345-67890-12-5", email: "augxmas@gmail.com", name: "Siam Artisan Market", contactName: "Narin Kamon", profile_image_url: "/uploads/merchant-profiles/siam-artisan-market-400.png", profile_image_400: "/uploads/merchant-profiles/siam-artisan-market-400.png" },
+  { id: 1004, taxId: "1-2345-67890-12-6", email: "nitsuser@naver.com", name: "Pattaya Beach Grill", contactName: "Malee Sangwan", profile_image_url: "/uploads/merchant-profiles/pattaya-beach-grill-400.png", profile_image_400: "/uploads/merchant-profiles/pattaya-beach-grill-400.png" },
+  { id: 1005, taxId: "1-2345-67890-12-7", email: "somchai.phan@example.com", name: "Jomtien Tour Shop", contactName: "Somchai Phan", profile_image_url: "/uploads/merchant-profiles/jomtien-tour-shop-400.png", profile_image_400: "/uploads/merchant-profiles/jomtien-tour-shop-400.png" },
+  { id: 1006, taxId: "1-2345-67890-12-8", email: "darika.rattan@example.com", name: "Pattaya Wellness Spa", contactName: "Darika Rattan", profile_image_url: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png", profile_image_400: "/uploads/merchant-profiles/pattaya-wellness-spa-400.png" },
+  { id: 1007, taxId: "1-2345-67890-12-9", email: "siriporn.cruise@example.com", name: "Bangkok River Dinner Cruise", contactName: "Siriporn Nanthakorn", profile_image_url: "/uploads/merchant-profiles/bangkok-dinner-cruise-400.png", profile_image_400: "/uploads/merchant-profiles/bangkok-dinner-cruise-400.png" },
+].map((m) => ({
+  ...m,
+  google_lat: (m as any).google_lat ?? ({
+    1001: 13.736717,
+    1002: 13.730578,
+    1003: 13.746111,
+    1004: 12.927608,
+    1005: 12.891845,
+    1006: 12.934071,
+    1007: 13.720492,
+  } as Record<number, number>)[Number((m as any).id)],
+  google_lng: (m as any).google_lng ?? ({
+    1001: 100.561050,
+    1002: 100.541766,
+    1003: 100.534722,
+    1004: 100.875778,
+    1005: 100.875167,
+    1006: 100.889267,
+    1007: 100.513707,
+  } as Record<number, number>)[Number((m as any).id)],
+}));
+const THAI_MERCHANT_PASSWORD = "!Q2w3e4r";
+const thaiTempPasswordHashes = new Map<string, string>();
+
 const docDir = path.join(process.cwd(), "uploads", "merchant-docs");
 fs.mkdirSync(docDir, { recursive: true });
 
@@ -44,7 +111,9 @@ const upload = multer({
   }),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    const allowed = file.fieldname === "profile_image"
+      ? ["image/jpeg", "image/png", "image/webp"]
+      : ["application/pdf", "image/jpeg", "image/png"];
     cb(null, allowed.includes(file.mimetype));
   },
 });
@@ -69,6 +138,26 @@ function generateTempPassword(): string {
     chars.push(all[Math.floor(Math.random() * all.length)]);
   }
   return chars.sort(() => Math.random() - 0.5).join("");
+}
+
+function merchantSerialDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date()).replace(/-/g, "");
+}
+
+async function nextMerchantSerial(): Promise<string> {
+  const ymd = merchantSerialDate();
+  const [rows] = await pool.execute(
+    "SELECT merchant_serial FROM merchants WHERE merchant_serial LIKE ? ORDER BY merchant_serial DESC LIMIT 1",
+    [`${ymd}_%`],
+  );
+  const last = Array.isArray(rows) && rows.length ? String((rows[0] as any).merchant_serial || "") : "";
+  const lastSeq = Number(last.slice(-4)) || 0;
+  return `${ymd}_${String(lastSeq + 1).padStart(4, "0")}`;
 }
 
 // ── 은행 목록(코드/이름) ──
@@ -135,13 +224,18 @@ router.post("/email-verify/check", async (req, res) => {
 // ── 회원가입 ──
 router.post(
   "/register",
-  upload.fields([{ name: "biz_cert", maxCount: 1 }, { name: "bank_copy", maxCount: 1 }]),
+  upload.fields([
+    { name: "biz_cert", maxCount: 1 },
+    { name: "bank_copy", maxCount: 1 },
+    { name: "profile_image", maxCount: 1 },
+  ]),
   async (req, res) => {
     const { merchant_name, email, password, biz_no, bank_code, bank_account,
-            contact_name, contact_phone, contact_mobile } = req.body as Record<string, string>;
+            contact_name, contact_phone, contact_mobile, google_lat, google_lng } = req.body as Record<string, string>;
     const files = req.files as { [field: string]: Express.Multer.File[] };
     const bizCert = files?.biz_cert?.[0];
     const bankCopy = files?.bank_copy?.[0];
+    const profileImage = files?.profile_image?.[0];
 
     if (!merchant_name?.trim()) { res.status(400).json({ error: "가맹점명을 입력해 주세요." }); return; }
     if (!email?.trim() || !EMAIL_REGEX.test(email)) { res.status(400).json({ error: "올바른 이메일 주소를 입력해 주세요." }); return; }
@@ -159,6 +253,16 @@ router.post(
     if (!bankCopy) { res.status(400).json({ error: "은행계좌사본을 첨부해 주세요." }); return; }
     if (!password) { res.status(400).json({ error: "비밀번호를 입력해 주세요." }); return; }
     if (!PW_REGEX.test(password)) { res.status(400).json({ error: "비밀번호는 대소문자·숫자·특수문자를 포함한 8자 이상이어야 합니다." }); return; }
+    if (!profileImage) { res.status(400).json({ error: "Profile 이미지를 첨부해 주세요." }); return; }
+    const hasGoogleLat = google_lat !== undefined && google_lat !== null && String(google_lat).trim() !== "";
+    const hasGoogleLng = google_lng !== undefined && google_lng !== null && String(google_lng).trim() !== "";
+    const googleLatNum = hasGoogleLat ? Number(google_lat) : null;
+    const googleLngNum = hasGoogleLng ? Number(google_lng) : null;
+    if (hasGoogleLat !== hasGoogleLng) { res.status(400).json({ error: "Google 지도 위치는 위도와 경도를 함께 입력해 주세요." }); return; }
+    if (hasGoogleLat && (!Number.isFinite(googleLatNum) || !Number.isFinite(googleLngNum) || googleLatNum! < -90 || googleLatNum! > 90 || googleLngNum! < -180 || googleLngNum! > 180)) {
+      res.status(400).json({ error: "Google 지도 좌표가 올바르지 않습니다." });
+      return;
+    }
 
     const k = encKey();
     const bizNoDigits = biz_no.replace(/-/g, "");
@@ -170,29 +274,43 @@ router.post(
     }
 
     const hash = await bcrypt.hash(password, 12);
-    await pool.execute(
-      `INSERT INTO merchants
-       (merchant_name, contact_name, contact_phone, contact_mobile, email, biz_no, biz_cert_path, biz_cert_name,
-        bank_name, bank_code, bank_account, bank_copy_path, bank_copy_name,
-        password_hash, status)
-       VALUES (${ENC}, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ?, ?, ?, ?, ?, ${ENC}, ?, ?, ?, 'pending')`,
-      [
-        merchant_name.trim(), k,
-        contact_name.trim(), k,
-        (contact_phone?.replace(/[^0-9]/g, "") || null), k,
-        contact_mobile.replace(/[^0-9]/g, ""), k,
-        email.trim(), k,
-        bizNoDigits,
-        bizCert.path,
-        bizCert.originalname,
-        BANKS[bank_code],
-        bank_code,
-        bank_account.trim(), k,
-        bankCopy.path,
-        bankCopy.originalname,
-        hash,
-      ],
-    );
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const merchantSerial = await nextMerchantSerial();
+      try {
+        await pool.execute(
+          `INSERT INTO merchants
+           (merchant_serial, merchant_name, contact_name, contact_phone, contact_mobile, email, biz_no, biz_cert_path, biz_cert_name,
+            bank_name, bank_code, bank_account, bank_copy_path, bank_copy_name, profile_image_path, profile_image_name,
+            google_lat, google_lng, password_hash, status, roampay_status)
+           VALUES (?, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ${ENC}, ?, ?, ?, ?, ?, ${ENC}, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')`,
+          [
+            merchantSerial,
+            merchant_name.trim(), k,
+            contact_name.trim(), k,
+            (contact_phone?.replace(/[^0-9]/g, "") || null), k,
+            contact_mobile.replace(/[^0-9]/g, ""), k,
+            email.trim(), k,
+            bizNoDigits,
+            bizCert.path,
+            bizCert.originalname,
+            BANKS[bank_code],
+            bank_code,
+            bank_account.trim(), k,
+            bankCopy.path,
+            bankCopy.originalname,
+            profileImage.path,
+            profileImage.originalname,
+            googleLatNum,
+            googleLngNum,
+            hash,
+          ],
+        );
+        break;
+      } catch (error: any) {
+        if (error?.code === "ER_DUP_ENTRY" && attempt < 4) continue;
+        throw error;
+      }
+    }
 
     req.session.merchantEmailVerified = undefined;
 
@@ -212,16 +330,52 @@ router.post(
 
 // ── 로그인 ──
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body as { email?: string; password?: string };
-  if (!email || !password) {
-    res.status(400).json({ error: "이메일과 비밀번호를 입력해 주세요." });
+  const { country, identifier, email, password } = req.body as {
+    country?: string;
+    identifier?: string;
+    email?: string;
+    password?: string;
+  };
+  const loginCountry = String(country || "KR").toUpperCase();
+  const identifierDigits = String(identifier || "").replace(/[^0-9]/g, "");
+  if (!["KR", "TH"].includes(loginCountry)) {
+    res.status(400).json({ error: "국가를 선택해 주세요." });
+    return;
+  }
+  if (!identifierDigits || !email || !password) {
+    res.status(400).json({ error: loginCountry === "TH" ? "TIN 번호, 이메일, 비밀번호를 입력해 주세요." : "사업자등록번호, 이메일, 비밀번호를 입력해 주세요." });
+    return;
+  }
+
+  if (loginCountry === "TH") {
+    const emailLower = email.trim().toLowerCase();
+    const thaiMerchant = THAI_MERCHANT_PASSWORD_CONTACTS.find(m =>
+      m.email.toLowerCase() === emailLower && m.taxId.replace(/[^0-9]/g, "") === identifierDigits,
+    );
+    const hash = thaiMerchant ? thaiTempPasswordHashes.get(emailLower) : null;
+    const ok = !!thaiMerchant && (password === THAI_MERCHANT_PASSWORD || (!!hash && await bcrypt.compare(password, hash)));
+    if (!thaiMerchant || !ok) {
+      res.status(401).json({ error: "TIN 번호, 이메일 또는 비밀번호가 올바르지 않습니다." });
+      return;
+    }
+
+    req.session.merchant = { id: thaiMerchant.id, name: thaiMerchant.name, email: thaiMerchant.email, country: "TH" };
+    req.session.lastActivity = Date.now();
+
+    res.json({
+      ok: true,
+      merchant: req.session.merchant,
+      resetRequired: false,
+      prevIp: null,
+      prevLogoutAt: null,
+    });
     return;
   }
 
   const k = encKey();
   const [rows] = await pool.execute(
     `SELECT id, ${dec("merchant_name")}, ${dec("email")},
-            password_hash, status, password_reset_required, last_login_ip, last_logout_at
+            biz_no, password_hash, status, roampay_status, password_reset_required, last_login_ip, last_logout_at
      FROM merchants WHERE email = ${ENC}`,
     [k, k, email.trim(), k],
   );
@@ -231,9 +385,13 @@ router.post("/login", async (req, res) => {
     return;
   }
   const merchant = rows[0] as any;
+  if (String(merchant.biz_no || "").replace(/[^0-9]/g, "") !== identifierDigits) {
+    res.status(401).json({ error: "사업자등록번호, 이메일 또는 비밀번호가 올바르지 않습니다." });
+    return;
+  }
   const ok = await bcrypt.compare(password, String(merchant.password_hash));
   if (!ok) {
-    res.status(401).json({ error: "이메일 또는 비밀번호가 올바르지 않습니다." });
+    res.status(401).json({ error: "사업자등록번호, 이메일 또는 비밀번호가 올바르지 않습니다." });
     return;
   }
 
@@ -242,7 +400,12 @@ router.post("/login", async (req, res) => {
   if (merchant.status === "terminated") { res.status(403).json({ error: "종료된 계정입니다." }); return; }
   if (merchant.status === "locked")     { res.status(403).json({ error: "잠긴 계정입니다. 관리자에게 문의하세요." }); return; }
 
-  req.session.merchant = { id: Number(merchant.id), name: String(merchant.merchant_name), email: String(merchant.email) };
+  if (merchant.roampay_status !== "approved") {
+    res.status(403).json({ error: "roampay_approval_required", message: "Roampay 승인 대기 중입니다. Roampay 승인 완료 후 이용할 수 있습니다." });
+    return;
+  }
+
+  req.session.merchant = { id: Number(merchant.id), name: String(merchant.merchant_name), email: String(merchant.email), country: "KR" };
   req.session.lastActivity = Date.now();
 
   const ip = clientIp(req);
@@ -279,7 +442,11 @@ router.get("/me", requireMerchant, (req, res) => {
 
 // ── 비밀번호 분실(임시 비밀번호 발송) ──
 router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body as { email?: string };
+  const { country, email } = req.body as { country?: string; email?: string };
+  if (!["KR", "TH", "VN"].includes(String(country || ""))) {
+    res.status(400).json({ error: "국가를 선택해 주세요." });
+    return;
+  }
   if (!email?.trim()) {
     res.status(400).json({ error: "이메일을 입력해 주세요." });
     return;
@@ -291,9 +458,43 @@ router.post("/forgot-password", async (req, res) => {
     [k, k, email.trim(), k],
   );
 
-  // 계정 존재 여부를 노출하지 않도록 동일한 안내 메시지를 반환한다.
-  const msg = { ok: true, message: "입력하신 이메일과 일치하는 계정이 있으면 임시 비밀번호가 발송됩니다." };
-  if (!Array.isArray(rows) || rows.length === 0) { res.json(msg); return; }
+  const msg = { ok: true, message: "입력하신 국가와 이메일에 일치하는 계정이 있으면 임시 비밀번호가 발송됩니다." };
+  if (!Array.isArray(rows) || rows.length === 0) {
+    if (country === "TH") {
+      const emailLower = email.trim().toLowerCase();
+      const contact = THAI_MERCHANT_PASSWORD_CONTACTS.find(m => m.email.toLowerCase() === emailLower);
+      if (contact) {
+        const tempPw = THAI_MERCHANT_PASSWORD;
+        thaiTempPasswordHashes.set(contact.email.toLowerCase(), await bcrypt.hash(THAI_MERCHANT_PASSWORD, 12));
+        try {
+          await sendEmail({
+            templateKey: "thai_merchant_temp_password",
+            to: contact.email,
+            subject: "[Tour Tracker] 태국 가맹점 임시 비밀번호 안내",
+            html: `<div style="font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;max-width:520px;line-height:1.7;color:#334155;">
+              <h2 style="color:#16a34a;margin:0 0 14px;">임시 비밀번호 안내</h2>
+              <p><b>${contact.contactName}</b> 담당자님, <b>${contact.name}</b> 태국 가맹점 계정의 임시 비밀번호입니다.</p>
+              <div style="text-align:center;margin:22px 0;">
+                <div style="display:inline-block;background:#f1f5f9;border:2px dashed #cbd5e1;border-radius:12px;padding:16px 28px;">
+                  <div style="font-size:24px;font-weight:800;letter-spacing:3px;color:#1e293b;font-family:'Courier New',monospace;user-select:all;-webkit-user-select:all;">${tempPw}</div>
+                </div>
+              </div>
+              <p style="color:#dc2626;font-size:13px;font-weight:700;">로그인 후 반드시 새 비밀번호로 변경해 주세요.</p>
+              <p style="font-size:12px;color:#64748b;">본인이 요청하지 않았다면 이 메일을 무시해 주세요.</p>
+            </div>`,
+            vars: {
+              merchantName: contact.name,
+              contactName: contact.contactName,
+              email: contact.email,
+              tempPassword: tempPw,
+            },
+          });
+        } catch (_) {}
+      }
+    }
+    res.json(msg);
+    return;
+  }
 
   const merchant = rows[0] as any;
   if (merchant.status !== "approved") { res.json(msg); return; }
@@ -433,9 +634,37 @@ router.post("/gift-grant", requireMerchant, async (req, res) => {
 // ── 기본 정보 조회 ──
 router.get("/profile", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
+  const thaiMerchant = THAI_MERCHANT_PASSWORD_CONTACTS.find(m => m.id === merchantId);
+  if (thaiMerchant || req.session.merchant?.country === "TH") {
+    const m = thaiMerchant || {
+      id: merchantId,
+      taxId: "",
+      email: req.session.merchant!.email,
+      name: req.session.merchant!.name,
+      contactName: "",
+    };
+    req.session.merchant!.country = "TH";
+    res.json({
+      ok: true,
+      profile: {
+        ...m,
+        country: "TH",
+        merchant_id: m.id,
+        merchant_serial: (m as any).merchant_serial || "",
+        merchant_name: m.name,
+        business_name: m.name,
+        legal_name: (m as any).legal_name || m.name,
+        contact_name: m.contactName,
+        email: m.email,
+        tax_id: m.taxId,
+        biz_no: m.taxId,
+      },
+    });
+    return;
+  }
   const k = encKey();
   const [rows] = await pool.execute(
-    `SELECT ${dec("merchant_name")}, ${dec("contact_name")}, ${dec("contact_phone")}, ${dec("contact_mobile")},
+    `SELECT merchant_serial, ${dec("merchant_name")}, ${dec("contact_name")}, ${dec("contact_phone")}, ${dec("contact_mobile")},
             ${dec("email")}, ${dec("bank_account")}, biz_no, bank_name, bank_code,
             address_zip, address1, address2
      FROM merchants WHERE id = ?`,
@@ -446,6 +675,8 @@ router.get("/profile", requireMerchant, async (req, res) => {
   res.json({
     ok: true,
     profile: {
+      merchant_serial: m.merchant_serial,
+      country: "KR",
       merchant_name: m.merchant_name, contact_name: m.contact_name,
       contact_phone: m.contact_phone, contact_mobile: m.contact_mobile,
       email: m.email, biz_no: m.biz_no,
@@ -511,16 +742,46 @@ router.put("/profile", requireMerchant, async (req, res) => {
 router.get("/projects", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
   const { project_name = "", organization = "", status = "", applied = "" } = req.query as Record<string, string>;
+  const isThaiDummyMerchant = THAI_MERCHANT_PASSWORD_CONTACTS.some(m => m.id === merchantId);
+  const requestStates = getThaiTourMerchantProjectsFor(merchantId);
+  const requestStateByProject = new Map(requestStates.map(row => [row.projectId, row.state]));
+  let thaiDbApps: any[] = [];
+  let thaiDbAppByProject = new Map<number, any>();
+  if (isThaiDummyMerchant) {
+    const [dbAppRows] = await pool.execute(
+      `SELECT project_id, support_type, status, applied_at, decided_at
+         FROM project_applications
+        WHERE merchant_id = ?
+          AND support_type = 'tour'
+          AND status IN ('pending','approved','rejected')`,
+      [merchantId],
+    );
+    thaiDbApps = Array.isArray(dbAppRows) ? (dbAppRows as any[]) : [];
+    thaiDbAppByProject = new Map(thaiDbApps.map(row => [Number(row.project_id), row]));
+  }
 
-  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND EXISTS (SELECT 1 FROM project_applications pa WHERE pa.project_id = p.id AND pa.merchant_id = ?)))";
-  const params: Array<string | number> = [merchantId];
+  let where: string;
+  const params: Array<string | number> = [];
+  if (isThaiDummyMerchant) {
+    const projectIds = Array.from(new Set([
+      ...requestStates.map(row => Number(row.projectId)),
+      ...thaiDbApps.map(row => Number(row.project_id)),
+    ].filter(id => Number.isFinite(id) && id > 0)));
+    if (projectIds.length === 0 || applied === "n") {
+      res.json({ ok: true, data: [] });
+      return;
+    }
+    where = `WHERE p.id IN (${projectIds.map(() => "?").join(",")})`;
+    params.push(...projectIds);
+  } else {
+    where = "WHERE EXISTS (SELECT 1 FROM project_applications pa WHERE pa.project_id = p.id AND pa.merchant_id = ? AND pa.status IN ('pending','approved','rejected'))";
+    params.push(merchantId);
+    if (applied === "n") where += " AND 1 = 0";
+  }
 
   if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
   if (organization.trim()) { where += " AND h.organization_name LIKE ?"; params.push(`%${organization.trim()}%`); }
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
-  if (applied === "y") where += " AND EXISTS (SELECT 1 FROM project_applications pa2 WHERE pa2.project_id = p.id AND pa2.merchant_id = ?)";
-  else if (applied === "n") where += " AND NOT EXISTS (SELECT 1 FROM project_applications pa3 WHERE pa3.project_id = p.id AND pa3.merchant_id = ?)";
-  if (applied === "y" || applied === "n") params.push(merchantId);
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.from_date, p.to_date,
@@ -538,7 +799,34 @@ router.get("/projects", requireMerchant, async (req, res) => {
 
   // 각 프로젝트별 가맹점의 유형별 신청 상태 + PIN 매핑
   const projects = Array.isArray(rows) ? (rows as any[]) : [];
-  if (projects.length > 0) {
+  if (projects.length > 0 && isThaiDummyMerchant) {
+    for (const p of projects) {
+      const state = requestStateByProject.get(Number(p.id));
+      const dbApp = thaiDbAppByProject.get(Number(p.id));
+      const appStatus = state?.approval_status === "approved"
+        ? "approved"
+        : state?.approval_status === "rejected"
+          ? "rejected"
+          : (dbApp?.status || "pending");
+      p.applications = [{
+        support_type: "tour",
+        status: appStatus,
+        applied_at: state?.requested_at || dbApp?.applied_at || null,
+        decided_at: state?.approved_at || state?.rejected_at || dbApp?.decided_at || null,
+      }];
+      p.pin_code = null;
+      p.all_approved = appStatus === "approved";
+      p.has_any_application = true;
+      p.application_status = appStatus;
+      p.approval_request = {
+        status: appStatus,
+        requested_at: state?.approval_sent_at || state?.requested_at || dbApp?.applied_at || null,
+        decided_at: state?.approved_at || state?.rejected_at || dbApp?.decided_at || null,
+        commission_rate: state?.commission_rate ?? null,
+        organization_name: p.organization_name,
+      };
+    }
+  } else if (projects.length > 0) {
     const ids = projects.map(p => p.id);
     const placeholders = ids.map(() => "?").join(",");
     const [appRows] = await pool.execute(
@@ -546,7 +834,7 @@ router.get("/projects", requireMerchant, async (req, res) => {
               fn_decrypt(p.pin_enc, ?) AS pin_code
        FROM project_applications pa
        JOIN projects p ON p.id = pa.project_id
-       WHERE pa.merchant_id = ? AND pa.project_id IN (${placeholders})`,
+       WHERE pa.merchant_id = ? AND pa.status IN ('pending','approved','rejected') AND pa.project_id IN (${placeholders})`,
       [encKey(), merchantId, ...ids],
     );
     const byProj = new Map<number, any[]>();
@@ -577,37 +865,130 @@ router.get("/projects", requireMerchant, async (req, res) => {
       p.application_status = apps.length > 0
         ? (apps.find(a => a.status === "pending")?.status || apps[0].status)
         : null;
+      const tourApp = apps.find(a => a.support_type === "tour") || apps[0] || null;
+      const state = requestStateByProject.get(Number(p.id));
+      p.approval_request = tourApp ? {
+        status: tourApp.status,
+        requested_at: state?.approval_sent_at || state?.requested_at || tourApp.applied_at || null,
+        decided_at: tourApp.decided_at || state?.approved_at || state?.rejected_at || null,
+        commission_rate: state?.commission_rate ?? null,
+        organization_name: p.organization_name,
+      } : null;
     }
   }
 
   res.json({ ok: true, data: projects });
 });
 
-// ── 프로젝트: 조회조건 전체 엑셀 다운로드 (파일명: 소속기관_프로젝트일련번호) ──
+router.post("/projects/:id/approval-request", requireMerchant, async (req, res) => {
+  const merchantId = req.session.merchant!.id;
+  const projectId = Number(req.params.id);
+  const decision = String(req.body?.decision || "");
+  if (!projectId || Number.isNaN(projectId)) {
+    res.status(400).json({ error: "프로젝트가 올바르지 않습니다." });
+    return;
+  }
+  if (!["approved", "rejected"].includes(decision)) {
+    res.status(400).json({ error: "승인 또는 반려 중 하나를 선택해 주세요." });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const stateMap = getThaiTourMerchantState(projectId);
+  const state = stateMap.get(merchantId);
+  if (state) {
+    state.approval_status = decision as "approved" | "rejected";
+    if (decision === "approved") state.approved_at = now;
+    else state.rejected_at = now;
+    stateMap.set(merchantId, state);
+  }
+
+  const [existingRows] = await pool.execute(
+    "SELECT id FROM project_applications WHERE project_id = ? AND merchant_id = ? AND support_type = 'tour' LIMIT 1",
+    [projectId, merchantId],
+  );
+  const existing = (Array.isArray(existingRows) ? existingRows[0] : null) as any;
+  if (existing) {
+    await pool.execute(
+      "UPDATE project_applications SET status = ?, decided_at = NOW(), decided_reason = ?, updated_at = NOW() WHERE id = ?",
+      [decision, decision === "approved" ? null : "가맹점 반려", existing.id],
+    );
+  } else if (!state) {
+    res.status(404).json({ error: "승인 요청을 찾을 수 없습니다." });
+    return;
+  }
+
+  res.json({ ok: true, status: decision, message: decision === "approved" ? "프로젝트 참여 요청을 승인했습니다." : "프로젝트 참여 요청을 반려했습니다." });
+});
+
+// ── 프로젝트: 조회조건 전체 엑셀 다운로드 (파일명: 주관기관_프로젝트일련번호) ──
 router.get("/projects/export", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
   const { project_name = "", organization = "", status = "", applied = "" } = req.query as Record<string, string>;
+  const isThaiDummyMerchant = THAI_MERCHANT_PASSWORD_CONTACTS.some(m => m.id === merchantId);
+  const thaiProjectStates = isThaiDummyMerchant ? getThaiTourMerchantProjectsFor(merchantId) : [];
+  const thaiStateByProject = new Map(thaiProjectStates.map(row => [row.projectId, row.state]));
+  let thaiDbApps: any[] = [];
+  let thaiDbAppByProject = new Map<number, any>();
+  if (isThaiDummyMerchant) {
+    const [dbAppRows] = await pool.execute(
+      `SELECT project_id, status, applied_at, decided_at
+         FROM project_applications
+        WHERE merchant_id = ?
+          AND support_type = 'tour'
+          AND status IN ('pending','approved','rejected')`,
+      [merchantId],
+    );
+    thaiDbApps = Array.isArray(dbAppRows) ? (dbAppRows as any[]) : [];
+    thaiDbAppByProject = new Map(thaiDbApps.map(row => [Number(row.project_id), row]));
+  }
 
-  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND pa.id IS NOT NULL))";
-  const params: Array<string | number> = [merchantId];
+  let where: string;
+  const params: Array<string | number> = [];
+  if (isThaiDummyMerchant) {
+    const projectIds = Array.from(new Set([
+      ...thaiProjectStates.map(row => Number(row.projectId)),
+      ...thaiDbApps.map(row => Number(row.project_id)),
+    ].filter(id => Number.isFinite(id) && id > 0)));
+    if (projectIds.length === 0 || applied === "n") {
+      where = "WHERE 1 = 0";
+    } else {
+      where = `WHERE p.id IN (${projectIds.map(() => "?").join(",")})`;
+      params.push(...projectIds);
+    }
+  } else {
+    where = "WHERE EXISTS (SELECT 1 FROM project_applications pax WHERE pax.project_id = p.id AND pax.merchant_id = ? AND pax.status IN ('pending','approved'))";
+    params.push(merchantId);
+    if (applied === "n") where += " AND 1 = 0";
+  }
   if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
   if (organization.trim()) { where += " AND h.organization_name LIKE ?"; params.push(`%${organization.trim()}%`); }
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
-  if (applied === "y") where += " AND pa.id IS NOT NULL";
-  else if (applied === "n") where += " AND pa.id IS NULL";
 
   const [rows] = await pool.execute(
     `SELECT p.project_serial, p.project_name, p.status, p.from_date, p.to_date, p.gift_amount,
             h.organization_name, DATEDIFF(p.to_date, CURDATE()) AS remaining_days,
-            pa.status AS application_status
+            ${isThaiDummyMerchant ? "NULL" : "pa.status"} AS application_status,
+            p.id
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
-     LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
+     LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ? AND pa.status IN ('pending','approved')
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    params,
+    [merchantId, ...params],
   );
   const list = Array.isArray(rows) ? (rows as any[]) : [];
+  if (isThaiDummyMerchant) {
+    for (const p of list) {
+      const state = thaiStateByProject.get(Number(p.id));
+      const dbApp = thaiDbAppByProject.get(Number(p.id));
+      p.application_status = state?.approval_status === "approved"
+        ? "approved"
+        : state?.approval_status === "rejected"
+          ? "rejected"
+          : (dbApp?.status || "pending");
+    }
+  }
 
   const STATUS_KO: Record<string, string> = { ready_to_start: "시작대기", started: "진행중", completed: "종료" };
   const APP_KO: Record<string, string> = { pending: "지원중", approved: "승인", rejected: "거절" };
@@ -621,7 +1002,7 @@ router.get("/projects/export", requireMerchant, async (req, res) => {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("프로젝트");
   ws.columns = [
-    { header: "소속기관", key: "org", width: 22 },
+    { header: "주관기관", key: "org", width: 22 },
     { header: "프로젝트명", key: "name", width: 26 },
     { header: "일련번호", key: "serial", width: 16 },
     { header: "상태", key: "status", width: 10 },
@@ -647,7 +1028,7 @@ router.get("/projects/export", requireMerchant, async (req, res) => {
   }
   const gc = ws.getColumn("gift_amount"); gc.numFmt = "#,##0"; gc.alignment = { horizontal: "right" };
 
-  // 파일명: 소속기관_프로젝트일련번호 (다건이면 첫(상단) 행 기준)
+  // 파일명: 주관기관_프로젝트일련번호 (다건이면 첫(상단) 행 기준)
   const first = list[0] || {};
   const fnameBase = `${first.organization_name || "merchant"}_${first.project_serial || "projects"}`;
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -876,14 +1257,13 @@ router.get("/settlement", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
   const { project_name = "", organization = "", status = "", applied = "" } = req.query as Record<string, string>;
 
-  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND pa.id IS NOT NULL))";
-  const params: Array<string | number> = [merchantId];
+  let where = "WHERE 1=1";
+  const params: Array<string | number> = [];
 
   if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
   if (organization.trim()) { where += " AND h.organization_name LIKE ?"; params.push(`%${organization.trim()}%`); }
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
-  if (applied === "y") where += " AND pa.id IS NOT NULL";
-  else if (applied === "n") where += " AND pa.id IS NULL";
+  if (applied === "n") where += " AND 1=0";
 
   const [rows] = await pool.execute(
     `SELECT p.id, p.project_name, p.project_serial, p.status, p.gift_amount, h.organization_name,
@@ -896,10 +1276,15 @@ router.get("/settlement", requireMerchant, async (req, res) => {
             (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_users
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
-     LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
+     JOIN (
+       SELECT project_id, merchant_id, 'approved' AS status
+         FROM project_applications
+        WHERE merchant_id = ? AND status = 'approved'
+        GROUP BY project_id, merchant_id
+     ) pa ON pa.project_id = p.id
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
+    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
   );
 
   res.json({ ok: true, data: Array.isArray(rows) ? rows : [] });
@@ -910,13 +1295,12 @@ router.get("/settlement/export", requireMerchant, async (req, res) => {
   const merchantId = req.session.merchant!.id;
   const { project_name = "", organization = "", status = "", applied = "" } = req.query as Record<string, string>;
 
-  let where = "WHERE (p.status IN ('ready_to_start','started') OR (p.status = 'completed' AND pa.id IS NOT NULL))";
-  const params: Array<string | number> = [merchantId];
+  let where = "WHERE 1=1";
+  const params: Array<string | number> = [];
   if (project_name.trim()) { where += " AND p.project_name LIKE ?"; params.push(`%${project_name.trim()}%`); }
   if (organization.trim()) { where += " AND h.organization_name LIKE ?"; params.push(`%${organization.trim()}%`); }
   if (["ready_to_start", "started", "completed"].includes(status)) { where += " AND p.status = ?"; params.push(status); }
-  if (applied === "y") where += " AND pa.id IS NOT NULL";
-  else if (applied === "n") where += " AND pa.id IS NULL";
+  if (applied === "n") where += " AND 1=0";
 
   const [rows] = await pool.execute(
     `SELECT p.project_name, p.project_serial, p.status, p.gift_amount, h.organization_name,
@@ -929,10 +1313,15 @@ router.get("/settlement/export", requireMerchant, async (req, res) => {
             (SELECT COUNT(DISTINCT gr.visitor_id) FROM gift_redemptions gr WHERE gr.project_id = p.id AND gr.merchant_id = ? AND gr.redemption_type = 'grant') AS grant_users
      FROM projects p
      JOIN hosts h ON h.id = p.host_id
-     LEFT JOIN project_applications pa ON pa.project_id = p.id AND pa.merchant_id = ?
+     JOIN (
+       SELECT project_id, merchant_id, 'approved' AS status
+         FROM project_applications
+        WHERE merchant_id = ? AND status = 'approved'
+        GROUP BY project_id, merchant_id
+     ) pa ON pa.project_id = p.id
      ${where}
      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC`,
-    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
+    [merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, merchantId, ...params],
   );
   const list = Array.isArray(rows) ? (rows as any[]) : [];
 
@@ -943,7 +1332,7 @@ router.get("/settlement/export", requireMerchant, async (req, res) => {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("정산");
   ws.columns = [
-    { header: "소속기관", key: "org", width: 22 },
+    { header: "주관기관", key: "org", width: 22 },
     { header: "프로젝트명", key: "name", width: 26 },
     { header: "일련번호", key: "serial", width: 16 },
     { header: "프로젝트상태", key: "status", width: 12 },
@@ -981,7 +1370,7 @@ router.get("/settlement/export", requireMerchant, async (req, res) => {
     const col = ws.getColumn(key); col.numFmt = "#,##0"; col.alignment = { horizontal: "right" };
   });
 
-  // 파일명: 소속기관_프로젝트일련번호 (다건이면 첫(상단) 행 기준)
+  // 파일명: 주관기관_프로젝트일련번호 (다건이면 첫(상단) 행 기준)
   const first = list[0] || {};
   const fnameBase = `${first.organization_name || "merchant"}_${first.project_serial || "settlement"}`;
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

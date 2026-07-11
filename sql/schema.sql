@@ -1,5 +1,5 @@
 -- ============================================================
---  모노라마 트래커 — MariaDB 스키마 생성 스크립트
+--  Tour Tracker — MariaDB 스키마 생성 스크립트
 --  실행:  mysql -u <user> -p < sql/schema.sql
 --  (DB 사용자/권한 생성은 sql/init_tracker.sql 참고. 앱은 .env의
 --   ENCRYPTION_KEY를 fn_encrypt/fn_decrypt 의 키 인자로 전달한다.)
@@ -31,6 +31,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- fn_encrypt(평문, ENCRYPTION_KEY) 의 HEX 결과를 저장합니다. 아래 함수 정의 참조.
 CREATE TABLE IF NOT EXISTS hosts (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  host_serial VARCHAR(13) NOT NULL,
   host_name VARCHAR(512) NOT NULL,
   host_email VARCHAR(512) NOT NULL UNIQUE,
   mobile_phone VARCHAR(255) NULL,
@@ -52,7 +53,8 @@ CREATE TABLE IF NOT EXISTS hosts (
   last_logout_at DATETIME NULL,
   password_reset_required TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_host_serial (host_serial)
 );
 
 CREATE TABLE IF NOT EXISTS host_email_verify_codes (
@@ -140,7 +142,7 @@ CREATE TABLE IF NOT EXISTS project_locations (
   project_id BIGINT NOT NULL,
   location_seq INT NOT NULL,
   display_seq INT NOT NULL,
-  dest_type ENUM('location','exhibit') NOT NULL DEFAULT 'location',
+  dest_type ENUM('location','exhibit','merchant') NOT NULL DEFAULT 'location',
   location_name VARCHAR(100) NOT NULL,
   kakao_lat DECIMAL(12,8) NULL,
   kakao_lng DECIMAL(12,8) NULL,
@@ -297,6 +299,7 @@ CREATE TABLE IF NOT EXISTS visitor_push_subscriptions (
 
 CREATE TABLE IF NOT EXISTS merchants (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  merchant_serial VARCHAR(13) NOT NULL,
   merchant_name VARCHAR(512) NOT NULL,
   contact_name VARCHAR(512) NULL,
   contact_phone VARCHAR(128) NULL,
@@ -310,19 +313,35 @@ CREATE TABLE IF NOT EXISTS merchants (
   bank_account VARCHAR(512) NULL,
   bank_copy_path VARCHAR(255) NULL,
   bank_copy_name VARCHAR(255) NULL,
+  profile_image_path VARCHAR(255) NULL,
+  profile_image_name VARCHAR(255) NULL,
   address_zip VARCHAR(20) NULL,
   address1 VARCHAR(255) NULL,
   address2 VARCHAR(255) NULL,
+  google_lat DECIMAL(12,8) NULL,
+  google_lng DECIMAL(12,8) NULL,
   password_hash VARCHAR(80) NOT NULL,
   status ENUM('pending','approved','cancelled','terminated','locked') NOT NULL DEFAULT 'pending',
   status_reason VARCHAR(255) NULL,
+  system_approved_at DATETIME NULL,
+  roampay_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  roampay_approved_at DATETIME NULL,
+  roampay_status_reason VARCHAR(255) NULL,
+  roampay_request_status ENUM('none','approval_requested','request_received','request_unavailable') NOT NULL DEFAULT 'none',
+  roampay_requested_at DATETIME NULL,
+  roampay_request_attempts INT NOT NULL DEFAULT 0,
+  roampay_response_status_code INT NULL,
+  roampay_response_body LONGTEXT NULL,
+  roampay_response_at DATETIME NULL,
   last_login_ip VARCHAR(80) NULL,
   last_login_at DATETIME NULL,
   last_logout_at DATETIME NULL,
   password_reset_required TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_merchant_email (email)
+  UNIQUE KEY uq_merchant_serial (merchant_serial),
+  UNIQUE KEY uq_merchant_email (email),
+  KEY idx_merchants_roampay_request_status (roampay_request_status)
 );
 
 -- 가맹점이 시작대기/진행중 프로젝트에 직접 지원 → host(주최)가 승인/거절
@@ -372,6 +391,32 @@ CREATE TABLE IF NOT EXISTS login_histories (
   login_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   logout_at DATETIME NULL,
   session_id VARCHAR(200) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actor_type ENUM('host','supervisor','merchant','partner','system','anonymous') NOT NULL DEFAULT 'anonymous',
+  actor_id VARCHAR(120) NULL,
+  actor_label VARCHAR(255) NULL,
+  action ENUM('create','update','delete','login','logout','request','other') NOT NULL DEFAULT 'request',
+  entity_type VARCHAR(150) NULL,
+  entity_id VARCHAR(120) NULL,
+  request_method VARCHAR(10) NULL,
+  request_path VARCHAR(512) NULL,
+  request_ip VARCHAR(80) NULL,
+  user_agent VARCHAR(512) NULL,
+  status_code INT NULL,
+  success TINYINT(1) NOT NULL DEFAULT 1,
+  before_json LONGTEXT NULL,
+  after_json LONGTEXT NULL,
+  metadata_json LONGTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_audit_occurred (occurred_at),
+  KEY idx_audit_actor (actor_type, actor_id),
+  KEY idx_audit_entity (entity_type, entity_id),
+  KEY idx_audit_action (action),
+  KEY idx_audit_request (request_method, request_path(191))
 );
 
 CREATE TABLE IF NOT EXISTS email_logs (

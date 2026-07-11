@@ -1,4 +1,6 @@
 import path from "node:path";
+import fs from "node:fs/promises";
+import crypto from "node:crypto";
 import express from "express";
 import cors from "cors";
 import session from "express-session";
@@ -24,13 +26,16 @@ import inquiryRouter from "./routes/inquiry";
 import videoRouter from "./routes/video";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
+import { auditMutations } from "./middleware/audit";
 import { scheduleProjectEndingNotifications } from "./jobs/project-ending.job";
+import { encKey } from "./utils/encrypt";
 
 dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const errorPageDir = path.join(process.cwd(), "public", "errors");
+const SESSION_TTL_MS = 10 * 60 * 1000;
 
 function acceptsHtml(req: express.Request): boolean {
   return !req.path.startsWith("/api/") && req.accepts(["html", "json"]) === "html";
@@ -53,12 +58,82 @@ function sendErrorPage(
   });
 }
 
+function toUploadUrl(p?: string | null): string | null {
+  if (!p) return null;
+  const norm = String(p).replace(/\\/g, "/");
+  const idx = norm.lastIndexOf("/uploads/");
+  if (idx >= 0) return norm.slice(idx);
+  const rel = norm.indexOf("uploads/");
+  return rel >= 0 ? `/${norm.slice(rel)}` : norm;
+}
+
+const landingMerchantProfileImages: Record<string, string> = {
+  "1001": "/uploads/merchant-profiles/bangkok-sky-bistro-400.png",
+  "1002": "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+  "1003": "/uploads/merchant-profiles/siam-artisan-market-400.png",
+  "1004": "/uploads/merchant-profiles/pattaya-beach-grill-400.png",
+  "1005": "/uploads/merchant-profiles/jomtien-tour-shop-400.png",
+  "1006": "/uploads/merchant-profiles/pattaya-wellness-spa-400.png",
+  "20260704_TH001": "/uploads/merchant-profiles/bangkok-sky-bistro-400.png",
+  "20260704_TH002": "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+  "20260704_TH003": "/uploads/merchant-profiles/siam-artisan-market-400.png",
+  "20260704_TH004": "/uploads/merchant-profiles/pattaya-beach-grill-400.png",
+  "20260704_TH005": "/uploads/merchant-profiles/jomtien-tour-shop-400.png",
+  "20260704_TH006": "/uploads/merchant-profiles/pattaya-wellness-spa-400.png",
+  "Bangkok Sky Bistro": "/uploads/merchant-profiles/bangkok-sky-bistro-400.png",
+  "Chao Phraya Cafe": "/uploads/merchant-profiles/chao-phraya-cafe-400.png",
+  "Siam Artisan Market": "/uploads/merchant-profiles/siam-artisan-market-400.png",
+  "Pattaya Beach Grill": "/uploads/merchant-profiles/pattaya-beach-grill-400.png",
+  "Jomtien Tour Shop": "/uploads/merchant-profiles/jomtien-tour-shop-400.png",
+  "Pattaya Wellness Spa": "/uploads/merchant-profiles/pattaya-wellness-spa-400.png",
+};
+
+function landingMerchantProfileImage(row: any): string | null {
+  const fromDb = toUploadUrl(row?.profile_image_path);
+  if (fromDb) return fromDb;
+  const keys = [
+    String(row?.merchant_id || ""),
+    String(row?.merchant_serial || ""),
+    String(row?.merchant_name || ""),
+  ];
+  for (const key of keys) {
+    if (key && landingMerchantProfileImages[key]) return landingMerchantProfileImages[key];
+  }
+  return null;
+}
+
+const landingProjectRepresentativeImages: Record<string, string> = {
+  "20260704_0001": "/uploads/project-representatives/bangkok-old-city-heritage-walk.png",
+  "20260704_0002": "/uploads/project-representatives/bangkok-food-night-market-route.png",
+  "20260704_0003": "/uploads/project-representatives/bangkok-art-cafe-riverside-tour.png",
+  "20260704_0004": "/uploads/project-representatives/pattaya-beach-sunset-trail.png",
+  "20260704_0005": "/uploads/project-representatives/pattaya-family-marine-adventure.png",
+  "Bangkok Old City Heritage Walk": "/uploads/project-representatives/bangkok-old-city-heritage-walk.png",
+  "Bangkok Food & Night Market Route": "/uploads/project-representatives/bangkok-food-night-market-route.png",
+  "Bangkok Art, Cafe & Riverside Tour": "/uploads/project-representatives/bangkok-art-cafe-riverside-tour.png",
+  "Pattaya Beach & Sunset Trail": "/uploads/project-representatives/pattaya-beach-sunset-trail.png",
+  "Pattaya Family Marine Adventure": "/uploads/project-representatives/pattaya-family-marine-adventure.png",
+};
+
+function landingProjectRepresentativeImage(row: any): string | null {
+  const fromDb = toUploadUrl(row?.supervisor_mobile_image_path);
+  if (fromDb) return fromDb;
+  const keys = [
+    String(row?.project_serial || ""),
+    String(row?.project_name || ""),
+  ];
+  for (const key of keys) {
+    if (key && landingProjectRepresentativeImages[key]) return landingProjectRepresentativeImages[key];
+  }
+  return null;
+}
+
 const MySQLStore = MySQLStoreFactory(session as any);
 const sessionStore = new MySQLStore(
   {
     clearExpired: true,
     checkExpirationInterval: 60 * 1000,
-    expiration: 4 * 60 * 1000,
+    expiration: SESSION_TTL_MS,
     createDatabaseTable: true,
     schema: {
       tableName: "sessions",
@@ -76,6 +151,31 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+app.all("/webhook", async (req, res, next) => {
+  try {
+    const body =
+      req.body && typeof req.body === "object" && Object.keys(req.body).length > 0
+        ? req.body
+        : req.query;
+    const payload = {
+      received_at: new Date().toISOString(),
+      method: req.method,
+      content: body,
+    };
+    const dir = path.join(process.cwd(), "dist");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const suffix = crypto.randomBytes(4).toString("hex");
+    const filePath = path.join(dir, `webhook-${stamp}-${suffix}.json`);
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(payload, null, 2), "utf8");
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use(
   session({
     secret: process.env.SESSION_SECRET ?? "tracker_secret",
@@ -86,7 +186,7 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: false,
-      maxAge: 4 * 60 * 1000,
+      maxAge: SESSION_TTL_MS,
     },
   }),
 );
@@ -97,6 +197,7 @@ app.post("/api/session-extend", extendSession);
 
 app.use(sessionTimeout);
 app.use(touchActivity);
+app.use(auditMutations);
 
 app.use("/api/host", hostAuthRouter);
 app.use("/api/host", hostProjectRouter);
@@ -115,9 +216,89 @@ app.use("/api/grid-prefs", gridPrefsRouter);      // 사용자별 그리드 컬�
 app.use("/api/inquiry", inquiryRouter);           // 문의사항 작성/관리 + 공개 게시판
 app.use("/api/video", videoRouter);               // 동영상(YouTube) 등록/관리 + 공개 게시판
 
+app.get("/api/public/landing", async (_req, res) => {
+  const k = encKey();
+  const [projectRows] = await pool.execute(
+    `SELECT p.id, p.project_name, p.project_serial, p.description, p.from_date, p.to_date,
+            p.gift_amount, p.prize_amount,
+            p.status, p.supervisor_mobile_image_path, h.organization_name,
+            (SELECT COUNT(*) FROM project_locations pl WHERE pl.project_id = p.id AND pl.disabled = 0) AS route_count,
+            (SELECT COUNT(DISTINCT pa.merchant_id)
+               FROM project_applications pa
+              WHERE pa.project_id = p.id AND pa.status = 'approved') AS merchant_count
+       FROM projects p
+       JOIN hosts h ON h.id = p.host_id
+      WHERE p.status IN ('ready_to_start', 'started', 'completed')
+      ORDER BY FIELD(p.status, 'started', 'ready_to_start', 'completed'), p.from_date DESC, p.id DESC
+      LIMIT 24`,
+  );
+
+  const projects = (Array.isArray(projectRows) ? projectRows : []).map((p: any) => ({
+    id: Number(p.id),
+    name: String(p.project_name || ""),
+    serial: String(p.project_serial || ""),
+    description: String(p.description || ""),
+    from_date: p.from_date,
+    to_date: p.to_date,
+    status: String(p.status || ""),
+    organization_name: String(p.organization_name || ""),
+    image_url: landingProjectRepresentativeImage(p),
+    gift_amount: Number(p.gift_amount || 0),
+    prize_amount: Number(p.prize_amount || 0),
+    route_count: Number(p.route_count || 0),
+    merchant_count: Number(p.merchant_count || 0),
+    visitor_url: `/v/${encodeURIComponent(String(p.project_serial || ""))}`,
+  }));
+
+  const ids = projects.map((p) => p.id);
+  let merchants: any[] = [];
+  if (ids.length > 0) {
+    const placeholders = ids.map(() => "?").join(",");
+    const [merchantRows] = await pool.execute(
+      `SELECT pa.project_id, m.id AS merchant_id, m.merchant_serial, m.profile_image_path,
+              fn_decrypt(m.merchant_name, ?) AS merchant_name,
+              fn_decrypt(m.contact_name, ?) AS contact_name,
+              fn_decrypt(m.contact_phone, ?) AS contact_phone,
+              fn_decrypt(m.contact_mobile, ?) AS contact_mobile,
+              m.address_zip, m.address1, m.address2, m.google_lat, m.google_lng,
+              GROUP_CONCAT(DISTINCT pa.support_type ORDER BY pa.support_type SEPARATOR ',') AS support_types
+         FROM project_applications pa
+         JOIN merchants m ON m.id = pa.merchant_id
+        WHERE pa.status = 'approved'
+          AND m.status = 'approved'
+          AND pa.project_id IN (${placeholders})
+        GROUP BY pa.project_id, m.id, m.merchant_serial, m.profile_image_path, merchant_name,
+                 contact_name, contact_phone, contact_mobile, m.address_zip, m.address1, m.address2, m.google_lat, m.google_lng
+        ORDER BY merchant_name ASC`,
+      [k, k, k, k, ...ids],
+    );
+    merchants = (Array.isArray(merchantRows) ? merchantRows : []).map((m: any) => ({
+      project_id: Number(m.project_id),
+      id: Number(m.merchant_id),
+      serial: String(m.merchant_serial || ""),
+      name: String(m.merchant_name || "가맹점"),
+      image_url: landingMerchantProfileImage(m),
+      contact_name: String(m.contact_name || ""),
+      contact_phone: String(m.contact_phone || ""),
+      contact_mobile: String(m.contact_mobile || ""),
+      address_zip: String(m.address_zip || ""),
+      address1: String(m.address1 || ""),
+      address2: String(m.address2 || ""),
+      google_lat: m.google_lat == null ? null : Number(m.google_lat),
+      google_lng: m.google_lng == null ? null : Number(m.google_lng),
+      support_types: String(m.support_types || "").split(",").filter(Boolean),
+    }));
+  }
+
+  res.json({ ok: true, projects, merchants });
+});
+
 // 참가기관 로그인 — 정적 미들웨어보다 먼저 처리 (public/partner/index.html 자동 서빙 차단)
 app.get(["/partner", "/partner/"], (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "partner", "auth.html"));
+});
+app.get(["/intro", "/intro/"], (_req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "intro", "index.html"));
 });
 // public 정적 파일 — 단, partner 디렉토리의 자동 index.html 서빙은 막음
 app.use(express.static(path.join(process.cwd(), "public"), { index: false }));
@@ -321,9 +502,9 @@ app.get("/video/:serial", (_req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "video", "index.html"));
 });
 
-// 루트 접근 → 대표 랜딩 페이지로 리다이렉트
+// 루트 접근 → 소개 페이지로 리다이렉트
 app.get("/", (_req, res) => {
-  res.redirect("/landing/20260623_0001/");
+  res.sendFile(path.join(process.cwd(), "public", "index.html"));
 });
 
 app.use((req, res) => {
@@ -352,5 +533,5 @@ setInterval(() => autoUpdateProjectStatuses().catch(console.error), 60 * 60 * 10
 scheduleProjectEndingNotifications();
 
 app.listen(port, () => {
-  console.log(`Server started at http://clan.maumena.co.kr`);
+  console.log(`Server started at http://tour.roampay.kr}`);
 });

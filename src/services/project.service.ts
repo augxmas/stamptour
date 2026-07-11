@@ -39,6 +39,18 @@ export async function nextProjectSerial(connection: any, nowDate: Date): Promise
   return `${dateKey}_${String(nextNo).padStart(4, "0")}`;
 }
 
+export async function nextHostSerial(connection: any, nowDate: Date): Promise<string> {
+  const dateKey = yyyymmdd(nowDate);
+  const like = `${dateKey}_H%`;
+  const [rows] = await connection.execute(
+    "SELECT host_serial FROM hosts WHERE host_serial LIKE ? ORDER BY host_serial DESC LIMIT 1 FOR UPDATE",
+    [like],
+  );
+  const last = Array.isArray(rows) && rows.length ? String(rows[0].host_serial || "") : "";
+  const lastNo = Number(last.slice(-3)) || 0;
+  return `${dateKey}_H${String(lastNo + 1).padStart(3, "0")}`;
+}
+
 export async function hashPin(pin: string): Promise<string> {
   return bcrypt.hash(pin, 10);
 }
