@@ -569,6 +569,7 @@
     #sec-dashboard #tab-noticemng.act,
     #sec-dashboard #tab-inquiry.act,
     #sec-dashboard #tab-video.act,
+    #sec-dashboard #tab-resource.act,
     #sec-dashboard #tab-apps.act {
       flex: 1 1 auto;
       min-height: 0;
@@ -587,6 +588,7 @@
     #sec-dashboard #tab-noticemng.act > .panel-card,
     #sec-dashboard #tab-inquiry.act > .panel-card,
     #sec-dashboard #tab-video.act > .panel-card,
+    #sec-dashboard #tab-resource.act > .panel-card,
     #sec-dashboard #tab-apps.act > .panel-card {
       flex: 0 0 auto;
       width: 100%;
@@ -827,6 +829,7 @@
     .modal-ov.open { display: flex; }
     /* 공통 확인/알림 모달은 다른 팝업(지원현황 등) 위에 항상 노출 */
     #modal-confirm { z-index: 600; }
+    #modal-resource-image-picker { z-index: 700; }
     .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 400px;
              overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,.2); }
     .modal p.sub { font-size: 13px; color: #64748b; margin-bottom: 22px; }
@@ -912,15 +915,17 @@
       padding: 0 20px;
       display: flex;
       align-items: center;
-      border-bottom: 1px solid #e2e8f0;
-      background: #fff;
+      justify-content: center;
+      border-bottom: 1px solid #1d4ed8;
+      background: #2563eb;
       flex-shrink: 0;
     }
     .guest-column-modal .card-header h2 {
       margin: 0;
-      color: #0f172a;
+      color: #fff;
       font-size: 18px;
-      text-align: left;
+      text-align: center;
+      width: 100%;
     }
     .guest-column-modal .modal-close {
       top: 18px;
@@ -928,10 +933,10 @@
       width: 38px;
       height: 38px;
       border-radius: 50%;
-      background: #f1f5f9;
-      color: #334155;
+      background: #1d4ed8;
+      color: #fff;
     }
-    .guest-column-modal .modal-close:hover { background:#e2e8f0; color:#0f172a; }
+    .guest-column-modal .modal-close:hover { background:#1e40af; color:#fff; }
     .guest-column-modal .card-body { padding: 18px 22px; overflow-y:auto; flex:1; min-height:0; }
     .guest-column-modal .modal-foot {
       display:grid;
@@ -1350,6 +1355,7 @@
       <button class="tab-btn" id="tb-noticemng" onclick="switchTab('noticemng')">📢 공지사항</button>
       <button class="tab-btn" id="tb-inquiry" onclick="switchTab('inquiry')">💬 문의사항</button>
       <button class="tab-btn" id="tb-video" onclick="switchTab('video')">🎬 동영상</button>
+      <button class="tab-btn" id="tb-resource" onclick="switchTab('resource')">📚 Resource</button>
       <button class="tab-btn" id="tb-apps" onclick="switchTab('apps')">🏪 가맹점</button>
     </div>
   </div>
@@ -1440,7 +1446,12 @@
             </div>
             <input type="file" id="loc-tour-img-file" accept="image/*" style="display:none;" onchange="uploadLocTourImage(this)">
             <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('loc-tour-img-file').click()">📷 업로드</button>
+            <button type="button" class="btn btn-o btn-sm" onclick="openResourceImagePicker('tour')">Resource</button>
             <button type="button" class="btn btn-r btn-sm" id="loc-tour-img-del" onclick="deleteLocTourImage()" style="display:none;">🗑 삭제</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+            <input id="loc-tour-img-url" type="url" placeholder="Image URL" style="flex:1;min-width:240px;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;">
+            <button type="button" class="btn btn-p btn-sm" onclick="applyLocTourImageUrl()">URL 적용</button>
           </div>
         </div>
         <div id="loc-tour-meta-msg" class="msg" style="margin-top:6px;font-size:12px;"></div>
@@ -1593,6 +1604,10 @@
           <img id="icon-prev" class="icon-prev" alt="" style="display:none;">
           <input id="loc-image" type="file" accept="image/*" onchange="onIconChange(this)">
           <button type="button" class="btn btn-o btn-sm" id="icon-clear" style="display:none;" onclick="clearIcon()">제거</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+          <input id="loc-image-url" type="url" placeholder="Image URL" oninput="onLocIconUrlInput()" style="flex:1;min-width:220px;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;">
+          <button type="button" class="btn btn-o btn-sm" onclick="openResourceImagePicker('locIcon')">Resource</button>
         </div>
       </div>
 
@@ -3012,7 +3027,7 @@
             </div>
           </div>
           <div class="tbl-wrap" style="margin-top:10px;">
-            <table id="guest-grid" style="min-width:1120px;">
+            <table id="guest-grid" data-gc-no-button style="min-width:1120px;">
               <thead id="guest-grid-head"></thead>
               <tbody id="guest-grid-body"></tbody>
             </table>
@@ -3501,6 +3516,65 @@
     </div>
   </div>
 
+  <!-- Resource 탭 -->
+  <div class="tab-panel" id="tab-resource">
+    <div class="panel-card">
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px;">
+        <h3 style="margin:0;">Resource</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button type="button" class="btn btn-p btn-sm" id="resource-menu-image" onclick="switchResourceMenu('image')">Image</button>
+          <button type="button" class="btn btn-o btn-sm" id="resource-menu-office" onclick="switchResourceMenu('office')">Office</button>
+        </div>
+      </div>
+
+      <div id="resource-image-pane">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start;">
+          <div style="border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;padding:14px;">
+            <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:10px;">Image Upload</div>
+            <div class="fg" style="margin-bottom:10px;">
+              <label>Image file</label>
+              <input id="resource-image-file" type="file" accept="image/*" onchange="onResourceImageFileChange()">
+            </div>
+            <div id="resource-image-preview" ondragenter="onResourceImageDrag(event)" ondragover="onResourceImageDrag(event)" ondragleave="onResourceImageDragLeave(event)" ondrop="onResourceImageDrop(event)" style="display:grid;place-items:center;min-height:150px;border:1px dashed #cbd5e1;border-radius:8px;background:white;color:#94a3b8;font-size:12px;font-weight:700;overflow:hidden;margin-bottom:10px;transition:border-color .15s,background .15s,color .15s;">
+              Select or drag an image file here.
+            </div>
+            <div id="resource-image-meta" style="font-size:12px;color:#475569;font-weight:700;margin-bottom:10px;">Width / Height: -</div>
+            <div class="fg" style="margin-bottom:10px;">
+              <label>Description</label>
+              <textarea id="resource-image-description" rows="4" maxlength="1000" placeholder="Enter image description" style="width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:9px 10px;font-size:13px;resize:vertical;"></textarea>
+            </div>
+            <div class="fg" style="margin-bottom:10px;">
+              <label>Tags</label>
+              <div id="resource-image-tag-box" onclick="document.getElementById('resource-image-tags')?.focus()" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:42px;width:100%;border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 8px;background:white;">
+                <div id="resource-image-tag-chips" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;"></div>
+                <input id="resource-image-tags" type="text" maxlength="80" placeholder="Type tag" onfocus="renderResourceTagChips()" onkeydown="onResourceTagKeydown(event)" oninput="onResourceTagInput(event)" onblur="commitResourceTagInput()" onpaste="onResourceTagPaste(event)" style="flex:1 1 120px;min-width:100px;border:0;outline:none;padding:4px 2px;font-size:13px;">
+              </div>
+              <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Separate tags with spaces or commas.</div>
+            </div>
+            <button type="button" class="btn btn-p" id="resource-image-upload-btn" onclick="uploadResourceImage()" disabled style="width:100%;">Upload Image</button>
+            <div id="resource-image-upload-msg" style="font-size:12px;color:#64748b;margin-top:8px;min-height:18px;"></div>
+          </div>
+
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <input id="resource-image-search" type="text" placeholder="Search image name, description, or tags" onkeydown="if(event.key==='Enter')loadResourceImages(1)" style="flex:1;min-width:220px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+              <button type="button" class="btn btn-p btn-sm" onclick="loadResourceImages(1)">Search</button>
+              <button type="button" class="btn btn-o btn-sm" onclick="resetResourceImageSearch()">Reload</button>
+              <span id="resource-image-count" style="font-size:12px;color:#64748b;font-weight:700;margin-left:auto;"></span>
+            </div>
+            <div id="resource-image-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;min-height:220px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="resource-office-pane" style="display:none;">
+        <div style="display:grid;place-items:center;min-height:220px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;color:#64748b;font-size:13px;font-weight:700;text-align:center;padding:24px;">
+          Office resources will be configured here.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 가맹점관리 탭 -->
   <div class="tab-panel" id="tab-apps">
     <div class="panel-card">
@@ -3977,6 +4051,20 @@
 </div>
 
 <!-- 등록하기 통합 QR 모달 (사전/현장등록 자동 분기) -->
+<div class="modal-ov" id="modal-resource-image-picker">
+  <div class="modal" style="width:90vw;max-width:880px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="card-header" style="flex-shrink:0;"><h2>Resource Image</h2>
+      <button class="modal-close" onclick="closeResourceImagePicker()">×</button></div>
+    <div class="card-body" style="overflow-y:auto;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <input id="rip-search" type="text" placeholder="Search image name, description, or tags" onkeydown="if(event.key==='Enter')loadResourcePickerImages()" style="flex:1;min-width:240px;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <button type="button" class="btn btn-p btn-sm" onclick="loadResourcePickerImages()">Search</button>
+      </div>
+      <div id="rip-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;min-height:220px;"></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="modal-register-qr">
   <div class="modal" style="max-width:420px;">
     <div class="card-header"><h2 id="regqr-title">등록하기 QR</h2>
@@ -4278,6 +4366,10 @@
         <label>이미지 <span class="hint">(선택, 5MB 이하 — 새 파일 선택 시 교체)</span></label>
         <div id="el-img-preview" style="margin-bottom:8px;"></div>
         <input id="el-image" type="file" accept="image/*" style="font-size:12px;" onchange="onElImgChange(this)">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+          <input id="el-image-url" type="url" placeholder="Image URL" oninput="onElImageUrlInput()" style="flex:1;min-width:220px;border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;">
+          <button type="button" class="btn btn-o btn-sm" onclick="openResourceImagePicker('editLocImage')">Resource</button>
+        </div>
       </div>
       <div id="el-msg" class="msg"></div>
       <div style="display:flex;gap:8px;margin-top:14px;">
@@ -5653,9 +5745,366 @@ function openProjectCreateModal() {
 function closeProjectCreateModal() {
   document.getElementById('modal-project-create')?.classList.remove('open');
 }
+const resourceState = {
+  menu: 'image',
+  imageReady: false,
+  imageObjectUrl: '',
+  imagesLoaded: false,
+  selectedWidth: 0,
+  selectedHeight: 0,
+  tags: [],
+};
+function switchResourceMenu(menu) {
+  resourceState.menu = menu === 'office' ? 'office' : 'image';
+  document.getElementById('resource-menu-image')?.classList.toggle('btn-p', resourceState.menu === 'image');
+  document.getElementById('resource-menu-image')?.classList.toggle('btn-o', resourceState.menu !== 'image');
+  document.getElementById('resource-menu-office')?.classList.toggle('btn-p', resourceState.menu === 'office');
+  document.getElementById('resource-menu-office')?.classList.toggle('btn-o', resourceState.menu !== 'office');
+  const imagePane = document.getElementById('resource-image-pane');
+  const officePane = document.getElementById('resource-office-pane');
+  if (imagePane) imagePane.style.display = resourceState.menu === 'image' ? '' : 'none';
+  if (officePane) officePane.style.display = resourceState.menu === 'office' ? '' : 'none';
+  if (resourceState.menu === 'image') loadResourceImages(1);
+}
+function initResourceTab() {
+  switchResourceMenu(resourceState.menu || 'image');
+  renderResourceTagChips();
+}
+function setResourceUploadMsg(message, isError) {
+  const el = document.getElementById('resource-image-upload-msg');
+  if (!el) return;
+  el.textContent = message || '';
+  el.style.color = isError ? '#dc2626' : '#64748b';
+}
+function resetResourceImagePreview(message) {
+  if (resourceState.imageObjectUrl) URL.revokeObjectURL(resourceState.imageObjectUrl);
+  resourceState.imageObjectUrl = '';
+  resourceState.imageReady = false;
+  resourceState.selectedWidth = 0;
+  resourceState.selectedHeight = 0;
+  const preview = document.getElementById('resource-image-preview');
+  const meta = document.getElementById('resource-image-meta');
+  const btn = document.getElementById('resource-image-upload-btn');
+  if (preview) {
+    preview.innerHTML = esc(message || 'Select or drag an image file here.');
+    preview.style.borderColor = '#cbd5e1';
+    preview.style.background = 'white';
+    preview.style.color = '#94a3b8';
+  }
+  if (meta) meta.textContent = 'Width / Height: -';
+  if (btn) btn.disabled = true;
+}
+function prepareResourceImageFile(file) {
+  resetResourceImagePreview(file ? 'Checking image size...' : 'Select or drag an image file here.');
+  setResourceUploadMsg('');
+  if (!file) return;
+  if (!/^image\//i.test(file.type || '')) {
+    resetResourceImagePreview('Only image files can be uploaded.');
+    setResourceUploadMsg('Only image files can be uploaded.', true);
+    return;
+  }
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    resourceState.imageObjectUrl = objectUrl;
+    resourceState.imageReady = true;
+    resourceState.selectedWidth = img.naturalWidth;
+    resourceState.selectedHeight = img.naturalHeight;
+    const preview = document.getElementById('resource-image-preview');
+    const meta = document.getElementById('resource-image-meta');
+    const btn = document.getElementById('resource-image-upload-btn');
+    if (preview) preview.innerHTML = `<img src="${objectUrl}" alt="" style="max-width:100%;max-height:210px;object-fit:contain;display:block;">`;
+    if (meta) meta.textContent = `Width / Height: ${img.naturalWidth} x ${img.naturalHeight}px`;
+    if (btn) btn.disabled = false;
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    resetResourceImagePreview('Image size could not be verified.');
+    setResourceUploadMsg('Image size could not be verified.', true);
+  };
+  img.src = objectUrl;
+}
+function onResourceImageFileChange() {
+  const input = document.getElementById('resource-image-file');
+  prepareResourceImageFile(input?.files?.[0]);
+}
+function setResourceImageDropActive(active) {
+  const preview = document.getElementById('resource-image-preview');
+  if (!preview) return;
+  preview.style.borderColor = active ? '#2563eb' : '#cbd5e1';
+  preview.style.background = active ? '#eff6ff' : 'white';
+  preview.style.color = active ? '#1d4ed8' : '#94a3b8';
+}
+function onResourceImageDrag(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  setResourceImageDropActive(true);
+}
+function onResourceImageDragLeave(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (ev.currentTarget && ev.relatedTarget && ev.currentTarget.contains(ev.relatedTarget)) return;
+  setResourceImageDropActive(false);
+}
+function onResourceImageDrop(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  setResourceImageDropActive(false);
+  const file = ev.dataTransfer?.files?.[0];
+  const input = document.getElementById('resource-image-file');
+  if (input && ev.dataTransfer?.files?.length) input.files = ev.dataTransfer.files;
+  prepareResourceImageFile(file);
+}
+function formatResourceBytes(bytes) {
+  const n = Number(bytes || 0);
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+function normalizeResourceTags(input) {
+  const seen = new Set();
+  return String(input || '')
+    .split(/[\s,]+/)
+    .map(tag => tag.trim().replace(/^#+/, ''))
+    .filter(Boolean)
+    .map(tag => tag.slice(0, 40))
+    .filter(tag => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 30);
+}
+function renderResourceTagChips() {
+  const box = document.getElementById('resource-image-tag-box');
+  const chips = document.getElementById('resource-image-tag-chips');
+  const input = document.getElementById('resource-image-tags');
+  if (!chips) return;
+  chips.innerHTML = resourceState.tags.map((tag, idx) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;max-width:160px;padding:3px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:800;">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tag)}</span>
+      <button type="button" onclick="removeResourceTag(${idx})" aria-label="Remove tag" style="border:0;background:transparent;color:#1d4ed8;font-size:14px;line-height:1;cursor:pointer;padding:0 1px;">×</button>
+    </span>
+  `).join('');
+  if (input) input.placeholder = resourceState.tags.length ? 'Add tag' : 'Type tag';
+  if (box) box.style.borderColor = document.activeElement === input ? '#2563eb' : '#cbd5e1';
+}
+function addResourceTags(value) {
+  const next = normalizeResourceTags(value);
+  if (!next.length) return;
+  const seen = new Set(resourceState.tags.map(tag => tag.toLowerCase()));
+  next.forEach(tag => {
+    const key = tag.toLowerCase();
+    if (!seen.has(key) && resourceState.tags.length < 30) {
+      resourceState.tags.push(tag);
+      seen.add(key);
+    }
+  });
+  renderResourceTagChips();
+}
+function commitResourceTagInput() {
+  const input = document.getElementById('resource-image-tags');
+  if (!input) return;
+  addResourceTags(input.value);
+  input.value = '';
+  renderResourceTagChips();
+}
+function onResourceTagKeydown(ev) {
+  const input = ev.currentTarget;
+  if (ev.key === ' ' || ev.key === ',' || ev.key === 'Enter' || ev.key === 'Tab') {
+    if (input.value.trim()) {
+      ev.preventDefault();
+      commitResourceTagInput();
+    }
+    return;
+  }
+  if (ev.key === 'Backspace' && !input.value && resourceState.tags.length) {
+    resourceState.tags.pop();
+    renderResourceTagChips();
+  }
+}
+function onResourceTagInput(ev) {
+  const input = ev.currentTarget;
+  if (/[\s,]/.test(input.value)) {
+    addResourceTags(input.value);
+    input.value = '';
+  }
+}
+function onResourceTagPaste(ev) {
+  const text = ev.clipboardData?.getData('text') || '';
+  if (!/[\s,]/.test(text)) return;
+  ev.preventDefault();
+  addResourceTags(text);
+}
+function removeResourceTag(idx) {
+  resourceState.tags.splice(idx, 1);
+  renderResourceTagChips();
+}
+function clearResourceTags() {
+  resourceState.tags = [];
+  const input = document.getElementById('resource-image-tags');
+  if (input) input.value = '';
+  renderResourceTagChips();
+}
+function absoluteResourceUrl(url) {
+  if (!url) return '';
+  try { return new URL(url, location.origin).href; } catch { return url; }
+}
+async function loadResourceImages(page) {
+  const list = document.getElementById('resource-image-list');
+  const count = document.getElementById('resource-image-count');
+  if (!list) return;
+  list.innerHTML = '<div style="color:#64748b;font-size:13px;font-weight:700;padding:18px;">Loading...</div>';
+  const q = encodeURIComponent(document.getElementById('resource-image-search')?.value || '');
+  try {
+    const r = await fetch(`/api/resource/images?page=${page || 1}&size=60&q=${q}`);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.message || d.error || 'Failed to load images.');
+    resourceState.imagesLoaded = true;
+    if (count) count.textContent = `${Number(d.total || 0)} images`;
+    const images = Array.isArray(d.images) ? d.images : [];
+    if (!images.length) {
+      list.innerHTML = '<div style="grid-column:1/-1;display:grid;place-items:center;min-height:180px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;color:#94a3b8;font-size:13px;font-weight:700;">No images found.</div>';
+      return;
+    }
+    list.innerHTML = images.map(img => {
+      const url = absoluteResourceUrl(img.image_url || img.url || '');
+      const tags = normalizeResourceTags(img.tags || '');
+      const tagHtml = tags.length
+        ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">${tags.map(tag => `<span style="display:inline-flex;align-items:center;max-width:100%;padding:2px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:800;">${esc(tag)}</span>`).join('')}</div>`
+        : '';
+      return `<div style="border:1px solid #e2e8f0;border-radius:8px;background:white;overflow:hidden;min-width:0;">
+        <div style="height:150px;background:#f8fafc;display:grid;place-items:center;overflow:hidden;">
+          <img src="${esc(img.image_url || '')}" alt="" style="width:100%;height:100%;object-fit:contain;">
+        </div>
+        <div style="padding:10px;display:grid;gap:6px;">
+          <div title="${esc(img.original_name || '')}" style="font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(img.original_name || 'image')}</div>
+          <div style="font-size:12px;color:#475569;font-weight:700;">${Number(img.width || 0)} x ${Number(img.height || 0)}px · ${formatResourceBytes(img.file_size)}</div>
+          <div style="font-size:12px;color:#64748b;min-height:34px;line-height:1.4;word-break:break-word;">${esc(img.description || '-')}</div>
+          ${tagHtml}
+          <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(url)}">${esc(url)}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button type="button" class="btn btn-p btn-sm" onclick="copyResourceImageUrl('${esc(url)}')">Copy URL</button>
+            <button type="button" class="btn btn-o btn-sm" onclick="window.open('${esc(url)}','_blank','noopener')">View</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="grid-column:1/-1;color:#dc2626;font-size:13px;font-weight:700;padding:18px;">${esc(e.message || 'Failed to load images.')}</div>`;
+  }
+}
+function resetResourceImageSearch() {
+  const input = document.getElementById('resource-image-search');
+  if (input) input.value = '';
+  loadResourceImages(1);
+}
+async function uploadResourceImage() {
+  const input = document.getElementById('resource-image-file');
+  const file = input?.files?.[0];
+  if (!file || !resourceState.imageReady) {
+    await uiAlert('이미지의 width, height 확인이 먼저 필요합니다.');
+    return;
+  }
+  const btn = document.getElementById('resource-image-upload-btn');
+  if (btn) btn.disabled = true;
+  setResourceUploadMsg('Uploading...');
+  const fd = new FormData();
+  fd.append('image', file);
+  fd.append('description', document.getElementById('resource-image-description')?.value || '');
+  commitResourceTagInput();
+  const tags = resourceState.tags.join(',');
+  fd.append('tags', tags);
+  try {
+    const r = await fetch('/api/resource/images', { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.message || d.error || 'Image upload failed.');
+    setResourceUploadMsg(`Uploaded: ${d.image?.width || resourceState.selectedWidth} x ${d.image?.height || resourceState.selectedHeight}px`);
+    if (input) input.value = '';
+    const desc = document.getElementById('resource-image-description');
+    if (desc) desc.value = '';
+    clearResourceTags();
+    resetResourceImagePreview('Select or drag an image file here.');
+    await loadResourceImages(1);
+  } catch (e) {
+    setResourceUploadMsg(e.message || 'Image upload failed.', true);
+    if (btn) btn.disabled = false;
+  }
+}
+async function copyResourceImageUrl(url) {
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    await uiAlert(`URL 이 복사되었습니다.\n${url}`);
+  } catch {
+    await uiAlert(url);
+  }
+}
+
+let resourceImagePickerTarget = '';
+function openResourceImagePicker(target) {
+  resourceImagePickerTarget = target || '';
+  const modal = document.getElementById('modal-resource-image-picker');
+  const search = document.getElementById('rip-search');
+  if (search) search.value = '';
+  if (modal) modal.classList.add('open');
+  loadResourcePickerImages();
+}
+function closeResourceImagePicker() {
+  document.getElementById('modal-resource-image-picker')?.classList.remove('open');
+}
+async function loadResourcePickerImages() {
+  const list = document.getElementById('rip-list');
+  if (!list) return;
+  list.innerHTML = '<div style="grid-column:1/-1;color:#64748b;font-size:13px;font-weight:700;padding:18px;">Loading...</div>';
+  const q = encodeURIComponent(document.getElementById('rip-search')?.value || '');
+  try {
+    const r = await fetch(`/api/resource/images?page=1&size=80&q=${q}`);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.message || d.error || 'Failed to load Resource images.');
+    const images = Array.isArray(d.images) ? d.images : [];
+    if (!images.length) {
+      list.innerHTML = '<div style="grid-column:1/-1;display:grid;place-items:center;min-height:180px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;color:#94a3b8;font-size:13px;font-weight:700;">No images found.</div>';
+      return;
+    }
+    list.innerHTML = images.map(img => {
+      const url = absoluteResourceUrl(img.image_url || img.url || '');
+      const tags = normalizeResourceTags(img.tags || '');
+      return `<button type="button" onclick="selectResourceImageForTarget(decodeURIComponent('${encodeURIComponent(url)}'))" style="text-align:left;border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:0;overflow:hidden;cursor:pointer;">
+        <div style="height:120px;background:#f8fafc;display:grid;place-items:center;overflow:hidden;">
+          <img src="${esc(img.image_url || '')}" alt="" style="width:100%;height:100%;object-fit:contain;">
+        </div>
+        <div style="padding:9px;display:grid;gap:4px;">
+          <div style="font-size:12px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(img.original_name || 'image')}</div>
+          <div style="font-size:11px;color:#64748b;">${Number(img.width || 0)} x ${Number(img.height || 0)}px</div>
+          ${tags.length ? `<div style="font-size:11px;color:#1d4ed8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(tags.join(', '))}</div>` : ''}
+        </div>
+      </button>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="grid-column:1/-1;color:#dc2626;font-size:13px;font-weight:700;padding:18px;">${esc(e.message || 'Failed to load Resource images.')}</div>`;
+  }
+}
+async function selectResourceImageForTarget(url) {
+  closeResourceImagePicker();
+  if (resourceImagePickerTarget === 'tour') {
+    const input = document.getElementById('loc-tour-img-url');
+    if (input) input.value = url;
+    await applyLocTourImageUrl();
+    return;
+  }
+  if (resourceImagePickerTarget === 'locIcon') {
+    setLocIconImageUrl(url);
+    return;
+  }
+  if (resourceImagePickerTarget === 'editLocImage') {
+    setElImageUrl(url);
+  }
+}
 function switchTab(name) {
   setAdminMenu(false);
-  ['proj','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','inquiry','video','apps','settle','mail','mailtpl','pform','partner','guest','vote'].forEach(t => {
+  ['proj','entry','agent','tour','quiz','survey','votemgr','notifmng','notifreg','noticemng','noticereg','inquiry','video','resource','apps','settle','mail','mailtpl','pform','partner','guest','vote'].forEach(t => {
     document.getElementById('tb-'+t)?.classList.toggle('act', t===name);
     document.getElementById('tab-'+t)?.classList.toggle('act', t===name);
   });
@@ -5675,6 +6124,7 @@ function switchTab(name) {
   if (name === 'noticemng') loadNoticeList();
   if (name === 'inquiry') { loadInquiryList(); loadInquiryUrlProjects(); }
   if (name === 'video') loadVideoProjects();
+  if (name === 'resource') initResourceTab();
   if (name === 'tour') loadTourProjects();
   if (name === 'quiz') loadQuizProjects();
   if (name === 'survey') loadSurveyProjects();
@@ -6544,6 +6994,8 @@ async function loadLocRewardSettings(pid) {
     const img = document.getElementById('loc-tour-img-preview');
     const empty = document.getElementById('loc-tour-img-empty');
     const delBtn = document.getElementById('loc-tour-img-del');
+    const tourUrlInput = document.getElementById('loc-tour-img-url');
+    if (tourUrlInput) tourUrlInput.value = p.tour_image_url || '';
     if (p.tour_image_url) {
       img.src = p.tour_image_url; img.style.display = ''; empty.style.display = 'none';
       delBtn.style.display = '';
@@ -6592,6 +7044,8 @@ async function uploadLocTourImage(input) {
   if (!currentProjectId) return;
   const file = input.files && input.files[0]; input.value = '';
   if (!file) return;
+  const urlInput = document.getElementById('loc-tour-img-url');
+  if (urlInput) urlInput.value = '';
   const msg = document.getElementById('loc-tour-meta-msg');
   msg.className = 'msg'; msg.textContent = '업로드 중...';
   const fd = new FormData(); fd.append('image', file);
@@ -6604,6 +7058,47 @@ async function uploadLocTourImage(input) {
     img.src = d.image_url; img.style.display = ''; empty.style.display = 'none';
     document.getElementById('loc-tour-img-del').style.display = '';
     msg.className = 'msg s'; msg.textContent = '✓ 이미지가 업로드되었습니다.';
+  } catch (e) {
+    msg.className = 'msg e'; msg.textContent = '네트워크 오류';
+  }
+}
+
+function setLocTourImagePreview(url) {
+  const img = document.getElementById('loc-tour-img-preview');
+  const empty = document.getElementById('loc-tour-img-empty');
+  const del = document.getElementById('loc-tour-img-del');
+  if (!img || !empty) return;
+  if (url) {
+    img.src = url;
+    img.style.display = '';
+    empty.style.display = 'none';
+    if (del) del.style.display = '';
+  } else {
+    img.src = '';
+    img.style.display = 'none';
+    empty.style.display = '';
+    if (del) del.style.display = 'none';
+  }
+}
+
+async function applyLocTourImageUrl() {
+  if (!currentProjectId) return;
+  const input = document.getElementById('loc-tour-img-url');
+  const imageUrl = String(input?.value || '').trim();
+  const msg = document.getElementById('loc-tour-meta-msg');
+  if (!imageUrl) { msg.className = 'msg e'; msg.textContent = 'Image URL을 입력해 주세요.'; return; }
+  msg.className = 'msg'; msg.textContent = 'URL 적용 중...';
+  try {
+    const r = await fetch(`/api/host/projects/${currentProjectId}/tour-image-url`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { msg.className = 'msg e'; msg.textContent = d.error || 'URL 적용 실패'; return; }
+    if (input) input.value = d.image_url || imageUrl;
+    setLocTourImagePreview(d.image_url || imageUrl);
+    msg.className = 'msg s'; msg.textContent = '이미지 URL이 적용되었습니다.';
   } catch (e) {
     msg.className = 'msg e'; msg.textContent = '네트워크 오류';
   }
@@ -6622,6 +7117,8 @@ async function deleteLocTourImage() {
     document.getElementById('loc-tour-img-preview').style.display = 'none';
     document.getElementById('loc-tour-img-empty').style.display = '';
     document.getElementById('loc-tour-img-del').style.display = 'none';
+    const urlInput = document.getElementById('loc-tour-img-url');
+    if (urlInput) urlInput.value = '';
     msg.className = 'msg s'; msg.textContent = '✓ 이미지가 삭제되었습니다.';
   } catch (e) {
     msg.className = 'msg e'; msg.textContent = '네트워크 오류';
@@ -8817,6 +9314,7 @@ function onLocCardClick(e, id) {
 // ── Tour(전시물/위치) 수정 ──
 let editingLocId = null;
 let elRemoveImage = false;
+let elSelectedImageUrl = '';
 let elMapProvider = 'kakao';   // 편집 모달의 현재 선택된 지도 제공자
 function setElProvider(p, silent) {
   if (p !== 'kakao' && p !== 'google') p = 'kakao';
@@ -8829,6 +9327,7 @@ async function openEditLoc(locId) {
   if (!l) { await uiAlert('Tour 정보를 찾을 수 없습니다.'); return; }
   editingLocId = locId;
   elRemoveImage = false;
+  elSelectedImageUrl = '';
   // 초기 진입은 보기 모드 — 저장 버튼 비활성, 사용자가 값을 변경하면 활성화
   document.getElementById('el-save').disabled = true;
   const isExhibit = l.dest_type === 'exhibit';
@@ -8848,6 +9347,8 @@ async function openEditLoc(locId) {
   setElProvider(l.map_provider === 'google' ? 'google' : 'kakao', /*silent*/true);
   const fileEl = document.getElementById('el-image');
   if (fileEl) fileEl.value = '';
+  const urlEl = document.getElementById('el-image-url');
+  if (urlEl) urlEl.value = '';
   const pv = document.getElementById('el-img-preview');
   if (pv) {
     pv.innerHTML = l.image_url
@@ -8862,6 +9363,7 @@ async function openEditLoc(locId) {
 }
 function closeEditLoc() {
   editingLocId = null;
+  elSelectedImageUrl = '';
   document.getElementById('modal-edit-loc').classList.remove('open');
 }
 function onElImgChange(input) {
@@ -8873,6 +9375,9 @@ function onElImgChange(input) {
     return;
   }
   elRemoveImage = false;
+  elSelectedImageUrl = '';
+  const urlInput = document.getElementById('el-image-url');
+  if (urlInput) urlInput.value = '';
   elMarkChanged();
   const reader = new FileReader();
   reader.onload = e => {
@@ -8882,8 +9387,37 @@ function onElImgChange(input) {
   };
   reader.readAsDataURL(file);
 }
+function setElImageUrl(url) {
+  elSelectedImageUrl = String(url || '').trim();
+  elRemoveImage = false;
+  const input = document.getElementById('el-image-url');
+  const file = document.getElementById('el-image');
+  const pv = document.getElementById('el-img-preview');
+  if (input) input.value = elSelectedImageUrl;
+  if (file) file.value = '';
+  if (pv) {
+    pv.innerHTML = elSelectedImageUrl
+      ? `<img src="${esc(elSelectedImageUrl)}" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid #e5e7eb;object-fit:cover;">
+         <div style="font-size:11px;color:#1d4ed8;margin-top:4px;">URL 이미지로 교체됩니다 (저장 시 적용)</div>`
+      : '<span style="font-size:12px;color:#94a3b8;">등록된 이미지 없음</span>';
+  }
+  elMarkChanged();
+}
+function onElImageUrlInput() {
+  const url = String(document.getElementById('el-image-url')?.value || '').trim();
+  if (url) setElImageUrl(url);
+  else {
+    elSelectedImageUrl = '';
+    elMarkChanged();
+  }
+}
 function markRemoveElImage() {
   elRemoveImage = true;
+  elSelectedImageUrl = '';
+  const urlInput = document.getElementById('el-image-url');
+  const fileEl = document.getElementById('el-image');
+  if (urlInput) urlInput.value = '';
+  if (fileEl) fileEl.value = '';
   elMarkChanged();
   const pv = document.getElementById('el-img-preview');
   if (pv) pv.innerHTML = '<span style="color:#dc2626;font-size:12px;">기존 이미지 제거 예정 (저장 시 적용)</span>';
@@ -8925,6 +9459,7 @@ async function saveEditLoc() {
   if (elRemoveImage) fd.append('remove_image', '1');
   const fileEl = document.getElementById('el-image');
   if (fileEl && fileEl.files && fileEl.files[0]) fd.append('image', fileEl.files[0]);
+  if (!(fileEl && fileEl.files && fileEl.files[0]) && elSelectedImageUrl) fd.append('image_url', elSelectedImageUrl);
   const r = await fetch(`/api/host/projects/${currentProjectId}/locations/${editingLocId}`, {
     method:'PUT', body: fd,
   });
@@ -9482,6 +10017,7 @@ async function cancelTourMerchantRequests() {
 // ── 아이콘 이미지 미리보기 ──
 function onIconChange(input) {
   const f = input.files && input.files[0];
+  if (f) document.getElementById('loc-image-url').value = '';
   const prev = document.getElementById('icon-prev');
   const clr = document.getElementById('icon-clear');
   if (!f) { prev.style.display = 'none'; clr.style.display = 'none'; return; }
@@ -9491,8 +10027,34 @@ function onIconChange(input) {
 }
 function clearIcon() {
   document.getElementById('loc-image').value = '';
+  const urlInput = document.getElementById('loc-image-url');
+  if (urlInput) urlInput.value = '';
   document.getElementById('icon-prev').style.display = 'none';
   document.getElementById('icon-clear').style.display = 'none';
+}
+
+function setLocIconImageUrl(url) {
+  const input = document.getElementById('loc-image-url');
+  const file = document.getElementById('loc-image');
+  const prev = document.getElementById('icon-prev');
+  const clr = document.getElementById('icon-clear');
+  if (input) input.value = url || '';
+  if (file) file.value = '';
+  if (url) {
+    prev.src = url;
+    prev.style.display = 'block';
+    clr.style.display = 'inline-block';
+  } else {
+    prev.src = '';
+    prev.style.display = 'none';
+    clr.style.display = 'none';
+  }
+}
+
+function onLocIconUrlInput() {
+  const url = String(document.getElementById('loc-image-url')?.value || '').trim();
+  if (url) setLocIconImageUrl(url);
+  else clearIcon();
 }
 
 // 선택된 장소(프리뷰/좌표/장소명·설명)만 초기화 — 검색창 입력값은 보존
@@ -9716,6 +10278,8 @@ async function addLocation() {
 
   const img = document.getElementById('loc-image').files[0];
   if (img) fd.append('image', img);
+  const imageUrl = String(document.getElementById('loc-image-url')?.value || '').trim();
+  if (!img && imageUrl) fd.append('image_url', imageUrl);
 
   const r = await fetch(`/api/host/projects/${currentProjectId}/locations`, { method:'POST', body: fd });
   const d = await r.json();

@@ -7,6 +7,7 @@ dist/
 
 # 런타임 업로드(사업자등록증·통장사본·QR 이미지 등 민감/대용량)
 uploads/
+upload/
 
 # DB 백업 파일(데이터 포함 가능, 형상관리 제외)
 sql/backups/

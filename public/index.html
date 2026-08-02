@@ -485,6 +485,32 @@
       font-size: 12px;
       font-weight: 900;
     }
+    .merchant-path-actions {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .merchant-route-btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      padding: 0 18px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .merchant-route-btn:hover {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
     .merchant-card {
       border: 1px solid #dfe8ef;
       border-radius: 8px;
@@ -589,6 +615,99 @@
       padding: 20px;
     }
     .error { color: #b91c1c; }
+    .route-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(15, 23, 42, .62);
+    }
+    .route-modal.open { display: flex; }
+    .route-modal-box {
+      width: min(1100px, 100%);
+      height: min(760px, calc(100vh - 36px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .36);
+    }
+    .route-modal-head {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) 40px;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      background: #2563eb;
+      color: #fff;
+    }
+    .route-modal-head h3 {
+      margin: 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+    .route-modal-close {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: #1d4ed8;
+      color: #fff;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .route-modal-info {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #dbe4ee;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .route-modal-info a {
+      flex: 0 0 auto;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      padding: 0 12px;
+      background: #16a34a;
+      color: #fff;
+      font-weight: 900;
+    }
+    .route-modal-stops {
+      flex: 0 0 auto;
+      padding: 9px 14px;
+      border-bottom: 1px solid #dbe4ee;
+      background: #fff;
+      color: #1e293b;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+    .route-modal-frame {
+      flex: 1 1 auto;
+      width: 100%;
+      border: 0;
+      background: #e2e8f0;
+    }
 
     @media (max-width: 980px) {
       .campaign { grid-template-columns: 1fr; }
@@ -608,6 +727,7 @@
       .route-card { grid-template-columns: 108px minmax(0, 1fr); }
       .route-card img { width: 108px; height: 108px; }
       .merchant-path { display: block; }
+      .merchant-path-actions { margin-top: 10px; margin-left: 0; }
       .merchant-path-count { margin-top: 10px; }
       .merchant-strip { grid-template-columns: 1fr; }
       .merchant-grid { grid-template-columns: 1fr; }
@@ -732,6 +852,22 @@
 
   <footer class="footer">© 2026 Tour Tracker. Discounts and rewards are provided according to each project and participating merchant's operating conditions.</footer>
 
+  <div class="route-modal" id="route-modal" aria-hidden="true">
+    <div class="route-modal-box" role="dialog" aria-modal="true" aria-labelledby="route-modal-title">
+      <div class="route-modal-head">
+        <span aria-hidden="true"></span>
+        <h3 id="route-modal-title">Route</h3>
+        <button class="route-modal-close" type="button" onclick="closeRouteModal()" aria-label="Close">&times;</button>
+      </div>
+      <div class="route-modal-info">
+        <span id="route-modal-info">Preparing route...</span>
+        <a id="route-modal-link" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+      </div>
+      <div class="route-modal-stops" id="route-modal-stops"></div>
+      <iframe class="route-modal-frame" id="route-modal-frame" title="Google Maps route" loading="lazy"></iframe>
+    </div>
+  </div>
+
   <script>
     const fallbackImage = "/uploads/merchant-profiles/bangkok-sky-bistro-400.png";
     const statusLabel = { ready_to_start: "Coming soon", started: "Active", completed: "Ended" };
@@ -742,9 +878,16 @@
       quiz: "Quiz reward",
       survey_reward: "Survey reward"
     };
+    const THAILAND_AIRPORT_ORIGIN = {
+      label: "Suvarnabhumi Airport, Thailand",
+      lat: 13.6900,
+      lng: 100.7501,
+      source: "airport"
+    };
     let projects = [];
     let merchants = [];
     let selectedId = null;
+    let routeOriginPromise = null;
 
     const $ = (id) => document.getElementById(id);
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (m) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m]));
@@ -755,6 +898,7 @@
     const hasMerchantMap = (m) => Number.isFinite(Number(m.google_lat)) && Number.isFinite(Number(m.google_lng));
     const googleMapUrl = (m) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${m.google_lat},${m.google_lng}`)}`;
     const merchantCoord = (m) => `${Number(m.google_lat)},${Number(m.google_lng)}`;
+    const coordText = (lat, lng) => `${Number(lat).toFixed(6)},${Number(lng).toFixed(6)}`;
     const ymd = (v) => {
       if (!v) return "";
       const d = new Date(v);
@@ -796,6 +940,82 @@
       if (Number(p.gift_amount || 0) > 0) bits.push(`Gift KRW ${money(p.gift_amount)}`);
       if (Number(p.prize_amount || 0) > 0) bits.push(`Reward KRW ${money(p.prize_amount)}`);
       return bits.length ? bits.join(" + ") : "Merchant benefits";
+    }
+    function merchantSupportChips(m) {
+      const types = (m.support_types || []).filter((t) => t !== "tour");
+      if (!types.length) return "";
+      return `<div class="chips">${types.map((t) => `<span class="chip">${esc(supportLabel[t] || "Participation benefit")}</span>`).join("")}</div>`;
+    }
+    function routeDistanceKm(a, b) {
+      const toRad = (v) => Number(v) * Math.PI / 180;
+      const r = 6371;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const s1 = Math.sin(dLat / 2);
+      const s2 = Math.sin(dLng / 2);
+      const q = s1 * s1 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2;
+      return 2 * r * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));
+    }
+    function orderedRouteMerchants(origin, list) {
+      const pending = list
+        .filter(hasMerchantMap)
+        .map((m) => ({ ...m, lat: Number(m.google_lat), lng: Number(m.google_lng) }));
+      const ordered = [];
+      let cursor = { lat: origin.lat, lng: origin.lng };
+      while (pending.length) {
+        let bestIndex = 0;
+        let bestDistance = Number.POSITIVE_INFINITY;
+        pending.forEach((m, idx) => {
+          const distance = routeDistanceKm(cursor, m);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = idx;
+          }
+        });
+        const next = pending.splice(bestIndex, 1)[0];
+        ordered.push(next);
+        cursor = next;
+      }
+      return ordered;
+    }
+    async function detectRouteOrigin() {
+      if (routeOriginPromise) return routeOriginPromise;
+      routeOriginPromise = fetch("https://ipapi.co/json/", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error("ip_lookup_failed"))))
+        .then((geo) => {
+          const lat = Number(geo.latitude);
+          const lng = Number(geo.longitude);
+          const inThailand = String(geo.country_code || "").toUpperCase() === "TH";
+          if (inThailand && Number.isFinite(lat) && Number.isFinite(lng)) {
+            return {
+              label: [geo.city, geo.region, "Thailand"].filter(Boolean).join(", ") || "Current location in Thailand",
+              lat,
+              lng,
+              source: "ip"
+            };
+          }
+          return THAILAND_AIRPORT_ORIGIN;
+        })
+        .catch(() => THAILAND_AIRPORT_ORIGIN);
+      return routeOriginPromise;
+    }
+    function buildRouteUrls(origin, ordered) {
+      const originCoord = coordText(origin.lat, origin.lng);
+      const coords = ordered.map((m) => coordText(m.lat, m.lng));
+      const destination = coords[coords.length - 1];
+      const waypoints = coords.slice(0, -1);
+      const fullParams = new URLSearchParams({
+        api: "1",
+        origin: originCoord,
+        destination,
+        travelmode: "driving"
+      });
+      if (waypoints.length) fullParams.set("waypoints", waypoints.join("|"));
+      const embedDaddr = coords.map(encodeURIComponent).join("%20to:%20");
+      return {
+        full: `https://www.google.com/maps/dir/?${fullParams.toString()}`,
+        embed: `https://maps.google.com/maps?f=d&source=s_d&hl=en&saddr=${encodeURIComponent(originCoord)}&daddr=${embedDaddr}&output=embed`
+      };
     }
 
     function renderHero() {
@@ -877,7 +1097,10 @@
           <h3>${esc(project.serial)} · ${esc(project.name)} → Merchant information</h3>
           <p>Approved merchants participating in the ${esc(project.organization_name)} project.</p>
         </div>
-        <span class="merchant-path-count">${list.length} merchants</span>`;
+        <div class="merchant-path-actions">
+          ${routeMapMerchants(project.id).length ? `<button class="merchant-route-btn" type="button" onclick="openProjectRouteModal(${project.id})">Route</button>` : ""}
+          <span class="merchant-path-count">${list.length} merchants</span>
+        </div>`;
       if (!list.length) {
         $("merchant-grid").innerHTML = '<div class="empty">No public participating merchants are available for this route yet.</div>';
         return;
@@ -894,9 +1117,7 @@
               ${merchantAddress(m) ? `<span>Address: ${esc(merchantAddress(m))}</span>` : ""}
             </div>
             ${hasMerchantMap(m) ? `<a class="merchant-map-btn" href="${esc(googleMapUrl(m))}" target="_blank" rel="noopener">Map</a>` : ""}
-            <div class="chips">
-              ${(m.support_types || []).map((t) => `<span class="chip">${esc(supportLabel[t] || "Participation benefit")}</span>`).join("") || '<span class="chip">Participation benefit</span>'}
-            </div>
+            ${merchantSupportChips(m)}
           </div>
         </article>`).join("");
     }
@@ -935,6 +1156,44 @@
       if (!popup) window.location.href = url;
       else popup.focus();
     }
+    async function openProjectRouteModal(projectId) {
+      const project = projects.find((p) => Number(p.id) === Number(projectId));
+      const list = routeMapMerchants(projectId);
+      if (!project || !list.length) {
+        window.alert("Route cannot be shown because participating merchants do not have map locations.");
+        return;
+      }
+      const modal = $("route-modal");
+      $("route-modal-title").textContent = `${project.name} optimized route`;
+      $("route-modal-info").textContent = "Detecting your starting point and preparing an optimized Google Maps route for all participating merchants...";
+      $("route-modal-link").href = "#";
+      $("route-modal-stops").textContent = "";
+      $("route-modal-frame").removeAttribute("src");
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      try {
+        const origin = await detectRouteOrigin();
+        const ordered = orderedRouteMerchants(origin, list);
+        const urls = buildRouteUrls(origin, ordered);
+        $("route-modal-link").href = urls.full;
+        $("route-modal-frame").src = urls.embed;
+        const originText = origin.source === "ip"
+          ? `Starting from your IP-based location: ${origin.label}`
+          : `Starting from ${origin.label} because your IP is not in Thailand or could not be confirmed.`;
+        $("route-modal-info").textContent = `${originText} Optimized route includes all ${ordered.length} mapped participating merchant${ordered.length > 1 ? "s" : ""}.`;
+        $("route-modal-stops").textContent = `Stops: ${ordered.map((m, idx) => `${idx + 1}. ${m.name}`).join(" -> ")}`;
+      } catch (e) {
+        $("route-modal-info").textContent = "Failed to prepare the route. Please try again.";
+        $("route-modal-stops").textContent = "";
+      }
+    }
+    function closeRouteModal() {
+      const modal = $("route-modal");
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      $("route-modal-stops").textContent = "";
+      $("route-modal-frame").removeAttribute("src");
+    }
 
     async function load() {
       try {
@@ -953,6 +1212,12 @@
     }
 
     $("search").addEventListener("input", renderRoutes);
+    $("route-modal").addEventListener("click", (event) => {
+      if (event.target === $("route-modal")) closeRouteModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && $("route-modal").classList.contains("open")) closeRouteModal();
+    });
     load();
   </script>
 </body>

@@ -24,6 +24,7 @@ import noticeRouter from "./routes/notice";
 import gridPrefsRouter from "./routes/grid-prefs";
 import inquiryRouter from "./routes/inquiry";
 import videoRouter from "./routes/video";
+import resourceRouter from "./routes/resource";
 import { getSessionInfo, extendSession, sessionTimeout } from "./middleware/session-timeout";
 import { touchActivity } from "./middleware/auth";
 import { auditMutations } from "./middleware/audit";
@@ -36,6 +37,7 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const errorPageDir = path.join(process.cwd(), "public", "errors");
 const SESSION_TTL_MS = 10 * 60 * 1000;
+const SESSION_CLEANUP_INTERVAL_MS = Number(process.env.SESSION_CLEANUP_INTERVAL_MS ?? 10 * 60 * 1000);
 
 function acceptsHtml(req: express.Request): boolean {
   return !req.path.startsWith("/api/") && req.accepts(["html", "json"]) === "html";
@@ -132,9 +134,9 @@ const MySQLStore = MySQLStoreFactory(session as any);
 const sessionStore = new MySQLStore(
   {
     clearExpired: true,
-    checkExpirationInterval: 60 * 1000,
+    checkExpirationInterval: SESSION_CLEANUP_INTERVAL_MS,
     expiration: SESSION_TTL_MS,
-    createDatabaseTable: true,
+    createDatabaseTable: process.env.SESSION_CREATE_TABLE !== "false",
     schema: {
       tableName: "sessions",
       columnNames: {
@@ -182,7 +184,7 @@ app.use(
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    rolling: false,
     cookie: {
       httpOnly: true,
       secure: false,
@@ -215,6 +217,7 @@ app.use("/api/notice", noticeRouter);             // 공지사항 등록/관리 
 app.use("/api/grid-prefs", gridPrefsRouter);      // 사용자별 그리드 컬럼 설정(표시/순서)
 app.use("/api/inquiry", inquiryRouter);           // 문의사항 작성/관리 + 공개 게시판
 app.use("/api/video", videoRouter);               // 동영상(YouTube) 등록/관리 + 공개 게시판
+app.use("/api/resource", resourceRouter);
 
 app.get("/api/public/landing", async (_req, res) => {
   const k = encKey();
@@ -302,6 +305,7 @@ app.get(["/intro", "/intro/"], (_req, res) => {
 });
 // public 정적 파일 — 단, partner 디렉토리의 자동 index.html 서빙은 막음
 app.use(express.static(path.join(process.cwd(), "public"), { index: false }));
+app.use("/upload", express.static(path.join(process.cwd(), "upload")));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/admin", (_req, res) => {
@@ -352,12 +356,12 @@ app.get("/v/:projectSerial/sw.js", (_req, res) => {
   res.type("application/javascript");
   res.sendFile(path.join(process.cwd(), "public", "visitor", "service-worker.js"));
 });
-// Tour QR 진입: /v/:serial/:seq, 설치된 PWA 홈: /v/:serial (진행현황만)
+// Visitor mobile app reset: show the responsive tour.roampay.kr landing page.
 app.get("/v/:projectSerial/:locationSeq", (_req, res) => {
-  res.sendFile(path.join(process.cwd(), "public", "visitor", "index.html"));
+  res.redirect("/");
 });
 app.get("/v/:projectSerial", (_req, res) => {
-  res.sendFile(path.join(process.cwd(), "public", "visitor", "index.html"));
+  res.redirect("/");
 });
 // 사전등록 / 현장등록 랜딩 페이지 (입장 희망객 view)
 app.get("/reserve/:serial", (_req, res) => {
@@ -527,11 +531,30 @@ async function autoUpdateProjectStatuses(): Promise<void> {
 }
 
 autoUpdateProjectStatuses().catch(console.error);
-setInterval(() => autoUpdateProjectStatuses().catch(console.error), 60 * 60 * 1000);
+const projectStatusInterval = setInterval(() => autoUpdateProjectStatuses().catch(console.error), 60 * 60 * 1000);
 
 // 프로젝트 종료일 3일 전 ~ 종료일까지 매일 1회 담당자 + 참여 가맹점에게 알림
 scheduleProjectEndingNotifications();
 
-app.listen(port, () => {
+const httpServer = app.listen(port, () => {
   console.log(`Server started at http://tour.roampay.kr}`);
 });
+
+let shuttingDown = false;
+function shutdown(signal: NodeJS.Signals): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} received. Closing server and database pool...`);
+  clearInterval(projectStatusInterval);
+  httpServer.close(() => {
+    Promise.resolve(sessionStore.close())
+      .catch((err) => console.error("[shutdown] failed to close session store", err))
+      .then(() => pool.end())
+      .catch((err) => console.error("[shutdown] failed to close database pool", err))
+      .finally(() => process.exit(0));
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);

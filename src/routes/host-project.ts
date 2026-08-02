@@ -69,10 +69,28 @@ const quizImageUpload = multer({
 function toUploadUrl(p?: string | null): string | null {
   if (!p) return null;
   const norm = p.replace(/\\/g, "/");
+  if (/^https?:\/\//i.test(norm)) return norm;
+  const uploadIdx = norm.lastIndexOf("/upload/");
+  if (uploadIdx >= 0) return norm.slice(uploadIdx);
+  const uploadRel = norm.indexOf("upload/");
+  if (uploadRel >= 0) return `/${norm.slice(uploadRel)}`;
   const idx = norm.lastIndexOf("/uploads/");
   if (idx >= 0) return norm.slice(idx);
   const rel = norm.indexOf("uploads/");
   return rel >= 0 ? `/${norm.slice(rel)}` : norm;
+}
+
+function normalizeImageUrl(value: unknown): string | null {
+  const url = String(value || "").trim();
+  if (!url) return null;
+  if (/^https?:\/\/[^\s]+$/i.test(url)) return url.slice(0, 500);
+  if (/^\/(?:upload|uploads)\/[^\s]+$/i.test(url)) return url.slice(0, 500);
+  return null;
+}
+
+function unlinkLocalUpload(p?: string | null): void {
+  if (!p || /^https?:\/\//i.test(String(p)) || String(p).startsWith("/")) return;
+  try { fs.unlinkSync(String(p)); } catch (_) {}
 }
 
 // 입금확인(deposit_confirmed) 이후에는 Tour 변경 시 QR을 보완 생성한다.
@@ -571,7 +589,7 @@ router.get("/projects", requireHost, async (req, res) => {
 
   const data = Array.isArray(rows) ? rows.map((item: any) => ({
     ...item,
-    tour_image_url: item.tour_image_path ? `/uploads/tour-images/${path.basename(String(item.tour_image_path))}` : null,
+    tour_image_url: toUploadUrl(item.tour_image_path),
     budget_consumption_rate: Number(item.budget_amount) > 0
       ? Math.round((Number(item.gift_spent) / Number(item.budget_amount)) * 10000) / 100
       : 0,
@@ -726,9 +744,7 @@ router.get("/projects/:id", requireHost, async (req, res) => {
   );
   const gift_tiers = (tRows as any[]).map((r) => ({ pct: Number(r.threshold_pct), amount: Number(r.amount) }));
   // tour_image_path → 공개 URL
-  if (proj.tour_image_path) {
-    proj.tour_image_url = `/uploads/tour-images/${path.basename(String(proj.tour_image_path))}`;
-  }
+  if (proj.tour_image_path) proj.tour_image_url = toUploadUrl(proj.tour_image_path);
   res.json({
     ok: true,
     project: proj,
@@ -1016,9 +1032,7 @@ router.post("/projects/:id/tour-image", requireHost, tourImageUpload.single("ima
   // 기존 이미지 제거
   const [old] = await pool.execute(`SELECT tour_image_path FROM projects WHERE id = ?`, [projectId]);
   const oldRow = (old as any[])[0];
-  if (oldRow?.tour_image_path) {
-    try { fs.unlinkSync(oldRow.tour_image_path); } catch (_) {}
-  }
+  unlinkLocalUpload(oldRow?.tour_image_path);
   await pool.execute(
     `UPDATE projects SET tour_image_path = ?, updated_at = NOW() WHERE id = ?`,
     [file.path, projectId],
@@ -1031,6 +1045,26 @@ router.post("/projects/:id/tour-image", requireHost, tourImageUpload.single("ima
 });
 
 // Tour 대표 이미지 삭제
+router.put("/projects/:id/tour-image-url", requireHost, async (req, res) => {
+  const host = req.session.host!;
+  const projectId = Number(req.params.id);
+  if (!(await ensureHostOwnsProject(projectId, host.id))) {
+    res.status(404).json({ error: "project_not_found" }); return;
+  }
+  const imageUrl = normalizeImageUrl((req.body || {}).image_url);
+  if (!imageUrl) {
+    res.status(400).json({ error: "invalid_image_url" }); return;
+  }
+  const [old] = await pool.execute(`SELECT tour_image_path FROM projects WHERE id = ?`, [projectId]);
+  const oldRow = (old as any[])[0];
+  unlinkLocalUpload(oldRow?.tour_image_path);
+  await pool.execute(
+    `UPDATE projects SET tour_image_path = ?, updated_at = NOW() WHERE id = ?`,
+    [imageUrl, projectId],
+  );
+  res.json({ ok: true, image_path: imageUrl, image_url: imageUrl });
+});
+
 router.delete("/projects/:id/tour-image", requireHost, async (req, res) => {
   const host = req.session.host!;
   const projectId = Number(req.params.id);
@@ -1039,9 +1073,7 @@ router.delete("/projects/:id/tour-image", requireHost, async (req, res) => {
   }
   const [rows] = await pool.execute(`SELECT tour_image_path FROM projects WHERE id = ?`, [projectId]);
   const row = (rows as any[])[0];
-  if (row?.tour_image_path) {
-    try { fs.unlinkSync(row.tour_image_path); } catch (_) {}
-  }
+  unlinkLocalUpload(row?.tour_image_path);
   await pool.execute(`UPDATE projects SET tour_image_path = NULL, updated_at = NOW() WHERE id = ?`, [projectId]);
   res.json({ ok: true });
 });
@@ -1363,7 +1395,12 @@ router.post("/projects/:id/locations", requireHost, iconUpload.single("image"), 
   const kakaoLat = req.body.kakao_lat;
   const kakaoLng = req.body.kakao_lng;
   const mapProvider = (req.body.map_provider === "google") ? "google" : (req.body.map_provider === "kakao" ? "kakao" : null);
-  const imagePath = req.file ? req.file.path : null;
+  const imageUrl = normalizeImageUrl(req.body.image_url);
+  if (String(req.body.image_url || "").trim() && !imageUrl) {
+    res.status(400).json({ error: "invalid_image_url" });
+    return;
+  }
+  const imagePath = req.file ? req.file.path : imageUrl;
 
   if (destType === "location") {
     if (!locationName || !kakaoLat || !kakaoLng) {
@@ -1463,6 +1500,11 @@ router.put("/projects/:projectId/locations/:locationId", requireHost, iconUpload
   const kakao_lng = req.body.kakao_lng;
   const map_provider = (req.body.map_provider === "google") ? "google" : (req.body.map_provider === "kakao" ? "kakao" : null);
   const removeImage = String(req.body.remove_image ?? "") === "1";
+  const newImageUrl = normalizeImageUrl(req.body.image_url);
+  if (String(req.body.image_url || "").trim() && !newImageUrl) {
+    res.status(400).json({ error: "invalid_image_url" });
+    return;
+  }
 
   const [projectRows] = await pool.execute("SELECT id FROM projects WHERE id = ? AND host_id = ?", [projectId, host.id]);
   if (!Array.isArray(projectRows) || projectRows.length === 0) {
@@ -1494,6 +1536,8 @@ router.put("/projects/:projectId/locations/:locationId", requireHost, iconUpload
   let imagePath: string | null = oldRow.image_path;
   if (req.file) {
     imagePath = req.file.path;
+  } else if (newImageUrl) {
+    imagePath = newImageUrl;
   } else if (removeImage) {
     imagePath = null;
   }

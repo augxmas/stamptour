@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { touchSessionActivity } from "./session-timeout";
 
 export function requireHost(req: Request, res: Response, next: NextFunction): void {
   if (req.session.host) {
@@ -25,6 +26,6 @@ export function requireMerchant(req: Request, res: Response, next: NextFunction)
 }
 
 export function touchActivity(req: Request, _res: Response, next: NextFunction): void {
-  req.session.lastActivity = Date.now();
+  touchSessionActivity(req);
   next();
 }

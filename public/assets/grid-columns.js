@@ -551,9 +551,10 @@
     panel.style.cssText = "position:fixed;inset:0;z-index:9500;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px;font-size:13px;color:#1e293b;";
     panel.innerHTML =
       '<div class="gc-modal" style="background:#fff;border-radius:14px;width:380px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);">' +
-        '<div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #e2e8f0;">' +
-          '<div style="font-weight:800;font-size:15px;color:#0f172a;">컬럼조정</div>' +
-          '<button type="button" id="gc-x" aria-label="닫기" style="flex:none;width:30px;height:30px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:18px;line-height:1;cursor:pointer;">&times;</button>' +
+        '<div style="flex:none;display:grid;grid-template-columns:30px 1fr 30px;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #1d4ed8;background:#2563eb;color:#fff;">' +
+          '<span aria-hidden="true"></span>' +
+          '<div style="font-weight:800;font-size:15px;color:#fff;text-align:center;">컬럼조정</div>' +
+          '<button type="button" id="gc-x" aria-label="닫기" style="flex:none;width:30px;height:30px;border:none;border-radius:50%;background:#1d4ed8;color:#fff;font-size:18px;line-height:1;cursor:pointer;">&times;</button>' +
         '</div>' +
         '<div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px;">' +
           '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">정산 표는 그룹 헤더를 유지하기 위해 표시/숨김, 틀고정, 컬럼 폭 조정을 지원합니다.</div>' +
@@ -662,13 +663,14 @@
     panel.innerHTML =
       '<div class="gc-modal" style="background:#fff;border-radius:14px;width:360px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);">' +
         // 헤더 (고정)
-        '<div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #e2e8f0;">' +
-          '<div style="font-weight:800;font-size:15px;color:#0f172a;">⚙ 컬럼 조정</div>' +
-          '<button type="button" id="gc-x" aria-label="닫기" style="flex:none;width:30px;height:30px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:18px;line-height:1;cursor:pointer;">&times;</button>' +
+        '<div style="flex:none;display:grid;grid-template-columns:30px 1fr 30px;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #1d4ed8;background:#2563eb;color:#fff;">' +
+          '<span aria-hidden="true"></span>' +
+          '<div style="font-weight:800;font-size:15px;color:#fff;text-align:center;">⚙ 컬럼 조정</div>' +
+          '<button type="button" id="gc-x" aria-label="닫기" style="flex:none;width:30px;height:30px;border:none;border-radius:50%;background:#1d4ed8;color:#fff;font-size:18px;line-height:1;cursor:pointer;">&times;</button>' +
         '</div>' +
         // 본문 (세로 스크롤)
         '<div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px;">' +
-          '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">표시할 컬럼을 선택하고, 드래그(⠿)로 순서를 바꾸세요. 📌 를 누르면 <b>그 컬럼 하나만 좌측 틀 고정</b>됩니다.</div>' +
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">표시할 컬럼을 선택하고, 드래그(⠿)로 순서를 바꾸세요. 📌 를 누르면 <b>그 컬럼 하나만 좌측 틀 고정됩니다.</b></div>' +
           '<div id="gc-list"></div>' +
         '</div>' +
         // 푸터 (고정)
@@ -825,6 +827,7 @@
     return null;
   }
   function injectButton(table) {
+    if (table.hasAttribute("data-gc-no-button") || table.closest("[data-gc-no-button]")) return;
     var anchor = (table.parentElement && table.parentElement.classList.contains("tbl-wrap"))
       ? table.parentElement : table;
     if (!anchor.parentNode) return;

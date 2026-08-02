@@ -12,8 +12,8 @@ const pool = mysql.createPool({
   charset: "utf8mb4",
   timezone: "+09:00",
   waitForConnections: true,
-  connectionLimit: 20,
-  queueLimit: 0,
+  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT ?? 8),
+  queueLimit: Number(process.env.DB_QUEUE_LIMIT ?? 100),
   // DB is on a different subnet, so traffic crosses a stateful firewall.
   // Keepalive keeps the NAT/firewall flow alive and surfaces dead sockets
   // early; idle recycling drops pooled connections before the firewall
@@ -21,8 +21,8 @@ const pool = mysql.createPool({
   connectTimeout: 20000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
-  idleTimeout: 30000,
-  maxIdle: 10,
+  idleTimeout: Number(process.env.DB_IDLE_TIMEOUT_MS ?? 30000),
+  maxIdle: Number(process.env.DB_MAX_IDLE ?? 4),
 });
 
 export default pool;

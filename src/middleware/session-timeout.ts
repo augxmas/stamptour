@@ -2,6 +2,19 @@ import type { NextFunction, Request, Response } from "express";
 import pool from "../config/database";
 
 const MAX_IDLE_MS = 10 * 60 * 1000;
+const ACTIVITY_TOUCH_INTERVAL_MS = 60 * 1000;
+
+function hasLoginSession(req: Request): boolean {
+  return Boolean(req.session.host || req.session.supervisor || req.session.merchant || req.session.partner);
+}
+
+export function touchSessionActivity(req: Request, now = Date.now()): void {
+  if (!hasLoginSession(req)) return;
+  const last = req.session.lastActivity ?? 0;
+  if (now - last >= ACTIVITY_TOUCH_INTERVAL_MS) {
+    req.session.lastActivity = now;
+  }
+}
 
 // 세션 만료/종료 시 로그아웃 시각을 기록 (host/supervisor 공통)
 function markLogout(sessionId: string): void {
@@ -12,10 +25,15 @@ function markLogout(sessionId: string): void {
 }
 
 export function sessionTimeout(req: Request, res: Response, next: NextFunction): void {
+  if (!hasLoginSession(req)) {
+    next();
+    return;
+  }
+
   const now = Date.now();
   const last = req.session.lastActivity ?? now;
 
-  if ((req.session.host || req.session.supervisor || req.session.merchant) && now - last > MAX_IDLE_MS) {
+  if (now - last > MAX_IDLE_MS) {
     markLogout(req.sessionID);
     req.session.destroy(() => {
       res.status(440).json({
@@ -26,12 +44,12 @@ export function sessionTimeout(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  req.session.lastActivity = now;
+  touchSessionActivity(req, now);
   next();
 }
 
 export function getSessionInfo(req: Request, res: Response): void {
-  if (!req.session.host && !req.session.supervisor && !req.session.merchant) {
+  if (!hasLoginSession(req)) {
     res.status(401).json({ error: "not_logged_in" });
     return;
   }
@@ -49,7 +67,7 @@ export function getSessionInfo(req: Request, res: Response): void {
 
 // 사용자가 '로그인 연장'을 누르면 유휴 타이머를 초기화한다.
 export function extendSession(req: Request, res: Response): void {
-  if (!req.session.host && !req.session.supervisor && !req.session.merchant) {
+  if (!hasLoginSession(req)) {
     res.status(401).json({ error: "not_logged_in" });
     return;
   }
